@@ -23,6 +23,45 @@ struct GitContextTests {
       #expect(context.base.commit?.subject == "Add story.txt")
       #expect(context.rebaseProgress == nil)
       #expect(context.remainingConflictedFileCount == 0)
+      #expect(context.hasCommonAncestor)
+    }
+  }
+
+  @Test func fileBothSidesAddedHasNoCommonAncestor() throws {
+    try withSandbox { sandbox in
+      let repository = try sandbox.makeRepository("add-add")
+
+      let context = detect(in: repository, file: "added.txt", git: sandbox.git())
+
+      #expect(!context.hasCommonAncestor)
+      #expect(context.base == MergeSide())
+      #expect(context.remote.name == .reference("feature"))
+      #expect(context.local.name == .reference("main"))
+    }
+  }
+
+  @Test func emptyCommonAncestorIsStillACommonAncestor() throws {
+    try withSandbox { sandbox in
+      let repository = try sandbox.makeRepository("diff")
+      let git = sandbox.git()
+      let file = repository.appending(path: "empty.txt")
+      func commit(_ text: String, _ message: String) throws {
+        try Data(text.utf8).write(to: file)
+        _ = try git.run(["add", "empty.txt"], in: repository)
+        _ = try git.run(["commit", "--quiet", "--message", message], in: repository)
+      }
+      _ = try git.run(["stash", "--quiet"], in: repository)
+      try commit("", "Add an empty file")
+      _ = try git.run(["switch", "--quiet", "--create", "feature"], in: repository)
+      try commit("from feature\n", "Fill the file on feature")
+      _ = try git.run(["switch", "--quiet", "main"], in: repository)
+      try commit("from main\n", "Fill the file on main")
+      #expect(throws: GitError.self) { try git.run(["merge", "feature"], in: repository) }
+
+      let context = detect(in: repository, file: "empty.txt", git: git)
+
+      #expect(context.hasCommonAncestor)
+      #expect(context.base.commit != nil)
     }
   }
 

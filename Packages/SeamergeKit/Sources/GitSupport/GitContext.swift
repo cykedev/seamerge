@@ -25,8 +25,16 @@ public struct GitContext: Sendable, Hashable {
 
   /// The common ancestor of both sides.
   ///
-  /// The base never has a role.
+  /// The base never has a role. Without a common ancestor of the merged file, the base has no
+  /// name and no commit either.
   public var base: MergeSide
+
+  /// Whether the merged file has a common ancestor in both sides.
+  ///
+  /// This is `false` if the index holds the conflict of the file without an entry for the common
+  /// ancestor, as for a file both sides added. Git still hands the tool an empty file as `BASE`
+  /// then, which is no ancestor. If Git cannot tell, this is `true`.
+  public var hasCommonAncestor: Bool
 
   /// How far the rebase has come, if a rebase is in progress and its state can be read.
   public var rebaseProgress: RebaseProgress?
@@ -64,11 +72,13 @@ public struct GitContext: Sendable, Hashable {
     }
     let repository = Repository(git: git, workingDirectory: workingDirectory)
     let detection = Detection(repository: repository, labels: labels)
+    let hasCommonAncestor = detection.hasCommonAncestor(mergedFile)
     return GitContext(
       operation: detection.operation,
       remote: detection.remote(),
       local: detection.local(),
-      base: detection.base(),
+      base: hasCommonAncestor ? detection.base() : MergeSide(),
+      hasCommonAncestor: hasCommonAncestor,
       rebaseProgress: detection.rebaseProgress(),
       remainingConflictedFileCount: detection.remainingConflictedFileCount(besides: mergedFile))
   }
@@ -171,14 +181,26 @@ private struct Detection {
 
   func remainingConflictedFileCount(besides mergedFile: URL) -> Int? {
     guard let repository, let paths = repository.conflictedPaths else { return nil }
-    guard let topLevel = repository.topLevel else { return paths.count }
-    let topPath = Self.comparablePath(of: topLevel)
-    let filePath = Self.comparablePath(of: mergedFile)
-    guard filePath.hasPrefix(topPath + "/") else { return paths.count }
-    let relativePath = String(filePath.dropFirst(topPath.count + 1))
+    guard let relativePath = Self.path(of: mergedFile, in: repository) else { return paths.count }
     // Strings compare and hash by canonical equivalence, so a name the file system keeps
     // decomposed still matches the precomposed one Git lists.
     return paths.subtracting([relativePath]).count
+  }
+
+  func hasCommonAncestor(_ mergedFile: URL) -> Bool {
+    guard let repository, let path = Self.path(of: mergedFile, in: repository),
+      let stages = repository.unmergedStages(ofPath: path), !stages.isEmpty
+    else { return true }
+    return stages.contains(.commonAncestor)
+  }
+
+  /// The path of `file` relative to the top of the working tree, or `nil` if it lies outside.
+  private static func path(of file: URL, in repository: Repository) -> String? {
+    guard let topLevel = repository.topLevel else { return nil }
+    let topPath = comparablePath(of: topLevel)
+    let filePath = comparablePath(of: file)
+    guard filePath.hasPrefix(topPath + "/") else { return nil }
+    return String(filePath.dropFirst(topPath.count + 1))
   }
 
   private static func comparablePath(of url: URL) -> String {

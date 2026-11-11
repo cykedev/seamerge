@@ -108,6 +108,27 @@ struct Repository {
     return Set(output.split(separator: "\0").map(String.init))
   }
 
+  /// The stages of the unmerged index entries of a file, or `nil` if it has none or Git cannot
+  /// tell.
+  ///
+  /// - Parameter path: The path of the file relative to the top of the working tree. It is taken
+  ///   literally, so that characters such as `*` in a file name match only themselves.
+  func unmergedStages(ofPath path: String) -> Set<IndexStage>? {
+    let pathspec = ":(top,literal)\(path)"
+    guard let output = query(["ls-files", "--unmerged", "-z", "--", pathspec]) else { return nil }
+    var stages: Set<IndexStage> = []
+    // Each entry reads `<mode> <hash> <stage>\t<path>`.
+    for entry in output.split(separator: "\0") {
+      let fields = entry.prefix { $0 != "\t" }.split(separator: " ")
+      guard fields.count == 3, let stage = Int(fields[2]).flatMap(IndexStage.init) else {
+        Self.logger.error("git ls-files printed an entry in an unexpected form")
+        return nil
+      }
+      stages.insert(stage)
+    }
+    return stages
+  }
+
   /// The top directory of the working tree.
   var topLevel: URL? {
     query(["rev-parse", "--show-toplevel"]).map { URL(filePath: $0, directoryHint: .isDirectory) }
@@ -135,4 +156,16 @@ struct Repository {
     (text.count == 40 || text.count == 64)
       && text.allSatisfy { $0.isASCII && $0.isHexDigit && !$0.isUppercase }
   }
+}
+
+/// The stage of an index entry of a file with a conflict.
+enum IndexStage: Int {
+  /// The version of the common ancestor.
+  case commonAncestor = 1
+
+  /// The version of the current branch, `LOCAL`.
+  case ours = 2
+
+  /// The version being merged in, `REMOTE`.
+  case theirs = 3
 }
