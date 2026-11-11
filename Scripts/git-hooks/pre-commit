@@ -1,0 +1,22 @@
+#!/bin/bash
+#
+# Rejects a commit when a staged Swift file is not formatted as .swift-format
+# requires. Checks the staged content, not the working tree, so that partly
+# staged files are judged by what is committed.
+#
+# Enable with: git config core.hooksPath Scripts/git-hooks
+
+set -o pipefail
+
+status=0
+while IFS= read -r -d '' file; do
+  if ! git show ":$file" | swift format lint --strict --assume-filename "$file" -; then
+    status=1
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACMR -z -- '*.swift')
+
+if [ "$status" -ne 0 ]; then
+  echo "pre-commit: format the files above with 'swift format --in-place <file>'" >&2
+  echo "and stage them again." >&2
+fi
+exit "$status"

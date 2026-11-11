@@ -1,0 +1,33 @@
+#!/bin/bash
+#
+# Rejects a commit message whose subject is not a Conventional Commit
+# ("type(scope)!: description") or is longer than 72 characters. Messages that
+# Git writes itself for merges, reverts and fixups are accepted as they are.
+#
+# Enable with: git config core.hooksPath Scripts/git-hooks
+
+export LC_ALL=en_US.UTF-8
+
+types='build|chore|ci|docs|feat|fix|perf|refactor|test'
+pattern="^($types)(\([a-z0-9-]+\))?!?: [^ ]"
+max_length=72
+
+# Git calls this hook before it removes comment lines from the message.
+subject=$(grep -v '^#' "$1" | grep -m 1 -v '^[[:space:]]*$')
+
+case $subject in
+  "Merge "* | "Revert \""* | "fixup! "* | "squash! "* | "amend! "*) exit 0 ;;
+esac
+
+if ! printf '%s\n' "$subject" | grep -Eq "$pattern"; then
+  echo "commit-msg: the subject must read 'type(scope): description'," >&2
+  echo "with type one of: ${types//|/, }." >&2
+  echo "  $subject" >&2
+  exit 1
+fi
+
+if [ "${#subject}" -gt "$max_length" ]; then
+  echo "commit-msg: the subject has ${#subject} characters; at most $max_length are allowed." >&2
+  echo "  $subject" >&2
+  exit 1
+fi
