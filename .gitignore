@@ -1,0 +1,15 @@
+# Local reference material: the downloaded Perforce source archive and
+# third-party screenshots. The vendored subset lives in Packages/MergeEngine/.
+/reference/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Xcode
+DerivedData/
+xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store
