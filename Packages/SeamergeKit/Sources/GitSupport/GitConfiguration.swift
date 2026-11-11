@@ -39,7 +39,9 @@ public struct GitConfiguration: Sendable {
     let mergeCommand =
       #"\#(helperCommand) merge --base "$BASE" --local "$LOCAL" --remote "$REMOTE" "#
       + #"--output "$MERGED""#
-    let diffCommand = #"\#(helperCommand) diff --path "$MERGED" "$LOCAL" "$REMOTE""#
+    // Git passes a file of the working tree by its relative path, which may start with a dash,
+    // so `--` ends the options before the files. In the merge, every file follows an option.
+    let diffCommand = #"\#(helperCommand) diff --path "$MERGED" -- "$LOCAL" "$REMOTE""#
     let tool = "seamerge"
     entries = [
       Entry(key: "merge.tool", value: tool),

@@ -19,7 +19,7 @@ struct GitConfigurationTests {
         "git config --global mergetool.keepBackup false",
         "git config --global diff.tool seamerge",
         #"git config --global difftool.seamerge.cmd '\#(path) diff --path "$MERGED" "#
-          + #""$LOCAL" "$REMOTE"'"#,
+          + #"-- "$LOCAL" "$REMOTE"'"#,
         "git config --global difftool.prompt false",
         "git config --global difftool.trustExitCode true",
       ])
@@ -141,9 +141,32 @@ struct GitConfigurationTests {
       _ = try git.run(["difftool"], in: repository)
 
       let arguments = try recordedArguments(of: helper)
-      #expect(arguments.count == 5)
+      #expect(arguments.count == 6)
       #expect(Array(arguments.prefix(3)) == ["diff", "--path", "two.txt"])
+      #expect(arguments[3] == "--")
       #expect(arguments.last == "two.txt")
+    }
+  }
+
+  @Test func fileWhoseNameStartsWithADashFollowsTheEndOfTheOptions() throws {
+    try withSandbox { sandbox in
+      let repository = try sandbox.makeRepository("diff")
+      let file = repository.appending(path: "-x.txt")
+      try Data("first\n".utf8).write(to: file)
+      let git = sandbox.git()
+      _ = try git.run(["add", "--", "-x.txt"], in: repository)
+      _ = try git.run(["commit", "--quiet", "--message", "Add -x.txt"], in: repository)
+      try Data("second\n".utf8).write(to: file)
+      let helper = try makeRecordingHelper(in: sandbox)
+      try GitConfiguration(helper: helper).write(using: git)
+
+      _ = try git.run(["difftool", "--", "-x.txt"], in: repository)
+
+      let arguments = try recordedArguments(of: helper)
+      #expect(arguments.count == 6)
+      #expect(Array(arguments.prefix(4)) == ["diff", "--path", "-x.txt", "--"])
+      #expect(arguments[4].hasSuffix("x.txt"))
+      #expect(arguments[5] == "-x.txt")
     }
   }
 
