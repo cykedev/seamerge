@@ -221,6 +221,11 @@ DiffMerge::DiffMerge(
 	df1 = df2 = df3 = 0;
 	diff3behavior = 0;
 	oldMode = 0;
+
+	// MergeEngine fix: -dx (DiffFlags::Diff3) left gridType uninitialized;
+	// a garbage GRT_TWOWAY value makes DiffDiff() loop forever.
+
+	gridType = GRT_OPTIMAL;
 	
 	switch( flags.grid )
 	{
