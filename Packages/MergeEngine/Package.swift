@@ -2,6 +2,10 @@
 
 import PackageDescription
 
+// For the Swift targets only: the vendored Perforce code is compiled unchanged
+// and has warnings of its own.
+let swiftSettings: [SwiftSetting] = [.treatAllWarnings(as: .error)]
+
 let package = Package(
   name: "MergeEngine",
   platforms: [.macOS("27.0")],
@@ -26,20 +30,24 @@ let package = Package(
     ),
     .target(
       name: "MergeEngine",
-      dependencies: ["CMergeEngine"]
+      dependencies: ["CMergeEngine"],
+      swiftSettings: swiftSettings
     ),
     .executableTarget(
       name: "mergecli",
-      dependencies: ["MergeEngine"]
+      dependencies: ["MergeEngine"],
+      swiftSettings: swiftSettings
     ),
     .testTarget(
       name: "MergeEngineTests",
       dependencies: ["MergeEngine"],
-      resources: [.copy("Fixtures")]
+      resources: [.copy("Fixtures")],
+      swiftSettings: swiftSettings
     ),
     .testTarget(
       name: "mergecliTests",
-      dependencies: ["mergecli"]
+      dependencies: ["mergecli"],
+      swiftSettings: swiftSettings
     ),
   ],
   swiftLanguageModes: [.v6],
