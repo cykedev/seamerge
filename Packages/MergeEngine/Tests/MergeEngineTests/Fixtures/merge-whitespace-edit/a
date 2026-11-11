@@ -1,0 +1,4 @@
+if (x) {
+	call(1);
+}
+other

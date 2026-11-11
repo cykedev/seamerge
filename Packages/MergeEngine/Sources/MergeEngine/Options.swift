@@ -22,6 +22,27 @@ public enum Whitespace: Sendable, Hashable, CaseIterable {
   case ignoreAll
 }
 
+/// How the three-way merge resolves overlapping changes, mirroring the
+/// Perforce merge grid flags.
+public enum MergeStrategy: Sendable, Hashable, CaseIterable {
+  /// The Perforce default.
+  case optimal
+
+  /// Reports a conflict where the default would accept changes that touch the
+  /// same region, such as an identical change next to a different one (`-dg`).
+  case guarded
+
+  /// Like ``optimal``, but resolves some ambiguous insertions the way `diff3`
+  /// does (`-dx`).
+  case diff3
+
+  /// ``guarded`` and ``diff3`` combined (`-dgx`).
+  case guardedDiff3
+
+  /// Ignores the base and merges as if it were empty (`-dt`).
+  case twoWay
+}
+
 /// How ``TokenDiff`` splits text into tokens.
 public enum TokenGranularity: Sendable, Hashable {
   /// Runs of one character class: letters, digits and non-ASCII bytes;

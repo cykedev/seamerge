@@ -64,3 +64,19 @@ func spansEqual(
       linesEqual(x.line(lineX), y.line(lineY), under: mode)
     }
 }
+
+/// The text Perforce's `DiffMerge::Read()` would produce for `merge`,
+/// rebuilt from its blocks: unchanged text from the base, one-sided changes
+/// from the changed side, identical changes from A, conflicts as A then B.
+func readStream(of merge: Merge) -> Data {
+  merge.blocks.reduce(into: Data()) { output, block in
+    switch block.kind {
+    case .unchanged: output += merge.base.bytes(lines: block.base.lines)
+    case .changedInA, .changedInBoth: output += merge.a.bytes(lines: block.a.lines)
+    case .changedInB: output += merge.b.bytes(lines: block.b.lines)
+    case .conflict:
+      output += merge.a.bytes(lines: block.a.lines)
+      output += merge.b.bytes(lines: block.b.lines)
+    }
+  }
+}

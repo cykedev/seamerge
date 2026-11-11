@@ -55,3 +55,49 @@ func reconstructed(from diff: Diff) -> (a: Data, b: Data) {
     result.b += block.kind == .equal ? bytesA : bytesB
   }
 }
+
+/// Checks that the blocks of `merge` cover all three inputs in order and
+/// that each block's kind matches the text under `mode`.
+func expectValidMerge(
+  _ merge: Merge, under mode: Whitespace, sourceLocation: SourceLocation = #_sourceLocation
+) {
+  expectValidLineBuffer(merge.base, sourceLocation: sourceLocation)
+  expectValidLineBuffer(merge.a, sourceLocation: sourceLocation)
+  expectValidLineBuffer(merge.b, sourceLocation: sourceLocation)
+
+  var next = (base: 0, a: 0, b: 0)
+  for block in merge.blocks {
+    #expect(
+      block.base.lines.lowerBound == next.base && block.a.lines.lowerBound == next.a
+        && block.b.lines.lowerBound == next.b,
+      "blocks are contiguous", sourceLocation: sourceLocation)
+    #expect(
+      !(block.base.isEmpty && block.a.isEmpty && block.b.isEmpty), "no empty block",
+      sourceLocation: sourceLocation)
+
+    var baseA = spansEqual(block.base, in: merge.base, block.a, in: merge.a, under: mode)
+    var baseB = spansEqual(block.base, in: merge.base, block.b, in: merge.b, under: mode)
+    var aB = spansEqual(block.a, in: merge.a, block.b, in: merge.b, under: mode)
+    if mode == .ignoreLineEndings {
+      // With -dl, equality is not transitive (see linesEqual), but the merge
+      // grid combines the three pairwise diffs as if it were.
+      (baseA, baseB, aB) = (baseA || baseB && aB, baseB || baseA && aB, aB || baseA && baseB)
+    }
+
+    let consistent =
+      switch block.kind {
+      case .unchanged: baseA && baseB
+      case .changedInA: baseB && !baseA
+      case .changedInB: baseA && !baseB
+      case .changedInBoth: aB
+      case .conflict: !aB
+      }
+    #expect(
+      consistent, "\(block.kind) block under \(mode): \(block)", sourceLocation: sourceLocation)
+
+    next = (block.base.lines.upperBound, block.a.lines.upperBound, block.b.lines.upperBound)
+  }
+  #expect(
+    next == (merge.base.lineCount, merge.a.lineCount, merge.b.lineCount),
+    "blocks cover all inputs", sourceLocation: sourceLocation)
+}
