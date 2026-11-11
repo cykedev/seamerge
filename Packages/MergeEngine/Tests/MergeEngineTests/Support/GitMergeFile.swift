@@ -17,9 +17,10 @@ enum GitMergeFile {
 
   static var isAvailable: Bool { executable != nil }
 
-  /// Runs `git merge-file -p <b> <base> <a>`: B is git's "current" side and
-  /// A the "other" side. The conflict labels are those of
-  /// `Merge.ConflictLabels()`.
+  /// Runs `git merge-file -p <b> <base> <a>`.
+  ///
+  /// B is git's "current" side and A the "other" side. The conflict labels are
+  /// those of `Merge.ConflictLabels()`.
   static func merge(base: Data, a: Data, b: Data, diff3: Bool = false) throws -> Outcome {
     guard let executable else { throw Failure(status: -1) }
 

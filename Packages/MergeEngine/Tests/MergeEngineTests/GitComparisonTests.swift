@@ -3,9 +3,10 @@ import Testing
 
 @testable import MergeEngine
 
-/// Compares exact-mode merges with `git merge-file`. Differences are expected
-/// in places and are recorded here rather than hidden; a change in either
-/// tool shows up as a failing expectation.
+/// Compares exact-mode merges with `git merge-file`.
+///
+/// Differences are expected in places and are recorded here rather than
+/// hidden; a change in either tool shows up as a failing expectation.
 @Suite("Comparison with git merge-file", .enabled(if: GitMergeFile.isAvailable))
 struct GitComparisonTests {
   enum Agreement: String, CaseIterable, Sendable {
@@ -73,8 +74,9 @@ struct GitComparisonTests {
     #expect(merge.result(markingConflicts: style).data == git.text)
   }
 
-  /// Where both tools merge cleanly, they must produce the same text. The
-  /// other outcomes are tallied and attached to the test run.
+  /// Where both tools merge cleanly, they must produce the same text.
+  ///
+  /// The other outcomes are tallied and attached to the test run.
   @Test("Clean merges of random input match git")
   func randomMerges() throws {
     var generator = SplitMix64(seed: 2026)

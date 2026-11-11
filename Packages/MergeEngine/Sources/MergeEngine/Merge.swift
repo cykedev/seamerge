@@ -8,6 +8,7 @@ import Foundation
 /// order; each block records where it lies in all three inputs, so aligned
 /// views and per-block choices can be built directly from them.
 public struct Merge: Sendable {
+  /// How A and B changed a region of the base.
   public enum BlockKind: Sendable, Hashable, CaseIterable {
     /// Base, A and B are equal under the comparison mode.
     case unchanged
@@ -38,10 +39,21 @@ public struct Merge: Sendable {
     case bThenA
   }
 
+  /// A region of the merge and where it lies in base, A and B.
+  ///
+  /// Any of the three runs may be empty, but not all of them.
   public struct Block: Sendable, Hashable {
+    /// How A and B changed the region.
     public let kind: BlockKind
+
+    /// The run in the base; empty where A, B or both inserted lines, and
+    /// always empty with ``MergeStrategy/twoWay``.
     public let base: Span
+
+    /// The run in A.
     public let a: Span
+
+    /// The run in B.
     public let b: Span
 
     /// The source used when no resolution is given, or `nil` for a conflict.
@@ -62,6 +74,7 @@ public struct Merge: Sendable {
     }
   }
 
+  /// How ``result(markingConflicts:labels:resolutions:)`` writes a conflict.
   public enum ConflictStyle: Sendable, Hashable {
     /// B between `<<<<<<<` and `=======`, A between `=======` and `>>>>>>>`:
     /// the own side first, as Git writes it.
@@ -73,10 +86,17 @@ public struct Merge: Sendable {
 
   /// The names written after the conflict markers.
   public struct ConflictLabels: Sendable, Hashable {
+    /// Written after `>>>>>>>`, the marker that closes A's lines.
     public var a: String
+
+    /// Written after `|||||||`, the marker that opens the base's lines in the
+    /// ``ConflictStyle/diff3`` style.
     public var base: String
+
+    /// Written after `<<<<<<<`, the marker that opens B's lines.
     public var b: String
 
+    /// Creates labels for the three markers that carry one.
     public init(a: String = "A", base: String = "BASE", b: String = "B") {
       self.a = a
       self.base = base
@@ -90,15 +110,25 @@ public struct Merge: Sendable {
     public let data: Data
 
     /// The byte range of ``data`` produced by each block, in the order of
-    /// ``Merge/blocks``. The ranges are contiguous and cover all of
-    /// ``data``; a block that contributes no text has an empty range. The
-    /// range of a conflict written with markers includes the markers.
+    /// ``Merge/blocks``.
+    ///
+    /// The ranges are contiguous and cover all of ``data``; a block that
+    /// contributes no text has an empty range. The range of a conflict written
+    /// with markers includes the markers.
     public let blockRanges: [Range<Int>]
   }
 
+  /// The base, split into lines; empty with ``MergeStrategy/twoWay``, which
+  /// ignores the base it is given.
   public let base: LineBuffer
+
+  /// The incoming side, split into lines.
   public let a: LineBuffer
+
+  /// The own side, split into lines.
   public let b: LineBuffer
+
+  /// The blocks in input order; empty when all three inputs are empty.
   public let blocks: [Block]
 
   /// The line ending for text the merge inserts: the first one found in B, A
@@ -147,8 +177,10 @@ public struct Merge: Sendable {
     self.lineEnding = Self.lineEnding(in: [bufferB.data, bufferA.data, bufferBase.data])
   }
 
+  /// The number of blocks of kind ``BlockKind/conflict``.
   public var conflictCount: Int { blocks.count { $0.kind == .conflict } }
 
+  /// Whether any block is a conflict.
   public var hasConflicts: Bool { blocks.contains { $0.kind == .conflict } }
 
   /// The text `source` contributes for `block`.

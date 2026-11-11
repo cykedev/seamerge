@@ -55,5 +55,8 @@ public struct Span: Sendable, Hashable {
     self.byteRange = buffer.byteRange(lines: lines)
   }
 
+  /// Whether the span holds no lines, as on a side that lacks lines another
+  /// side of the block has: one side of an insertion or deletion, or the base
+  /// of any insertion in a merge.
   public var isEmpty: Bool { lines.isEmpty }
 }

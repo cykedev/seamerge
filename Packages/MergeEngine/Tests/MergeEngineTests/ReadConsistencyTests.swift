@@ -3,9 +3,11 @@ import Testing
 
 @testable import MergeEngine
 
+/// Checks that the blocks of `Merge` describe exactly what Perforce's original
+/// `DiffMerge::Read()` outputs for the same input.
+///
 /// `Merge` is built on `DiffMerge::NextChunk()`, an addition to the vendored
-/// code. These tests check that its blocks describe exactly what Perforce's
-/// original `DiffMerge::Read()` outputs for the same input.
+/// code.
 @Suite("Consistency with DiffMerge::Read()")
 struct ReadConsistencyTests {
   private func expectConsistent(

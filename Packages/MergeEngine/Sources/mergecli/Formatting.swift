@@ -1,9 +1,10 @@
 import Foundation
 import MergeEngine
 
-/// One line for display: control characters and bytes that are not valid
-/// UTF-8 are shown as `\xNN`, a CRLF ending as `␍␊`, a CR ending as `␍`.
-/// Returns whether the line had a line ending at all.
+/// One line for display, and whether it had a line ending at all.
+///
+/// Control characters and bytes that are not valid UTF-8 are shown as `\xNN`,
+/// a CRLF ending as `␍␊`, a CR ending as `␍`.
 func displayed(_ line: Data) -> (text: String, hasLineEnding: Bool) {
   var content = line
   var ending = ""

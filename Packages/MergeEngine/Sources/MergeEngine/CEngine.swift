@@ -52,16 +52,18 @@ func offsets(_ pointer: UnsafePointer<Int64>?, count: Int) throws(EngineError) -
   return UnsafeBufferPointer(start: pointer, count: count).map { Int($0) }
 }
 
-/// A view of `count` elements at `pointer`. The view is only valid while the
-/// handle that owns the elements is alive.
+/// A view of `count` elements at `pointer`.
+///
+/// The view is only valid while the handle that owns the elements is alive.
 func elements<Element>(
   _ pointer: UnsafePointer<Element>?, count: Int
 ) -> UnsafeBufferPointer<Element> {
   UnsafeBufferPointer(start: count > 0 ? pointer : nil, count: count)
 }
 
-/// Calls `body` with base address and length of each buffer. Empty buffers
-/// may have a nil base address, which the C interface accepts.
+/// Calls `body` with base address and length of each buffer.
+///
+/// Empty buffers may have a nil base address, which the C interface accepts.
 func withBytes<R>(
   _ x: Data, _ y: Data,
   _ body: (UnsafeRawPointer?, Int, UnsafeRawPointer?, Int) -> R
@@ -85,7 +87,9 @@ func withBytes<R>(
 }
 
 /// Output of Perforce's own `DiffMerge::Read()` for the same merge, used to
-/// verify ``Merge``. A conflict contributes A's lines, then B's lines.
+/// verify ``Merge``.
+///
+/// A conflict contributes A's lines, then B's lines.
 func referenceMergeText(
   base: Data, a: Data, b: Data, whitespace: Whitespace, strategy: MergeStrategy
 ) throws(EngineError) -> (text: Data, conflictCount: Int) {
@@ -102,7 +106,9 @@ func referenceMergeText(
 }
 
 /// The engine's two-way comparison, before it is wrapped in ``Diff`` or
-/// ``TokenDiff``. Ranges are element indices.
+/// ``TokenDiff``.
+///
+/// Ranges are element indices.
 struct TwoWayComparison {
   struct Block {
     let isEqual: Bool

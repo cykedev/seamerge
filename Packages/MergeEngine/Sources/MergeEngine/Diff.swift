@@ -7,6 +7,7 @@ import Foundation
 /// equal and changed runs of lines. Inputs are arbitrary bytes; no text
 /// encoding is assumed. For changes within lines, see ``TokenDiff``.
 public struct Diff: Sendable {
+  /// Whether the runs of a block are equal or changed.
   public enum BlockKind: Sendable, Hashable {
     /// The runs are equal. In a line diff with a comparison mode other than
     /// ``Whitespace/exact``, their bytes may still differ.
@@ -16,9 +17,17 @@ public struct Diff: Sendable {
     case changed
   }
 
+  /// A run of lines in A and the run in B at the same place.
+  ///
+  /// At least one of the two runs is non-empty.
   public struct Block: Sendable, Hashable {
+    /// Whether the runs are equal or changed.
     public let kind: BlockKind
+
+    /// The run in A; empty for an insertion.
     public let a: Span
+
+    /// The run in B; empty for a deletion.
     public let b: Span
 
     /// Whether the block adds lines that are only in B.
@@ -28,8 +37,13 @@ public struct Diff: Sendable {
     public var isDeletion: Bool { kind == .changed && b.isEmpty }
   }
 
+  /// The first input, split into lines as the comparison mode does it.
   public let a: LineBuffer
+
+  /// The second input, split into lines as the comparison mode does it.
   public let b: LineBuffer
+
+  /// The blocks in input order; empty when both inputs are empty.
   public let blocks: [Block]
 
   /// Compares `a` and `b` line by line.

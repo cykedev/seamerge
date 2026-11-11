@@ -45,8 +45,9 @@ func expectValidDiff(
 }
 
 /// Rebuilds B from A's equal blocks and B's changed blocks, and A the other
-/// way round. Exact only for ``Whitespace/exact``, where equal blocks are
-/// byte-identical.
+/// way round.
+///
+/// Exact only for ``Whitespace/exact``, where equal blocks are byte-identical.
 func reconstructed(from diff: Diff) -> (a: Data, b: Data) {
   diff.blocks.reduce(into: (a: Data(), b: Data())) { result, block in
     let bytesA = diff.a.bytes(lines: block.a.lines)

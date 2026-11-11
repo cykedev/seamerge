@@ -8,16 +8,30 @@ import Foundation
 /// completely and in order, alternating between equal and changed runs of
 /// tokens.
 public struct TokenDiff: Sendable {
+  /// Whether the runs of a block are equal or changed.
   public typealias BlockKind = Diff.BlockKind
 
+  /// A run of tokens in A and the run in B at the same place.
+  ///
+  /// At least one of the two runs is non-empty.
   public struct Block: Sendable, Hashable {
+    /// Whether the runs are equal or changed.
     public let kind: BlockKind
+
+    /// The run in A; empty for an insertion.
     public let a: TokenSpan
+
+    /// The run in B; empty for a deletion.
     public let b: TokenSpan
   }
 
+  /// The first input, split into tokens.
   public let a: TokenBuffer
+
+  /// The second input, split into tokens.
   public let b: TokenBuffer
+
+  /// The blocks in input order; empty when both inputs are empty.
   public let blocks: [Block]
 
   /// Compares `a` and `b` token by token.
@@ -96,5 +110,7 @@ public struct TokenSpan: Sendable, Hashable {
     self.byteRange = buffer.byteRange(tokens: tokens)
   }
 
+  /// Whether the span holds no tokens, as on one side of an insertion or
+  /// deletion.
   public var isEmpty: Bool { tokens.isEmpty }
 }
