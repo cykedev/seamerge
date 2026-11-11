@@ -6,7 +6,8 @@ let package = Package(
   name: "MergeEngine",
   platforms: [.macOS(.v15)],
   products: [
-    .library(name: "MergeEngine", targets: ["MergeEngine"])
+    .library(name: "MergeEngine", targets: ["MergeEngine"]),
+    .executable(name: "mergecli", targets: ["mergecli"]),
   ],
   targets: [
     // The Perforce diff/merge engine (Vendor/Perforce), the adapter that
@@ -27,10 +28,18 @@ let package = Package(
       name: "MergeEngine",
       dependencies: ["CMergeEngine"]
     ),
+    .executableTarget(
+      name: "mergecli",
+      dependencies: ["MergeEngine"]
+    ),
     .testTarget(
       name: "MergeEngineTests",
       dependencies: ["MergeEngine"],
       resources: [.copy("Fixtures")]
+    ),
+    .testTarget(
+      name: "mergecliTests",
+      dependencies: ["mergecli"]
     ),
   ],
   swiftLanguageModes: [.v6],
