@@ -17,8 +17,8 @@ struct GitComparisonTests {
     case onlyGitConflicts
     /// Git merges cleanly, Perforce reports a conflict.
     case onlyPerforceConflicts
-    /// Both report conflicts. The texts are not compared: the marker formats
-    /// and the order of the sides differ.
+    /// Both report conflicts. The texts are not compared: the tools delimit
+    /// conflicts differently (see the README's "Behavior").
     case bothConflict
   }
 
@@ -62,6 +62,15 @@ struct GitComparisonTests {
   func fixture(name: String) throws {
     let input = try Fixtures.triple(name)
     #expect(try agreement(base: input.base, a: input.a, b: input.b) == Self.expectedAgreement[name])
+  }
+
+  @Test("Conflict markers are the same as git's", arguments: [Merge.ConflictStyle.merge, .diff3])
+  func conflictMarkers(style: Merge.ConflictStyle) throws {
+    let input = try Fixtures.triple("merge-conflict")
+    let merge = try Merge(base: input.base, a: input.a, b: input.b)
+    let git = try GitMergeFile.merge(
+      base: input.base, a: input.a, b: input.b, diff3: style == .diff3)
+    #expect(merge.result(markingConflicts: style).data == git.text)
   }
 
   /// Where both tools merge cleanly, they must produce the same text. The

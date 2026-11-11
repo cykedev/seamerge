@@ -63,7 +63,8 @@ public struct Merge: Sendable {
   }
 
   public enum ConflictStyle: Sendable, Hashable {
-    /// A between `<<<<<<<` and `=======`, B between `=======` and `>>>>>>>`.
+    /// B between `<<<<<<<` and `=======`, A between `=======` and `>>>>>>>`:
+    /// the own side first, as Git writes it.
     case merge
 
     /// Like ``merge``, with the base between `|||||||` and `=======`.
@@ -203,11 +204,11 @@ public struct Merge: Sendable {
         parts.append(part(of: block, from: source))
         continue
       }
-      var conflict = [marker("<<<<<<< \(labels.a)"), part(of: block, from: .a)]
+      var conflict = [marker("<<<<<<< \(labels.b)"), part(of: block, from: .b)]
       if style == .diff3 {
         conflict += [marker("||||||| \(labels.base)"), part(of: block, from: .base)]
       }
-      conflict += [marker("======="), part(of: block, from: .b), marker(">>>>>>> \(labels.b)")]
+      conflict += [marker("======="), part(of: block, from: .a), marker(">>>>>>> \(labels.a)")]
       parts.append(joined(conflict).data)
     }
     return joined(parts)

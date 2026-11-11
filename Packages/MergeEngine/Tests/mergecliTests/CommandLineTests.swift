@@ -118,7 +118,7 @@ final class CommandLineTests {
     let result = try run("merge", "--style", "merge", base, a, b, "-o", "-")
     #expect(result.status == 1)
     #expect(
-      result.output == "<<<<<<< \(a)\nvalue = 2\n=======\nvalue = 3\n>>>>>>> \(b)\n")
+      result.output == "<<<<<<< \(b)\nvalue = 3\n=======\nvalue = 2\n>>>>>>> \(a)\n")
     #expect(result.errors.contains("1 conflict"))
   }
 }

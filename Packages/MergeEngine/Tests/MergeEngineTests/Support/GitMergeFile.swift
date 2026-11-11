@@ -18,8 +18,9 @@ enum GitMergeFile {
   static var isAvailable: Bool { executable != nil }
 
   /// Runs `git merge-file -p <b> <base> <a>`: B is git's "current" side and
-  /// A the "other" side.
-  static func merge(base: Data, a: Data, b: Data) throws -> Outcome {
+  /// A the "other" side. The conflict labels are those of
+  /// `Merge.ConflictLabels()`.
+  static func merge(base: Data, a: Data, b: Data, diff3: Bool = false) throws -> Outcome {
     guard let executable else { throw Failure(status: -1) }
 
     let directory = FileManager.default.temporaryDirectory
@@ -37,7 +38,9 @@ enum GitMergeFile {
     let process = Process()
     let output = Pipe()
     process.executableURL = executable
-    process.arguments = ["merge-file", "-p", urlB.path, urlBase.path, urlA.path]
+    process.arguments =
+      ["merge-file", "-p"] + (diff3 ? ["--diff3"] : [])
+      + ["-L", "B", "-L", "BASE", "-L", "A", urlB.path, urlBase.path, urlA.path]
     process.standardOutput = output
     process.standardError = FileHandle.nullDevice
     try process.run()

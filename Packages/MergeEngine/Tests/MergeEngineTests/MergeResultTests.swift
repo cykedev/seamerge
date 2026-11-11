@@ -35,13 +35,13 @@ struct MergeResultTests {
     #expect(
       conflict.result(markingConflicts: .diff3).data.text == """
         head
-        <<<<<<< A
-        value = 2
+        <<<<<<< B
+        value = 3
         ||||||| BASE
         value = 1
         =======
-        value = 3
-        >>>>>>> B
+        value = 2
+        >>>>>>> A
         tail
 
         """)
@@ -53,11 +53,11 @@ struct MergeResultTests {
     #expect(
       conflict.result(markingConflicts: .merge, labels: labels).data.text == """
         head
-        <<<<<<< theirs
-        value = 2
-        =======
+        <<<<<<< mine
         value = 3
-        >>>>>>> mine
+        =======
+        value = 2
+        >>>>>>> theirs
         tail
 
         """)
@@ -76,7 +76,7 @@ struct MergeResultTests {
     let merge = try Merge(base: input.base, a: input.a, b: input.b)
     #expect(
       merge.result(markingConflicts: .diff3).data.text
-        == "first\n<<<<<<< A\nlast-a\n||||||| BASE\nlast\n=======\nlast-b\n>>>>>>> B\n")
+        == "first\n<<<<<<< B\nlast-b\n||||||| BASE\nlast\n=======\nlast-a\n>>>>>>> A\n")
     #expect(merge.result(resolutions: [1: .a])?.data.text == "first\nlast-a")
     #expect(merge.result(resolutions: [1: .aThenB])?.data.text == "first\nlast-a\nlast-b")
   }
@@ -87,7 +87,7 @@ struct MergeResultTests {
       base: Data("x\r\nold\r\n"), a: Data("x\r\nnew-a\r\n"), b: Data("x\r\nnew-b\r\n"))
     #expect(
       merge.result(markingConflicts: .merge).data.text
-        == "x\r\n<<<<<<< A\r\nnew-a\r\n=======\r\nnew-b\r\n>>>>>>> B\r\n")
+        == "x\r\n<<<<<<< B\r\nnew-b\r\n=======\r\nnew-a\r\n>>>>>>> A\r\n")
   }
 
   @Test("Unchanged blocks take B's text by default")
@@ -145,7 +145,7 @@ struct MergeResultTests {
     let output = conflict.result(markingConflicts: .merge)
     #expect(
       output.blockRanges.map { output.data.subdata(in: $0).text } == [
-        "head\n", "<<<<<<< A\nvalue = 2\n=======\nvalue = 3\n>>>>>>> B\n", "tail\n",
+        "head\n", "<<<<<<< B\nvalue = 3\n=======\nvalue = 2\n>>>>>>> A\n", "tail\n",
       ])
   }
 
@@ -179,6 +179,6 @@ struct MergeResultTests {
     let merge = try Merge(base: Data("old\r"), a: Data("new-a\r"), b: Data("new-b\r"))
     #expect(
       merge.result(markingConflicts: .merge).data.text
-        == "<<<<<<< A\rnew-a\r=======\rnew-b\r>>>>>>> B\r")
+        == "<<<<<<< B\rnew-b\r=======\rnew-a\r>>>>>>> A\r")
   }
 }

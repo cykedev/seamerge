@@ -66,7 +66,7 @@ for (index, block) in merge.blocks.enumerated() {
 }
 
 let output = merge.result(resolutions: [3: .b])        // nil while a conflict is open
-let marked = merge.result(markingConflicts: .diff3)    // Git-style conflict markers
+let marked = merge.result(markingConflicts: .diff3)    // conflict markers, B first as in Git
 let text = output?.data
 let third = output?.blockRanges[2]                     // block 2's bytes in text
 ```
