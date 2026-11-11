@@ -11,7 +11,7 @@ The package contains:
 - `CMergeEngine`: the Perforce engine and its C interface (internal, see
   [VENDORING.md](VENDORING.md)).
 
-Requirements: macOS 15 or later, Swift 6.
+Requirements: macOS 27 or later, Swift 6.2 or later.
 
 ## Building and testing
 

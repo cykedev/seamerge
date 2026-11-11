@@ -1,10 +1,10 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 
 import PackageDescription
 
 let package = Package(
   name: "MergeEngine",
-  platforms: [.macOS(.v15)],
+  platforms: [.macOS("27.0")],
   products: [
     .library(name: "MergeEngine", targets: ["MergeEngine"]),
     .executable(name: "mergecli", targets: ["mergecli"]),
