@@ -1,3 +1,20 @@
+--- a/diff/diffmerge.h
++++ b/diff/diffmerge.h
+@@ -94,6 +94,14 @@
+ 
+ 	LineLen  	MaxLineLength() const;
+ 
++	// MergeEngine addition: instead of Read(), step through the merge
++	// one chunk at a time and report each chunk's line ranges as
++	// half-open [start,end) pairs: base, leg1, leg2 (6 values).
++	// Returns the chunk's DiffDiffs (DD_EOF when done).  Do not mix
++	// with Read() on the same DiffMerge.
++
++	DiffDiffs	NextChunk( LineNo *ranges );
++
+     private:
+ 
+ 	DiffDiffs	DiffDiff();
 --- a/diff/diffmerge.cc
 +++ b/diff/diffmerge.cc
 @@ -221,6 +221,11 @@
@@ -12,3 +29,34 @@
  	
  	switch( flags.grid )
  	{
+@@ -389,6 +394,30 @@
+ }
+ 
+ /*
++ * DiffMerge::NextChunk() - MergeEngine addition: next chunk's line ranges
++ *
++ * Read() calls DiffDiff() once per chunk and then copies the lines
++ * [start,end) of whichever legs selbitTab selects.  NextChunk() makes the
++ * same DiffDiff() call but returns all three ranges, so callers can build
++ * aligned views and choose the source of each chunk themselves.
++ */
++
++DiffDiffs
++DiffMerge::NextChunk( LineNo *ranges )
++{
++	DiffDiffs d = DiffDiff();
++
++	if( d == DD_EOF )
++	    return d;
++
++	ranges[0] = bf->start;  ranges[1] = bf->end;
++	ranges[2] = lf1->start; ranges[3] = lf1->end;
++	ranges[4] = lf2->start; ranges[5] = lf2->end;
++
++	return d;
++}
++
++/*
+  * DiffMerge::BitNames() - turn out mnemonic(?) names for the flags
+  */
+ 

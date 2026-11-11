@@ -394,6 +394,30 @@ DiffMerge::Read( char *buf, int len, int *outlen )
 }
 
 /*
+ * DiffMerge::NextChunk() - MergeEngine addition: next chunk's line ranges
+ *
+ * Read() calls DiffDiff() once per chunk and then copies the lines
+ * [start,end) of whichever legs selbitTab selects.  NextChunk() makes the
+ * same DiffDiff() call but returns all three ranges, so callers can build
+ * aligned views and choose the source of each chunk themselves.
+ */
+
+DiffDiffs
+DiffMerge::NextChunk( LineNo *ranges )
+{
+	DiffDiffs d = DiffDiff();
+
+	if( d == DD_EOF )
+	    return d;
+
+	ranges[0] = bf->start;  ranges[1] = bf->end;
+	ranges[2] = lf1->start; ranges[3] = lf1->end;
+	ranges[4] = lf2->start; ranges[5] = lf2->end;
+
+	return d;
+}
+
+/*
  * DiffMerge::BitNames() - turn out mnemonic(?) names for the flags
  */
 

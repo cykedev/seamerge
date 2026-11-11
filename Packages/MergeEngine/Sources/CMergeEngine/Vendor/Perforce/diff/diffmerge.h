@@ -94,6 +94,14 @@ class DiffMerge {
 
 	LineLen  	MaxLineLength() const;
 
+	// MergeEngine addition: instead of Read(), step through the merge
+	// one chunk at a time and report each chunk's line ranges as
+	// half-open [start,end) pairs: base, leg1, leg2 (6 values).
+	// Returns the chunk's DiffDiffs (DD_EOF when done).  Do not mix
+	// with Read() on the same DiffMerge.
+
+	DiffDiffs	NextChunk( LineNo *ranges );
+
     private:
 
 	DiffDiffs	DiffDiff();
