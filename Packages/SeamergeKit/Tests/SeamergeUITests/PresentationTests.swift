@@ -218,6 +218,6 @@ import Testing
       session: session, context: context, undoManager: UndoManager(),
       displayOptions: DisplayOptions(), pasteboard: .withUniqueName(),
       workspace: WorkspaceRecorder(),
-      prompts: PromptRecorder())
+      prompts: PromptRecorder(), doneStyle: .standard, window: SessionWindow())
   }
 }

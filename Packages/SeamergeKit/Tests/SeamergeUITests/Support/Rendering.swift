@@ -70,13 +70,23 @@ enum Rendering {
   /// otherwise.
   @discardableResult
   static func write(_ bitmap: NSBitmapImageRep, named name: String) throws -> URL {
+    let url = try folder().appending(path: "\(name).png")
+    let data = try #require(bitmap.representation(using: .png, properties: [:]))
+    try data.write(to: url)
+    return url
+  }
+
+  /// Writes `text` into a file named `name` with the extension `txt` next to the pictures, for
+  /// what has no picture without a screen, such as a menu.
+  static func write(text: String, named name: String) throws {
+    try Data((text + "\n").utf8).write(to: try folder().appending(path: "\(name).txt"))
+  }
+
+  private static func folder() throws -> URL {
     let folder =
       ProcessInfo.processInfo.environment["SEAMERGE_PICTURES"].map { URL(filePath: $0) }
       ?? FileManager.default.temporaryDirectory.appending(path: "SeamergePictures/SeamergeUI")
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-    let url = folder.appending(path: "\(name).png")
-    let data = try #require(bitmap.representation(using: .png, properties: [:]))
-    try data.write(to: url)
-    return url
+    return folder
   }
 }

@@ -38,8 +38,11 @@ enum WindowMetrics {
   /// The part of the window's height that the panes above the result take at first.
   static let sourcesFraction: CGFloat = 0.55
 
-  /// The room the title bar keeps on each side of the title for the window's buttons.
+  /// The room the title bar keeps before the title for the window's buttons.
   static let titlebarControlsWidth: CGFloat = 80
+
+  /// The least room between the subtitle and the items of the toolbar.
+  static let toolbarSpacing: CGFloat = 16
 
   /// The width of the field of Go to Line.
   static let lineFieldWidth: CGFloat = 200

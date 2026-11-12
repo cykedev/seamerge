@@ -18,7 +18,8 @@ enum Windows {
   ) throws -> SessionWindowController {
     let controller = SessionWindowController(
       session: session, context: context, undoManager: undoManager, displayOptions: options,
-      pasteboard: .withUniqueName(), workspace: workspace, prompts: prompts)
+      pasteboard: .withUniqueName(), workspace: workspace, prompts: prompts, doneStyle: .standard,
+      window: SessionWindow())
     let window = try #require(controller.window)
     window.contentView?.layoutSubtreeIfNeeded()
     return controller

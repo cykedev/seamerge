@@ -11,8 +11,12 @@ public enum SessionOutcome: Sendable {
   case cancelled
 }
 
-/// The window of a merge: the three inputs side by side above, the result below, and a title
-/// that names the file and sums up the changes.
+/// The window of a merge: the three inputs side by side above, the result below, a title that
+/// names the file and sums up the changes, and a toolbar with the open conflicts.
+///
+/// The controller carries out the commands of the window, ``SessionCommand``, which reach it
+/// along the responder chain from the main menu, the context menus, the toolbar and the single
+/// keys of block mode, and validates them.
 @MainActor
 public final class SessionWindowController: NSWindowController {
   /// Called exactly once, when the window closes for good, with how the session ended.
@@ -32,13 +36,22 @@ public final class SessionWindowController: NSWindowController {
 
   /// What the window asks or tells while it switches to another comparison.
   let prompts: any ComparisonPrompts
-  private var summary: SessionSummary
+
   /// The undo manager of the window, which belongs to this session alone.
   let sessionUndoManager: UndoManager
+
+  private var summary: SessionSummary
   private var hasFinished = false
 
   /// Whether the files are being compared anew.
   var isSwitchingComparison = false
+
+  /// Whether the toolbar says that the files are being compared anew, which it does once the
+  /// comparison has taken a moment.
+  var showsComparisonProgress = false
+
+  /// The toolbar of the window.
+  let toolbar: SessionToolbar
 
   /// The pane above the result that had the focus last, which gets it back when text mode ends.
   private(set) weak var lastSourcePane: PaneView?
@@ -77,19 +90,19 @@ public final class SessionWindowController: NSWindowController {
     self.init(
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
-      prompts: ComparisonSheets())
+      prompts: ComparisonSheets(), doneStyle: .standard, window: SessionWindow())
     NSWorkspace.shared.notificationCenter.addObserver(
       self, selector: #selector(accessibilityDisplayOptionsDidChange(_:)),
       name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
   }
 
   /// Opens a window for `session` that draws with `displayOptions`, whatever the system's
-  /// settings are, copies to `pasteboard`, opens files with `workspace`, and asks with
-  /// `prompts`.
+  /// settings are, copies to `pasteboard`, opens files with `workspace`, asks with `prompts`,
+  /// shows the button that saves and closes in `doneStyle`, and lays itself out in `window`.
   init(
     session: Session, context: SessionContext, undoManager: UndoManager,
     displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace,
-    prompts: any ComparisonPrompts
+    prompts: any ComparisonPrompts, doneStyle: SessionToolbar.DoneStyle, window: SessionWindow
   ) {
     precondition(session.kind == .merge, "A session window shows a merge")
     let theme = displayOptions.theme(fontSize: Self.standardFontSize)
@@ -105,6 +118,7 @@ public final class SessionWindowController: NSWindowController {
     self.pasteboard = pasteboard
     self.workspace = workspace
     self.prompts = prompts
+    toolbar = SessionToolbar(doneStyle: doneStyle)
     sessionUndoManager = undoManager
     self.displayOptions = displayOptions
     presentation = MergePresentation(
@@ -112,17 +126,15 @@ public final class SessionWindowController: NSWindowController {
       displayOptions: displayOptions)
     summary = SessionSummary(changes: presentation.changes, context: context)
 
-    let window = SessionWindow(
-      contentRect: CGRect(origin: .zero, size: WindowMetrics.defaultContentSize),
-      styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered,
-      defer: true)
     window.tabbingMode = .disallowed
     window.isReleasedWhenClosed = false
+    window.toolbarStyle = .unified
     super.init(window: window)
     // The delegate comes first: the window asks it for its undo manager once and keeps the
     // answer.
     window.delegate = self
     window.contentViewController = layout
+    window.toolbar = toolbar.toolbar
     window.setContentSize(WindowMetrics.defaultContentSize)
     window.contentMinSize = CGSize(width: layout.minimumWidth, height: layout.minimumHeight)
     window.title = summary.title
@@ -138,6 +150,38 @@ public final class SessionWindowController: NSWindowController {
       window.initialFirstResponder = first
       window.makeFirstResponder(first)
     }
+    stateDidChange()
+  }
+
+  /// Shows in the toolbar what changed: the open conflicts, the arrows that lead anywhere, a
+  /// comparison under way, and whether the window can save and close.
+  func stateDidChange() {
+    let navigation = presentation.navigation
+    toolbar.update(
+      openConflictCount: navigation.openConflictCount,
+      hasConflicts: presentation.changes.blocks.contains { $0.kind == .conflict },
+      isComparing: showsComparisonProgress, isValid: canPerform,
+      canSaveAndClose: responds(along: SessionToolbar.saveAndClose))
+    updateSubtitle()
+  }
+
+  /// Whether a responder of the window, from the view with the focus to the application,
+  /// carries out `action`.
+  private func responds(along action: Selector) -> Bool {
+    var responders: [NSResponder] = []
+    var responder = window?.firstResponder
+    while let next = responder {
+      responders.append(next)
+      responder = next.nextResponder
+    }
+    responder = self
+    while let next = responder {
+      responders.append(next)
+      responder = next.nextResponder
+    }
+    let application = NSApplication.shared
+    return responders.contains { $0.responds(to: action) } || application.responds(to: action)
+      || (application.delegate as? NSObject)?.responds(to: action) == true
   }
 
   /// Remembers which pane above the result has the focus, which gets it back when text mode
@@ -177,14 +221,15 @@ public final class SessionWindowController: NSWindowController {
     updateSubtitle()
   }
 
-  /// Shows as much of the subtitle as the width of the window allows; the rest stays in the
-  /// title that VoiceOver reads.
+  /// Shows as much of the subtitle as the room before the number of open conflicts in the
+  /// toolbar allows; the rest stays in the title that VoiceOver reads.
+  ///
+  /// The subtitle stands below the title, after the buttons of the window. Until the toolbar is
+  /// laid out, its middle stands for the start of the number.
   private func updateSubtitle() {
     guard let window else { return }
-    let titleWidth = (window.title as NSString).size(withAttributes: [
-      .font: NSFont.titleBarFont(ofSize: 0)
-    ]).width
-    let width = window.frame.width - 2 * WindowMetrics.titlebarControlsWidth - titleWidth
+    let end = toolbar.conflictCountMinX ?? window.frame.width / 2
+    let width = end - WindowMetrics.titlebarControlsWidth - WindowMetrics.toolbarSpacing
     window.subtitle = summary.subtitle(
       fittingWidth: width, font: .preferredFont(forTextStyle: .subheadline))
   }
@@ -277,6 +322,10 @@ extension SessionWindowController: NSUserInterfaceValidations {
 }
 
 extension SessionWindowController: MergePresentationDelegate {
+  func presentationDidChangeCurrentBlock(_ presentation: MergePresentation) {
+    stateDidChange()
+  }
+
   func presentation(
     _ presentation: MergePresentation, menuFor hit: PaneHit, in pane: PaneView
   ) -> NSMenu {

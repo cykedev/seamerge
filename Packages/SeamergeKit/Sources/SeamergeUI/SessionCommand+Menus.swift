@@ -42,6 +42,11 @@ extension SessionCommand {
     }
   }
 
+  /// The groups of the options menu of the toolbar: those of the Compare and View menus.
+  static var optionsGroups: [[SessionCommand]] {
+    groups(in: .compare) + groups(in: .view)
+  }
+
   /// The jumps that the context menu offers, on a changed block or on unchanged text, as far as
   /// each has an effect there.
   static func contextMenuJumps(onChangedBlock: Bool) -> [SessionCommand] {

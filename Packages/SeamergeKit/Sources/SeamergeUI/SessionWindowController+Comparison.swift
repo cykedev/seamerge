@@ -17,7 +17,20 @@ extension SessionWindowController {
   public func switchComparison(to options: ComparisonOptions) async {
     guard options != comparisonOptions, !isSwitchingComparison else { return }
     isSwitchingComparison = true
-    defer { isSwitchingComparison = false }
+    let progressTimer = Timer(timeInterval: Self.progressDelay, repeats: false) { [weak self] _ in
+      // Timers of the main run loop fire on the main thread.
+      MainActor.assumeIsolated {
+        self?.showsComparisonProgress = true
+        self?.stateDidChange()
+      }
+    }
+    RunLoop.main.add(progressTimer, forMode: .common)
+    defer {
+      progressTimer.invalidate()
+      isSwitchingComparison = false
+      showsComparisonProgress = false
+      stateDidChange()
+    }
     let session = presentation.changes.session
     let switched: Session
     do {
@@ -85,6 +98,9 @@ extension SessionWindowController {
     guard let window else { return }
     await prompts.reportFailedComparison(in: window)
   }
+
+  /// How long a comparison runs before the toolbar says that it is under way.
+  static let progressDelay: TimeInterval = 0.15
 
   static let logger = Logger(subsystem: "app.eiden.seamerge", category: "SeamergeUI")
 }

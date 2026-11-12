@@ -16,6 +16,29 @@
     "%@, line %lld": {
       "comment": "VoiceOver: a mark in the overview bar of the result, such as From A, line 12."
     },
+    "%lld Conflicts Left": {
+      "comment": "Toolbar: how many conflicts are still open, such as 2 Conflicts Left.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Conflict Left"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Conflicts Left"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld changes from A": {
       "comment": "Subtitle: the changes of the incoming side, such as 3 changes from A.",
       "localizations": {
@@ -71,6 +94,9 @@
     "Actual Size": {
       "comment": "View menu command."
     },
+    "All Conflicts Resolved": {
+      "comment": "Toolbar: every conflict is resolved."
+    },
     "All whitespace ignored": {
       "comment": "Subtitle: the comparison ignores spaces and tabs entirely."
     },
@@ -95,8 +121,17 @@
     "Change Comparison": {
       "comment": "Undo menu: the switch to another comparison mode or merge strategy."
     },
+    "Change how the files are compared and shown": {
+      "comment": "Help tag of the options item in the toolbar."
+    },
     "Change in %@, line %lld": {
       "comment": "VoiceOver: a mark in the overview bar, such as Change in A, line 12."
+    },
+    "Changes": {
+      "comment": "Toolbar."
+    },
+    "Choose how lines are compared": {
+      "comment": "Help tag of the comparison item in the toolbar."
     },
     "Collapse Unchanged Lines": {
       "comment": "View menu command."
@@ -106,6 +141,15 @@
     },
     "Compared exactly": {
       "comment": "Subtitle: the comparison counts every byte, whitespace and line endings too."
+    },
+    "Comparing…": {
+      "comment": "Toolbar: the files are being compared anew."
+    },
+    "Comparison": {
+      "comment": "Toolbar item: the comparison mode."
+    },
+    "Conflicts": {
+      "comment": "Toolbar item: the open conflicts."
     },
     "Copy": {
       "comment": "Context menu: copy the selected text, or the block if nothing is selected."
@@ -136,6 +180,9 @@
     },
     "Differs from the line endings of the other files": {
       "comment": "Help tag of the line endings in a header, shown only where they differ."
+    },
+    "Done": {
+      "comment": "Toolbar button: save and close."
     },
     "Edited by hand": {
       "comment": "VoiceOver: a part of the result that the user typed."
@@ -242,6 +289,9 @@
     "Next Pane": {
       "comment": "Go menu command."
     },
+    "No Conflicts": {
+      "comment": "Toolbar: the merge had no conflict."
+    },
     "No changes": {
       "comment": "Subtitle: neither side changed the base."
     },
@@ -254,6 +304,9 @@
     "Open in Editor": {
       "comment": "File menu command."
     },
+    "Options": {
+      "comment": "Toolbar item: comparison and view options."
+    },
     "Paste": {
       "comment": "Context menu: paste text."
     },
@@ -265,6 +318,12 @@
     },
     "Previous Pane": {
       "comment": "Go menu command."
+    },
+    "Previous and Next Change": {
+      "comment": "Toolbar item in the customization sheet."
+    },
+    "Previous and Next Conflict": {
+      "comment": "Toolbar item in the customization sheet."
     },
     "Rebase onto %@ · Commit %lld of %lld": {
       "comment": "Subtitle: how far a rebase has come, such as Rebase onto main · Commit 3 of 7."
@@ -280,6 +339,9 @@
     },
     "Result, %@": {
       "comment": "VoiceOver: the result pane and the file it is written to."
+    },
+    "Save and close": {
+      "comment": "Help tag of Done in the toolbar."
     },
     "Select All": {
       "comment": "Context menu: select the whole text."

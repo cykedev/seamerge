@@ -20,5 +20,6 @@ extension SessionWindowController {
     }
     _ = document.apply(plan, replacedTexts: replaced)
     presentation.show(document, text: text)
+    stateDidChange()
   }
 }

@@ -1,5 +1,6 @@
 import AppKit
 import MergeModel
+import PaneKit
 import SwiftUI
 import Testing
 
@@ -39,6 +40,125 @@ import Testing
       session, context: SampleMerges.helloWorldContext, look: look,
       options: DisplayOptions(differentiatesWithoutColor: true),
       named: "helloworld-without-color-\(look.name)")
+  }
+
+  @Test(
+    arguments: [
+      (SessionToolbar.DoneStyle.word, false), (.word, true), (.checkmark, false),
+      (.checkmark, true),
+    ], [Look.light, .dark])
+  func toolbarIsPicturedWithEitherDoneButton(
+    variant: (style: SessionToolbar.DoneStyle, resolved: Bool), look: Look
+  ) async throws {
+    let (style, resolved) = variant
+    let session = try await SampleMerges.helloWorld()
+    let name =
+      "toolbar-done-\(style == .word ? "word" : "checkmark")-\(resolved ? "resolved" : "open")-"
+      + look.name
+    try picture(
+      session, context: SampleMerges.helloWorldContext, look: look, doneStyle: style,
+      actsAsKey: true, named: name
+    ) { controller in
+      if resolved {
+        controller.resolveOpenConflicts(with: [.a])
+      }
+    }
+  }
+
+  @Test(arguments: Look.all)
+  func toolbarIsPicturedInEveryLook(look: Look) async throws {
+    let session = try await SampleMerges.helloWorld()
+    try picture(
+      session, context: SampleMerges.helloWorldContext, look: look,
+      options: DisplayOptions(increasesContrast: look.increasesContrast), actsAsKey: true,
+      named: "toolbar-\(look.name)")
+  }
+
+  @Test func toolbarIsPicturedWhileComparing() async throws {
+    let session = try await SampleMerges.helloWorld()
+    try picture(
+      session, context: SampleMerges.helloWorldContext, look: .light,
+      named: "toolbar-comparing-light"
+    ) { controller in
+      controller.showsComparisonProgress = true
+      controller.stateDidChange()
+    }
+  }
+
+  @Test(arguments: [Look.light, .dark], [true, false])
+  func currentBlockIsPicturedWithAndWithoutFocus(look: Look, hasFocus: Bool) async throws {
+    let session = try await SampleMerges.manyBlocks()
+    try picture(
+      session, context: SessionContext(), look: look,
+      options: DisplayOptions(reducesMotion: true), actsAsKey: true,
+      size: CGSize(width: 1280, height: 600),
+      named: "current-block-\(hasFocus ? "focus" : "no-focus")-\(look.name)"
+    ) { controller in
+      controller.presentation.jump(to: 6)
+      if !hasFocus {
+        controller.window?.makeFirstResponder(nil)
+      }
+    }
+  }
+
+  @Test(arguments: [Look.light, .dark])
+  func currentBlockIsPicturedInTextMode(look: Look) async throws {
+    let session = try await SampleMerges.manyBlocks()
+    try picture(
+      session, context: SessionContext(), look: look,
+      options: DisplayOptions(reducesMotion: true), actsAsKey: true,
+      size: CGSize(width: 1280, height: 600), named: "current-block-text-mode-\(look.name)"
+    ) { controller in
+      controller.presentation.jump(to: 6)
+      controller.enterTextMode()
+    }
+  }
+
+  @Test func baseHiddenIsPictured() async throws {
+    let session = try await SampleMerges.helloWorld()
+    try picture(
+      session, context: SampleMerges.helloWorldContext, look: .light, named: "base-hidden-light"
+    ) { controller in
+      controller.toggleBase(nil)
+    }
+  }
+
+  @Test func contextMenusAreWrittenDown() async throws {
+    let controller = try Windows.controller(for: try await SampleMerges.helloWorld())
+    let presentation = controller.presentation
+    let conflict = try #require(presentation.navigation.firstOpenConflict)
+    let change = try #require(presentation.changes.blocks.indices.first { $0 != conflict })
+    presentation.setCurrentBlock(0)
+    var lines: [String] = []
+    for pane in Windows.panes(of: controller) {
+      let name = pane.accessibilityLabel() ?? ""
+      let places: [(String, PaneHit)] = [
+        ("changed block", PaneHit(row: pane.content.blocks[change].rows.lowerBound, block: change)),
+        (
+          "open conflict",
+          PaneHit(row: pane.content.blocks[conflict].rows.lowerBound, block: conflict)
+        ),
+        ("unchanged text", PaneHit(row: pane.content.lineNumbers.count - 1, block: nil)),
+      ]
+      for (place, hit) in places {
+        presentation.setCurrentBlock(0)
+        let menu = try #require(presentation.pane(pane, menuFor: hit))
+        lines.append(
+          "\(name), \(place): \(Self.entries(of: menu))")
+      }
+    }
+    for role in [Role.a, .base, .b] {
+      let menu = controller.headerMenu(for: role).map(Self.entries(of:)) ?? "no menu"
+      lines.append("Header \(role.letter): \(menu)")
+    }
+    try Rendering.write(text: lines.joined(separator: "\n"), named: "context-menus")
+  }
+
+  /// The entries of `menu` in one line: separators as a bar, disabled entries in parentheses.
+  private static func entries(of menu: NSMenu) -> String {
+    menu.items.map { item in
+      item.isSeparatorItem ? "|" : item.isEnabled ? item.title : "(\(item.title))"
+    }.joined(separator: " · ").replacingOccurrences(of: " · | · ", with: " | ")
   }
 
   @Test func smallestWindowIsPictured() async throws {
@@ -100,21 +220,41 @@ import Testing
   }
 
   /// Draws the window of `session` at `size`, or at its least size for `nil`, after `prepare`.
+  ///
+  /// A responder that saves and closes stands in for the one that comes with saving, so that
+  /// the button shows as it does in the app. With `actsAsKey`, the window acts as the key
+  /// window, so that the focus shows in the accent color.
   private func picture(
     _ session: Session, context: SessionContext, look: Look,
-    options: DisplayOptions = DisplayOptions(),
-    size: CGSize? = WindowMetrics.defaultContentSize, named name: String,
+    options: DisplayOptions = DisplayOptions(), doneStyle: SessionToolbar.DoneStyle = .standard,
+    actsAsKey: Bool = false, size: CGSize? = WindowMetrics.defaultContentSize, named name: String,
     prepare: (SessionWindowController) -> Void = { _ in }
   ) throws {
     let controller = SessionWindowController(
       session: session, context: context, undoManager: UndoManager(), displayOptions: options,
-      pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(),
-      prompts: PromptRecorder())
+      pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(), prompts: PromptRecorder(),
+      doneStyle: doneStyle,
+      window: actsAsKey ? KeySessionWindow() : SessionWindow())
     let window = try #require(controller.window)
     defer { window.close() }
+    let saver = SaveAndCloseStandIn()
+    controller.nextResponder = saver
     Rendering.prepare(window, size: size ?? window.contentMinSize, appearance: look.appearance)
     controller.layout.placeDividers()
+    controller.stateDidChange()
     prepare(controller)
     try Rendering.write(Rendering.bitmap(of: window), named: name)
+    // The window does not retain its next responder.
+    withExtendedLifetime(saver) {}
   }
+}
+
+/// A session window that acts as the key window without being shown.
+final class KeySessionWindow: SessionWindow {
+  override var isKeyWindow: Bool { true }
+}
+
+/// Stands in for the responder that saves and closes, which does nothing here.
+final class SaveAndCloseStandIn: NSResponder {
+  @objc func saveAndClose(_ sender: Any?) {}
 }

@@ -33,7 +33,8 @@ final class MergePresentation {
   /// The coupling of the panes, which keeps them at the same place while one of them scrolls.
   let scrollSync = ScrollSync()
 
-  /// Supplies the context menus of the panes; the presentation does not retain it.
+  /// Learns when the current block changes and supplies the context menus of the panes; the
+  /// presentation does not retain it.
   weak var delegate: (any MergePresentationDelegate)?
 
   /// The accessibility settings, of which the presentation reads whether movement is reduced.
@@ -120,6 +121,7 @@ final class MergePresentation {
     }
     sourcesOverviewBar.currentBlock = block
     resultOverviewBar.currentBlock = block
+    delegate?.presentationDidChangeCurrentBlock(self)
   }
 
   /// Shows the document in every pane: the contents, the collapsed runs, the marks of the
@@ -341,9 +343,12 @@ final class MergePresentation {
   }
 }
 
-/// Supplies what a presentation shows on demand.
+/// Learns what changes in a presentation and supplies what it shows on demand.
 @MainActor
 protocol MergePresentationDelegate: AnyObject {
+  /// Tells the delegate that another block became current, or none.
+  func presentationDidChangeCurrentBlock(_ presentation: MergePresentation)
+
   /// The context menu for a secondary click on `hit` in `pane`.
   func presentation(_ presentation: MergePresentation, menuFor hit: PaneHit, in pane: PaneView)
     -> NSMenu
