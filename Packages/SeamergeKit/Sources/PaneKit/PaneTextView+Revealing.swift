@@ -39,6 +39,10 @@ extension PaneTextView {
   }
 
   private func scroll(toShow offset: Int, withContext: Bool) {
+    // A place behind a bar comes into view once its run is expanded; until then the bar shows.
+    if let run = displayRows.runIndex(containingRow: grid.row(containingOffset: offset)) {
+      interaction?.askToExpandRun(at: run)
+    }
     guard
       let scrollView = enclosingScrollView,
       let origin = origin(
@@ -56,7 +60,8 @@ extension PaneTextView {
   private func origin(showing offset: Int, in visible: CGRect, withContext: Bool) -> CGPoint? {
     let row = grid.row(containingOffset: offset)
     let place = CGRect(
-      x: xPosition(ofOffset: offset), y: CGFloat(row) * theme.rowHeight,
+      x: xPosition(ofOffset: offset),
+      y: CGFloat(displayRows.displayRow(ofRow: row)) * theme.rowHeight,
       width: theme.characterWidth, height: theme.rowHeight)
     var origin = visible.origin
     if place.minY < visible.minY || place.maxY > visible.maxY {

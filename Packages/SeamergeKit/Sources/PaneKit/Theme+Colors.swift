@@ -48,6 +48,31 @@ extension Theme {
     }
   }
 
+  /// The quiet tone of the bar of a collapsed run, drawn over the text background.
+  public var collapsedRunFill: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.collapsedRunOpacity[appearance])
+    }
+  }
+
+  /// The tone of the bar of a collapsed run while it is pressed, drawn over the text background.
+  public var pressedCollapsedRunFill: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.pressedCollapsedRunOpacity[appearance])
+    }
+  }
+
+  /// The color of the ellipsis and the label on the bar of a collapsed run: secondary beside the
+  /// code, yet as legible as any text, also within a selection.
+  public var collapsedRunTextColor: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.collapsedRunTextOpacity[appearance])
+    }
+  }
+
   /// The light area of the overview bar that shows the visible part of the text.
   public var visibleRegionFill: NSColor {
     color { appearance, nsAppearance in

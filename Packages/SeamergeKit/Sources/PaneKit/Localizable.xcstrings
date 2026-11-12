@@ -1,6 +1,75 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%lld Unchanged Lines": {
+      "comment": "The bar that stands for unchanged lines that are hidden.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Unchanged Line"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Unchanged Lines"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld unchanged lines in %@, collapsed": {
+      "comment": "VoiceOver: the bar that stands for unchanged lines that are hidden in a pane, such as Base.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld unchanged line in %@, collapsed"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld unchanged lines in %@, collapsed"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld unchanged lines, collapsed": {
+      "comment": "VoiceOver: the bar that stands for unchanged lines that are hidden.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld unchanged line, collapsed"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld unchanged lines, collapsed"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Added": {
       "comment": "VoiceOver: the side added lines."
     },
@@ -36,6 +105,9 @@
     },
     "Resolved conflict": {
       "comment": "VoiceOver: a conflict that has been decided."
+    },
+    "Shows the hidden lines.": {
+      "comment": "VoiceOver: what pressing the bar of hidden lines does."
     }
   },
   "version": "1.0"

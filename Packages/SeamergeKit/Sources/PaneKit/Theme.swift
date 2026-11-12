@@ -143,6 +143,12 @@ public struct Theme {
   /// The width of the notch of an open conflict in the overview bar.
   static let conflictNotchWidth: CGFloat = 2
 
+  /// The text style of the label on the bar of a collapsed run.
+  static let collapsedRunTextStyle: NSFont.TextStyle = .subheadline
+
+  /// The distance between the ellipsis on the bar of a collapsed run and its label.
+  static let collapsedRunSymbolSpacing: CGFloat = 4
+
   /// The smallest font size of the interface.
   private static let smallestFontSize: CGFloat = 10
 }

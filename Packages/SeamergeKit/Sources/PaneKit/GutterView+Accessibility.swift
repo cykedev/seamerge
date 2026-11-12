@@ -39,7 +39,8 @@ extension GutterView {
         children.append(element(named: name, atRow: row, frame: markerSlot(index, in: rowRect)))
       }
     }
-    for row in removalRows(rows) {
+    let removals = rows.isEmpty ? [] : removalRows(rows[0]..<rows[rows.count - 1] + 1)
+    for row in removals where displayRows.runIndex(containingRow: row) == nil {
       children.append(
         element(
           named: String(

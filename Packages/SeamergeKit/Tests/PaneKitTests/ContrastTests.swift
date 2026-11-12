@@ -99,6 +99,35 @@ import Testing
       }
     }
     return pairs + overviewPairs(theme: theme, ground: ground, resolve: resolve)
+      + collapsedRunPairs(theme: theme, ground: ground, resolve: resolve)
+  }
+
+  /// The pairs on the bar of a collapsed run: its label and ellipsis, on the bar and within a
+  /// selection that takes in its rows.
+  private func collapsedRunPairs(
+    theme: Theme, ground: NSColor, resolve: (NSColor?) -> NSColor?
+  ) -> [Pair] {
+    let bar = Contrast.over(resolve(theme.collapsedRunFill), ground)
+    var surfaces = [
+      ("bar of a collapsed run", bar),
+      (
+        "pressed bar of a collapsed run",
+        Contrast.over(resolve(theme.pressedCollapsedRunFill), ground)
+      ),
+    ]
+    for isEmphasized in [true, false] {
+      surfaces.append(
+        (
+          "\(isEmphasized ? "selection" : "inactive selection") on the bar of a collapsed run",
+          Contrast.over(resolve(theme.selectionFill(isEmphasized: isEmphasized)), bar)
+        ))
+    }
+    return surfaces.map { name, surface in
+      Pair(
+        description: "label on \(name)",
+        foreground: Contrast.over(resolve(theme.collapsedRunTextColor), surface), surface: surface,
+        minimum: Self.text)
+    }
   }
 
   /// The pairs in the overview bar: every mark and the pointer at the current block, on the bar

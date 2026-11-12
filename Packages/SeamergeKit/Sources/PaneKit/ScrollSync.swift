@@ -3,10 +3,11 @@ import AppKit
 /// Keeps several panes at the same place while any one of them scrolls.
 ///
 /// The pane that scrolls leads; the others follow at once, without moving it back. Panes on the
-/// same grid follow to the same origin. Between panes whose rows differ, the row mappings set with
-/// `setRowMapping(between:and:forward:backward:)` decide: the follower puts the row that the
-/// mapping gives at its reading line, a quarter down from its top, where the leader has the row
-/// it maps from.
+/// same grid, with the same collapsed runs, follow to the same origin. Between panes whose rows
+/// differ, the row mappings set with `setRowMapping(between:and:forward:backward:)` decide: the
+/// follower puts the row that the mapping gives at its reading line, a quarter down from its top,
+/// where the leader has the row it maps from. Mappings take and give rows of the grid; each pane
+/// converts them to the rows it shows, with its collapsed runs.
 ///
 /// Sideways, all panes share one position, also while they bounce at an edge, and one scroll
 /// range: that of the pane that needs the widest, so that the text of every pane reaches as far.
@@ -82,6 +83,15 @@ public final class ScrollSync {
     mappings[Pair(leader: secondID, follower: firstID)] = backward
   }
 
+  /// Runs `body`, in which panes move without the others following, as a pane does to keep its
+  /// rows in place when its collapsed runs change.
+  func withoutFollowing(_ body: () -> Void) {
+    let wasSynchronizing = isSynchronizing
+    isSynchronizing = true
+    defer { isSynchronizing = wasSynchronizing }
+    body()
+  }
+
   /// Gives every pane the scroll range of the pane that needs the widest; called when a pane's
   /// own need changes.
   func updateHorizontalScrollRange() {
@@ -115,8 +125,10 @@ public final class ScrollSync {
       let y =
         mappings[Pair(leader: ObjectIdentifier(leader), follower: ObjectIdentifier(follower))]
         .map { mapping in
-          let row = (origin.y + Theme.readingLine * leader.visibleHeight) / leader.rowHeight
-          return CGFloat(mapping(Double(row))) * follower.rowHeight
+          let displayRow =
+            (origin.y + Theme.readingLine * leader.visibleHeight) / leader.rowHeight
+          let row = mapping(leader.displayRows.rowPosition(ofDisplay: Double(displayRow)))
+          return CGFloat(follower.displayRows.displayPosition(ofRow: row)) * follower.rowHeight
             - Theme.readingLine * follower.visibleHeight
         } ?? origin.y
       // Sideways the follower takes the leader's position as it is, beyond an edge too, so that

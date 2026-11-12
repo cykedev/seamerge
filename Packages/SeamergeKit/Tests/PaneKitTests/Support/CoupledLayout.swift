@@ -12,6 +12,8 @@ final class CoupledLayout: NSView {
   let upperBar = OverviewBar()
   let resultBar = OverviewBar()
   let sync = ScrollSync()
+  /// The merge as the panes show it, its chunks repeated.
+  let merge: SampleMerge
   private let highlightProviders: [SampleHighlights]
 
   /// Lays out `merge` with `theme`, its chunks `repeats` times over, so that the panes scroll.
@@ -19,6 +21,7 @@ final class CoupledLayout: NSView {
     let merge = SampleMerge(
       chunks: Array(repeating: merge.chunks, count: repeats).flatMap(\.self),
       ignoredDifferenceRowsOfB: [])
+    self.merge = merge
     let contents = SampleMerge.Side.allCases.map { merge.content(of: $0) }
     upperPanes = contents.map { content in
       let pane = PaneView(theme: theme)
@@ -61,6 +64,19 @@ final class CoupledLayout: NSView {
   }
 
   override var isFlipped: Bool { true }
+
+  /// Collapses the long runs of unchanged rows in every pane, except the run at `expanded`, the
+  /// way the window does.
+  func collapseUnchangedRows(except expanded: Int? = nil) {
+    let (upper, result) = merge.collapsedRuns()
+    func shown(_ runs: [CollapsedRun]) -> [CollapsedRun] {
+      runs.indices.filter { $0 != expanded }.map { runs[$0] }
+    }
+    for pane in upperPanes {
+      pane.collapsedRuns = shown(upper)
+    }
+    resultPane.collapsedRuns = shown(result)
+  }
 
   /// Makes `block` of the upper panes the current one in every pane and in both bars.
   func setCurrentBlock(_ block: Int) {

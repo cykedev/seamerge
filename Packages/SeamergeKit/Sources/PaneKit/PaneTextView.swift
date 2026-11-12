@@ -4,13 +4,15 @@ import AppKit
 ///
 /// Selection, copying, the find bar, input methods and VoiceOver come from `NSTextView`. The
 /// view adds the row fills, the highlights and marks within lines and its size, all from the
-/// grid rather than from TextKit, so that row *r* lies at `r × rowHeight` in every pane. Its
+/// grid rather than from TextKit, so that row *r* lies at its display row times `rowHeight` in
+/// every pane; the rows behind a collapsed run take no room, except the one of its bar. Its
 /// fragments draw the selection, translucent above the row fills (see `RowLayoutFragment`).
 final class PaneTextView: NSTextView {
   private(set) var theme = Theme()
   private(set) var content = PaneContent.empty
   private(set) var currentBlock: Int?
   private(set) var grid = RowGrid(text: "", tabWidth: 1)
+  private(set) var displayRows = DisplayRows(runs: [], rowCount: 1)
 
   /// Learns about clicks on rows and supplies the context menu.
   weak var interaction: (any RowInteraction)?
@@ -74,6 +76,7 @@ final class PaneTextView: NSTextView {
         width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
     }
     textLayoutManager?.delegate = self
+    textContentStorage?.delegate = self
     NotificationCenter.default.addObserver(
       self, selector: #selector(willSwitchToLayoutManager(_:)),
       name: NSTextView.willSwitchToNSLayoutManagerNotification, object: self)
@@ -83,10 +86,10 @@ final class PaneTextView: NSTextView {
     self.theme = theme
   }
 
-  /// Shows `content` drawn with `theme`.
+  /// Shows `content` with `collapsedRuns`, drawn with `theme`.
   ///
-  /// - Precondition: `content` has one line number per row.
-  func show(_ content: PaneContent, theme: Theme) {
+  /// - Precondition: `content` has one line number per row, and the runs lie within its rows.
+  func show(_ content: PaneContent, collapsedRuns: [CollapsedRun], theme: Theme) {
     let grid = RowGrid(text: content.text, tabWidth: theme.tabWidth)
     precondition(
       content.lineNumbers.count == grid.rowCount,
@@ -97,6 +100,7 @@ final class PaneTextView: NSTextView {
     self.content = content
     self.theme = theme
     self.grid = grid
+    displayRows = DisplayRows(runs: collapsedRuns, rowCount: grid.rowCount)
     if let currentBlock, !content.blocks.indices.contains(currentBlock) {
       self.currentBlock = nil
     }
@@ -107,6 +111,18 @@ final class PaneTextView: NSTextView {
     typingAttributes = attributes
     textStorage?.setAttributedString(
       NSAttributedString(string: content.text, attributes: attributes))
+  }
+
+  /// Hides `runs` of rows behind bars, each one row high, and lays out the text again.
+  ///
+  /// - Precondition: The runs are sorted, do not overlap and lie within the rows.
+  func setCollapsedRuns(_ runs: [CollapsedRun]) {
+    guard runs != displayRows.runs else { return }
+    displayRows = DisplayRows(runs: runs, rowCount: grid.rowCount)
+    guard let textLayoutManager else { return }
+    // Which paragraphs the layout manager enumerates changes with the runs.
+    textLayoutManager.invalidateLayout(for: textLayoutManager.documentRange)
+    needsDisplay = true
   }
 
   /// Marks the block at `block` as the current one, or none.
@@ -145,18 +161,26 @@ final class PaneTextView: NSTextView {
     return interaction.menu(forRow: row(at: convert(event.locationInWindow, from: nil)))
   }
 
-  /// The row at `point` of the view, the nearest one beyond the text.
+  /// The row at `point` of the view, the nearest one beyond the text; on a bar, the first row
+  /// that it hides.
   private func row(at point: CGPoint) -> Int {
-    min(max(Int((point.y / theme.rowHeight).rounded(.down)), 0), grid.rowCount - 1)
+    let displayRow = Int((point.y / theme.rowHeight).rounded(.down))
+    return displayRows.row(atDisplayRow: min(max(displayRow, 0), displayRows.count - 1))
   }
 
   override func becomeFirstResponder() -> Bool {
-    defer { redraw(selections: selectedRanges) }
+    defer {
+      redraw(selections: selectedRanges)
+      interaction?.selectionDidChange()
+    }
     return super.becomeFirstResponder()
   }
 
   override func resignFirstResponder() -> Bool {
-    defer { redraw(selections: selectedRanges) }
+    defer {
+      redraw(selections: selectedRanges)
+      interaction?.selectionDidChange()
+    }
     return super.resignFirstResponder()
   }
 
@@ -210,13 +234,20 @@ final class PaneTextView: NSTextView {
     return window.isKeyWindow && window.firstResponder === self
   }
 
+  /// The fill of the selection as the fragments draw it now.
+  var selectionFill: NSColor {
+    theme.selectionFill(isEmphasized: isSelectionEmphasized)
+  }
+
   @objc private func selectionDidChange(_ notification: Notification) {
     redraw(selections: drawnSelection + selectedRanges)
     drawnSelection = selectedRanges
+    interaction?.selectionDidChange()
   }
 
   @objc private func windowKeyStateDidChange(_ notification: Notification) {
     redraw(selections: selectedRanges)
+    interaction?.selectionDidChange()
   }
 
   /// Draws the rows that `selections` touch again.
@@ -322,7 +353,25 @@ extension PaneTextView: @MainActor NSTextLayoutManagerDelegate {
   }
 }
 
+extension PaneTextView: @MainActor NSTextContentStorageDelegate {
+  /// Leaves out the paragraphs of the rows that collapsed runs hide, so that they take no room;
+  /// the first row of each run stays, as the place of its bar.
+  func textContentManager(
+    _ textContentManager: NSTextContentManager, shouldEnumerate textElement: NSTextElement,
+    options: NSTextContentManager.EnumerationOptions
+  ) -> Bool {
+    guard !displayRows.runs.isEmpty, let range = textElement.elementRange else { return true }
+    let start = textContentManager.offset(
+      from: textContentManager.documentRange.location, to: range.location)
+    return !displayRows.isHidden(row: grid.row(containingOffset: start))
+  }
+}
+
 extension PaneTextView: RowPainter {
+  func displayRows(ofRows rows: Range<Int>) -> Range<Int> {
+    displayRows.displayRows(ofRows: rows)
+  }
+
   var extent: RowLayoutFragment.Extent {
     RowLayoutFragment.Extent(
       containerInset: textContainerOrigin.x, width: bounds.width, textLift: theme.textLift,
@@ -332,14 +381,15 @@ extension PaneTextView: RowPainter {
   func painting(forRows rows: Range<Int>) -> RowLayoutFragment.Painting {
     let changes = changes(inRows: rows)
     let paragraph = grid.paragraphOffsets(ofRows: rows)
-    let selectionFill = theme.selectionFill(isEmphasized: isSelectionEmphasized)
+    let selectionFill = selectionFill
     let selections = selectedRanges.map(\.rangeValue).compactMap { selection in
       let range = selection.location..<selection.location + selection.length
       return range.isEmpty || !range.overlaps(paragraph)
         ? nil : RowLayoutFragment.Run(range: range, fill: selectionFill)
     }
     return RowLayoutFragment.Painting(
-      extent: extent, rowFills: rows.map(rowFill(atRow:)), background: Theme.backgroundColor,
+      extent: extent, isCollapsed: displayRows.runIndex(containingRow: rows.lowerBound) != nil,
+      rowFills: rows.map(rowFill(atRow:)), background: Theme.backgroundColor,
       textBandHeight: theme.textBandHeight, runs: changes.runs, selections: selections,
       removals: changes.removals,
       invisibles: showsInvisibles

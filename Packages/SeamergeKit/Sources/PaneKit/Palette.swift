@@ -150,6 +150,18 @@ enum Palette {
   static let visibleRegionOutlineOpacity = AppearanceValues<CGFloat>(
     light: 0.18, dark: 0.22, lightHighContrast: 0.50, darkHighContrast: 0.55)
 
+  /// The opacity of the label color behind the bar of a collapsed run.
+  static let collapsedRunOpacity = AppearanceValues<CGFloat>(
+    light: 0.05, dark: 0.07, lightHighContrast: 0.08, darkHighContrast: 0.10)
+
+  /// The opacity of the label color behind the bar of a collapsed run while it is pressed.
+  static let pressedCollapsedRunOpacity = AppearanceValues<CGFloat>(
+    light: 0.12, dark: 0.16, lightHighContrast: 0.16, darkHighContrast: 0.20)
+
+  /// The opacity of the label color for the ellipsis and the label on the bar of a collapsed run.
+  static let collapsedRunTextOpacity = AppearanceValues<CGFloat>(
+    light: 0.66, dark: 0.66, lightHighContrast: 0.80, darkHighContrast: 0.80)
+
   /// The opacity of the label color for the preview of a conflict in the result.
   static let previewTextOpacity = AppearanceValues<CGFloat>(
     light: 0.60, dark: 0.80, lightHighContrast: 0.60, darkHighContrast: 0.85)

@@ -15,8 +15,9 @@ public protocol OverviewBarDelegate: AnyObject {
 /// meant to be seen at all times. A click on the track pages or jumps to the spot as the user set
 /// it in the system; a click that jumps to a mark also reports its block.
 ///
-/// Install the bar on a pane with `PaneView.overviewBar`; the pane places it, tells it the number
-/// of rows and scrolls when it acts.
+/// Install the bar on a pane with `PaneView.overviewBar`; the pane places it, tells it its rows
+/// and scrolls when it acts. Marks name rows of the grid; the bar draws them where the pane shows
+/// them, with its collapsed runs.
 public final class OverviewBar: NSScroller {
   /// The colors of the marks and areas.
   public var theme = Theme() {
@@ -41,8 +42,8 @@ public final class OverviewBar: NSScroller {
   /// to scroll there whatever part of the bar the mouse hit last.
   private(set) var isPlacingKnob = false
 
-  /// The number of rows of the pane that the bar scrolls.
-  var rowCount = 1 {
+  /// The rows of the pane that the bar scrolls, as the pane shows them.
+  var displayRows = DisplayRows(runs: [], rowCount: 1) {
     didSet { invalidateLayout() }
   }
 
@@ -119,8 +120,9 @@ public final class OverviewBar: NSScroller {
 
   /// Reports the block of a mark that VoiceOver pressed and scrolls it into view.
   fileprivate func pressMark(_ mark: OverviewMark) {
-    let middle = (CGFloat(mark.rows.lowerBound) + CGFloat(mark.rows.upperBound)) / 2
-    scroll(showing: middle / CGFloat(max(rowCount, 1)))
+    let rows = displayRows.displayRows(ofRows: mark.rows)
+    let middle = (CGFloat(rows.lowerBound) + CGFloat(rows.upperBound)) / 2
+    scroll(showing: middle / CGFloat(max(displayRows.count, 1)))
     delegate?.overviewBar(self, didSelectBlock: mark.block)
   }
 
@@ -137,7 +139,12 @@ public final class OverviewBar: NSScroller {
     if let cachedLayout {
       return cachedLayout
     }
-    let layout = OverviewLayout(marks: marks, rowCount: rowCount, area: markArea)
+    let shownMarks = marks.map { mark in
+      var shown = mark
+      shown.rows = displayRows.displayRows(ofRows: mark.rows)
+      return shown
+    }
+    let layout = OverviewLayout(marks: shownMarks, rowCount: displayRows.count, area: markArea)
     cachedLayout = layout
     return layout
   }

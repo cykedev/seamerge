@@ -3,8 +3,9 @@ import AppKit
 /// The left margin of a pane: the line numbers, the markers of the blocks and the filled cells of
 /// the current block.
 ///
-/// The gutter sits beside the scroll view and draws the visible rows itself, each at
-/// `row × rowHeight` minus the scroll offset of the text.
+/// The gutter sits beside the scroll view and draws the visible rows itself, each at its display
+/// row times the row height, minus the scroll offset of the text. The bars of collapsed runs
+/// cover their rows across the gutter; it leaves them empty.
 final class GutterView: NSView {
   var theme = Theme() {
     didSet {
@@ -27,6 +28,11 @@ final class GutterView: NSView {
     didSet { needsDisplay = true }
   }
 
+  /// The rows as the pane shows them, with collapsed runs.
+  var displayRows = DisplayRows(runs: [], rowCount: 1) {
+    didSet { needsDisplay = true }
+  }
+
   /// The vertical scroll offset of the text beside the gutter.
   var scrollOffset: CGFloat = 0 {
     didSet { needsDisplay = true }
@@ -36,25 +42,27 @@ final class GutterView: NSView {
   /// the gutter names for VoiceOver.
   var removalRows: (Range<Int>) -> [Int] = { _ in [] }
 
-  /// The rows that are visible beside the text.
-  var visibleRows: Range<Int> {
+  /// The rows that are visible beside the text, without those behind bars.
+  var visibleRows: [Int] {
     rows(in: bounds)
   }
 
-  /// The rows that `rect` of the gutter shows.
-  func rows(in rect: CGRect) -> Range<Int> {
+  /// The rows that `rect` of the gutter shows, without those behind bars.
+  func rows(in rect: CGRect) -> [Int] {
     let rowHeight = theme.rowHeight
     let first = max(Int(((rect.minY + scrollOffset) / rowHeight).rounded(.down)), 0)
-    let end = min(
-      Int(((rect.maxY + scrollOffset) / rowHeight).rounded(.up)), content.lineNumbers.count)
-    return first..<max(first, end)
+    let end = min(Int(((rect.maxY + scrollOffset) / rowHeight).rounded(.up)), displayRows.count)
+    return (first..<max(first, end)).compactMap { displayRow in
+      displayRows.runIndex(atDisplayRow: displayRow) == nil
+        ? displayRows.row(atDisplayRow: displayRow) : nil
+    }
   }
 
   /// The rectangle of `row` across the gutter.
   func rect(ofRow row: Int) -> CGRect {
     CGRect(
-      x: 0, y: CGFloat(row) * theme.rowHeight - scrollOffset, width: bounds.width,
-      height: theme.rowHeight)
+      x: 0, y: CGFloat(displayRows.displayRow(ofRow: row)) * theme.rowHeight - scrollOffset,
+      width: bounds.width, height: theme.rowHeight)
   }
 
   /// The slot of the marker `index` places from the trailing edge in `rowRect`.
@@ -80,8 +88,8 @@ final class GutterView: NSView {
 
   /// The row at `point` of the gutter, the nearest one beyond the text.
   private func row(at point: CGPoint) -> Int {
-    let row = Int(((point.y + scrollOffset) / theme.rowHeight).rounded(.down))
-    return min(max(row, 0), content.lineNumbers.count - 1)
+    let displayRow = Int(((point.y + scrollOffset) / theme.rowHeight).rounded(.down))
+    return displayRows.row(atDisplayRow: min(max(displayRow, 0), displayRows.count - 1))
   }
 
   /// The width that the gutter needs for the widest line number and the markers of `content`.
@@ -109,7 +117,6 @@ final class GutterView: NSView {
     Theme.backgroundColor.setFill()
     dirtyRect.fill()
     let rows = rows(in: dirtyRect)
-    guard !rows.isEmpty else { return }
     let numberAttributes = lineNumberAttributes(isCurrent: false)
     let currentNumberAttributes = lineNumberAttributes(isCurrent: true)
     for row in rows {

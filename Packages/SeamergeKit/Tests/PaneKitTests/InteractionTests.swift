@@ -73,6 +73,7 @@ private final class Recorder: PaneViewDelegate {
   let menu = NSMenu()
   var clicks: [PaneHit] = []
   var menuHits: [PaneHit] = []
+  var expandedRuns: [CollapsedRun] = []
 
   func pane(_ pane: PaneView, didClick hit: PaneHit) {
     clicks.append(hit)
@@ -81,5 +82,9 @@ private final class Recorder: PaneViewDelegate {
   func pane(_ pane: PaneView, menuFor hit: PaneHit) -> NSMenu? {
     menuHits.append(hit)
     return menu
+  }
+
+  func pane(_ pane: PaneView, didAskToExpand run: CollapsedRun) {
+    expandedRuns.append(run)
   }
 }

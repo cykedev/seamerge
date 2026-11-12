@@ -44,6 +44,9 @@ final class RowLayoutFragment: NSTextLayoutFragment {
   struct Painting: Sendable {
     /// How far the drawing reaches.
     var extent: Extent
+    /// Whether the fragment's rows lie behind the bar of a collapsed run, which draws in their
+    /// place.
+    var isCollapsed: Bool
     /// The fill of each row, or `nil` for a row on the text background.
     var rowFills: [NSColor?]
     /// The color of the text background, which covers AppKit's selection.
@@ -117,16 +120,24 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     nil
   }
 
-  /// The frame of the fragment on the grid: its first row times the row height.
+  /// The display rows that the fragment takes: as many as its rows, or the one of a bar.
+  private var displayRows: Range<Int> {
+    guard let painter else { return rows }
+    let rows = rows
+    return MainActor.assumeIsolated { painter.displayRows(ofRows: rows) }
+  }
+
+  /// The frame of the fragment on the grid: its first display row times the row height.
   ///
   /// TextKit places a fragment that it has not laid out yet by an estimate from the number of
   /// characters before it, which misses rows of a long file by thousands of points. The grid
   /// knows the place exactly.
   override var layoutFragmentFrame: CGRect {
     let frame = super.layoutFragmentFrame
+    let displayRows = displayRows
     return CGRect(
-      x: frame.minX, y: CGFloat(rows.lowerBound) * rowHeight, width: frame.width,
-      height: CGFloat(rows.count) * rowHeight)
+      x: frame.minX, y: CGFloat(displayRows.lowerBound) * rowHeight, width: frame.width,
+      height: CGFloat(displayRows.count) * rowHeight)
   }
 
   override var renderingSurfaceBounds: CGRect {
@@ -139,6 +150,7 @@ final class RowLayoutFragment: NSTextLayoutFragment {
 
   override func draw(at point: CGPoint, in context: CGContext) {
     guard let painting else { return super.draw(at: point, in: context) }
+    guard !painting.isCollapsed else { return }
     let extent = painting.extent
     let rows = rowsBounds(extent).offsetBy(dx: point.x, dy: point.y)
     context.setFillColor(painting.background.cgColor)
@@ -275,6 +287,9 @@ final class RowLayoutFragment: NSTextLayoutFragment {
 protocol RowPainter: AnyObject, Sendable {
   /// How far the drawing of every fragment reaches now.
   var extent: RowLayoutFragment.Extent { get }
+
+  /// The display rows that a fragment laying out `rows` takes.
+  func displayRows(ofRows rows: Range<Int>) -> Range<Int>
 
   /// What the fragment that lays out `rows` draws now.
   func painting(forRows rows: Range<Int>) -> RowLayoutFragment.Painting

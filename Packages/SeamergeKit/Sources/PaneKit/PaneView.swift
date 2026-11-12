@@ -3,21 +3,48 @@ import AppKit
 /// A pane: the text of one side on the row grid, with line numbers and markers in its gutter.
 ///
 /// The pane shows what it is given and knows neither the engine nor the merge model. Row *r* of
-/// the content lies at `r × theme.rowHeight` from the top of the text, in every pane alike.
+/// the content lies at `r × theme.rowHeight` from the top of the text, in every pane alike, less
+/// the rows that collapsed runs above it hide: each run takes the one row of its bar.
 ///
 /// The pane moves its text only when the user scrolls, when it is told to reveal a block, and
 /// when the selection or a find result has to come into view; nothing else shifts what it shows.
 public final class PaneView: NSView {
   /// The fonts, metrics and colors of the pane.
   public var theme: Theme {
-    didSet { show() }
+    didSet { show(content, collapsedRuns: collapsedRuns) }
   }
 
   /// What the pane shows.
   ///
+  /// Setting the content alone shows it without collapsed runs, since the old runs need not fit
+  /// its rows; to show it with runs, use ``setContent(_:collapsedRuns:)``.
+  ///
   /// - Precondition: The content has one line number and one line ending per row.
-  public var content: PaneContent = .empty {
-    didSet { show() }
+  public var content: PaneContent {
+    get { textView.content }
+    set { setContent(newValue, collapsedRuns: []) }
+  }
+
+  /// Shows `content` with `collapsedRuns`, both at once.
+  ///
+  /// The pane keeps its scroll position, as it does for new content alone.
+  ///
+  /// - Precondition: The content has one line number and one line ending per row, and the runs
+  ///   are sorted, do not overlap and lie within its rows.
+  public func setContent(_ content: PaneContent, collapsedRuns: [CollapsedRun]) {
+    show(content, collapsedRuns: collapsedRuns)
+  }
+
+  /// The runs of rows that the pane hides, each behind a bar one row high that the user can
+  /// expand.
+  ///
+  /// The pane keeps the rows in view where they are while its runs change. The delegate learns
+  /// when the user asks to expand a run; the pane leaves it collapsed until it is told otherwise.
+  ///
+  /// - Precondition: The runs are sorted, do not overlap and lie within the rows of the content.
+  public var collapsedRuns: [CollapsedRun] {
+    get { displayRows.runs }
+    set { collapse(newValue) }
   }
 
   /// The index of the current block in the content's blocks, or `nil` if there is none.
@@ -60,7 +87,7 @@ public final class PaneView: NSView {
       if let overviewBar {
         overviewBar.target = self
         overviewBar.action = #selector(overviewBarDidScroll(_:))
-        overviewBar.rowCount = content.lineNumbers.count
+        overviewBar.displayRows = displayRows
         addSubview(overviewBar)
       }
       needsLayout = true
@@ -87,11 +114,19 @@ public final class PaneView: NSView {
   }
 
   /// The row and block at `point`, in the pane's coordinates.
+  ///
+  /// On the bar of a collapsed run, the row is the first one that the run hides.
   public func hit(at point: CGPoint) -> PaneHit {
     let y = point.y + clipView.bounds.minY
-    let row = min(max(Int((y / theme.rowHeight).rounded(.down)), 0), content.lineNumbers.count - 1)
-    return hit(atRow: row)
+    let displayRow = min(max(Int((y / theme.rowHeight).rounded(.down)), 0), displayRows.count - 1)
+    return hit(atRow: displayRows.row(atDisplayRow: displayRow))
   }
+
+  /// The rows as the pane shows them, with its collapsed runs.
+  var displayRows: DisplayRows { textView.displayRows }
+
+  /// The bar of each collapsed run that is in view, by the index of its run.
+  var runBars: [Int: CollapsedRunBar] = [:]
 
   /// The coupling that the pane scrolls in, if any.
   weak var scrollSync: ScrollSync?
@@ -133,8 +168,9 @@ public final class PaneView: NSView {
     scrollView.reflectScrolledClipView(clipView)
   }
 
-  private let textView = PaneTextView(usingTextLayoutManager: true)
-  private let gutterView = GutterView()
+  let textView = PaneTextView(usingTextLayoutManager: true)
+  let gutterView = GutterView()
+  let runBarLayer = CollapsedRunBarLayer()
   private let scrollView = PaneScrollView()
 
   /// Creates an empty pane.
@@ -152,7 +188,8 @@ public final class PaneView: NSView {
     gutterView.interaction = self
     addSubview(gutterView)
     addSubview(scrollView)
-    show()
+    addSubview(runBarLayer)
+    show(.empty, collapsedRuns: [])
   }
 
   /// Panes are never archived.
@@ -190,7 +227,7 @@ public final class PaneView: NSView {
       scrollView.tile()
     }
     textView.setFrameSize(
-      CGSize(width: visibleWidth + range, height: CGFloat(content.lineNumbers.count) * rowHeight))
+      CGSize(width: visibleWidth + range, height: CGFloat(displayRows.count) * rowHeight))
     textDidScroll()
   }
 
@@ -199,23 +236,33 @@ public final class PaneView: NSView {
     scrollView.scrollWheel(with: event)
   }
 
-  private func show() {
-    textView.show(content, theme: theme)
+  private func show(_ content: PaneContent, collapsedRuns: [CollapsedRun]) {
+    // The runs, and with them the indices of the bars, may change; the text reports its new
+    // selection while it changes.
+    removeRunBars()
+    textView.show(content, collapsedRuns: collapsedRuns, theme: theme)
     gutterView.theme = theme
     gutterView.content = content
     gutterView.currentBlock = textView.currentBlock
-    overviewBar?.rowCount = content.lineNumbers.count
+    showDisplayRows()
     needsLayout = true
+  }
+
+  /// Hands the rows as the pane shows them to the gutter and the overview bar.
+  func showDisplayRows() {
+    gutterView.displayRows = displayRows
+    overviewBar?.displayRows = displayRows
   }
 
   @objc private func clipViewBoundsDidChange(_ notification: Notification) {
     textDidScroll()
   }
 
-  /// Moves the gutter and the overview bar along with the text.
+  /// Moves the gutter, the bars of collapsed runs and the overview bar along with the text.
   private func textDidScroll() {
     let visible = clipView.bounds
     gutterView.scrollOffset = visible.minY
+    placeRunBars()
     guard let overviewBar else { return }
     let height = textView.frame.height
     overviewBar.isEnabled = height > visible.height
@@ -245,6 +292,14 @@ extension PaneView: RowInteraction {
 
   func menu(forRow row: Int) -> NSMenu? {
     delegate?.pane(self, menuFor: hit(atRow: row))
+  }
+
+  func selectionDidChange() {
+    markSelectedRunBars()
+  }
+
+  func askToExpandRun(at index: Int) {
+    delegate?.pane(self, didAskToExpand: displayRows.runs[index])
   }
 
   private func hit(atRow row: Int) -> PaneHit {
