@@ -124,6 +124,16 @@ enum Palette {
   static let selectionOpacity = AppearanceValues<CGFloat>(
     light: 0.45, dark: 0.55, lightHighContrast: 0.55, darkHighContrast: 0.65)
 
+  /// How much stronger than the rows of its block the hairline at an edge of the block is
+  /// tinted: strong enough to stand out against the rows of the current block too.
+  static let edgeFactor = AppearanceValues<CGFloat>(
+    light: 3.2, dark: 3.0, lightHighContrast: 3.2, darkHighContrast: 3.0)
+
+  /// The opacity of the label color for the hairline that alone separates two neutral blocks,
+  /// such as two parts typed by hand: as strong as a sign on the gray of the current block.
+  static let neutralBoundaryOpacity = AppearanceValues<CGFloat>(
+    light: 0.6, dark: 0.6, lightHighContrast: 0.75, darkHighContrast: 0.75)
+
   /// How much stronger the rows of the current block are tinted.
   static let currentBlockFactor: CGFloat = 1.5
 
@@ -182,5 +192,26 @@ extension NSColor {
       resolved = usingColorSpace(.sRGB) ?? self
     }
     return resolved
+  }
+
+  /// This color drawn over the opaque `background`, as an opaque color in sRGB.
+  func over(_ background: NSColor) -> NSColor {
+    let top = usingColorSpace(.sRGB) ?? self
+    let bottom = background.usingColorSpace(.sRGB) ?? background
+    let alpha = top.alphaComponent
+    return NSColor(
+      srgbRed: top.redComponent * alpha + bottom.redComponent * (1 - alpha),
+      green: top.greenComponent * alpha + bottom.greenComponent * (1 - alpha),
+      blue: top.blueComponent * alpha + bottom.blueComponent * (1 - alpha), alpha: 1)
+  }
+
+  /// The relative luminance of this color in sRGB, from 0 for black to 1 for white.
+  var luminance: CGFloat {
+    let color = usingColorSpace(.sRGB) ?? self
+    func linear(_ component: CGFloat) -> CGFloat {
+      component <= 0.040_45 ? component / 12.92 : pow((component + 0.055) / 1.055, 2.4)
+    }
+    return 0.2126 * linear(color.redComponent) + 0.7152 * linear(color.greenComponent)
+      + 0.0722 * linear(color.blueComponent)
   }
 }

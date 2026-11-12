@@ -38,6 +38,8 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     var removalMarkWidth: CGFloat
     /// The width of the seam of background color around the mark of removed text.
     var removalMarkSeam: CGFloat
+    /// The thickness of a hairline: one pixel of the screen.
+    var hairline: CGFloat
   }
 
   /// Everything the fragment draws besides its glyphs.
@@ -49,6 +51,8 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     var isCollapsed: Bool
     /// The fill of each row, or `nil` for a row on the text background.
     var rowFills: [NSColor?]
+    /// The hairlines at the edges of changed blocks in each row.
+    var edges: [Edges]
     /// The color of the text background, which covers AppKit's selection.
     var background: NSColor
     /// The height of the band of a line's text, centered in the row: the height of run fills
@@ -63,6 +67,14 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     /// What the invisible characters of the fragment's rows look like, or `nil` if they do not
     /// show.
     var invisibles: Invisibles?
+  }
+
+  /// The hairlines at the top and the bottom edge of a row, each inside the row.
+  struct Edges: Sendable {
+    /// The color of the hairline at the top, or `nil` for none.
+    var top: NSColor?
+    /// The color of the hairline at the bottom, or `nil` for none.
+    var bottom: NSColor?
   }
 
   /// The symbols for spaces, tabs and line endings.
@@ -200,6 +212,14 @@ final class RowLayoutFragment: NSTextLayoutFragment {
         CGRect(
           x: rows.minX, y: rows.minY + CGFloat(index) * rowHeight, width: rows.width,
           height: rowHeight))
+    }
+    for (index, edges) in painting.edges.enumerated() {
+      let top = rows.minY + CGFloat(index) * rowHeight
+      for (color, y) in [(edges.top, top), (edges.bottom, top + rowHeight - extent.hairline)] {
+        guard let color else { continue }
+        context.setFillColor(color.cgColor)
+        context.fill(CGRect(x: rows.minX, y: y, width: rows.width, height: extent.hairline))
+      }
     }
     for run in painting.runs {
       for rect in runRects(run.range, fullHeight: false, painting) {

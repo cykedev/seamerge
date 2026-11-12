@@ -172,6 +172,37 @@ extension Theme {
     }
   }
 
+  /// The color of the hairline at an edge between rows of `upper` and rows of `lower`, either of
+  /// which may be `nil` for rows outside a changed block, or `nil` if neither is tinted.
+  ///
+  /// The hairline is a darker tone of the tint of the rows it borders, opaque, so that it shows
+  /// against the rows on both sides, current or not; between two tints, the one that stands out
+  /// more from the text background wins. Where the hairline alone shows that one block ends and
+  /// the next begins, as between two blocks of the same tint, it takes the symbol value of the
+  /// tint, which stands out from the rows on both sides as a sign does.
+  ///
+  /// - Parameter isOnlyBoundary: Whether nothing but the hairline separates the two blocks.
+  public func edgeColor(
+    between upper: BlockStyle?, and lower: BlockStyle?, isOnlyBoundary: Bool
+  ) -> NSColor? {
+    let tints = [upper, lower].compactMap { $0.flatMap(tint(for:)) }
+    guard !tints.isEmpty else { return nil }
+    return color { appearance, nsAppearance in
+      let background = Self.backgroundColor.resolved(in: nsAppearance)
+      let edges = tints.map { tint in
+        if isOnlyBoundary {
+          return tint.symbolColor(appearance, nsAppearance).over(background)
+        }
+        let opacity = min(tint.rowOpacity(appearance) * Palette.edgeFactor[appearance], 1)
+        return tint.color(appearance, nsAppearance).resolved(in: nsAppearance)
+          .withAlphaComponent(opacity).over(background)
+      }
+      return edges.max {
+        abs($0.luminance - background.luminance) < abs($1.luminance - background.luminance)
+      } ?? edges[0]
+    }
+  }
+
   /// The fill behind a changed run within a line of a block of `style`, drawn over the row fill,
   /// or `nil` if such runs are not highlighted.
   ///
@@ -246,6 +277,22 @@ private enum Tint {
         .blended(withFraction: 0.5, of: NSColor(rgb: Palette.surface(of: .b)[appearance]))
         ?? NSColor(rgb: Palette.surface(of: .a)[appearance])
     case .quiet, .handwritten: NSColor.labelColor.resolved(in: nsAppearance)
+    }
+  }
+
+  /// The color of signs in the tint: the symbol value of its role, or the label color at the
+  /// boundary opacity for neutral tints.
+  func symbolColor(_ appearance: PaletteAppearance, _ nsAppearance: NSAppearance) -> NSColor {
+    switch self {
+    case .role(let role): NSColor(rgb: Palette.symbol(of: role)[appearance])
+    case .openConflict: NSColor(rgb: Palette.symbol(of: .conflict)[appearance])
+    case .combined:
+      NSColor(rgb: Palette.symbol(of: .a)[appearance])
+        .blended(withFraction: 0.5, of: NSColor(rgb: Palette.symbol(of: .b)[appearance]))
+        ?? NSColor(rgb: Palette.symbol(of: .a)[appearance])
+    case .quiet, .handwritten:
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.neutralBoundaryOpacity[appearance])
     }
   }
 

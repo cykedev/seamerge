@@ -197,8 +197,9 @@ final class PaneTextView: NSTextView {
       guard old != new else { continue }
       changedRows += [old?.rows, new?.rows].compactMap(\.self)
     }
+    // The row after a block draws the edge between them, whose color depends on both.
     for rows in changedRows where !rows.isEmpty {
-      redraw(rows: rows.clamped(to: 0..<grid.rowCount))
+      redraw(rows: (rows.lowerBound..<rows.upperBound + 1).clamped(to: 0..<grid.rowCount))
     }
   }
 
@@ -395,6 +396,37 @@ final class PaneTextView: NSTextView {
       isCurrent: blockIndex != nil && blockIndex == currentBlock)
   }
 
+  /// The hairlines at the edges of changed blocks in `row`: at the top of the first row of a
+  /// block, and at the bottom of its last row unless another block follows at once, whose top
+  /// edge is the line between them.
+  ///
+  /// The hairlines keep two blocks of the same color apart where they touch, also on panes that
+  /// show no marker there, and let a block read as a band across the panes. Between two tinted
+  /// blocks of the same style, or where the lower one has no marker, the hairline alone shows
+  /// the boundary and takes the stronger color.
+  private func edges(atRow row: Int) -> RowLayoutFragment.Edges {
+    guard let block = content.blockIndex(atRow: row) else { return RowLayoutFragment.Edges() }
+    let rows = content.blocks[block].rows
+    var edges = RowLayoutFragment.Edges()
+    if row == rows.lowerBound {
+      let touchesBlockAbove = row > 0 && content.blockIndex(atRow: row - 1) != nil
+      let upper = touchesBlockAbove ? style(ofRow: row - 1) : nil
+      let lower = style(ofRow: row)
+      let bothTinted = upper.map { $0 != .unchanged } == true && lower != .unchanged
+      let isOnlyBoundary = bothTinted && (upper == lower || content.blocks[block].marker == nil)
+      edges.top = theme.edgeColor(between: upper, and: lower, isOnlyBoundary: isOnlyBoundary)
+    }
+    if row == rows.upperBound - 1 {
+      let touchesBlockBelow =
+        row + 1 < content.lineNumbers.count && content.blockIndex(atRow: row + 1) != nil
+      if !touchesBlockBelow {
+        edges.bottom = theme.edgeColor(
+          between: style(ofRow: row), and: nil, isOnlyBoundary: false)
+      }
+    }
+    return edges
+  }
+
   /// The changed runs within `rows` with their fills, and the places of removed text with the
   /// colors of their marks.
   private func changes(inRows rows: Range<Int>) -> (
@@ -486,7 +518,8 @@ extension PaneTextView: RowPainter {
   var extent: RowLayoutFragment.Extent {
     RowLayoutFragment.Extent(
       containerInset: textContainerOrigin.x, width: bounds.width, textLift: theme.textLift,
-      removalMarkWidth: Theme.removalMarkWidth, removalMarkSeam: Theme.markSeam)
+      removalMarkWidth: Theme.removalMarkWidth, removalMarkSeam: Theme.markSeam,
+      hairline: 1 / (window?.backingScaleFactor ?? 2))
   }
 
   func painting(forRows rows: Range<Int>) -> RowLayoutFragment.Painting {
@@ -500,7 +533,8 @@ extension PaneTextView: RowPainter {
     }
     return RowLayoutFragment.Painting(
       extent: extent, isCollapsed: displayRows.runIndex(containingRow: rows.lowerBound) != nil,
-      rowFills: rows.map(rowFill(atRow:)), background: Theme.backgroundColor,
+      rowFills: rows.map(rowFill(atRow:)), edges: rows.map(edges(atRow:)),
+      background: Theme.backgroundColor,
       textBandHeight: theme.textBandHeight, runs: changes.runs, selections: selections,
       removals: changes.removals,
       invisibles: showsInvisibles
