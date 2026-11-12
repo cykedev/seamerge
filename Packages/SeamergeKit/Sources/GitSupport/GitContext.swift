@@ -71,7 +71,9 @@ public struct GitContext: Sendable, Hashable {
   ///
   /// Each query has the time limit of `git`. A query that fails or takes too long leaves out only
   /// the fact it was asked for, so this never fails; outside a repository, only the labels of the
-  /// conflict markers remain.
+  /// conflict markers remain. The repository counts only if `mergedFile` lies in its working
+  /// tree: a merge of other files, started from a directory of a repository, is none of its
+  /// business.
   ///
   /// - Parameters:
   ///   - workingDirectory: A directory in the working tree, usually the one Git starts the tool in.
@@ -86,7 +88,12 @@ public struct GitContext: Sendable, Hashable {
     } catch {
       logger.error("Cannot read the conflict markers: \(String(describing: error))")
     }
-    let repository = Repository(git: git, workingDirectory: workingDirectory)
+    var repository = Repository(git: git, workingDirectory: workingDirectory)
+    if let found = repository, Detection.path(of: mergedFile, in: found) == nil {
+      // The tool runs outside `git mergetool`, from a repository that the files are not part of.
+      logger.info("The merged file lies outside the repository; leaving out its state")
+      repository = nil
+    }
     let detection = Detection(repository: repository, labels: labels)
     let hasCommonAncestor = detection.hasCommonAncestor(mergedFile)
     return GitContext(
@@ -211,7 +218,7 @@ private struct Detection {
   }
 
   /// The path of `file` relative to the top of the working tree, or `nil` if it lies outside.
-  private static func path(of file: URL, in repository: Repository) -> String? {
+  static func path(of file: URL, in repository: Repository) -> String? {
     guard let topLevel = repository.topLevel else { return nil }
     let topPath = comparablePath(of: topLevel)
     let filePath = comparablePath(of: file)

@@ -275,6 +275,39 @@ struct GitContextTests {
     }
   }
 
+  @Test func mergedFileOutsideTheRepositoryOfTheWorkingDirectoryLeavesItOut() throws {
+    try withSandbox { sandbox in
+      let repository = try sandbox.makeRepository("merge")
+      let elsewhere = sandbox.directory.appending(path: "elsewhere", directoryHint: .isDirectory)
+      try FileManager.default.createDirectory(at: elsewhere, withIntermediateDirectories: true)
+      let file = elsewhere.appending(path: "story.txt")
+      try Data("<<<<<<< HEAD\na\n=======\nb\n>>>>>>> other\n".utf8).write(to: file)
+
+      let context = GitContext.detect(
+        workingDirectory: repository, mergedFile: file, git: sandbox.git())
+
+      #expect(context.operation == nil)
+      #expect(context.local == MergeSide(name: .reference("HEAD")))
+      #expect(context.remote == MergeSide(name: .reference("other")))
+      #expect(context.remainingConflictedFileCount == nil)
+    }
+  }
+
+  @Test func mergedFileReachedThroughASymbolicLinkStillBelongsToTheRepository() throws {
+    try withSandbox { sandbox in
+      let repository = try sandbox.makeRepository("merge")
+      let link = sandbox.directory.appending(path: "link", directoryHint: .isDirectory)
+      try FileManager.default.createSymbolicLink(at: link, withDestinationURL: repository)
+
+      let context = GitContext.detect(
+        workingDirectory: repository, mergedFile: link.appending(path: "story.txt"),
+        git: sandbox.git())
+
+      #expect(context.operation == .merge)
+      #expect(context.local.name == .reference("main"))
+    }
+  }
+
   @Test func outsideARepositoryStashMarkersStillNameTheStash() throws {
     try withSandbox { sandbox in
       let file = sandbox.directory.appending(path: "merged.txt")
