@@ -4,6 +4,9 @@ import AppKit
 ///
 /// The pane shows what it is given and knows neither the engine nor the merge model. Row *r* of
 /// the content lies at `r × theme.rowHeight` from the top of the text, in every pane alike.
+///
+/// The pane moves its text only when the user scrolls, when it is told to reveal a block, and
+/// when the selection or a find result has to come into view; nothing else shifts what it shows.
 public final class PaneView: NSView {
   /// The fonts, metrics and colors of the pane.
   public var theme: Theme {
@@ -64,9 +67,50 @@ public final class PaneView: NSView {
   /// The view that shows the text, for selection and the find bar.
   public var documentView: NSTextView { textView }
 
+  /// The narrowest the pane gets: room for the gutter, a short line of code and the overview
+  /// bar, so that its neighbors and the dividers between them stay usable.
+  public var minimumWidth: CGFloat {
+    let text = CGFloat(Theme.minimumTextColumns) * theme.characterWidth + 2 * Theme.textInset
+    let bar = overviewBar == nil ? 0 : Theme.overviewBarWidth
+    let width = gutterView.fittingWidth + text + bar
+    return (width / Theme.layoutGrid).rounded(.up) * Theme.layoutGrid
+  }
+
+  /// Scrolls the pane, and the panes coupled with it, so that the first change of `block` comes
+  /// into view with some text before it, unless it is in view already.
+  public func reveal(block: Int) {
+    guard content.blocks.indices.contains(block) else { return }
+    textView.reveal(offset: textView.firstChangeOffset(ofBlock: block))
+  }
+
+  /// The coupling that the pane scrolls in, if any.
+  weak var scrollSync: ScrollSync?
+
+  /// The scroll range sideways that the pane shares with the panes it is coupled with, or `nil`
+  /// while it is coupled with none.
+  var sharedHorizontalScrollRange: CGFloat? {
+    didSet {
+      if sharedHorizontalScrollRange != oldValue {
+        needsLayout = true
+      }
+    }
+  }
+
+  /// How far the pane's own text reaches beyond the visible width.
+  private(set) var ownHorizontalScrollRange: CGFloat = 0
+
   /// The view that clips the text to the visible part, whose bounds origin is the scroll
   /// position.
   var clipView: NSClipView { scrollView.contentView }
+
+  /// The top left corner of the visible part of the text.
+  var scrollOrigin: CGPoint { clipView.bounds.origin }
+
+  /// The height of the visible part of the text.
+  var visibleHeight: CGFloat { clipView.bounds.height }
+
+  /// The height of a row.
+  var rowHeight: CGFloat { theme.rowHeight }
 
   /// How far the text scrolls vertically.
   var verticalScrollRange: CGFloat {
@@ -104,6 +148,10 @@ public final class PaneView: NSView {
     nil
   }
 
+  isolated deinit {
+    scrollSync?.remove(self)
+  }
+
   public override var isFlipped: Bool { true }
 
   public override func layout() {
@@ -118,15 +166,19 @@ public final class PaneView: NSView {
       x: bounds.width - barWidth, y: 0, width: barWidth, height: bounds.height)
     scrollView.tile()
     let visibleWidth = clipView.bounds.width
-    let range = max(textView.textWidth - visibleWidth, 0)
+    let ownRange = max(textView.textWidth - visibleWidth, 0)
+    if ownRange != ownHorizontalScrollRange {
+      ownHorizontalScrollRange = ownRange
+      scrollSync?.updateHorizontalScrollRange()
+    }
+    let range = sharedHorizontalScrollRange ?? ownRange
     let hasHorizontalScroller = range > 0
     if scrollView.hasHorizontalScroller != hasHorizontalScroller {
       scrollView.hasHorizontalScroller = hasHorizontalScroller
       scrollView.tile()
     }
     textView.setFrameSize(
-      CGSize(
-        width: visibleWidth + range, height: CGFloat(content.lineNumbers.count) * theme.rowHeight))
+      CGSize(width: visibleWidth + range, height: CGFloat(content.lineNumbers.count) * rowHeight))
     textDidScroll()
   }
 

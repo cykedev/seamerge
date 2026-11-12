@@ -100,6 +100,17 @@ enum Rendering {
   }
 }
 
+extension Rendering {
+  /// Writes `text` as a text file named `name` into the folder for pictures, next to them.
+  static func writeText(_ text: String, named name: String) throws {
+    let folder =
+      ProcessInfo.processInfo.environment["SEAMERGE_PICTURES"].map { URL(filePath: $0) }
+      ?? FileManager.default.temporaryDirectory.appending(path: "SeamergePictures/PaneKit")
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    try Data((text + "\n").utf8).write(to: folder.appending(path: "\(name).txt"))
+  }
+}
+
 /// A window that acts as the key window without being shown, until a test makes it give that up.
 final class KeyWindow: NSWindow {
   var actsAsKey = true

@@ -10,7 +10,11 @@ final class PaneTextView: NSTextView {
   private(set) var theme = Theme()
   private(set) var content = PaneContent.empty
   private(set) var currentBlock: Int?
-  private var grid = RowGrid(text: "", tabWidth: 1)
+  private(set) var grid = RowGrid(text: "", tabWidth: 1)
+
+  /// Whether a find action of the find bar or the Find menu is under way, whose result comes into
+  /// view the way a jump does.
+  var isPerformingFindAction = false
 
   /// Whether spaces, tabs and line endings show as symbols.
   var showsInvisibles = false {
@@ -264,7 +268,7 @@ final class PaneTextView: NSTextView {
     changes(inRows: rows).removals.map { grid.row(containingOffset: $0.offset) }
   }
 
-  private func highlights(forBlock block: Int) -> [Range<Int>] {
+  func highlights(forBlock block: Int) -> [Range<Int>] {
     if let highlights = highlightsByBlock[block] {
       return highlights
     }

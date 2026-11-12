@@ -113,6 +113,12 @@ public struct Theme {
   /// The grid that widths and distances of the panes are rounded to.
   static let layoutGrid: CGFloat = 4
 
+  /// The number of characters that a pane shows at its minimum width.
+  static let minimumTextColumns = 20
+
+  /// The number of characters that stay visible before a place that the pane scrolls to.
+  static let revealContextColumns = 8
+
   /// Where the reading line lies, as a fraction of the visible height from the top: the line
   /// that panes coupled by blocks align, and where a place that the pane scrolls to comes to
   /// rest.

@@ -58,6 +58,11 @@ struct RowGrid {
     return low
   }
 
+  /// The offsets of `row`, its line feed included.
+  func offsets(ofRow row: Int) -> Range<Int> {
+    rowStarts[row]..<(row + 1 < rowStarts.count ? rowStarts[row + 1] : textLength)
+  }
+
   /// The rows that TextKit lays out in the paragraph from `start` to `end`.
   ///
   /// That is one row, except for the paragraph before an empty last row: TextKit gives the empty
