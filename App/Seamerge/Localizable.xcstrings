@@ -7,6 +7,9 @@
     "About Seamerge": {
       "comment": "App menu."
     },
+    "Another copy of Seamerge is already running.": {
+      "comment": "Alert at launch: a second copy of the app cannot take merges from Git."
+    },
     "B": {
       "comment": "Merge > Toggle Source."
     },
@@ -24,6 +27,9 @@
     },
     "Compare Files…": {
       "comment": "File menu: open the window Compare Files."
+    },
+    "Comparing files still works. Quit Seamerge and open it again to use it with Git.": {
+      "comment": "Alert at launch: what to do when the app cannot listen for Git."
     },
     "Copy": {
       "comment": "Edit menu."
@@ -54,6 +60,9 @@
     },
     "Find…": {
       "comment": "Edit > Find."
+    },
+    "Git opens merges in the other copy. Quit it, then open this one again.": {
+      "comment": "Alert at launch: what to do when another copy runs."
     },
     "Go": {
       "comment": "Menu bar."
@@ -126,6 +135,9 @@
     },
     "Seamerge Help": {
       "comment": "Help menu."
+    },
+    "Seamerge can’t take merges from Git.": {
+      "comment": "Alert at launch: the app cannot listen for the command-line helper."
     },
     "Select All": {
       "comment": "Edit menu."
