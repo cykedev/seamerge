@@ -1,5 +1,6 @@
 import Foundation
 import MergeModel
+import SeamergeUI
 
 /// Merges of small texts for the tests and pictures.
 enum SampleMerges {
@@ -22,6 +23,10 @@ enum SampleMerges {
       a: SourceFile(bytes: Data(helloWorldA.utf8), label: "HelloWorld1.java"),
       b: SourceFile(bytes: Data(helloWorldB.utf8), label: "HelloWorld2.java"))
   }
+
+  /// The context of the sample merge: the result goes to `HelloWorld.java`.
+  static let helloWorldContext = SessionContext(
+    resultURL: URL(filePath: "/Users/ada/Documents/color-test/HelloWorld.java"))
 
   static let helloWorldBase = """
     // This is a multi-line comment

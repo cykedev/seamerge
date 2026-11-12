@@ -1,11 +1,14 @@
 import AppKit
 import MergeModel
 import PaneKit
+import SwiftUI
 
 /// The panes of a merge window and how they are laid out: A, Base and B side by side and equally
-/// wide above, the result across the full width below.
+/// wide above, the result across the full width below, each with its header.
 ///
-/// The controller only arranges; what the panes show is set from outside.
+/// The headers are accessories at the top of the split view items, as the system lays them out,
+/// with a hard edge, since dense code would blur under a soft one. The controller only arranges;
+/// what the panes show is set from outside.
 @MainActor
 final class SessionSplitViewController: NSSplitViewController {
   /// The panes of the inputs, in the order A, Base, B, as many as take part.
@@ -15,23 +18,33 @@ final class SessionSplitViewController: NSSplitViewController {
   let resultPane: PaneView
 
   private let sourcesController = NSSplitViewController()
+  private let sourceHeaderViews: [NSHostingView<SideHeaderView>]
+  private let resultHeaderView: NSHostingView<ResultHeaderView>
 
-  /// Creates the panes for `roles`, drawn with `theme`.
-  init(roles: [Role], theme: Theme) {
-    sourcePanes = roles.map { ($0, PaneView(theme: theme)) }
+  /// Creates the panes for the inputs of `headers`, drawn with `theme`.
+  init(headers: [SideHeader], resultHeader: ResultHeader, theme: Theme) {
+    sourcePanes = headers.map { ($0.role, PaneView(theme: theme)) }
     resultPane = PaneView(theme: theme)
+    sourceHeaderViews = headers.map {
+      NSHostingView(rootView: SideHeaderView(header: $0, theme: theme))
+    }
+    resultHeaderView = NSHostingView(
+      rootView: ResultHeaderView(header: resultHeader, callerIsGone: false))
     super.init(nibName: nil, bundle: nil)
     splitView.isVertical = false
     sourcesController.splitView.isVertical = true
-    for (_, pane) in sourcePanes {
-      sourcesController.addSplitViewItem(
-        NSSplitViewItem(viewController: PaneItemController(pane: pane)))
+    for (headerView, (_, pane)) in zip(sourceHeaderViews, sourcePanes) {
+      let item = NSSplitViewItem(viewController: PaneItemController(pane: pane))
+      item.addTopAlignedAccessoryViewController(Self.accessory(headerView))
+      sourcesController.addSplitViewItem(item)
     }
     let sourcesItem = NSSplitViewItem(viewController: sourcesController)
-    sourcesItem.minimumThickness = WindowMetrics.minimumPaneHeight
+    // The headers of the sources lie within this item; the result's lies outside its own.
+    sourcesItem.minimumThickness = WindowMetrics.minimumPaneHeight + WindowMetrics.headerHeight
     addSplitViewItem(sourcesItem)
     let resultItem = NSSplitViewItem(viewController: PaneItemController(pane: resultPane))
     resultItem.minimumThickness = WindowMetrics.minimumPaneHeight
+    resultItem.addTopAlignedAccessoryViewController(Self.accessory(resultHeaderView))
     addSplitViewItem(resultItem)
   }
 
@@ -43,12 +56,15 @@ final class SessionSplitViewController: NSSplitViewController {
     }
   }
 
-  /// Draws the panes with `theme`.
+  /// Draws the panes and headers with `theme`.
   func apply(_ theme: Theme) {
     for (_, pane) in sourcePanes {
       pane.theme = theme
     }
     resultPane.theme = theme
+    for headerView in sourceHeaderViews {
+      headerView.rootView = SideHeaderView(header: headerView.rootView.header, theme: theme)
+    }
   }
 
   /// Split view controllers of a window are never archived.
@@ -65,10 +81,16 @@ final class SessionSplitViewController: NSSplitViewController {
   }
 
   /// The least height of the panes together: the sources and the result each at their least
-  /// height, with the divider between them.
+  /// height below their headers, with the divider between them.
   var minimumHeight: CGFloat {
     view.layoutSubtreeIfNeeded()
     return view.fittingSize.height
+  }
+
+  /// Shows below the result header that Git no longer waits for the merge.
+  func showCallerIsGone() {
+    resultHeaderView.rootView = ResultHeaderView(
+      header: resultHeaderView.rootView.header, callerIsGone: true)
   }
 
   /// Places the dividers as a new window has them: the source panes equally wide, and above
@@ -91,9 +113,18 @@ final class SessionSplitViewController: NSSplitViewController {
     }
   }
 
+  /// The accessory that shows `header` at the top of a split view item, with a hard edge.
+  private static func accessory(_ header: NSView) -> NSSplitViewItemAccessoryViewController {
+    let accessory = NSSplitViewItemAccessoryViewController()
+    accessory.view = header
+    // The header keeps its own height of 28 points rather than the system's taller insets.
+    accessory.automaticallyAppliesContentInsets = false
+    accessory.preferredScrollEdgeEffectStyle = .hard
+    return accessory
+  }
 }
 
-/// The view controller of one pane in the split view: the pane fills the item.
+/// The view controller of one pane in the split view: the pane fills the item below its header.
 @MainActor
 private final class PaneItemController: NSViewController {
   private let pane: PaneView

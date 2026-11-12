@@ -11,7 +11,8 @@ public enum SessionOutcome: Sendable {
   case cancelled
 }
 
-/// The window of a merge: the three inputs side by side above, the result below.
+/// The window of a merge: the three inputs side by side above, the result below, each with a
+/// header that names it.
 @MainActor
 public final class SessionWindowController: NSWindowController {
   /// Called exactly once, when the window closes for good, with how the session ended.
@@ -33,10 +34,15 @@ public final class SessionWindowController: NSWindowController {
   ///
   /// - Parameters:
   ///   - session: A merge.
+  ///   - context: Where the result goes and what Git is doing.
   ///   - undoManager: The undo manager of the window, which belongs to this session alone.
   /// - Precondition: `session` is a merge.
-  public convenience init(session: Session, undoManager: UndoManager) {
-    self.init(session: session, undoManager: undoManager, displayOptions: .current(in: .shared))
+  public convenience init(
+    session: Session, context: SessionContext = SessionContext(), undoManager: UndoManager
+  ) {
+    self.init(
+      session: session, context: context, undoManager: undoManager,
+      displayOptions: .current(in: .shared))
     NSWorkspace.shared.notificationCenter.addObserver(
       self, selector: #selector(accessibilityDisplayOptionsDidChange(_:)),
       name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
@@ -44,10 +50,19 @@ public final class SessionWindowController: NSWindowController {
 
   /// Opens a window for `session` that draws with `displayOptions`, whatever the system's
   /// settings are.
-  init(session: Session, undoManager: UndoManager, displayOptions: DisplayOptions) {
+  init(
+    session: Session, context: SessionContext, undoManager: UndoManager,
+    displayOptions: DisplayOptions
+  ) {
     precondition(session.kind == .merge, "A session window shows a merge")
+    let theme = displayOptions.theme
+    let headers = Dictionary(
+      uniqueKeysWithValues: Self.paneOrder.filter(session.roles.contains).map { role in
+        (role, SideHeader(role: role, session: session, context: context))
+      })
+    let resultHeader = ResultHeader(session: session, context: context)
     let layout = SessionSplitViewController(
-      roles: Self.paneOrder.filter(session.roles.contains), theme: displayOptions.theme)
+      headers: Self.paneOrder.compactMap { headers[$0] }, resultHeader: resultHeader, theme: theme)
     self.layout = layout
     sessionUndoManager = undoManager
     self.displayOptions = displayOptions
@@ -65,6 +80,7 @@ public final class SessionWindowController: NSWindowController {
     window.contentViewController = layout
     window.setContentSize(WindowMetrics.defaultContentSize)
     window.contentMinSize = CGSize(width: layout.minimumWidth, height: layout.minimumHeight)
+    window.representedURL = context.resultURL
     layout.updateMinimumWidths()
     layout.placeDividers()
   }
@@ -75,6 +91,12 @@ public final class SessionWindowController: NSWindowController {
   /// Session windows are never archived.
   public required init?(coder: NSCoder) {
     nil
+  }
+
+  /// Tells the window that the Git command that asked for the merge no longer waits, so that it
+  /// says so below the result header.
+  public func callerDisconnected() {
+    layout.showCallerIsGone()
   }
 
   @objc private func accessibilityDisplayOptionsDidChange(_ notification: Notification) {

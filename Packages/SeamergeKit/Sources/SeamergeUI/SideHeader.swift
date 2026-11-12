@@ -1,0 +1,138 @@
+import Foundation
+import GitSupport
+import MergeModel
+
+/// What the header above the pane of an input says: the letter of the side, its real name, its
+/// role in the Git operation, and the details its popover shows.
+struct SideHeader: Equatable {
+  /// Where the role stands in the header.
+  enum RolePlacement: Equatable {
+    /// After the name, in the secondary color, as in an ordinary merge, where the sides lie as
+    /// expected.
+    case afterName
+    /// Before the name, as prominent as the name, as in a rebase, a cherry-pick, a revert and a
+    /// stash, where the sides lie otherwise than expected.
+    case beforeName
+  }
+
+  /// The facts the popover of the header shows.
+  struct Details: Equatable {
+    /// The commit the side comes from, if it is known.
+    var commit: CommitDetails?
+
+    /// Where the file of the side was read from, or its label if it was not read from disk.
+    var location: String
+
+    /// How the lines of the file end, if the file has line breaks.
+    var lineEndings: LineEndings?
+  }
+
+  /// The input the pane shows.
+  let role: Role
+
+  /// The real name of the side: a branch, a commit or the name of the file.
+  let name: String
+
+  /// The role of the side in the operation in words, such as "incoming", if it has one.
+  let roleText: String?
+
+  /// Where the role stands.
+  let rolePlacement: RolePlacement
+
+  /// How the lines of the file end, shown only where they differ from the other sides.
+  let differingLineEndings: LineEndings?
+
+  /// The facts for the popover.
+  let details: Details
+
+  /// The header of the pane of `role`.
+  ///
+  /// The names come from Git where Git started the merge; otherwise, and for a side Git does not
+  /// name, the label of the file stands in.
+  ///
+  /// - Precondition: `role` takes part in `session`.
+  init(role: Role, session: Session, context: SessionContext) {
+    guard let file = session.file(for: role) else {
+      preconditionFailure("The merge has no input \(role)")
+    }
+    let side = context.git.map { git in
+      switch role {
+      case .a: git.remote
+      case .base: git.base
+      case .b: git.local
+      }
+    }
+    self.role = role
+    name = side?.name.map(Self.text(of:)) ?? (file.label.isEmpty ? role.letter : file.label)
+    roleText = side?.role.map(Self.text(of:))
+    rolePlacement =
+      switch context.git?.operation {
+      case .merge, nil: .afterName
+      case .rebase, .cherryPick, .revert, .stash: .beforeName
+      }
+    differingLineEndings = session.lineEndingsDiffer ? file.lineEndings : nil
+    details = Details(
+      commit: side?.commit,
+      location: file.url.map { $0.path(percentEncoded: false) } ?? file.label,
+      lineEndings: file.lineEndings)
+  }
+
+  /// The name of the side as a whole, for VoiceOver and the help tag: letter, role and name in
+  /// the order the header shows them.
+  var spokenName: String {
+    guard let roleText else {
+      return String(
+        localized: "\(role.letter), \(name)", bundle: .module,
+        comment: "VoiceOver: a pane, such as A, feature/login.")
+    }
+    let (first, second) = rolePlacement == .afterName ? (name, roleText) : (roleText, name)
+    return String(
+      localized: "\(role.letter), \(first), \(second)", bundle: .module,
+      comment:
+        "VoiceOver: a pane with its name and role in the order the header shows them, such as A, feature/login, incoming or A, your commit, 1a2b3c4 Fix typo."
+    )
+  }
+
+  /// A name of a side in words.
+  static func text(of name: SideName) -> String {
+    switch name {
+    case .reference(let reference):
+      return reference
+    case .commit(let hash, let subject, let branch):
+      let commit = subject.map { "\(hash) \($0)" } ?? hash
+      return branch.map {
+        String(
+          localized: "\(commit) · \($0)", bundle: .module,
+          comment: "The name of a commit followed by its branch, such as 1a2b3c4 Fix typo · main.")
+      } ?? commit
+    case .stash:
+      return String(
+        localized: "Stash", bundle: .module, comment: "The name of a stash in a header.")
+    }
+  }
+
+  /// A role of a side in words.
+  static func text(of role: SideRole) -> String {
+    switch role {
+    case .incoming:
+      String(localized: "incoming", bundle: .module, comment: "Role: the branch being merged in.")
+    case .yours:
+      String(localized: "yours", bundle: .module, comment: "Role: the branch the user is on.")
+    case .yourCommit:
+      String(
+        localized: "your commit", bundle: .module,
+        comment: "Role: the user's own commit that a rebase moves.")
+    case .rebaseTarget:
+      String(
+        localized: "rebase target", bundle: .module,
+        comment: "Role: the commit a rebase moves the user's commits onto.")
+    case .cherryPickedCommit:
+      String(
+        localized: "cherry-picked commit", bundle: .module,
+        comment: "Role: the commit being cherry-picked.")
+    case .revertedCommit:
+      String(
+        localized: "reverted commit", bundle: .module, comment: "Role: the commit being reverted.")
+    }
+  }
+}

@@ -5,7 +5,7 @@ import Testing
 
 @testable import SeamergeUI
 
-/// The window around the panes: their order and sizes, and how the window ends.
+/// The window around the panes: their order, sizes and headers, and how the window ends.
 @MainActor
 @Suite struct SessionWindowTests {
   @Test func panesStandInTheOrderABaseB() async throws {
@@ -17,6 +17,41 @@ import Testing
     let session = try await SampleMerges.merge(
       base: nil, a: "same\nfrom a\nsame again\n", b: "same\nfrom b\nsame again\n")
     #expect(makeController(session).layout.sourcePanes.map(\.role) == [.a, .b])
+  }
+
+  @Test func ordinaryMergePutsTheRoleAfterTheName() async throws {
+    let (session, context) = try await Scenario.merges[0].load()
+    let header = SideHeader(role: .a, session: session, context: context)
+    #expect(header.name == "feature")
+    #expect(header.roleText == "incoming")
+    #expect(header.rolePlacement == .afterName)
+  }
+
+  @Test(arguments: ["rebase", "cherry-pick", "revert"])
+  func otherOperationsPutTheRoleBeforeTheName(scenario name: String) async throws {
+    let scenario = try #require(Scenario.merges.first { $0.name == name })
+    let (session, context) = try await scenario.load()
+    let header = SideHeader(role: .a, session: session, context: context)
+    #expect(header.roleText != nil)
+    #expect(header.rolePlacement == .beforeName)
+    #expect(header.spokenName.hasPrefix("A, \(header.roleText ?? ""), "))
+  }
+
+  @Test func disconnectedCallerAddsALineBelowTheResultHeader() async throws {
+    let session = try await SampleMerges.helloWorld()
+    let controller = makeController(session)
+    let header = try #require(
+      controller.layout.splitViewItems.last?.topAlignedAccessoryViewControllers.first?.view)
+    #expect(header.fittingSize.height == WindowMetrics.headerHeight)
+    controller.callerDisconnected()
+    header.layoutSubtreeIfNeeded()
+    #expect(header.fittingSize.height == WindowMetrics.headerHeight + WindowMetrics.noticeHeight)
+  }
+
+  @Test func windowRepresentsTheResultFile() async throws {
+    let (session, context) = try await Scenario.merges[0].load()
+    let window = try #require(makeController(session, context: context).window)
+    #expect(window.representedURL == context.resultURL)
   }
 
   @Test func closingReportsCancelledExactlyOnce() async throws {
@@ -67,8 +102,11 @@ import Testing
     }
   }
 
-  private func makeController(_ session: Session) -> SessionWindowController {
+  private func makeController(
+    _ session: Session, context: SessionContext = SessionContext()
+  ) -> SessionWindowController {
     SessionWindowController(
-      session: session, undoManager: UndoManager(), displayOptions: DisplayOptions())
+      session: session, context: context, undoManager: UndoManager(),
+      displayOptions: DisplayOptions())
   }
 }

@@ -1,0 +1,93 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%@ · %@": {
+      "comment": "The name of a commit followed by its branch, such as 1a2b3c4 Fix typo · main."
+    },
+    "%@, %@": {
+      "comment": "VoiceOver: a pane, such as A, feature/login."
+    },
+    "%@, %@, %@": {
+      "comment": "VoiceOver: a pane with its name and role in the order the header shows them, such as A, feature/login, incoming or A, your commit, 1a2b3c4 Fix typo."
+    },
+    "A": {
+      "comment": "The badge of the incoming side."
+    },
+    "Author": {
+      "comment": "Details of a side: the author of the commit."
+    },
+    "B": {
+      "comment": "The badge of the own side."
+    },
+    "Base": {
+      "comment": "The badge of the common ancestor."
+    },
+    "CR": {
+      "comment": "Line endings: carriage return."
+    },
+    "CRLF": {
+      "comment": "Line endings: CR LF."
+    },
+    "Commit": {
+      "comment": "Details of a side: the commit."
+    },
+    "Date": {
+      "comment": "Details of a side: when the commit was made."
+    },
+    "Details about %@": {
+      "comment": "VoiceOver: the ⓘ of a header, such as Details about A, main."
+    },
+    "Differs from the line endings of the other files": {
+      "comment": "Help tag of the line endings in a header, shown only where they differ."
+    },
+    "File": {
+      "comment": "Details of a side: where the file was read from."
+    },
+    "Git is no longer waiting for this merge.": {
+      "comment": "Notice below the result header after the Git command that asked has ended."
+    },
+    "LF": {
+      "comment": "Line endings: line feed."
+    },
+    "Line Endings": {
+      "comment": "Details of a side: LF, CRLF or CR."
+    },
+    "Line endings: %@": {
+      "comment": "VoiceOver: the line endings of the result, such as Line endings: LF."
+    },
+    "Mixed": {
+      "comment": "Line endings: more than one kind."
+    },
+    "Result": {
+      "comment": "The name of the result pane."
+    },
+    "Result, %@": {
+      "comment": "VoiceOver: the result pane and the file it is written to."
+    },
+    "Show where this side comes from": {
+      "comment": "Help tag of ⓘ."
+    },
+    "Stash": {
+      "comment": "The name of a stash in a header."
+    },
+    "cherry-picked commit": {
+      "comment": "Role: the commit being cherry-picked."
+    },
+    "incoming": {
+      "comment": "Role: the branch being merged in."
+    },
+    "rebase target": {
+      "comment": "Role: the commit a rebase moves the user's commits onto."
+    },
+    "reverted commit": {
+      "comment": "Role: the commit being reverted."
+    },
+    "your commit": {
+      "comment": "Role: the user's own commit that a rebase moves."
+    },
+    "yours": {
+      "comment": "Role: the branch the user is on."
+    }
+  },
+  "version": "1.0"
+}
