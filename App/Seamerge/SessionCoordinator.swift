@@ -16,7 +16,9 @@ protocol SessionCoordinatorDelegate: AnyObject {
 /// Opens a window for each session that the helper hands over through the socket.
 ///
 /// Every session gets a window of its own with an undo manager of its own, built in the
-/// comparison mode of the window. The coordinator answers `opened` once the window shows.
+/// comparison mode of the window. For the helper, the coordinator answers `opened` once the
+/// window shows, and the outcome once it closes; if the helper goes away first, it tells the
+/// window, which stays open.
 @MainActor
 final class SessionCoordinator {
   /// Learns when windows open and close; the coordinator does not retain it.
@@ -29,6 +31,9 @@ final class SessionCoordinator {
   private let presentError: (any Error) -> Void
   private var kinds: [ObjectIdentifier: Session.Kind] = [:]
   private var serverTask: Task<Void, Never>?
+  private var isFinishing = false
+  private var servingCount = 0
+  private var idleWaiters: [CheckedContinuation<Void, Never>] = []
 
   private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "App")
 
@@ -45,7 +50,7 @@ final class SessionCoordinator {
   ///   another copy of the app listens.
   func start() throws(SessionError) {
     let server = try SessionServer(socketURL: socketURL)
-    // The task keeps the coordinator until it stops listening in stop().
+    // The task keeps the coordinator until it stops listening in finish().
     serverTask = Task {
       await server.run { connection in
         await self.serve(connection)
@@ -53,11 +58,24 @@ final class SessionCoordinator {
     }
   }
 
-  /// Stops listening and lets every helper go.
-  func stop() async {
+  /// Closes every session window, tells each waiting helper that its session was cancelled, and
+  /// stops listening.
+  func finish() async {
+    isFinishing = true
+    for controller in windowControllers {
+      controller.close()
+    }
+    await waitUntilIdle()
     serverTask?.cancel()
     await serverTask?.value
     serverTask = nil
+  }
+
+  /// Waits until no helper is being served: every helper has had its answer or has gone away.
+  func waitUntilIdle() async {
+    if servingCount > 0 {
+      await withCheckedContinuation { idleWaiters.append($0) }
+    }
   }
 
   /// The kind of session that `window` shows, if it is a session window.
@@ -65,8 +83,18 @@ final class SessionCoordinator {
     windowControllers.first { $0.window === window }.flatMap { kinds[ObjectIdentifier($0)] }
   }
 
-  /// Serves the request of one helper until the helper goes away.
+  /// Serves the request of one helper until its window closes or the helper goes away.
   private func serve(_ connection: SessionConnection) async {
+    servingCount += 1
+    defer {
+      servingCount -= 1
+      if servingCount == 0 {
+        for waiter in idleWaiters {
+          waiter.resume()
+        }
+        idleWaiters = []
+      }
+    }
     switch connection.request {
     case .merge(let merge):
       await serve(merge, on: connection)
@@ -92,19 +120,45 @@ final class SessionCoordinator {
       await send(.closed(.cancelled), on: connection)
       return
     }
-    show(controller, kind: .merge)
+    guard !isFinishing else {
+      await send(.closed(.cancelled), on: connection)
+      return
+    }
+
+    let (endings, ending) = AsyncStream.makeStream(of: SessionEnding.self)
+    show(controller, kind: .merge) { outcome in
+      ending.yield(.closed(outcome))
+    }
     do {
       try await connection.send(.opened)
     } catch {
       Self.logger.notice("The helper went away before its window opened")
+      controller.callerDisconnected()
       return
     }
-    await connection.waitUntilDisconnected()
+    let disconnection = Task {
+      await connection.waitUntilDisconnected()
+      ending.yield(.disconnected)
+    }
+    defer { disconnection.cancel() }
+    var iterator = endings.makeAsyncIterator()
+    switch await iterator.next() {
+    case .closed(let outcome):
+      await send(.closed(SessionIPC.SessionOutcome(outcome)), on: connection)
+    case .disconnected, nil:
+      Self.logger.notice("The helper no longer waits for its window")
+      controller.callerDisconnected()
+    }
   }
 
-  /// Shows `controller`, which shows a session of `kind`, and keeps it until its window closes.
-  private func show(_ controller: SessionWindowController, kind: Session.Kind) {
-    controller.onFinish = { [weak self, weak controller] _ in
+  /// Shows `controller`, which shows a session of `kind`, and keeps it until its window closes;
+  /// then `onFinish` learns how the session ended.
+  private func show(
+    _ controller: SessionWindowController, kind: Session.Kind,
+    onFinish: @escaping (SeamergeUI.SessionOutcome) -> Void
+  ) {
+    controller.onFinish = { [weak self, weak controller] outcome in
+      onFinish(outcome)
       guard let self, let controller else { return }
       windowControllers.removeAll { $0 === controller }
       kinds[ObjectIdentifier(controller)] = nil
@@ -130,5 +184,22 @@ final class SessionCoordinator {
   ) async throws(SessionLoadingError) -> SessionWindowController {
     let session = try await Session.loadMerge(base: base, a: a, b: b)
     return SessionWindowController(session: session, context: context, undoManager: UndoManager())
+  }
+}
+
+/// How a session ended for the helper: its window closed, or the helper went away first.
+private enum SessionEnding: Sendable {
+  case closed(SeamergeUI.SessionOutcome)
+  case disconnected
+}
+
+extension SessionIPC.SessionOutcome {
+  /// The outcome the helper reports for a window that closed with `outcome`.
+  init(_ outcome: SeamergeUI.SessionOutcome) {
+    self =
+      switch outcome {
+      case .saved: .saved
+      case .cancelled: .cancelled
+      }
   }
 }

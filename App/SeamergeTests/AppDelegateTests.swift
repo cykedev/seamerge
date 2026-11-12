@@ -25,7 +25,7 @@ struct AppDelegateTests {
     #expect(MainMenuTests.keys(of: nextConflict) == "⌥⌘↓")
     window.close()
     session.cancel()
-    await delegate.coordinator.stop()
+    await delegate.coordinator.finish()
   }
 
   @Test func listeningThatFailsAtLaunchIsToldInWords() async throws {
@@ -41,6 +41,30 @@ struct AppDelegateTests {
     #expect(sandbox.presenter.messages == ["Another copy of Seamerge is already running."])
     #expect(ListeningError.anotherCopyIsRunning.recoverySuggestion?.isEmpty == false)
     withExtendedLifetime(otherCopy) {}
+  }
+
+  @Test func appHidesAfterItsLastSessionWindow() async throws {
+    let sandbox = try AppSandbox()
+    let delegate = makeDelegate(in: sandbox)
+    let recorder = WindowRecorder()
+    try delegate.coordinator.start()
+    let sessions = [
+      perform(try sandbox.mergeRequest(), at: sandbox.socketURL),
+      perform(try sandbox.mergeRequest(), at: sandbox.socketURL),
+    ]
+    delegate.coordinator.delegate = recorder
+    let windows = [await recorder.nextOpened(), await recorder.nextOpened()]
+    delegate.coordinator.delegate = delegate
+
+    windows[0].close()
+    #expect(sandbox.presenter.hideCount == 0)
+    windows[1].close()
+
+    #expect(sandbox.presenter.hideCount == 1)
+    for session in sessions {
+      #expect(try await session.value == .cancelled)
+    }
+    await delegate.coordinator.finish()
   }
 
   private func makeDelegate(in sandbox: AppSandbox) -> AppDelegate {

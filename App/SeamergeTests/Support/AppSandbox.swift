@@ -121,3 +121,16 @@ func perform(_ request: SessionRequest, at socketURL: URL) -> Task<
     try await SessionClient(socketURL: socketURL).perform(request)
   }
 }
+
+/// The height the header above the result of `window` takes, which grows by a line while it
+/// says that Git no longer waits.
+@MainActor
+func resultHeaderHeight(in window: NSWindow) -> CGFloat? {
+  func find(in view: NSView) -> NSView? {
+    if String(describing: type(of: view)).contains("ResultHeaderView") {
+      return view
+    }
+    return view.subviews.lazy.compactMap(find).first
+  }
+  return window.contentView.flatMap(find)?.fittingSize.height
+}
