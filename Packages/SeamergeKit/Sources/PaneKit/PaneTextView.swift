@@ -12,6 +12,9 @@ final class PaneTextView: NSTextView {
   private(set) var currentBlock: Int?
   private(set) var grid = RowGrid(text: "", tabWidth: 1)
 
+  /// Learns about clicks on rows and supplies the context menu.
+  weak var interaction: (any RowInteraction)?
+
   /// Whether a find action of the find bar or the Find menu is under way, whose result comes into
   /// view the way a jump does.
   var isPerformingFindAction = false
@@ -128,6 +131,23 @@ final class PaneTextView: NSTextView {
   /// out the whole document whenever the view's geometry changes.
   override var textContainerOrigin: NSPoint {
     NSPoint(x: textContainerInset.width, y: textContainerInset.height)
+  }
+
+  override func mouseDown(with event: NSEvent) {
+    let row = row(at: convert(event.locationInWindow, from: nil))
+    // The text view tracks the mouse until the button goes up.
+    super.mouseDown(with: event)
+    interaction?.rowWasClicked(row)
+  }
+
+  override func menu(for event: NSEvent) -> NSMenu? {
+    guard let interaction, interaction.suppliesMenus else { return super.menu(for: event) }
+    return interaction.menu(forRow: row(at: convert(event.locationInWindow, from: nil)))
+  }
+
+  /// The row at `point` of the view, the nearest one beyond the text.
+  private func row(at point: CGPoint) -> Int {
+    min(max(Int((point.y / theme.rowHeight).rounded(.down)), 0), grid.rowCount - 1)
   }
 
   override func becomeFirstResponder() -> Bool {

@@ -37,6 +37,9 @@ public final class PaneView: NSView {
     set { textView.highlightProvider = newValue }
   }
 
+  /// Learns about clicks and supplies the context menu; the pane does not retain it.
+  public weak var delegate: (any PaneViewDelegate)?
+
   /// Whether spaces, tabs and line endings show as quiet symbols.
   ///
   /// The symbols are drawn only: they are neither copied nor read by VoiceOver.
@@ -81,6 +84,13 @@ public final class PaneView: NSView {
   public func reveal(block: Int) {
     guard content.blocks.indices.contains(block) else { return }
     textView.reveal(offset: textView.firstChangeOffset(ofBlock: block))
+  }
+
+  /// The row and block at `point`, in the pane's coordinates.
+  public func hit(at point: CGPoint) -> PaneHit {
+    let y = point.y + clipView.bounds.minY
+    let row = min(max(Int((y / theme.rowHeight).rounded(.down)), 0), content.lineNumbers.count - 1)
+    return hit(atRow: row)
   }
 
   /// The coupling that the pane scrolls in, if any.
@@ -138,6 +148,8 @@ public final class PaneView: NSView {
       name: NSView.boundsDidChangeNotification,
       object: scrollView.contentView)
     gutterView.removalRows = { [weak textView] rows in textView?.removalRows(in: rows) ?? [] }
+    textView.interaction = self
+    gutterView.interaction = self
     addSubview(gutterView)
     addSubview(scrollView)
     show()
@@ -221,5 +233,21 @@ public final class PaneView: NSView {
       default: sender.doubleValue * verticalScrollRange
       }
     scroll(to: CGPoint(x: visible.minX, y: min(max(y, 0), verticalScrollRange).rounded()))
+  }
+}
+
+extension PaneView: RowInteraction {
+  var suppliesMenus: Bool { delegate != nil }
+
+  func rowWasClicked(_ row: Int) {
+    delegate?.pane(self, didClick: hit(atRow: row))
+  }
+
+  func menu(forRow row: Int) -> NSMenu? {
+    delegate?.pane(self, menuFor: hit(atRow: row))
+  }
+
+  private func hit(atRow row: Int) -> PaneHit {
+    PaneHit(row: row, block: content.blockIndex(atRow: row))
   }
 }

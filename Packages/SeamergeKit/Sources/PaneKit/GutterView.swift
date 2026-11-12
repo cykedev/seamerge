@@ -66,6 +66,24 @@ final class GutterView: NSView {
 
   override var isFlipped: Bool { true }
 
+  /// Learns about clicks on rows and supplies the context menu.
+  weak var interaction: (any RowInteraction)?
+
+  override func mouseDown(with event: NSEvent) {
+    interaction?.rowWasClicked(row(at: convert(event.locationInWindow, from: nil)))
+  }
+
+  override func menu(for event: NSEvent) -> NSMenu? {
+    guard let interaction, interaction.suppliesMenus else { return super.menu(for: event) }
+    return interaction.menu(forRow: row(at: convert(event.locationInWindow, from: nil)))
+  }
+
+  /// The row at `point` of the gutter, the nearest one beyond the text.
+  private func row(at point: CGPoint) -> Int {
+    let row = Int(((point.y + scrollOffset) / theme.rowHeight).rounded(.down))
+    return min(max(row, 0), content.lineNumbers.count - 1)
+  }
+
   /// The width that the gutter needs for the widest line number and the markers of `content`.
   var fittingWidth: CGFloat {
     let width =
