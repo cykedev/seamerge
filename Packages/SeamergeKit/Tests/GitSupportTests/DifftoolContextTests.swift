@@ -79,6 +79,28 @@ struct DifftoolContextTests {
     #expect(context.filePosition == nil)
   }
 
+  @Test func contextMadeFromWhatTheToolHandedOverEqualsTheDetectedOne() {
+    let detected = DifftoolContext.detect(
+      path: "file.txt",
+      leftFile: URL(filePath: "/dev/null"),
+      rightFile: URL(filePath: "/dev/null"),
+      workingDirectory: URL(filePath: "/"),
+      environment: [:])
+
+    #expect(DifftoolContext(path: "file.txt") == detected)
+  }
+
+  @Test func positionMadeFromItsNumbersEqualsTheOneGitPasses() {
+    let context = DifftoolContext.detect(
+      path: "file.txt",
+      leftFile: URL(filePath: "/dev/null"),
+      rightFile: URL(filePath: "/dev/null"),
+      workingDirectory: URL(filePath: "/"),
+      environment: ["GIT_DIFF_PATH_COUNTER": "2", "GIT_DIFF_PATH_TOTAL": "5"])
+
+    #expect(context.filePosition == FilePosition(number: 2, count: 5))
+  }
+
   /// One call of the tool by `git difftool`: what Git passed, and what was detected from it.
   private struct Call {
     var left: String

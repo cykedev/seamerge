@@ -17,6 +17,18 @@ public struct DifftoolContext: Sendable, Hashable {
   /// Which file of the comparison this is, if Git tells.
   public var filePosition: FilePosition?
 
+  /// Creates a context from what is known about a comparison, such as what the command-line tool
+  /// found out and handed over.
+  public init(
+    path: String, leftRole: DiffSideRole = .before, rightRole: DiffSideRole = .after,
+    filePosition: FilePosition? = nil
+  ) {
+    self.path = path
+    self.leftRole = leftRole
+    self.rightRole = rightRole
+    self.filePosition = filePosition
+  }
+
   /// Names both sides of a comparison.
   ///
   /// A side is the working copy if its file is the file at `path` in `workingDirectory`, which
@@ -69,6 +81,12 @@ public struct FilePosition: Sendable, Hashable {
 
   /// How many files the run compares.
   public var count: Int
+
+  /// Creates the position of file `number`, counted from 1, among `count` files.
+  public init(number: Int, count: Int) {
+    self.number = number
+    self.count = count
+  }
 
   /// Reads the position from `GIT_DIFF_PATH_COUNTER` and `GIT_DIFF_PATH_TOTAL`, or returns `nil`
   /// if either is missing or the two do not fit together.
