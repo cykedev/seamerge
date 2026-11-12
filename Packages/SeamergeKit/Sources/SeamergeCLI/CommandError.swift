@@ -51,6 +51,10 @@ enum CommandError: Error {
   /// The app answered but does not understand the request, so it is another version.
   case appRefusedRequest
 
+  /// The app understands the request but cannot open a window of its kind; the associated value
+  /// tells whether the request is a comparison of two files.
+  case windowNotAvailable(isComparison: Bool)
+
   /// The socket could not be used; the associated value says why.
   case connectionNotPossible(reason: String)
 
@@ -60,7 +64,7 @@ enum CommandError: Error {
   /// The status the command ends with.
   var exitStatus: Int32 {
     switch self {
-    case .connectionLost:
+    case .connectionLost, .windowNotAvailable:
       1
     case .unknownOption, .unknownOptionOrFile, .missingValue, .repeatedOption, .missingOption,
       .unexpectedArgument, .missingFiles, .emptyFileName, .fileNotFound, .folderInsteadOfFile,
@@ -98,6 +102,10 @@ enum CommandError: Error {
     case .appNotAnswering: "Seamerge does not answer. Quit Seamerge, then try again."
     case .appRefusedRequest:
       "Seamerge cannot read the request; it may be another version. Quit Seamerge, then try again."
+    case .windowNotAvailable(isComparison: true):
+      "This version of Seamerge cannot compare two files yet. Use another diff tool for now."
+    case .windowNotAvailable(isComparison: false):
+      "This version of Seamerge cannot open this merge. Use another merge tool for now."
     case .connectionNotPossible(let reason):
       "Cannot connect to Seamerge (\(reason)). Quit Seamerge, then try again."
     case .connectionLost:
@@ -105,11 +113,17 @@ enum CommandError: Error {
     }
   }
 
-  /// The error a failed session ends the command with.
-  init(_ error: SessionError) {
+  /// The error a failed session of `request` ends the command with.
+  init(_ error: SessionError, request: SessionRequest) {
     switch error {
     case .serverUnreachable:
       self = .appNotAnswering
+    case .rejected(.unsupportedRequest):
+      if case .diff = request {
+        self = .windowNotAvailable(isComparison: true)
+      } else {
+        self = .windowNotAvailable(isComparison: false)
+      }
     case .rejected, .unsupportedVersion:
       self = .appRefusedRequest
     case .disconnected, .cancelled, .malformedMessage, .messageTooLong:

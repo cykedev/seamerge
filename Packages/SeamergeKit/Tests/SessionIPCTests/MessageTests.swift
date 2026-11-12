@@ -16,7 +16,8 @@ struct MessageTests {
             name: .commit(abbreviatedHash: "1a2b3c4", subject: "Fix it", branch: "feature"),
             role: .yourCommit,
             commit: .init(
-              abbreviatedHash: "1a2b3c4", subject: "Fix it", authorName: "Ada",
+              hash: "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d", abbreviatedHash: "1a2b3c4",
+              subject: "Fix it", authorName: "Ada",
               authorDate: Date(timeIntervalSince1970: 1_700_000_000))),
           local: .init(name: .reference("main"), role: .rebaseTarget),
           base: .init(name: .stash),
@@ -52,20 +53,23 @@ struct MessageTests {
 
   @Test(arguments: [
     SessionEvent.opened, .closed(.saved), .closed(.cancelled), .rejected(.unsupportedVersion),
-    .rejected(.malformedRequest),
+    .rejected(.malformedRequest), .rejected(.unsupportedRequest),
   ])
   func eventSurvivesEncodingAndDecoding(_ event: SessionEvent) throws {
     #expect(try roundTrip(event) == event)
   }
 
   @Test func eventsAreWrittenAsTheProtocolDescribesThem() throws {
-    #expect(try json(SessionEvent.opened) == #"{"event":"opened","version":1}"#)
+    #expect(try json(SessionEvent.opened) == #"{"event":"opened","version":2}"#)
     #expect(
       try json(SessionEvent.closed(.saved))
-        == #"{"event":"closed","exit":0,"outcome":"saved","version":1}"#)
+        == #"{"event":"closed","exit":0,"outcome":"saved","version":2}"#)
     #expect(
       try json(SessionEvent.closed(.cancelled))
-        == #"{"event":"closed","exit":1,"outcome":"cancelled","version":1}"#)
+        == #"{"event":"closed","exit":1,"outcome":"cancelled","version":2}"#)
+    #expect(
+      try json(SessionEvent.rejected(.unsupportedRequest))
+        == #"{"event":"rejected","reason":"unsupportedRequest","version":2}"#)
   }
 
   @Test func requestIsWrittenWithPlainPathsAndNamedFields() throws {
@@ -77,7 +81,7 @@ struct MessageTests {
           remote: .init(
             name: .reference("feature"), role: .incoming,
             commit: .init(
-              abbreviatedHash: "1a2b3c4", subject: "Add", authorName: "Ada",
+              hash: "1a2b3c4d", abbreviatedHash: "1a2b3c4", subject: "Add", authorName: "Ada",
               authorDate: Date(timeIntervalSince1970: 0))),
           base: .init(name: .stash))))
 
@@ -85,13 +89,13 @@ struct MessageTests {
       try json(request)
         == #"{"merge":{"context":{"base":{"name":{"stash":{}}},"local":{},"#
         + #""remote":{"commit":{"abbreviatedHash":"1a2b3c4","authorDate":"1970-01-01T00:00:00Z","#
-        + #""authorName":"Ada","subject":"Add"},"name":{"reference":{"name":"feature"}},"#
-        + #""role":"incoming"}},"local":"/a b/ä","output":"/o","remote":"/r"},"version":1}"#)
+        + #""authorName":"Ada","hash":"1a2b3c4d","subject":"Add"},"name":{"reference":{"name":"feature"}},"#
+        + #""role":"incoming"}},"local":"/a b/ä","output":"/o","remote":"/r"},"version":2}"#)
   }
 
   @Test func commitDateIsWrittenInISO8601WhateverTheEncoderSays() throws {
     let commit = SessionRequest.Commit(
-      abbreviatedHash: "1", subject: "s", authorName: "a",
+      hash: "1", abbreviatedHash: "1", subject: "s", authorName: "a",
       authorDate: Date(timeIntervalSince1970: 1_700_000_000))
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .secondsSince1970
@@ -102,8 +106,8 @@ struct MessageTests {
   }
 
   @Test func eventOfAnotherVersionIsRefused() {
-    #expect(throws: SessionError.unsupportedVersion(2)) {
-      try decode(SessionEvent.self, from: #"{"event":"opened","version":2}"#)
+    #expect(throws: SessionError.unsupportedVersion(1)) {
+      try decode(SessionEvent.self, from: #"{"event":"opened","version":1}"#)
     }
   }
 
@@ -122,7 +126,7 @@ struct MessageTests {
   @Test func exitStatusThatContradictsTheOutcomeIsRefused() {
     #expect(throws: DecodingError.self) {
       try decode(
-        SessionEvent.self, from: #"{"event":"closed","exit":0,"outcome":"cancelled","version":1}"#)
+        SessionEvent.self, from: #"{"event":"closed","exit":0,"outcome":"cancelled","version":2}"#)
     }
   }
 
@@ -131,15 +135,15 @@ struct MessageTests {
       try decode(
         SessionRequest.self,
         from: #"{"diff":{"context":{"leftRole":"before","rightRole":"after"},"left":"a","#
-          + #""right":"/b"},"version":1}"#)
+          + #""right":"/b"},"version":2}"#)
     }
   }
 
   @Test(arguments: [
-    #"{"version":1}"#,
+    #"{"version":2}"#,
     #"{"diff":{"context":{"leftRole":"before","rightRole":"after"},"left":"/a","right":"/b"},"#
       + #""merge":{"context":{"base":{},"local":{},"remote":{}},"local":"/l","output":"/o","#
-      + #""remote":"/r"},"version":1}"#,
+      + #""remote":"/r"},"version":2}"#,
   ])
   func requestWithoutExactlyOneOperationIsRefused(_ json: String) {
     #expect(throws: DecodingError.self) { try decode(SessionRequest.self, from: json) }

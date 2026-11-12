@@ -119,6 +119,9 @@ extension SessionRequest {
 
   /// The facts about a commit that the popover of a header shows.
   public struct Commit: Sendable, Hashable {
+    /// The full hash.
+    public var hash: String
+
     /// The abbreviated hash.
     public var abbreviatedHash: String
 
@@ -132,7 +135,10 @@ extension SessionRequest {
     public var authorDate: Date
 
     /// Creates the facts about a commit.
-    public init(abbreviatedHash: String, subject: String, authorName: String, authorDate: Date) {
+    public init(
+      hash: String, abbreviatedHash: String, subject: String, authorName: String, authorDate: Date
+    ) {
+      self.hash = hash
       self.abbreviatedHash = abbreviatedHash
       self.subject = subject
       self.authorName = authorName
@@ -162,12 +168,13 @@ extension SessionRequest {
 
 extension SessionRequest.Commit: Codable {
   private enum CodingKeys: String, CodingKey {
-    case abbreviatedHash, subject, authorName, authorDate
+    case hash, abbreviatedHash, subject, authorName, authorDate
   }
 
   /// Decodes a commit whose date is written in ISO 8601.
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
+    hash = try container.decode(String.self, forKey: .hash)
     abbreviatedHash = try container.decode(String.self, forKey: .abbreviatedHash)
     subject = try container.decode(String.self, forKey: .subject)
     authorName = try container.decode(String.self, forKey: .authorName)
@@ -183,6 +190,7 @@ extension SessionRequest.Commit: Codable {
   /// Encodes a commit with its date in ISO 8601, whatever the date strategy of the encoder.
   public func encode(to encoder: any Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(hash, forKey: .hash)
     try container.encode(abbreviatedHash, forKey: .abbreviatedHash)
     try container.encode(subject, forKey: .subject)
     try container.encode(authorName, forKey: .authorName)

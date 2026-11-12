@@ -91,11 +91,11 @@ struct SessionTests {
       var server = try RunningServer(at: url)
       var tool = try RawPeer.connect(to: url)
 
-      try await tool.write(#"{"version":2,"anything":"new"}"# + "\n")
+      try await tool.write(#"{"version":1,"anything":"old"}"# + "\n")
 
       #expect(
         try await tool.nextLine()
-          == #"{"event":"rejected","reason":"unsupportedVersion","version":1}"#)
+          == #"{"event":"rejected","reason":"unsupportedVersion","version":2}"#)
       #expect(try await tool.nextLine() == nil)
       try await expectNextRequestComesFromAWellBehavedTool(server: &server, url: url)
       await server.stop()
@@ -111,7 +111,7 @@ struct SessionTests {
 
       #expect(
         try await tool.nextLine()
-          == #"{"event":"rejected","reason":"malformedRequest","version":1}"#)
+          == #"{"event":"rejected","reason":"malformedRequest","version":2}"#)
       #expect(try await tool.nextLine() == nil)
       try await expectNextRequestComesFromAWellBehavedTool(server: &server, url: url)
       await server.stop()
@@ -139,7 +139,7 @@ struct SessionTests {
       var server = try RunningServer(at: url)
       let tool = try RawPeer.connect(to: url)
 
-      try await tool.write(#"{"version":1,"merge":{"base":"/rep"#)
+      try await tool.write(#"{"version":2,"merge":{"base":"/rep"#)
       tool.close()
 
       try await expectNextRequestComesFromAWellBehavedTool(server: &server, url: url)
@@ -169,9 +169,9 @@ struct SessionTests {
       var app = try await RawPeer.acceptFirstConnection(at: url)
       #expect(try await app.nextLine() != nil)
 
-      try await app.write(#"{"event":"opened","version":2}"# + "\n")
+      try await app.write(#"{"event":"opened","version":1}"# + "\n")
 
-      await #expect(throws: SessionError.unsupportedVersion(2)) { try await tool.value }
+      await #expect(throws: SessionError.unsupportedVersion(1)) { try await tool.value }
     }
   }
 
@@ -181,7 +181,7 @@ struct SessionTests {
       var app = try await RawPeer.acceptFirstConnection(at: url)
       #expect(try await app.nextLine() != nil)
 
-      try await app.write(#"{"event":"rejected","reason":"malformedRequest","version":1}"# + "\n")
+      try await app.write(#"{"event":"rejected","reason":"malformedRequest","version":2}"# + "\n")
 
       await #expect(throws: SessionError.rejected(.malformedRequest)) { try await tool.value }
     }

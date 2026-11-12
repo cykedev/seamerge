@@ -79,7 +79,7 @@ public struct SeamergeCommand: Sendable {
       return outcome.exitStatus
     } catch {
       Logger.seamergeCLI.error("The session failed: \(String(describing: error))")
-      throw CommandError(error)
+      throw CommandError(error, request: request)
     }
   }
 

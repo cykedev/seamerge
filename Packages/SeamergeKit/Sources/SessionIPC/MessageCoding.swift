@@ -7,7 +7,7 @@ import Foundation
 /// understood.
 enum MessageCoding {
   /// The version of the protocol this module speaks.
-  static let version = 1
+  static let version = 2
 
   /// The line feed that ends every message.
   static let lineFeed = UInt8(ascii: "\n")

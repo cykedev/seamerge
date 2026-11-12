@@ -39,6 +39,50 @@ struct ExitStatusTests {
     }
   }
 
+  @Test func comparisonTheAppCannotShowEndsWithOneAndSaysSo() async throws {
+    try await withSandbox { sandbox in
+      try sandbox.makeFile("a.txt")
+      let app = try ScriptedApp(at: sandbox.socketURL, ending: .reject(.unsupportedRequest))
+      #expect(
+        await sandbox.run(Self.diff)
+          == CommandResult(
+            exitStatus: 1,
+            errorOutput: "seamerge: This version of Seamerge cannot compare two files yet. "
+              + "Use another diff tool for now.\n"))
+      await app.stop()
+    }
+  }
+
+  @Test func mergeTheAppCannotShowEndsWithOneAndSaysSo() async throws {
+    try await withSandbox { sandbox in
+      try sandbox.makeFile("a.txt")
+      let app = try ScriptedApp(at: sandbox.socketURL, ending: .reject(.unsupportedRequest))
+      #expect(
+        await sandbox.run(Self.merge)
+          == CommandResult(
+            exitStatus: 1,
+            errorOutput: "seamerge: This version of Seamerge cannot open this merge. "
+              + "Use another merge tool for now.\n"))
+      await app.stop()
+    }
+  }
+
+  @Test func appOfAnOlderProtocolEndsWithThreeAndSaysWhatToDo() async throws {
+    try await withSandbox { sandbox in
+      try sandbox.makeFile("a.txt")
+      let app = try OlderApp(
+        at: sandbox.socketURL,
+        answering: #"{"event":"rejected","reason":"unsupportedVersion","version":1}"#)
+      #expect(
+        await sandbox.run(Self.merge)
+          == CommandResult(
+            exitStatus: 3,
+            errorOutput: "seamerge: Seamerge cannot read the request; it may be another version. "
+              + "Quit Seamerge, then try again.\n"))
+      await app.stop()
+    }
+  }
+
   @Test func appThatGoesAwayBeforeTheWindowClosesEndsWithOne() async throws {
     try await withSandbox { sandbox in
       try sandbox.makeFile("a.txt")

@@ -14,6 +14,9 @@ struct ScriptedApp {
 
     /// Goes away without closing the window, as an app that crashes.
     case disconnect
+
+    /// Refuses the request without opening a window.
+    case reject(SessionRejection)
   }
 
   private let task: Task<Void, Never>
@@ -32,8 +35,13 @@ struct ScriptedApp {
       await server.run { connection in
         sink.yield(connection.request)
         do {
+          let ending = ending(connection.request)
+          if case .reject(let reason) = ending {
+            try await connection.send(.rejected(reason))
+            return
+          }
           try await connection.send(.opened)
-          switch ending(connection.request) {
+          switch ending {
           case .close(let outcome):
             try await connection.send(.closed(outcome))
           case .save(let text):
@@ -43,7 +51,7 @@ struct ScriptedApp {
             }
             try Data(text.utf8).write(to: merge.output)
             try await connection.send(.closed(.saved))
-          case .disconnect:
+          case .disconnect, .reject:
             return
           }
         } catch {

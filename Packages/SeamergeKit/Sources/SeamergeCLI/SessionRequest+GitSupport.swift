@@ -68,6 +68,7 @@ extension SessionRequest.SideRole {
 extension SessionRequest.Commit {
   init(_ commit: CommitDetails) {
     self.init(
+      hash: commit.hash,
       abbreviatedHash: commit.abbreviatedHash,
       subject: commit.subject,
       authorName: commit.authorName,

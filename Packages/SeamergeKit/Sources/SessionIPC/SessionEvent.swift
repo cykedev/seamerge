@@ -35,6 +35,9 @@ public enum SessionRejection: String, Sendable, Hashable, Codable {
 
   /// The request could not be read.
   case malformedRequest
+
+  /// The app read the request but cannot open a window of its kind.
+  case unsupportedRequest
 }
 
 extension SessionEvent: Codable {
