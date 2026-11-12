@@ -40,6 +40,17 @@ struct ComparedFile: Sendable {
     lineStarts[lines.lowerBound]..<lineStarts[lines.upperBound]
   }
 
+  /// The text of `lines` as the file has it, including the line ending of the last one.
+  ///
+  /// It differs from the compared text only in a file whose lines all end in CR, which the
+  /// comparison sees with LF.
+  func originalText(ofLines lines: Range<Int>) -> String {
+    guard let bytes = file.utf8 else {
+      preconditionFailure("A session never compares a binary file")
+    }
+    return String(decoding: bytes[byteRange(ofLines: lines)], as: UTF8.self)
+  }
+
   /// The bytes of a line without its line ending.
   func contentByteRange(ofLine line: Int) -> Range<Int> {
     let start = lineStarts[line]
