@@ -1,17 +1,32 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ added as %@": {
+      "comment": "VoiceOver: a file was put in a field, such as LoginView.swift added as Base."
+    },
     "%@ and %@": {
       "comment": "Two sides that share a toggle, such as feature/login and main."
     },
+    "%@ removed from %@": {
+      "comment": "VoiceOver: a field was emptied, such as LoginView.swift removed from Left."
+    },
     "%@ · %@": {
       "comment": "The name of a commit followed by its branch, such as 1a2b3c4 Fix typo · main."
+    },
+    "%@ ↔ %@": {
+      "comment": "A recent comparison: the names of the left and the right file."
+    },
+    "%@ ↔ %@ ↔ %@": {
+      "comment": "A recent merge: the names of A, the base and B."
     },
     "%@, %@": {
       "comment": "VoiceOver: a pane, such as A, feature/login."
     },
     "%@, %@, %@": {
       "comment": "VoiceOver: a pane with its name and role in the order the header shows them, such as A, feature/login, incoming or A, your commit, 1a2b3c4 Fix typo."
+    },
+    "%@, in %@": {
+      "comment": "VoiceOver: the file in a field, such as LoginView.swift, in ~/Projects/app."
     },
     "%@, line %lld": {
       "comment": "VoiceOver: a mark in the overview bar of the result, such as From A, line 12."
@@ -109,6 +124,12 @@
     "Base": {
       "comment": "The badge of the common ancestor."
     },
+    "Base (Optional)": {
+      "comment": "Compare Files: the role of the middle field, which may stay empty."
+    },
+    "Base, optional": {
+      "comment": "VoiceOver: the role of the empty middle field of Compare Files."
+    },
     "CR": {
       "comment": "Line endings: carriage return."
     },
@@ -130,14 +151,38 @@
     "Changes": {
       "comment": "Toolbar."
     },
+    "Check that the file exists and that you may read it, then try again.": {
+      "comment": "Alert: what to do when a file cannot be read."
+    },
+    "Choose": {
+      "comment": "The button of the open panel of a field."
+    },
+    "Choose a file, or drop one here": {
+      "comment": "VoiceOver hint of a field of Compare Files."
+    },
     "Choose how lines are compared": {
       "comment": "Help tag of the comparison item in the toolbar."
+    },
+    "Choose the file for %@.": {
+      "comment": "Open panel of a field of Compare Files, such as Choose the file for Left."
+    },
+    "Choose…": {
+      "comment": "Compare Files: the button in an empty field that opens the open panel."
     },
     "Collapse Unchanged Lines": {
       "comment": "View menu command."
     },
     "Commit": {
       "comment": "Details of a side: the commit."
+    },
+    "Compare": {
+      "comment": "Compare Files: the default button with two files."
+    },
+    "Compare %@ with %@": {
+      "comment": "VoiceOver: a recent comparison, with the names of the left and the right file."
+    },
+    "Compare Files": {
+      "comment": "The title of the window that puts files together to compare or merge."
     },
     "Compared exactly": {
       "comment": "Subtitle: the comparison counts every byte, whitespace and line endings too."
@@ -183,6 +228,15 @@
     },
     "Done": {
       "comment": "Toolbar button: save and close."
+    },
+    "Drop a File": {
+      "comment": "Compare Files: an empty field, which takes a file dragged onto it."
+    },
+    "Drop to Swap": {
+      "comment": "Compare Files: below two fields while one is dragged onto the other."
+    },
+    "Drop to Use as %@": {
+      "comment": "Compare Files: below a field that a drop would fill, such as Drop to Use as A."
     },
     "Edited by hand": {
       "comment": "VoiceOver: a part of the result that the user typed."
@@ -259,6 +313,9 @@
     "Last Change": {
       "comment": "Go menu command."
     },
+    "Left": {
+      "comment": "Compare Files: the role of a field."
+    },
     "Line Endings": {
       "comment": "Details of a side: LF, CRLF or CR."
     },
@@ -276,6 +333,12 @@
     },
     "Maximize Result": {
       "comment": "View menu command."
+    },
+    "Merge": {
+      "comment": "Compare Files: the default button with three files."
+    },
+    "Merge %@ and %@ with the base %@": {
+      "comment": "VoiceOver: a recent merge, with the names of A, B and the base."
     },
     "Mixed": {
       "comment": "Line endings: more than one kind."
@@ -325,8 +388,20 @@
     "Previous and Next Conflict": {
       "comment": "Toolbar item in the customization sheet."
     },
+    "Quit other apps to free memory, then try again.": {
+      "comment": "Alert: what to do when the files of a merge are too large."
+    },
     "Rebase onto %@ · Commit %lld of %lld": {
       "comment": "Subtitle: how far a rebase has come, such as Rebase onto main · Commit 3 of 7."
+    },
+    "Recent": {
+      "comment": "Compare Files: the heading of the comparisons opened last."
+    },
+    "Remove File": {
+      "comment": "Compare Files: the button that empties a field."
+    },
+    "Remove this file from the field": {
+      "comment": "Help tag of the button that empties a field of Compare Files."
     },
     "Resolved conflict, line %lld": {
       "comment": "VoiceOver: the mark of a decided conflict in the overview bar."
@@ -340,8 +415,20 @@
     "Result, %@": {
       "comment": "VoiceOver: the result pane and the file it is written to."
     },
+    "Right": {
+      "comment": "Compare Files: the role of a field."
+    },
     "Save and close": {
       "comment": "Help tag of Done in the toolbar."
+    },
+    "Seamerge can’t read “%@”.": {
+      "comment": "Alert: a file of a merge cannot be read."
+    },
+    "Seamerge couldn’t compare the files.": {
+      "comment": "Alert: the comparison of a merge failed."
+    },
+    "Seamerge merges text. Use the app that made the file to merge it.": {
+      "comment": "Alert: what to do with a binary file."
     },
     "Select All": {
       "comment": "Context menu: select the whole text."
@@ -364,6 +451,9 @@
     "Stash": {
       "comment": "The name of a stash in a header."
     },
+    "Swapped %@ and %@": {
+      "comment": "VoiceOver: two fields swapped their files."
+    },
     "Switch": {
       "comment": "Button: switch anyway."
     },
@@ -375,6 +465,9 @@
     },
     "Take the version of %@.": {
       "comment": "Help tag of a toggle, such as Take the version of feature/login."
+    },
+    "The files are too large to merge.": {
+      "comment": "Alert: the files of a merge do not fit in memory."
     },
     "The switch discards %lld decisions.": {
       "comment": "Sheet before switching the comparison, such as The switch discards 3 decisions.",
@@ -411,6 +504,9 @@
     "Treat “a  b” as “a b”, but not as “ab”": {
       "comment": "Help tag of Compare > Ignore Whitespace Changes, with an example."
     },
+    "Try again. If it fails again, merge the files with another tool.": {
+      "comment": "Alert: what to do when the comparison of a merge failed."
+    },
     "UTF-16 BE": {
       "comment": "Encoding: UTF-16 big-endian."
     },
@@ -441,6 +537,9 @@
     "cherry-picked commit": {
       "comment": "Role: the commit being cherry-picked."
     },
+    "empty": {
+      "comment": "VoiceOver: a field without a file."
+    },
     "incoming": {
       "comment": "Role: the branch being merged in."
     },
@@ -458,6 +557,9 @@
     },
     "yours": {
       "comment": "Role: the branch the user is on."
+    },
+    "“%@” isn’t a text file.": {
+      "comment": "Alert: a file of a merge is binary."
     }
   },
   "version": "1.0"

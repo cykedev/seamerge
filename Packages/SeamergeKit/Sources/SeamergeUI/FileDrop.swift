@@ -1,0 +1,72 @@
+import AppKit
+
+/// What the window Compare Files does with files dragged onto one of its fields or anywhere else
+/// on it.
+@MainActor
+protocol FileDropDelegate: AnyObject {
+  /// What a drop of `info` would do, as the pointer shows it; `slot` is the field under the
+  /// pointer, or `nil` elsewhere on the window.
+  func operation(forDrag info: any NSDraggingInfo, onto slot: FileSlot?) -> NSDragOperation
+
+  /// Takes the drop of `info` and tells whether it did.
+  func acceptDrop(_ info: any NSDraggingInfo, onto slot: FileSlot?) -> Bool
+
+  /// The drag that `operation(forDrag:onto:)` was asked about left or ended.
+  func dragDidEnd()
+}
+
+/// Reads the files of a drop.
+enum FileDrop {
+  /// The files on `pasteboard`, or `nil` if it holds none or a folder among them, which the
+  /// window does not take.
+  @MainActor
+  static func files(on pasteboard: NSPasteboard) -> [URL]? {
+    let objects = pasteboard.readObjects(
+      forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true])
+    guard let urls = objects as? [URL], !urls.isEmpty else { return nil }
+    for url in urls {
+      var isDirectory: ObjCBool = false
+      let exists = FileManager.default.fileExists(
+        atPath: url.path(percentEncoded: false), isDirectory: &isDirectory)
+      guard exists, !isDirectory.boolValue else { return nil }
+    }
+    return urls
+  }
+}
+
+/// The content of the window Compare Files, which takes files dropped anywhere outside the
+/// fields.
+final class FileDropView: NSView {
+  /// Decides what a drop does; the view does not retain it.
+  weak var delegate: (any FileDropDelegate)?
+
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    registerForDraggedTypes([.fileURL])
+  }
+
+  /// The view is made in code only.
+  required init?(coder: NSCoder) {
+    nil
+  }
+
+  override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+    delegate?.operation(forDrag: sender, onto: nil) ?? []
+  }
+
+  override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+    delegate?.operation(forDrag: sender, onto: nil) ?? []
+  }
+
+  override func draggingExited(_ sender: (any NSDraggingInfo)?) {
+    delegate?.dragDidEnd()
+  }
+
+  override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+    delegate?.acceptDrop(sender, onto: nil) ?? false
+  }
+
+  override func concludeDragOperation(_ sender: (any NSDraggingInfo)?) {
+    delegate?.dragDidEnd()
+  }
+}

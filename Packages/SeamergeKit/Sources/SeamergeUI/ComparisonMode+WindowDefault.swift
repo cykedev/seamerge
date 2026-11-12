@@ -5,6 +5,7 @@ extension ComparisonMode {
   /// are ignored, since a reindented line rarely matters when merging.
   ///
   /// The merge model starts in ``exact`` as the neutral choice of a library; this is the choice
-  /// of the app, and the subtitle names a mode only when it differs from it.
-  static let windowDefault = ComparisonMode.ignoreWhitespaceAmount
+  /// of the app, which builds every session in it, and the subtitle names a mode only when it
+  /// differs from it.
+  public static let windowDefault = ComparisonMode.ignoreWhitespaceAmount
 }
