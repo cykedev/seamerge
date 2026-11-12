@@ -138,6 +138,18 @@ enum Palette {
   static let invisibleCharacterOpacity = AppearanceValues<CGFloat>(
     light: 0.46, dark: 0.53, lightHighContrast: 0.60, darkHighContrast: 0.60)
 
+  /// The opacity of the label color behind the marks of the overview bar.
+  static let overviewBackgroundOpacity = AppearanceValues<CGFloat>(
+    light: 0.03, dark: 0.04, lightHighContrast: 0.05, darkHighContrast: 0.06)
+
+  /// The opacity of the label color in the area of the overview bar that shows the visible part.
+  static let visibleRegionOpacity = AppearanceValues<CGFloat>(
+    light: 0.10, dark: 0.14, lightHighContrast: 0.12, darkHighContrast: 0.18)
+
+  /// The opacity of the label color for the outline of the visible area in the overview bar.
+  static let visibleRegionOutlineOpacity = AppearanceValues<CGFloat>(
+    light: 0.18, dark: 0.22, lightHighContrast: 0.50, darkHighContrast: 0.55)
+
   /// The opacity of the label color for the preview of a conflict in the result.
   static let previewTextOpacity = AppearanceValues<CGFloat>(
     light: 0.60, dark: 0.80, lightHighContrast: 0.60, darkHighContrast: 0.85)

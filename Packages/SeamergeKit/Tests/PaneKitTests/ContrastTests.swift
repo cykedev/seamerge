@@ -98,6 +98,31 @@ import Testing
           theme: theme, style: style, isCurrent: isCurrent, ground: ground, resolve: resolve)
       }
     }
+    return pairs + overviewPairs(theme: theme, ground: ground, resolve: resolve)
+  }
+
+  /// The pairs in the overview bar: every mark and the pointer at the current block, on the bar
+  /// and within the area that shows the visible part.
+  private func overviewPairs(
+    theme: Theme, ground: NSColor, resolve: (NSColor?) -> NSColor?
+  ) -> [Pair] {
+    let bar = Contrast.over(resolve(theme.overviewBackgroundTone), ground)
+    let visible = Contrast.over(resolve(theme.visibleRegionFill), bar)
+    var pairs: [Pair] = []
+    for (surfaceName, surface) in [("bar", bar), ("visible area", visible)] {
+      for style in Self.styles where style != .unchanged {
+        pairs.append(
+          Pair(
+            description: "overview mark of \(style) on \(surfaceName)",
+            foreground: Contrast.over(resolve(theme.overviewMarkColor(for: style)), surface),
+            surface: surface, minimum: Self.sign))
+      }
+      pairs.append(
+        Pair(
+          description: "current block pointer on \(surfaceName)",
+          foreground: Contrast.over(resolve(.labelColor), surface), surface: surface,
+          minimum: Self.sign))
+    }
     return pairs
   }
 

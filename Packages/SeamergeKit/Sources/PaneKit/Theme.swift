@@ -20,17 +20,26 @@ public struct Theme {
   /// The colors also take those values in an appearance that has increased contrast.
   public var increasesContrast: Bool
 
+  /// Whether marks that differ in color differ in shape as well.
+  ///
+  /// Set it from the system setting,
+  /// `NSWorkspace.accessibilityDisplayShouldDifferentiateWithoutColor`. Open conflicts in the
+  /// overview bar then get a notch at their leading edge.
+  public var differentiatesWithoutColor: Bool
+
   /// Creates a theme.
   public init(
     font: NSFont = .monospacedSystemFont(ofSize: 13, weight: .regular),
     lineHeightMultiple: CGFloat = 1.5,
     tabWidth: Int = 4,
-    increasesContrast: Bool = false
+    increasesContrast: Bool = false,
+    differentiatesWithoutColor: Bool = false
   ) {
     self.font = font
     self.lineHeightMultiple = lineHeightMultiple
     self.tabWidth = tabWidth
     self.increasesContrast = increasesContrast
+    self.differentiatesWithoutColor = differentiatesWithoutColor
   }
 
   /// The height of every row, in points: the font size times the multiple, rounded up.
@@ -103,6 +112,30 @@ public struct Theme {
 
   /// The grid that widths and distances of the panes are rounded to.
   static let layoutGrid: CGFloat = 4
+
+  /// Where the reading line lies, as a fraction of the visible height from the top: the line
+  /// that panes coupled by blocks align, and where a place that the pane scrolls to comes to
+  /// rest.
+  static let readingLine: CGFloat = 0.25
+
+  /// The width of the overview bar.
+  static let overviewBarWidth: CGFloat = 12
+
+  /// The distance between the edges of the overview bar and its marks.
+  static let overviewMarkInset: CGFloat = 2
+
+  /// The smallest height of a mark in the overview bar, so that a single line stays visible and
+  /// can be clicked in a long file.
+  static let overviewMarkMinimumHeight: CGFloat = 3
+
+  /// How far beyond a mark in the overview bar a click still hits it.
+  static let overviewMarkHitSlop: CGFloat = 3
+
+  /// The height of the triangle that points at the current block in the overview bar.
+  static let currentBlockIndicatorHeight: CGFloat = 6
+
+  /// The width of the notch of an open conflict in the overview bar.
+  static let conflictNotchWidth: CGFloat = 2
 
   /// The smallest font size of the interface.
   private static let smallestFontSize: CGFloat = 10

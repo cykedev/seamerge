@@ -112,12 +112,10 @@ final class PaneTextView: NSTextView {
     }
   }
 
-  /// The size that the view needs for its rows, at least as wide as `visibleWidth`.
-  func fittingSize(visibleWidth: CGFloat) -> CGSize {
-    let textWidth = CGFloat(grid.widestRowColumns) * theme.characterWidth + 2 * Theme.textInset
-    return CGSize(
-      width: max(visibleWidth, textWidth.rounded(.up)),
-      height: CGFloat(grid.rowCount) * theme.rowHeight)
+  /// The width that the widest row needs, known before TextKit lays it out, so that the scroll
+  /// range does not grow while the user scrolls.
+  var textWidth: CGFloat {
+    (CGFloat(grid.widestRowColumns) * theme.characterWidth + 2 * Theme.textInset).rounded(.up)
   }
 
   /// The origin of the text, fixed by the inset.

@@ -25,6 +25,9 @@
     "Open conflict": {
       "comment": "VoiceOver: a conflict that still needs a decision."
     },
+    "Overview": {
+      "comment": "VoiceOver: the scroll bar that marks where the text changes."
+    },
     "Removed": {
       "comment": "VoiceOver: the side removed lines."
     },

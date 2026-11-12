@@ -40,6 +40,46 @@ extension Theme {
     }
   }
 
+  /// The tone behind the marks of the overview bar, drawn over the text background.
+  public var overviewBackgroundTone: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.overviewBackgroundOpacity[appearance])
+    }
+  }
+
+  /// The light area of the overview bar that shows the visible part of the text.
+  public var visibleRegionFill: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.visibleRegionOpacity[appearance])
+    }
+  }
+
+  /// The outline of the visible area in the overview bar.
+  public var visibleRegionOutline: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.visibleRegionOutlineOpacity[appearance])
+    }
+  }
+
+  /// The color of the mark of a block of `style` in the overview bar: the symbol value of the
+  /// side whose text the rows hold, a neutral tone for text typed by hand.
+  public func overviewMarkColor(for style: BlockStyle) -> NSColor {
+    switch style {
+    case .tinted(let role): symbolColor(for: role)
+    case .original: symbolColor(for: .base)
+    case .combined:
+      color { appearance, _ in
+        NSColor(rgb: Palette.symbol(of: .a)[appearance])
+          .blended(withFraction: 0.5, of: NSColor(rgb: Palette.symbol(of: .b)[appearance]))
+          ?? NSColor(rgb: Palette.symbol(of: .a)[appearance])
+      }
+    case .unchanged, .handwritten: Self.secondaryMarkColor
+    }
+  }
+
   /// The symbol value of `role`: the color of its markers, badges and toggles.
   public func symbolColor(for role: ColorRole) -> NSColor {
     let values = Palette.symbol(of: role)
