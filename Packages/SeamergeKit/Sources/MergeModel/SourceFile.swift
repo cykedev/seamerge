@@ -59,6 +59,11 @@ public struct SourceFile: Sendable {
   /// The text of the file with its line endings, or `nil` if the file is binary.
   public var text: String? { decodedText?.text }
 
+  /// The encoding the file was read in, or `nil` if the file is binary.
+  public var encoding: FileEncoding? {
+    decodedText.map { FileEncoding($0.encoding) }
+  }
+
   /// How the lines of the text end, or `nil` if the file is binary or has no line break.
   public var lineEndings: LineEndings? {
     decodedText?.lineEndingStyle.map(LineEndings.init)
