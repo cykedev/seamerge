@@ -27,6 +27,7 @@ let package = Package(
   products: [
     // Only the modules the app and the command-line tool link directly.
     .library(name: "SeamergeUI", targets: ["SeamergeUI"]),
+    .library(name: "MergeModel", targets: ["MergeModel"]),
     .library(name: "SeamergeCLI", targets: ["SeamergeCLI"]),
     .library(name: "SessionIPC", targets: ["SessionIPC"]),
     .library(name: "GitSupport", targets: ["GitSupport"]),

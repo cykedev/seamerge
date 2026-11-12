@@ -1,0 +1,566 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		5EA300000000000000000101 /* SeamergeUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000901 /* SeamergeUI */; };
+		5EA300000000000000000102 /* SessionIPC in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000902 /* SessionIPC */; };
+		5EA300000000000000000103 /* GitSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000903 /* GitSupport */; };
+		5EA300000000000000000104 /* MergeModel in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000904 /* MergeModel */; };
+		5EA300000000000000000111 /* SeamergeCLI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000911 /* SeamergeCLI */; };
+		5EA300000000000000000121 /* SeamergeUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000921 /* SeamergeUI */; };
+		5EA300000000000000000122 /* SessionIPC in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000922 /* SessionIPC */; };
+		5EA300000000000000000123 /* GitSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000923 /* GitSupport */; };
+		5EA300000000000000000124 /* MergeModel in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000924 /* MergeModel */; };
+		5EA300000000000000000125 /* SeamergeCLI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000925 /* SeamergeCLI */; };
+		5EA300000000000000000131 /* seamerge in Embed Helper */ = {isa = PBXBuildFile; fileRef = 5EA300000000000000000302 /* seamerge */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		5EA300000000000000000201 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5EA300000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5EA300000000000000000602;
+			remoteInfo = SeamergeTool;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		5EA300000000000000000514 /* Embed Helper */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
+			files = (
+				5EA300000000000000000131 /* seamerge in Embed Helper */,
+			);
+			name = "Embed Helper";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		5EA300000000000000000301 /* Seamerge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Seamerge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5EA300000000000000000302 /* seamerge */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = seamerge; sourceTree = BUILT_PRODUCTS_DIR; };
+		5EA300000000000000000303 /* SeamergeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SeamergeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5EA300000000000000000311 /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+		5EA300000000000000000312 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		5EA300000000000000000411 /* Exceptions for "Seamerge" folder in "SeamergeTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				main.swift,
+			);
+			target = 5EA300000000000000000603 /* SeamergeTests */;
+		};
+		5EA300000000000000000412 /* Exceptions for "SeamergeTool" folder in "SeamergeTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				main.swift,
+			);
+			target = 5EA300000000000000000603 /* SeamergeTests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		5EA300000000000000000401 /* Seamerge */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				5EA300000000000000000411 /* Exceptions for "Seamerge" folder in "SeamergeTests" target */,
+			);
+			path = Seamerge;
+			sourceTree = "<group>";
+		};
+		5EA300000000000000000402 /* SeamergeTool */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				5EA300000000000000000412 /* Exceptions for "SeamergeTool" folder in "SeamergeTests" target */,
+			);
+			path = SeamergeTool;
+			sourceTree = "<group>";
+		};
+		5EA300000000000000000404 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		5EA300000000000000000403 /* SeamergeTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SeamergeTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5EA300000000000000000512 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5EA300000000000000000101 /* SeamergeUI in Frameworks */,
+				5EA300000000000000000102 /* SessionIPC in Frameworks */,
+				5EA300000000000000000103 /* GitSupport in Frameworks */,
+				5EA300000000000000000104 /* MergeModel in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5EA300000000000000000522 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5EA300000000000000000111 /* SeamergeCLI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5EA300000000000000000532 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5EA300000000000000000121 /* SeamergeUI in Frameworks */,
+				5EA300000000000000000122 /* SessionIPC in Frameworks */,
+				5EA300000000000000000123 /* GitSupport in Frameworks */,
+				5EA300000000000000000124 /* MergeModel in Frameworks */,
+				5EA300000000000000000125 /* SeamergeCLI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5EA300000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				5EA300000000000000000401 /* Seamerge */,
+				5EA300000000000000000402 /* SeamergeTool */,
+				5EA300000000000000000403 /* SeamergeTests */,
+				5EA300000000000000000404 /* Shared */,
+				5EA300000000000000000004 /* Config */,
+				5EA300000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5EA300000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5EA300000000000000000301 /* Seamerge.app */,
+				5EA300000000000000000302 /* seamerge */,
+				5EA300000000000000000303 /* SeamergeTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		5EA300000000000000000004 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				5EA300000000000000000312 /* Info.plist */,
+				5EA300000000000000000311 /* Version.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5EA300000000000000000601 /* Seamerge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5EA300000000000000000811 /* Build configuration list for PBXNativeTarget "Seamerge" */;
+			buildPhases = (
+				5EA300000000000000000511 /* Sources */,
+				5EA300000000000000000512 /* Frameworks */,
+				5EA300000000000000000513 /* Resources */,
+				5EA300000000000000000514 /* Embed Helper */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5EA300000000000000000701 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				5EA300000000000000000401 /* Seamerge */,
+				5EA300000000000000000404 /* Shared */,
+			);
+			name = Seamerge;
+			packageProductDependencies = (
+				5EA300000000000000000901 /* SeamergeUI */,
+				5EA300000000000000000902 /* SessionIPC */,
+				5EA300000000000000000903 /* GitSupport */,
+				5EA300000000000000000904 /* MergeModel */,
+			);
+			productName = Seamerge;
+			productReference = 5EA300000000000000000301 /* Seamerge.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5EA300000000000000000602 /* SeamergeTool */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5EA300000000000000000821 /* Build configuration list for PBXNativeTarget "SeamergeTool" */;
+			buildPhases = (
+				5EA300000000000000000521 /* Sources */,
+				5EA300000000000000000522 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5EA300000000000000000402 /* SeamergeTool */,
+				5EA300000000000000000404 /* Shared */,
+			);
+			name = SeamergeTool;
+			packageProductDependencies = (
+				5EA300000000000000000911 /* SeamergeCLI */,
+			);
+			productName = seamerge;
+			productReference = 5EA300000000000000000302 /* seamerge */;
+			productType = "com.apple.product-type.tool";
+		};
+		5EA300000000000000000603 /* SeamergeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5EA300000000000000000831 /* Build configuration list for PBXNativeTarget "SeamergeTests" */;
+			buildPhases = (
+				5EA300000000000000000531 /* Sources */,
+				5EA300000000000000000532 /* Frameworks */,
+				5EA300000000000000000533 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5EA300000000000000000401 /* Seamerge */,
+				5EA300000000000000000402 /* SeamergeTool */,
+				5EA300000000000000000403 /* SeamergeTests */,
+				5EA300000000000000000404 /* Shared */,
+			);
+			name = SeamergeTests;
+			packageProductDependencies = (
+				5EA300000000000000000921 /* SeamergeUI */,
+				5EA300000000000000000922 /* SessionIPC */,
+				5EA300000000000000000923 /* GitSupport */,
+				5EA300000000000000000924 /* MergeModel */,
+				5EA300000000000000000925 /* SeamergeCLI */,
+			);
+			productName = SeamergeTests;
+			productReference = 5EA300000000000000000303 /* SeamergeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5EA300000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2720;
+				LastUpgradeCheck = 2720;
+			};
+			buildConfigurationList = 5EA300000000000000000801 /* Build configuration list for PBXProject "Seamerge" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 5EA300000000000000000002;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 5EA300000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5EA300000000000000000601 /* Seamerge */,
+				5EA300000000000000000602 /* SeamergeTool */,
+				5EA300000000000000000603 /* SeamergeTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5EA300000000000000000513 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5EA300000000000000000533 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5EA300000000000000000511 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5EA300000000000000000521 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5EA300000000000000000531 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5EA300000000000000000701 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5EA300000000000000000602 /* SeamergeTool */;
+			targetProxy = 5EA300000000000000000201 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		5EA300000000000000000802 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5EA300000000000000000311 /* Version.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		5EA300000000000000000803 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5EA300000000000000000311 /* Version.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		5EA300000000000000000812 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Seamerge;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Christian Eiden";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = app.eiden.seamerge;
+				PRODUCT_NAME = Seamerge;
+			};
+			name = Debug;
+		};
+		5EA300000000000000000813 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Seamerge;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Christian Eiden";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = app.eiden.seamerge;
+				PRODUCT_NAME = Seamerge;
+			};
+			name = Release;
+		};
+		5EA300000000000000000822 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = app.eiden.seamerge.tool;
+				PRODUCT_NAME = seamerge;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		5EA300000000000000000823 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = app.eiden.seamerge.tool;
+				PRODUCT_NAME = seamerge;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		5EA300000000000000000832 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = app.eiden.seamerge.tests;
+				PRODUCT_NAME = SeamergeTests;
+			};
+			name = Debug;
+		};
+		5EA300000000000000000833 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = app.eiden.seamerge.tests;
+				PRODUCT_NAME = SeamergeTests;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5EA300000000000000000801 /* Build configuration list for PBXProject "Seamerge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5EA300000000000000000802 /* Debug */,
+				5EA300000000000000000803 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5EA300000000000000000811 /* Build configuration list for PBXNativeTarget "Seamerge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5EA300000000000000000812 /* Debug */,
+				5EA300000000000000000813 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5EA300000000000000000821 /* Build configuration list for PBXNativeTarget "SeamergeTool" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5EA300000000000000000822 /* Debug */,
+				5EA300000000000000000823 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5EA300000000000000000831 /* Build configuration list for PBXNativeTarget "SeamergeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5EA300000000000000000832 /* Debug */,
+				5EA300000000000000000833 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/SeamergeKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		5EA300000000000000000901 /* SeamergeUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
+			productName = SeamergeUI;
+		};
+		5EA300000000000000000902 /* SessionIPC */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
+			productName = SessionIPC;
+		};
+		5EA300000000000000000903 /* GitSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
+			productName = GitSupport;
+		};
+		5EA300000000000000000904 /* MergeModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
+			productName = MergeModel;
+		};
+		5EA300000000000000000911 /* SeamergeCLI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
+			productName = SeamergeCLI;
+		};
+		5EA300000000000000000921 /* SeamergeUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
+			productName = SeamergeUI;
+		};
+		5EA300000000000000000922 /* SessionIPC */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
+			productName = SessionIPC;
+		};
+		5EA300000000000000000923 /* GitSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
+			productName = GitSupport;
+		};
+		5EA300000000000000000924 /* MergeModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
+			productName = MergeModel;
+		};
+		5EA300000000000000000925 /* SeamergeCLI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
+			productName = SeamergeCLI;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 5EA300000000000000000001 /* Project object */;
+}

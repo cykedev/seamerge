@@ -1,8 +1,7 @@
 #!/bin/bash
 #
 # Checks the repository: the format of every Swift file, then build and tests
-# of each package under Packages/ and, once it exists, of the Xcode project
-# under App/.
+# of each package under Packages/ and of the Xcode project under App/.
 #
 # Usage: Scripts/check.sh [--quick]
 #
@@ -54,22 +53,37 @@ diagnostic_pattern='^[^[:space:]].*:[0-9]+:[0-9]+: (error|warning):|^error: |rec
 noise_pattern='failed with a nonzero exit code|^error: Build failed|/Vendor/.*: warning:'
 
 # Runs one step, records its output in the log and prints its outcome. The
-# remaining arguments are the command; it runs from the repository root.
+# remaining arguments are the command; it runs from the repository root. With
+# --tests first, the step runs tests and passes only if every test run it
+# started ended with a summary that counts at least one test: a run that ends
+# early can still exit with 0.
 run_step() {
-  local name=$1 status=0
+  local runs_tests=false
+  if [ "$1" = --tests ]; then
+    runs_tests=true
+    shift
+  fi
+  local name=$1 status=0 missing=""
   shift
   total=$((total + 1))
   "$@" > "$raw_log" 2>&1 || status=$?
   strip_escapes < "$raw_log" > "$step_log"
   printf '\n==> %s\n$ %s\n' "$name" "$*" >> "$run_log"
   cat "$step_log" >> "$run_log"
-  if [ "$status" -eq 0 ]; then
+  if [ "$status" -eq 0 ] && $runs_tests; then
+    missing=$(missing_test_summary)
+  fi
+  if [ "$status" -eq 0 ] && [ -z "$missing" ]; then
     printf '%-28s ok%s\n' "$name" "$(test_summary)"
     return 0
   fi
   failed=$((failed + 1))
   printf '%-28s failed\n' "$name"
-  print_errors
+  if [ -n "$missing" ]; then
+    echo "  $missing" | tee -a "$run_log"
+  else
+    print_errors
+  fi
   return 1
 }
 
@@ -90,6 +104,22 @@ test_summary() {
       for (i = 1; i < NF; i++) if ($i == "with") { sum += $(i + 1); found = 1 }
     }
     END { if (found) printf " (%d tests)", sum }' "$step_log"
+}
+
+# Says what is missing from the summaries of Swift Testing in the log of a step
+# that ran tests, or nothing if every run that started ended with one and they
+# count at least one test.
+missing_test_summary() {
+  awk '/Test run started\./ { started++ }
+    /Test run with [0-9]+ tests? / {
+      ended++
+      for (i = 1; i < NF; i++) if ($i == "with") sum += $(i + 1)
+    }
+    END {
+      if (ended == 0) print "The log has no summary of a test run."
+      else if (started > ended) printf "%d of %d test runs ended without a summary.\n", started - ended, started
+      else if (sum == 0) print "The test runs counted no tests."
+    }' "$step_log"
 }
 
 # Prints the diagnostics of the failed step without paths into the repository;
@@ -127,7 +157,7 @@ for manifest in Packages/*/Package.swift; do
   if run_step "build $name" swift build --package-path "$package" --build-tests \
     --explicit-target-dependency-import-check error; then
     if ! $quick; then
-      run_step "test $name" swift test --package-path "$package" --skip-build
+      run_step --tests "test $name" swift test --package-path "$package" --skip-build
     fi
   elif ! $quick; then
     skip_step "test $name" "build failed"
@@ -136,11 +166,12 @@ done
 
 if [ -d App ]; then
   xcode=(xcodebuild -project App/Seamerge.xcodeproj -scheme Seamerge
-    -destination platform=macOS -derivedDataPath "$log_dir/xcode" -quiet)
+    -destination platform=macOS -derivedDataPath "$log_dir/xcode")
   if $quick; then
-    run_step "xcodebuild build" "${xcode[@]}" build
+    run_step "xcodebuild build" "${xcode[@]}" -quiet build
   else
-    run_step "xcodebuild test" "${xcode[@]}" test
+    # Without -quiet, so that the log has the summary of Swift Testing to count the tests.
+    run_step --tests "xcodebuild test" "${xcode[@]}" test
   fi
 fi
 

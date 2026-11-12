@@ -1,0 +1,7 @@
+// The version of the app and of its command-line helper.
+//
+// MARKETING_VERSION follows Semantic Versioning and is what `seamerge --version`
+// prints; CURRENT_PROJECT_VERSION counts the builds of a version.
+
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
