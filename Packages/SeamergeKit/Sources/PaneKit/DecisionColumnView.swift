@@ -93,8 +93,44 @@ public final class DecisionColumnView: NSView {
   /// blocks now are, and draws the signs again: after the pane scrolled, changed its rows or its
   /// current block.
   func update() {
+    cachedSignPlaces = nil
     showControls()
     needsDisplay = true
+  }
+
+  /// Where the signs stand, until the column updates.
+  private var cachedSignPlaces: SignPlaces?
+
+  /// Where the signs stand: at their blocks, moved apart where two would come closer than the
+  /// room of a click, and within the rows of the text.
+  ///
+  /// The signs of every block take part, so that a chain of close signs comes out the same
+  /// wherever the pane is scrolled.
+  private var signPlaces: SignPlaces {
+    if let cachedSignPlaces { return cachedSignPlaces }
+    guard let host else { return SignPlaces(anchors: [], spacing: 0, within: 0...0) }
+    let anchors: [SignPlaces.Anchor] = decisions.keys.sorted().compactMap { block in
+      host.signCenter(ofBlock: block).map {
+        SignPlaces.Anchor(block: block, center: $0, liesBetweenRows: host.liesBetweenRows(block))
+      }
+    }
+    let places = SignPlaces(
+      anchors: anchors, spacing: Theme.decisionControlSize, within: host.rowsExtent)
+    cachedSignPlaces = places
+    return places
+  }
+
+  /// The vertical middle of the sign and the controls of `block`, if it has a sign.
+  private func signCenter(ofBlock block: Int) -> CGFloat? {
+    signPlaces.centers[block]
+  }
+
+  /// The block whose sign or controls lie at `y`, or else whose rows do, if it has a decision.
+  private func block(atY y: CGFloat) -> Int? {
+    if let block = signPlaces.block(atY: y, spacing: Theme.decisionControlSize) {
+      return block
+    }
+    return host?.block(atY: y).flatMap { decisions[$0] == nil ? nil : $0 }
   }
 
   /// The blocks that show their controls instead of their sign.
@@ -113,7 +149,7 @@ public final class DecisionColumnView: NSView {
       removeControls(of: block)
     }
     for block in blocks {
-      guard let host, let decision = decisions[block], let center = host.signCenter(ofBlock: block)
+      guard let host, let decision = decisions[block], let center = signCenter(ofBlock: block)
       else {
         removeControls(of: block)
         continue
@@ -202,7 +238,7 @@ public final class DecisionColumnView: NSView {
     dirtyRect.fill()
     let withControls = blocksWithControls
     for (block, decision) in decisions where !withControls.contains(block) {
-      guard let center = host?.signCenter(ofBlock: block),
+      guard let center = signCenter(ofBlock: block),
         center + Theme.stateSignHeight >= dirtyRect.minY,
         center - Theme.stateSignHeight <= dirtyRect.maxY
       else { continue }
@@ -226,9 +262,7 @@ public final class DecisionColumnView: NSView {
   /// Tells the delegate which block the click is beside; a click on a control reaches the
   /// control instead.
   public override func mouseDown(with event: NSEvent) {
-    guard let block = host?.block(atY: convert(event.locationInWindow, from: nil).y) else {
-      return
-    }
+    guard let block = block(atY: convert(event.locationInWindow, from: nil).y) else { return }
     delegate?.decisionColumn(self, didClickBlock: block)
   }
 
@@ -243,7 +277,7 @@ public final class DecisionColumnView: NSView {
   /// Follows the pointer to `point`: the toggles of the block below it show once it rests there,
   /// those of a block it left go at once.
   func pointerMoved(to point: CGPoint) {
-    let block = host?.block(atY: point.y).flatMap { decisions[$0] == nil ? nil : $0 }
+    let block = block(atY: point.y)
     guard block != hoveredBlock else {
       cancelHover()
       return
@@ -313,7 +347,7 @@ public final class DecisionColumnView: NSView {
     var shownSigns: Set<Int> = []
     for (block, decision) in decisions where !withControls.contains(block) {
       let sign = StateSign(state: decision.state, theme: theme)
-      guard let label = sign.accessibilityLabel, let center = host.signCenter(ofBlock: block),
+      guard let label = sign.accessibilityLabel, let center = signCenter(ofBlock: block),
         bounds.minY...bounds.maxY ~= center
       else { continue }
       let element = signElements[block] ?? NSAccessibilityElement()
@@ -343,10 +377,19 @@ protocol DecisionColumnHost: AnyObject {
   /// The index of the current block, if any.
   var currentBlock: Int? { get }
 
-  /// The vertical middle of the place of `block`'s sign and controls in the column: its first
-  /// row, or for a block without rows the boundary where it lies; `nil` while that is behind the
-  /// bar of a collapsed run.
+  /// The vertical middle of the place that `block` asks for its sign and controls in the
+  /// column: its first row, or for a block without rows the boundary where it lies; `nil` while
+  /// that is behind the bar of a collapsed run.
+  ///
+  /// The column moves signs apart that would come too close; see ``SignPlaces``.
   func signCenter(ofBlock block: Int) -> CGFloat?
+
+  /// Whether `block` has no rows and lies on the boundary between two.
+  func liesBetweenRows(_ block: Int) -> Bool
+
+  /// Where the rows of the text lie in the column, from the top of the first to the bottom of
+  /// the last, as the pane is scrolled.
+  var rowsExtent: ClosedRange<CGFloat> { get }
 
   /// The block whose rows lie at `y` of the column, if any.
   func block(atY y: CGFloat) -> Int?

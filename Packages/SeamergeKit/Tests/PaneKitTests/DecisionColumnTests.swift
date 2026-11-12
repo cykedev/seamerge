@@ -256,6 +256,145 @@ import Testing
     #expect(try blockUnderThePointer(at: boundary + 4) == [1])
   }
 
+  @Test func signsOfBlocksAtTheSamePlaceMoveApartAndEachFindsItsBlock() throws {
+    // Block 1 lies on the boundary below block 0, block 3 on the boundary above block 4: each
+    // pair asks for places half a row apart, closer than a click's room.
+    let pane = PaneView()
+    pane.content = PaneContent(
+      text: "zero\none\ntwo\nthree\nfour\nfive\nsix", lineNumbers: [0, 1, 2, 3, 4, 5, 6],
+      blocks: [
+        PaneBlock(rows: 1..<2, style: .tinted(.a)), PaneBlock(rows: 2..<2, style: .unchanged),
+        PaneBlock(rows: 2..<4, style: .unchanged), PaneBlock(rows: 4..<4, style: .unchanged),
+        PaneBlock(rows: 4..<5, style: .tinted(.b)),
+      ])
+    let column = DecisionColumnView()
+    let toggles = [SampleResult.toggle([.a], isOn: true), SampleResult.toggle([.b], isOn: true)]
+    column.decisions = [
+      0: BlockDecision(state: .automatic([.a, .b]), toggles: toggles),
+      1: BlockDecision(state: .automatic([.a, .b]), toggles: toggles),
+      3: BlockDecision(state: .chosen([]), toggles: toggles),
+      4: BlockDecision(state: .automatic([.b]), toggles: toggles),
+    ]
+    let recorder = DecisionRecorder()
+    column.delegate = recorder
+    pane.decisionColumn = column
+    let window = Rendering.host(pane, size: CGSize(width: 400, height: 200), isKey: true)
+    defer { window.close() }
+    let rowHeight = pane.theme.rowHeight
+    let signs = try #require(column.accessibilityChildren() as? [NSAccessibilityElement])
+    #expect(signs.count == 4)
+    let frames = signs.map { $0.accessibilityFrameInParentSpace() }
+    let middles = frames.map(\.midY)
+    for (upper, lower) in zip(middles, middles.dropFirst()) {
+      #expect(lower - upper >= Theme.decisionControlSize)
+    }
+    for (upper, lower) in zip(frames, frames.dropFirst()) {
+      #expect(!upper.intersects(lower))
+    }
+    // The signs of blocks with rows stay beside their first rows; those on boundaries give way.
+    #expect(middles[0] == 1.5 * rowHeight)
+    #expect(middles[3] == 4.5 * rowHeight)
+    for (block, middle) in zip([0, 1, 3, 4], middles) {
+      for offset in [-(Theme.decisionControlSize / 2 - 1), 0, Theme.decisionControlSize / 2 - 1] {
+        column.pointerLeft()
+        column.pointerMoved(to: CGPoint(x: 10, y: middle + offset))
+        try #require(column.hoverTimer).fire()
+        let shown = Set(Self.controls(of: column).map(\.block))
+        #expect(shown == [block], "pointer at \(middle + offset)")
+        for control in Self.controls(of: column) {
+          #expect(control.frame.width >= 20 && control.frame.height >= 20)
+        }
+      }
+      column.pointerLeft()
+      try Clicking.click(column, at: CGPoint(x: 6, y: middle))
+    }
+    #expect(recorder.clicked == [0, 1, 3, 4])
+  }
+
+  @Test func signsAtTheStartAndTheEndOfTheTextGiveWayInwards() throws {
+    // A deletion before the first line and one after the last, beside blocks of one row there.
+    let rowCount = 10
+    let pane = PaneView()
+    pane.content = PaneContent(
+      text: (0..<rowCount).map { "line \($0)" }.joined(separator: "\n"),
+      lineNumbers: (0..<rowCount).map(Int32.init),
+      blocks: [
+        PaneBlock(rows: 0..<0, style: .unchanged), PaneBlock(rows: 0..<1, style: .tinted(.a)),
+        PaneBlock(rows: 9..<10, style: .tinted(.b)), PaneBlock(rows: 10..<10, style: .unchanged),
+      ])
+    let column = DecisionColumnView()
+    let toggles = [SampleResult.toggle([.a], isOn: true), SampleResult.toggle([.b], isOn: true)]
+    column.decisions = Dictionary(
+      uniqueKeysWithValues: (0..<4).map {
+        ($0, BlockDecision(state: .automatic([.a, .b]), toggles: toggles))
+      })
+    pane.decisionColumn = column
+    let window = Rendering.host(pane, size: CGSize(width: 400, height: 400), isKey: true)
+    defer { window.close() }
+    let rows = 0...CGFloat(rowCount) * pane.theme.rowHeight
+    let signs = try #require(column.accessibilityChildren() as? [NSAccessibilityElement])
+    try #require(signs.count == 4)
+    let middles = signs.map { $0.accessibilityFrameInParentSpace().midY }
+    for middle in middles {
+      let target =
+        (middle - Theme.decisionControlSize / 2)...(middle + Theme.decisionControlSize / 2)
+      #expect(rows.contains(target.lowerBound) && rows.contains(target.upperBound), "\(middle)")
+    }
+    for (upper, lower) in zip(middles, middles.dropFirst()) {
+      #expect(lower - upper >= Theme.decisionControlSize)
+    }
+    for (block, middle) in zip(0..<4, middles) {
+      column.pointerLeft()
+      column.pointerMoved(to: CGPoint(x: 10, y: middle))
+      try #require(column.hoverTimer).fire()
+      #expect(Set(Self.controls(of: column).map(\.block)) == [block])
+    }
+  }
+
+  @Test func signsOfAChainStayInPlaceOnTheTextWhileThePaneScrolls() throws {
+    // Blocks of one row, each with a deletion after it: two signs a row, which push each other
+    // far down.
+    let rowCount = 100
+    var blocks: [PaneBlock] = []
+    for row in 40..<52 {
+      blocks.append(PaneBlock(rows: row..<row + 1, style: .tinted(.a)))
+      blocks.append(PaneBlock(rows: row + 1..<row + 1, style: .unchanged))
+    }
+    let pane = PaneView()
+    pane.content = PaneContent(
+      text: (0..<rowCount).map { "line \($0)" }.joined(separator: "\n"),
+      lineNumbers: (0..<rowCount).map(Int32.init), blocks: blocks)
+    let column = DecisionColumnView()
+    let toggles = [SampleResult.toggle([.a], isOn: true), SampleResult.toggle([.b], isOn: true)]
+    column.decisions = Dictionary(
+      uniqueKeysWithValues: blocks.indices.map {
+        ($0, BlockDecision(state: .automatic([.a]), toggles: toggles))
+      })
+    pane.decisionColumn = column
+    let window = Rendering.host(pane, size: CGSize(width: 400, height: 160), isKey: true)
+    defer { window.close() }
+    let rowHeight = pane.theme.rowHeight
+    func placesOnTheText(scrolledTo row: Int) throws -> [String: CGFloat] {
+      pane.scroll(to: CGPoint(x: 0, y: CGFloat(row) * rowHeight))
+      let offset = pane.scrollOrigin.y
+      let signs = try #require(column.accessibilityChildren() as? [NSAccessibilityElement])
+      return Dictionary(
+        uniqueKeysWithValues: signs.map {
+          (
+            $0.accessibilityValue() as? String ?? "",
+            $0.accessibilityFrameInParentSpace().midY + offset
+          )
+        })
+    }
+    let early = try placesOnTheText(scrolledTo: 44)
+    let late = try placesOnTheText(scrolledTo: 50)
+    let shared = Set(early.keys).intersection(late.keys)
+    try #require(shared.count > 1, "\(early.keys.sorted()) \(late.keys.sorted())")
+    for key in shared {
+      #expect(early[key] == late[key], "\(key)")
+    }
+  }
+
   /// The toggles and reset arrows that `column` shows.
   static func controls(of column: DecisionColumnView) -> [DecisionControl] {
     column.subviews.flatMap { ($0 as? DecisionControlGroup)?.controls ?? [] }

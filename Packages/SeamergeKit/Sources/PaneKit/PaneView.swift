@@ -413,20 +413,21 @@ extension PaneView: DecisionColumnHost {
       - scrollOffset
   }
 
+  var rowsExtent: ClosedRange<CGFloat> {
+    let top = -clipView.bounds.minY
+    return top...top + CGFloat(displayRows.count) * rowHeight
+  }
+
+  func liesBetweenRows(_ block: Int) -> Bool {
+    content.blocks.indices.contains(block) && content.blocks[block].rows.isEmpty
+  }
+
   func block(atY y: CGFloat) -> Int? {
     let displayRow = Int(((y + clipView.bounds.minY) / rowHeight).rounded(.down))
-    if displayRow >= 0, displayRow < displayRows.count,
-      displayRows.runIndex(atDisplayRow: displayRow) == nil,
-      let block = content.blockIndex(atRow: displayRows.row(atDisplayRow: displayRow))
-    {
-      return block
-    }
-    // Where no row of a block lies, a block without rows has the room of a control around the
-    // boundary it lies on.
-    return content.blocks.indices.first { block in
-      content.blocks[block].rows.isEmpty
-        && signCenter(ofBlock: block).map { abs($0 - y) <= Theme.decisionControlSize / 2 } == true
-    }
+    guard displayRow >= 0, displayRow < displayRows.count,
+      displayRows.runIndex(atDisplayRow: displayRow) == nil
+    else { return nil }
+    return content.blockIndex(atRow: displayRows.row(atDisplayRow: displayRow))
   }
 
   func placeDescription(ofBlock block: Int) -> String {
