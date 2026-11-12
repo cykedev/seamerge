@@ -5,12 +5,27 @@ import Testing
 
 @testable import SeamergeUI
 
-/// The window around the panes: their order, sizes and headers, and how the window ends.
+/// The window around the panes: their order, sizes, names and headers, and how the window ends.
 @MainActor
 @Suite struct SessionWindowTests {
-  @Test func panesStandInTheOrderABaseB() async throws {
-    let controller = makeController(try await SampleMerges.helloWorld())
+  @Test func panesStandInTheOrderABaseBAndEachHasAVoiceOverName() async throws {
+    let (session, context) = try await Scenario.merges[0].load()
+    let controller = makeController(session, context: context)
     #expect(controller.layout.sourcePanes.map(\.role) == [.a, .base, .b])
+    let names = controller.layout.sourcePanes.map { $0.pane.accessibilityLabel() }
+    #expect(names[0] == "A, feature, incoming")
+    #expect(names[1]?.hasPrefix("Base, ") == true)
+    #expect(names[2] == "B, main, yours")
+    #expect(controller.layout.resultPane.accessibilityLabel()?.hasPrefix("Result, ") == true)
+    #expect(controller.layout.resultPane.accessibilityLabel()?.hasSuffix("story.txt") == true)
+  }
+
+  @Test func paneWithoutGitIsNamedAfterItsFile() async throws {
+    let session = try await SampleMerges.helloWorld()
+    let controller = makeController(session, context: SessionContext())
+    let names = controller.layout.sourcePanes.map { $0.pane.accessibilityLabel() }
+    #expect(names == ["A, HelloWorld1.java", "Base, HelloWorld0.java", "B, HelloWorld2.java"])
+    #expect(controller.layout.resultPane.accessibilityLabel() == "Result")
   }
 
   @Test func mergeWithoutABaseHasNoBasePane() async throws {
@@ -95,11 +110,14 @@ import Testing
   }
 
   @Test func changingTheDisplayOptionsRedrawsWithTheirTheme() async throws {
-    let controller = makeController(try await SampleMerges.helloWorld())
+    let session = try await SampleMerges.helloWorld()
+    let controller = makeController(session, context: SessionContext())
     controller.displayOptions = DisplayOptions(differentiatesWithoutColor: true)
     for pane in controller.layout.sourcePanes.map(\.pane) + [controller.layout.resultPane] {
       #expect(pane.theme.differentiatesWithoutColor)
     }
+    #expect(controller.presentation.sourcesOverviewBar.theme.differentiatesWithoutColor)
+    #expect(controller.presentation.decisionColumn.theme.differentiatesWithoutColor)
   }
 
   private func makeController(

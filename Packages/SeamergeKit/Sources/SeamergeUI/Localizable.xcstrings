@@ -1,6 +1,9 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ and %@": {
+      "comment": "Two sides that share a toggle, such as feature/login and main."
+    },
     "%@ · %@": {
       "comment": "The name of a commit followed by its branch, such as 1a2b3c4 Fix typo · main."
     },
@@ -9,6 +12,9 @@
     },
     "%@, %@, %@": {
       "comment": "VoiceOver: a pane with its name and role in the order the header shows them, such as A, feature/login, incoming or A, your commit, 1a2b3c4 Fix typo."
+    },
+    "%@, line %lld": {
+      "comment": "VoiceOver: a mark in the overview bar of the result, such as From A, line 12."
     },
     "A": {
       "comment": "The badge of the incoming side."
@@ -28,6 +34,9 @@
     "CRLF": {
       "comment": "Line endings: CR LF."
     },
+    "Change in %@, line %lld": {
+      "comment": "VoiceOver: a mark in the overview bar, such as Change in A, line 12."
+    },
     "Commit": {
       "comment": "Details of a side: the commit."
     },
@@ -40,8 +49,20 @@
     "Differs from the line endings of the other files": {
       "comment": "Help tag of the line endings in a header, shown only where they differ."
     },
+    "Edited by hand": {
+      "comment": "VoiceOver: a part of the result that the user typed."
+    },
     "File": {
       "comment": "Details of a side: where the file was read from."
+    },
+    "From %@": {
+      "comment": "VoiceOver: a part of the result taken from one side, such as From A."
+    },
+    "From %@ and %@": {
+      "comment": "VoiceOver: a part of the result taken from both sides, such as From A and B."
+    },
+    "From the base": {
+      "comment": "VoiceOver: a part of the result taken from the common ancestor."
     },
     "Git is no longer waiting for this merge.": {
       "comment": "Notice below the result header after the Git command that asked has ended."
@@ -58,6 +79,15 @@
     "Mixed": {
       "comment": "Line endings: more than one kind."
     },
+    "Nothing taken": {
+      "comment": "VoiceOver: a part of the result that takes no lines."
+    },
+    "Open conflict, line %lld": {
+      "comment": "VoiceOver: the mark of an open conflict in the overview bar."
+    },
+    "Resolved conflict, line %lld": {
+      "comment": "VoiceOver: the mark of a decided conflict in the overview bar."
+    },
     "Result": {
       "comment": "The name of the result pane."
     },
@@ -70,6 +100,12 @@
     "Stash": {
       "comment": "The name of a stash in a header."
     },
+    "Take the deletion of %@.": {
+      "comment": "Help tag of a toggle that removes the lines, such as Take the deletion of main."
+    },
+    "Take the version of %@.": {
+      "comment": "Help tag of a toggle, such as Take the version of feature/login."
+    },
     "cherry-picked commit": {
       "comment": "Role: the commit being cherry-picked."
     },
@@ -81,6 +117,9 @@
     },
     "reverted commit": {
       "comment": "Role: the commit being reverted."
+    },
+    "the base": {
+      "comment": "The common ancestor in the help tag of a toggle: Take the version of the base."
     },
     "your commit": {
       "comment": "Role: the user's own commit that a rebase moves."

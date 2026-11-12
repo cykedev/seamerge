@@ -19,6 +19,7 @@ public final class SessionWindowController: NSWindowController {
   public var onFinish: ((SessionOutcome) -> Void)?
 
   let layout: SessionSplitViewController
+  let presentation: MergePresentation
   private let sessionUndoManager: UndoManager
   private var hasFinished = false
 
@@ -26,11 +27,16 @@ public final class SessionWindowController: NSWindowController {
   var displayOptions: DisplayOptions {
     didSet {
       guard displayOptions != oldValue else { return }
-      layout.apply(displayOptions.theme)
+      let theme = displayOptions.theme
+      layout.apply(theme)
+      presentation.apply(theme)
     }
   }
 
   /// Opens a window for `session`.
+  ///
+  /// The window shows the merge as loaded: every conflict open, every other change taken as the
+  /// merge takes it.
   ///
   /// - Parameters:
   ///   - session: A merge.
@@ -66,6 +72,9 @@ public final class SessionWindowController: NSWindowController {
     self.layout = layout
     sessionUndoManager = undoManager
     self.displayOptions = displayOptions
+    presentation = MergePresentation(
+      session: session, layout: layout, headers: headers, resultHeader: resultHeader,
+      theme: theme)
 
     let window = NSWindow(
       contentRect: CGRect(origin: .zero, size: WindowMetrics.defaultContentSize),
