@@ -47,6 +47,7 @@ public final class PaneView: NSView {
     textView.setBlocks(blocks, previews: previews)
     gutterView.content = content
     gutterView.currentBlock = textView.currentBlock
+    decisionColumn?.update()
   }
 
   /// The runs of rows that the pane hides, each behind a bar one row high that the user can
@@ -69,6 +70,7 @@ public final class PaneView: NSView {
     set {
       textView.setCurrentBlock(newValue)
       gutterView.currentBlock = textView.currentBlock
+      decisionColumn?.update()
     }
   }
 
@@ -130,6 +132,24 @@ public final class PaneView: NSView {
     }
   }
 
+  /// The decision column beside the right edge of the text, between the text and the overview
+  /// bar, or `nil` for a pane without one.
+  ///
+  /// The pane places the column and keeps it in step with its rows, its scroll position and its
+  /// current block.
+  public var decisionColumn: DecisionColumnView? {
+    didSet {
+      guard decisionColumn !== oldValue else { return }
+      oldValue?.removeFromSuperview()
+      oldValue?.host = nil
+      if let decisionColumn {
+        decisionColumn.host = self
+        addSubview(decisionColumn, positioned: .below, relativeTo: runBarLayer)
+      }
+      needsLayout = true
+    }
+  }
+
   /// The view that shows the text, for selection and the find bar.
   public var documentView: NSTextView { textView }
 
@@ -138,7 +158,8 @@ public final class PaneView: NSView {
   public var minimumWidth: CGFloat {
     let text = CGFloat(Theme.minimumTextColumns) * theme.characterWidth + 2 * Theme.textInset
     let bar = overviewBar == nil ? 0 : Theme.overviewBarWidth
-    let width = gutterView.fittingWidth + text + bar
+    let column = decisionColumn == nil ? 0 : DecisionColumnView.width
+    let width = gutterView.fittingWidth + text + column + bar
     return (width / Theme.layoutGrid).rounded(.up) * Theme.layoutGrid
   }
 
@@ -247,10 +268,13 @@ public final class PaneView: NSView {
     super.layout()
     let gutterWidth = gutterView.fittingWidth
     let barWidth = overviewBar == nil ? 0 : Theme.overviewBarWidth
+    let columnWidth = decisionColumn == nil ? 0 : DecisionColumnView.width
     gutterView.frame = CGRect(x: 0, y: 0, width: gutterWidth, height: bounds.height)
     scrollView.frame = CGRect(
-      x: gutterWidth, y: 0, width: max(bounds.width - gutterWidth - barWidth, 0),
+      x: gutterWidth, y: 0, width: max(bounds.width - gutterWidth - columnWidth - barWidth, 0),
       height: bounds.height)
+    decisionColumn?.frame = CGRect(
+      x: bounds.width - barWidth - columnWidth, y: 0, width: columnWidth, height: bounds.height)
     overviewBar?.frame = CGRect(
       x: bounds.width - barWidth, y: 0, width: barWidth, height: bounds.height)
     scrollView.tile()
@@ -285,6 +309,7 @@ public final class PaneView: NSView {
     gutterView.content = content
     gutterView.currentBlock = textView.currentBlock
     showDisplayRows()
+    decisionColumn?.update()
     needsLayout = true
   }
 
@@ -303,6 +328,7 @@ public final class PaneView: NSView {
     let visible = clipView.bounds
     gutterView.scrollOffset = visible.minY
     placeRunBars()
+    decisionColumn?.update()
     guard let overviewBar else { return }
     let height = textView.frame.height
     overviewBar.isEnabled = height > visible.height
@@ -358,10 +384,65 @@ extension PaneView: RowInteraction {
     removeRunBars()
     gutterView.content = content
     showDisplayRows()
+    decisionColumn?.update()
     needsLayout = true
   }
 
   private func hit(atRow row: Int) -> PaneHit {
     PaneHit(row: row, block: content.blockIndex(atRow: row))
+  }
+}
+
+extension PaneView: DecisionColumnHost {
+  func signCenter(ofBlock block: Int) -> CGFloat? {
+    guard content.blocks.indices.contains(block) else { return nil }
+    let rows = content.blocks[block].rows
+    let scrollOffset = clipView.bounds.minY
+    guard !rows.isEmpty else {
+      // A block without rows lies on the boundary before the row it would start at.
+      let row = rows.lowerBound
+      if row < displayRows.rowCount && displayRows.isHidden(row: row) { return nil }
+      let displayRow =
+        row < displayRows.rowCount ? displayRows.displayRow(ofRow: row) : displayRows.count
+      return CGFloat(displayRow) * rowHeight - scrollOffset
+    }
+    guard displayRows.runIndex(containingRow: rows.lowerBound) == nil else { return nil }
+    return (CGFloat(displayRows.displayRow(ofRow: rows.lowerBound)) + 0.5) * rowHeight
+      - scrollOffset
+  }
+
+  func block(atY y: CGFloat) -> Int? {
+    let displayRow = Int(((y + clipView.bounds.minY) / rowHeight).rounded(.down))
+    if displayRow >= 0, displayRow < displayRows.count,
+      displayRows.runIndex(atDisplayRow: displayRow) == nil,
+      let block = content.blockIndex(atRow: displayRows.row(atDisplayRow: displayRow))
+    {
+      return block
+    }
+    // Where no row of a block lies, a block without rows has the room of a control around the
+    // boundary it lies on.
+    return content.blocks.indices.first { block in
+      content.blocks[block].rows.isEmpty
+        && signCenter(ofBlock: block).map { abs($0 - y) <= Theme.decisionControlSize / 2 } == true
+    }
+  }
+
+  func placeDescription(ofBlock block: Int) -> String {
+    let rows = content.blocks[block].rows
+    let lines = content.lineNumbers
+    if rows.isEmpty {
+      // A block without rows lies after the line before it.
+      guard let line = lines[..<min(rows.lowerBound, lines.count)].last(where: { $0 >= 0 }) else {
+        return String(
+          localized: "Before the first line", bundle: .module,
+          comment: "VoiceOver: where a mark beside filler rows at the start is.")
+      }
+      return String(
+        localized: "After line \(Int(line) + 1)", bundle: .module,
+        comment: "VoiceOver: where a mark beside a filler row is.")
+    }
+    let line = lines[...rows.lowerBound].last { $0 >= 0 }.map { Int($0) + 1 } ?? 1
+    return String(
+      localized: "Line \(line)", bundle: .module, comment: "VoiceOver: where a mark is.")
   }
 }

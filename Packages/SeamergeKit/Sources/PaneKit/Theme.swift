@@ -149,6 +149,58 @@ public struct Theme {
   /// The distance between the ellipsis on the bar of a collapsed run and its label.
   static let collapsedRunSymbolSpacing: CGFloat = 4
 
+  /// The height of the toggles and the reset arrow in the decision column, and the smallest width
+  /// of each: the smallest target that a click needs.
+  static let decisionControlSize: CGFloat = 20
+
+  /// The distance between the toggles of a block, and between them and the reset arrow.
+  static let decisionControlSpacing: CGFloat = 2
+
+  /// The distance between the edges of the decision column and what it shows.
+  static let decisionColumnInset: CGFloat = 4
+
+  /// The distance between the edges of a toggle and its label.
+  static let toggleLabelPadding: CGFloat = 6
+
+  /// The radius of the corners of a toggle.
+  static let toggleCornerRadius: CGFloat = 5
+
+  /// The distance between the label of a toggle that follows a deletion and its trash can.
+  static let toggleSymbolSpacing: CGFloat = 2
+
+  /// How much smaller the trash can of a toggle is than its label, so that the can stands about
+  /// as high as the capitals beside it.
+  static let toggleSymbolSizeReduction: CGFloat = 1
+
+  /// The text style of the labels of the toggles.
+  static let toggleTextStyle: NSFont.TextStyle = .subheadline
+
+  /// The height of the small sign of a block's state in the decision column.
+  static let stateSignHeight: CGFloat = 14
+
+  /// The distance between the edges of a letter of the state sign and its outline.
+  static let stateSignPadding: CGFloat = 3
+
+  /// The radius of the corners of a letter of the state sign.
+  static let stateSignCornerRadius: CGFloat = 3
+
+  /// The distance between the letters of a state sign.
+  static let stateSignSpacing: CGFloat = 2
+
+  /// How much larger the symbols of the state signs are than their letters, so that they fill
+  /// the height of the sign like the outlined letters.
+  static let stateSignSymbolSizeIncrease: CGFloat = 2
+
+  /// The width of the outline of a letter that the merge took.
+  static let stateSignOutlineWidth: CGFloat = 1
+
+  /// The text style of the letters of the state signs.
+  static let stateSignTextStyle: NSFont.TextStyle = .caption1
+
+  /// How long the pointer rests on a block in the decision column before its toggles show, so
+  /// that the column does not flicker while the pointer passes along it.
+  static let toggleHoverDelay: TimeInterval = 0.1
+
   /// How long a preview takes to turn into text, or text into a preview.
   static let previewFadeDuration: CFTimeInterval = 0.15
 

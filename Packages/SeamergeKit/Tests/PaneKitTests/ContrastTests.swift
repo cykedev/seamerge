@@ -100,6 +100,52 @@ import Testing
     }
     return pairs + overviewPairs(theme: theme, ground: ground, resolve: resolve)
       + collapsedRunPairs(theme: theme, ground: ground, resolve: resolve)
+      + decisionPairs(theme: theme, ground: ground, resolve: resolve)
+  }
+
+  /// The pairs in the decision column: the labels of toggles on and off, also while pressed, the
+  /// letters of the state signs, and the symbols, all on the plain column.
+  private func decisionPairs(
+    theme: Theme, ground: NSColor, resolve: (NSColor?) -> NSColor?
+  ) -> [Pair] {
+    let pressed = Contrast.over(resolve(theme.pressedDecisionControlFill), ground)
+    var pairs: [Pair] = []
+    let toggles: [[ColorRole]] = [[.a], [.base], [.b], [.a, .b], [.base, .a], [.base, .b]]
+    for roles in toggles {
+      let color = theme.decisionColor(for: roles)
+      let fill = Contrast.over(resolve(color), ground)
+      let pressedFill = Contrast.over(resolve(theme.pressedDecisionControlFill), fill)
+      for (name, surface) in [("", fill), ("pressed ", pressedFill)] {
+        pairs.append(
+          Pair(
+            description: "label on \(name)toggle \(roles) that is on",
+            foreground: Contrast.over(resolve(theme.filledLabelColor), surface),
+            surface: surface, minimum: Self.text))
+      }
+      pairs.append(
+        Pair(
+          description: "label of toggle \(roles) that is off and outlined letter",
+          foreground: Contrast.over(resolve(color), ground), surface: ground, minimum: Self.text))
+      pairs.append(
+        Pair(
+          description: "label of pressed toggle \(roles) that is off",
+          foreground: Contrast.over(resolve(Theme.textColor), pressed), surface: pressed,
+          minimum: Self.text))
+    }
+    let symbols: [(String, NSColor)] = [
+      ("trash can, pencil and reset arrow", Theme.secondaryMarkColor),
+      ("warning sign", theme.symbolColor(for: .conflict)),
+    ]
+    for (name, color) in symbols {
+      for (surfaceName, surface) in [("column", ground), ("pressed control", pressed)] {
+        pairs.append(
+          Pair(
+            description: "\(name) on \(surfaceName)",
+            foreground: Contrast.over(resolve(color), surface), surface: surface,
+            minimum: Self.sign))
+      }
+    }
+    return pairs
   }
 
   /// The pairs on the bar of a collapsed run: its label and ellipsis, on the bar and within a

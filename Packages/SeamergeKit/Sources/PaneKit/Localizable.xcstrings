@@ -1,6 +1,12 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ and %@": {
+      "comment": "VoiceOver: the inputs that share a toggle, such as Base and B."
+    },
+    "%@, deletion": {
+      "comment": "VoiceOver: a toggle that follows the inputs named in removing lines, such as A."
+    },
     "%lld Unchanged Lines": {
       "comment": "The bar that stands for unchanged lines that are hidden.",
       "localizations": {
@@ -70,11 +76,20 @@
         }
       }
     },
+    "A": {
+      "comment": "The name of the incoming side on a toggle."
+    },
     "Added": {
       "comment": "VoiceOver: the side added lines."
     },
     "After line %lld": {
       "comment": "VoiceOver: where a mark beside a filler row is."
+    },
+    "B": {
+      "comment": "The name of the own side on a toggle."
+    },
+    "Base": {
+      "comment": "The name of the common ancestor on a toggle."
     },
     "Before the first line": {
       "comment": "VoiceOver: where a mark beside filler rows at the start is."
@@ -85,11 +100,23 @@
     "Changed": {
       "comment": "VoiceOver: the side changed lines."
     },
+    "Chosen: %@": {
+      "comment": "VoiceOver: a block whose sources the user chose, in order, such as B, A."
+    },
+    "Decisions": {
+      "comment": "VoiceOver: the column beside the result that shows how each block was decided."
+    },
+    "Edited by hand": {
+      "comment": "VoiceOver: a block whose text the user typed or changed."
+    },
     "Ignored difference": {
       "comment": "VoiceOver: a line that differs only in what the comparison ignores."
     },
     "Line %lld": {
       "comment": "VoiceOver: where a mark is."
+    },
+    "Nothing taken": {
+      "comment": "VoiceOver: a block that takes no lines from any input."
     },
     "Open conflict": {
       "comment": "VoiceOver: a conflict that still needs a decision."
@@ -103,11 +130,20 @@
     "Removed text": {
       "comment": "VoiceOver: the mark where a side removed text within a line."
     },
+    "Reset Block": {
+      "comment": "VoiceOver: the arrow that resets a block to how it was loaded."
+    },
     "Resolved conflict": {
       "comment": "VoiceOver: a conflict that has been decided."
     },
+    "Return the block to how it was after loading": {
+      "comment": "Help tag of the arrow that resets a block."
+    },
     "Shows the hidden lines.": {
       "comment": "VoiceOver: what pressing the bar of hidden lines does."
+    },
+    "Taken automatically: %@": {
+      "comment": "VoiceOver: a block whose sources the merge took, such as A."
     }
   },
   "version": "1.0"

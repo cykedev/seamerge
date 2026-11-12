@@ -105,6 +105,36 @@ extension Theme {
     }
   }
 
+  /// The color of a toggle or a letter of a state sign that stands for `roles`: the color of the
+  /// side, of both sides blended where they share it, or of the base alone.
+  public func decisionColor(for roles: [ColorRole]) -> NSColor {
+    let sides = roles.filter { $0 == .a || $0 == .b }
+    switch sides.count {
+    case 0: return symbolColor(for: .base)
+    case 1: return symbolColor(for: sides[0])
+    default: return overviewMarkColor(for: .combined)
+    }
+  }
+
+  /// The color of the label on a filled toggle or letter: white in light appearances, black in
+  /// dark ones, where the fills are light.
+  public var filledLabelColor: NSColor {
+    color { appearance, _ in
+      switch appearance {
+      case .light, .lightHighContrast: .white
+      case .dark, .darkHighContrast: .black
+      }
+    }
+  }
+
+  /// The quiet fill behind a toggle or the reset arrow while it is pressed.
+  public var pressedDecisionControlFill: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.pressedCollapsedRunOpacity[appearance])
+    }
+  }
+
   /// The symbol value of `role`: the color of its markers, badges and toggles.
   public func symbolColor(for role: ColorRole) -> NSColor {
     let values = Palette.symbol(of: role)
