@@ -1,0 +1,198 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "A": {
+      "comment": "Merge > Toggle Source."
+    },
+    "About Seamerge": {
+      "comment": "App menu."
+    },
+    "B": {
+      "comment": "Merge > Toggle Source."
+    },
+    "Base": {
+      "comment": "Merge > Toggle Source."
+    },
+    "Bring All to Front": {
+      "comment": "Window menu."
+    },
+    "Close": {
+      "comment": "File menu."
+    },
+    "Compare": {
+      "comment": "Menu bar: the comparison modes."
+    },
+    "Compare Files…": {
+      "comment": "File menu: open the window Compare Files."
+    },
+    "Copy": {
+      "comment": "Edit menu."
+    },
+    "Customize Toolbar…": {
+      "comment": "View menu."
+    },
+    "Cut": {
+      "comment": "Edit menu."
+    },
+    "Edit": {
+      "comment": "Menu bar."
+    },
+    "Enter Full Screen": {
+      "comment": "View menu."
+    },
+    "File": {
+      "comment": "Menu bar."
+    },
+    "Find": {
+      "comment": "Edit menu: the submenu of finding."
+    },
+    "Find Next": {
+      "comment": "Edit > Find."
+    },
+    "Find Previous": {
+      "comment": "Edit > Find."
+    },
+    "Find…": {
+      "comment": "Edit > Find."
+    },
+    "Go": {
+      "comment": "Menu bar."
+    },
+    "Help": {
+      "comment": "Menu bar."
+    },
+    "Hide Others": {
+      "comment": "App menu."
+    },
+    "Hide Seamerge": {
+      "comment": "App menu."
+    },
+    "Jump to Selection": {
+      "comment": "Edit > Find."
+    },
+    "Keyboard Shortcuts": {
+      "comment": "Help menu: the sheet of all shortcuts."
+    },
+    "Leave Unresolved": {
+      "comment": "File menu: close a merge without saving it."
+    },
+    "Merge": {
+      "comment": "Menu bar: the decisions of a merge."
+    },
+    "Minimize": {
+      "comment": "Window menu."
+    },
+    "Open Recent": {
+      "comment": "File menu."
+    },
+    "Paste": {
+      "comment": "Edit menu."
+    },
+    "Quit Seamerge": {
+      "comment": "App menu."
+    },
+    "Redo": {
+      "comment": "Edit menu."
+    },
+    "Reopen All Conflicts": {
+      "comment": "Merge menu."
+    },
+    "Reset All Decisions…": {
+      "comment": "Merge menu."
+    },
+    "Reset This Change": {
+      "comment": "Merge menu."
+    },
+    "Resolve All Open Conflicts with A": {
+      "comment": "Merge menu."
+    },
+    "Resolve All Open Conflicts with B": {
+      "comment": "Merge menu."
+    },
+    "Resolve Manually": {
+      "comment": "Merge menu."
+    },
+    "Save": {
+      "comment": "File menu."
+    },
+    "Save As…": {
+      "comment": "File menu."
+    },
+    "Save and Close": {
+      "comment": "File menu."
+    },
+    "Seamerge": {
+      "comment": "Menu bar: the app menu."
+    },
+    "Seamerge Help": {
+      "comment": "Help menu."
+    },
+    "Select All": {
+      "comment": "Edit menu."
+    },
+    "Services": {
+      "comment": "App menu."
+    },
+    "Set Up Git Integration…": {
+      "comment": "App menu: make Git use Seamerge."
+    },
+    "Settings…": {
+      "comment": "App menu."
+    },
+    "Show All": {
+      "comment": "App menu."
+    },
+    "Show Ignored Changes": {
+      "comment": "View menu: mark the differences the comparison mode ignores."
+    },
+    "Show Toolbar": {
+      "comment": "View menu."
+    },
+    "Skip Remaining Files": {
+      "comment": "File menu of a comparison: end the comparisons that Git has left."
+    },
+    "Swap Sides": {
+      "comment": "Compare menu: swap the left and the right file."
+    },
+    "Syntax Highlighting": {
+      "comment": "View menu: color the code by its syntax."
+    },
+    "Toggle Source": {
+      "comment": "Merge menu: the submenu that adds or removes a side."
+    },
+    "Undo": {
+      "comment": "Edit menu."
+    },
+    "Use A": {
+      "comment": "Merge menu."
+    },
+    "Use A Then B": {
+      "comment": "Merge menu."
+    },
+    "Use B": {
+      "comment": "Merge menu."
+    },
+    "Use B Then A": {
+      "comment": "Merge menu."
+    },
+    "Use Base": {
+      "comment": "Merge menu."
+    },
+    "Use None": {
+      "comment": "Merge menu."
+    },
+    "Use Selection for Find": {
+      "comment": "Edit > Find."
+    },
+    "View": {
+      "comment": "Menu bar."
+    },
+    "Window": {
+      "comment": "Menu bar."
+    },
+    "Zoom": {
+      "comment": "Window menu."
+    }
+  },
+  "version": "1.0"
+}
