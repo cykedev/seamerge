@@ -3,7 +3,8 @@ import MergeModel
 import PaneKit
 
 /// Shows a merge in the panes of a window: what each pane shows, the marks of the overview bars,
-/// the signs of the decision column and the collapsed runs of unchanged rows.
+/// the signs of the decision column, the collapsed runs of unchanged rows, and the coupling that
+/// keeps the panes at the same place while one of them scrolls.
 @MainActor
 final class MergePresentation {
   /// The changed blocks, as every pane numbers them.
@@ -19,6 +20,7 @@ final class MergePresentation {
   let decisionColumn = DecisionColumnView()
 
   private let layout: SessionSplitViewController
+  private let scrollSync = ScrollSync()
   private var collapsed: CollapsedRows
   private let scrollMap: ScrollMap
   private var highlights: [BlockHighlights] = []
@@ -69,7 +71,14 @@ final class MergePresentation {
     layout.resultPane.decisionColumn = decisionColumn
 
     for pane in allPanes {
+      scrollSync.add(pane)
       pane.delegate = self
+    }
+    for (_, pane) in layout.sourcePanes {
+      scrollSync.setRowMapping(
+        between: layout.resultPane, and: pane,
+        forward: { [weak self] line in self?.scrollMap.row(atResultLine: line) ?? line },
+        backward: { [weak self] row in self?.scrollMap.resultLine(atRow: row) ?? row })
     }
   }
 
