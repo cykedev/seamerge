@@ -8,7 +8,7 @@ import Testing
 @MainActor
 @Suite struct MainMenuTests {
   @Test func everyCommandStandsInItsMenuInTheWordsAndWithTheKeysOfTheConcept() throws {
-    let menu = MainMenu()
+    let menu = MainMenu(openRecentMenu: NSMenu())
 
     let outline = Self.outline(of: menu.menu)
 
@@ -17,7 +17,7 @@ import Testing
   }
 
   @Test func commandsOfTheSessionWindowSendItsActionsInTheOrderOfTheirGroups() throws {
-    let mainMenu = MainMenu()
+    let mainMenu = MainMenu(openRecentMenu: NSMenu())
     let menus: [(SessionCommand.Menu, String)] = [
       (.file, "File"), (.edit, "Edit"), (.view, "View"), (.go, "Go"), (.compare, "Compare"),
     ]
@@ -37,7 +37,7 @@ import Testing
   }
 
   @Test func jumpsAndTheLastFileCommandFollowTheKindOfWindow() throws {
-    let mainMenu = MainMenu()
+    let mainMenu = MainMenu(openRecentMenu: NSMenu())
 
     mainMenu.update(for: .diff)
 
@@ -56,7 +56,7 @@ import Testing
   }
 
   @Test func whatHasNoEffectIsDeactivatedAndNothingIsHidden() {
-    let menu = MainMenu().menu
+    let menu = MainMenu(openRecentMenu: NSMenu()).menu
     let items = Self.allItems(of: menu)
 
     for submenu in items.compactMap(\.submenu) {
@@ -131,7 +131,7 @@ import Testing
       ---
       Quit Seamerge ⌘Q
     File ▸
-      Compare Files… ⌘O (deactivated)
+      Compare Files… ⌘O
       Open Recent ▸
       ---
       Open in Editor ⌥⌘O

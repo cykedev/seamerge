@@ -30,13 +30,13 @@ final class MainMenu {
   /// Files.
   let leaveUnresolvedItem: NSMenuItem
 
-  /// Builds the menu bar, keyed as in a merge window.
-  init() {
+  /// Builds the menu bar with `openRecentMenu` as File > Open Recent, keyed as in a merge window.
+  init(openRecentMenu: NSMenu) {
     leaveUnresolvedItem = Self.item(Titles.leaveUnresolved, key: ".")
     windowsMenu = NSMenu(title: Titles.window)
     helpMenu = NSMenu(title: Titles.help)
     for submenu in [
-      appMenu(), fileMenu(), editMenu(), viewMenu(), goMenu(),
+      appMenu(), fileMenu(openRecentMenu: openRecentMenu), editMenu(), viewMenu(), goMenu(),
       compareMenu(), mergeMenu(), windowMenu(), helpMenuContent(),
     ] {
       let item = NSMenuItem(title: submenu.title, action: nil, keyEquivalent: "")
@@ -76,14 +76,14 @@ final class MainMenu {
       ])
   }
 
-  private func fileMenu() -> NSMenu {
+  private func fileMenu(openRecentMenu: NSMenu) -> NSMenu {
     let openRecent = NSMenuItem(title: Titles.openRecent, action: nil, keyEquivalent: "")
-    openRecent.submenu = NSMenu(title: Titles.openRecent)
+    openRecent.submenu = openRecentMenu
     return Self.menu(
       Titles.file,
       [
         [
-          Self.item(Titles.compareFiles, key: "o"),
+          Self.item(Titles.compareFiles, #selector(AppDelegate.showCompareFiles(_:)), key: "o"),
           openRecent,
         ],
         commands(.openInEditor),

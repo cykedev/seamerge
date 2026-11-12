@@ -13,7 +13,8 @@ protocol SessionCoordinatorDelegate: AnyObject {
   func sessionCoordinatorDidChangeWindows(_ coordinator: SessionCoordinator)
 }
 
-/// Opens a window for each session that the helper hands over through the socket.
+/// Opens a window for each session: those the helper hands over through the socket, and those
+/// the window Compare Files puts together.
 ///
 /// Every session gets a window of its own with an undo manager of its own, built in the
 /// comparison mode of the window. For the helper, the coordinator answers `opened` once the
@@ -78,9 +79,37 @@ final class SessionCoordinator {
     }
   }
 
+  /// Whether the app can open a window for a session of `kind`.
+  ///
+  /// The session window shows merges only; until it compares two files too, the app refuses
+  /// comparisons, and the helper says so.
+  func canOpen(_ kind: Session.Kind) -> Bool {
+    kind == .merge
+  }
+
   /// The kind of session that `window` shows, if it is a session window.
   func kind(of window: NSWindow) -> Session.Kind? {
     windowControllers.first { $0.window === window }.flatMap { kinds[ObjectIdentifier($0)] }
+  }
+
+  /// Opens a window for the files of `comparison` in their roles and returns once it shows.
+  ///
+  /// Such a merge has no file to save to and no Git behind it. While the app quits, nothing
+  /// opens.
+  ///
+  /// - Throws: Why the files cannot be opened.
+  /// - Precondition: The comparison has a base; the session window shows merges only.
+  func open(_ comparison: FileComparison) async throws(SessionLoadingError) {
+    guard let base = comparison.base else {
+      preconditionFailure("The session window shows merges only")
+    }
+    let controller = try await Self.makeWindow(
+      base: SessionFile(url: base, label: base.lastPathComponent),
+      a: SessionFile(url: comparison.left, label: comparison.left.lastPathComponent),
+      b: SessionFile(url: comparison.right, label: comparison.right.lastPathComponent),
+      context: SessionContext())
+    guard !isFinishing else { return }
+    show(controller, kind: .merge) { _ in }
   }
 
   /// Serves the request of one helper until its window closes or the helper goes away.

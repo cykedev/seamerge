@@ -135,6 +135,7 @@ struct SessionCoordinatorTests {
     await #expect(throws: SessionError.rejected(.unsupportedRequest)) {
       try await perform(request, at: sandbox.socketURL).value
     }
+    #expect(!coordinator.canOpen(.diff))
     #expect(coordinator.windowControllers.isEmpty)
     await coordinator.finish()
   }
@@ -154,6 +155,41 @@ struct SessionCoordinatorTests {
       sandbox.presenter.errors.compactMap { $0 as? SessionLoadingError } == [.binaryFile(binary)])
     #expect(coordinator.windowControllers.isEmpty)
     await coordinator.finish()
+  }
+
+  @Test func filesFromTheWindowCompareFilesOpenAMergeInTheirRoles() async throws {
+    let sandbox = try AppSandbox()
+    let recorder = WindowRecorder()
+    let coordinator = SessionCoordinator(
+      socketURL: sandbox.socketURL, presentError: sandbox.presentError)
+    coordinator.delegate = recorder
+    let merge = FileComparison(
+      left: try sandbox.file("theirs.txt", "a\nb\n"), base: try sandbox.file("base.txt", "a\n"),
+      right: try sandbox.file("mine.txt", "a\nc\n"))
+
+    try await coordinator.open(merge)
+
+    let controller = await recorder.nextOpened()
+    #expect(controller.window?.title == "mine.txt")
+    #expect(controller.window?.representedURL == nil)
+    #expect(controller.comparisonOptions.mode == .windowDefault)
+    #expect(coordinator.kind(of: try #require(controller.window)) == .merge)
+    controller.close()
+  }
+
+  @Test func filesFromTheWindowThatCannotBeOpenedThrowWithTheFile() async throws {
+    let sandbox = try AppSandbox()
+    let coordinator = SessionCoordinator(
+      socketURL: sandbox.socketURL, presentError: sandbox.presentError)
+    let binary = try sandbox.file("image.png", "\u{0}\u{1}PNG\u{0}")
+    let merge = FileComparison(
+      left: binary, base: try sandbox.file("base.txt"), right: try sandbox.file("mine.txt"))
+
+    await #expect(throws: SessionLoadingError.binaryFile(binary)) {
+      try await coordinator.open(merge)
+    }
+    #expect(coordinator.windowControllers.isEmpty)
+    #expect(sandbox.presenter.errors.isEmpty)
   }
 
   @Test func namesFromGitReachTheWindowAsTheHelperSentThem() throws {

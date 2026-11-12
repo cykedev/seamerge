@@ -19,6 +19,9 @@
     "Bring All to Front": {
       "comment": "Window menu."
     },
+    "Clear Menu": {
+      "comment": "File > Open Recent: forget the recent comparisons."
+    },
     "Close": {
       "comment": "File menu."
     },
