@@ -11,10 +11,11 @@ extension PaneContent {
   ///   - document: The result, which tells which conflicts are still open.
   ///   - ignoredDifferences: The lines whose differences the comparison ignores, which get a ring
   ///     in the gutter.
+  ///   - conflictMarkRole: The pane that carries the mark of a conflict.
   /// - Precondition: `role` takes part in the merge.
   init(
     source role: Role, of changes: SessionChanges, document: ResultDocument,
-    ignoredDifferences: IgnoredDifferences
+    ignoredDifferences: IgnoredDifferences, conflictMarkRole: Role
   ) {
     let session = changes.session
     let layout = session.rowLayout
@@ -40,7 +41,7 @@ extension PaneContent {
     }
     let blocks = changes.blocks.map { block in
       let isOpen = document.segment(for: block).state == .open
-      let carriesConflictMark = block.kind == .conflict && role == changes.conflictMarkRole
+      let carriesConflictMark = block.kind == .conflict && role == conflictMarkRole
       return PaneBlock(
         rows: layout.rows(of: block),
         style: changes.style(of: role, in: block, conflictIsOpen: isOpen),

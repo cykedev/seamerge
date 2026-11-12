@@ -10,8 +10,29 @@ extension SessionCommand {
     /// Choosing a comparison mode needs no comparison under way.
     case noComparisonUnderWay
 
+    /// Hiding or showing the base needs a base and the panes above the result in view.
+    case basePane
+
+    /// Collapsing or expanding needs runs of unchanged lines that change with it.
+    case collapsibleRows
+
+    /// Zooming in needs a larger size left.
+    case largerFontSize
+
+    /// Zooming out needs a smaller size left.
+    case smallerFontSize
+
+    /// Actual Size needs another size than the standard one.
+    case otherFontSize
+
+    /// Opening the file needs one on disk.
+    case fileOnDisk
+
     /// Copying a block needs a current block with text.
     case blockText
+
+    /// The command always has an effect.
+    case nothing
   }
 
   /// What the command needs to have an effect.
@@ -26,7 +47,15 @@ extension SessionCommand {
     case .nextPane, .previousPane: .anotherPane
     case .compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace:
       .noComparisonUnderWay
+    case .toggleBase: .basePane
+    case .toggleCollapsedLines: .collapsibleRows
+    case .zoomIn: .largerFontSize
+    case .zoomOut: .smallerFontSize
+    case .actualSize: .otherFontSize
+    case .openInEditor: .fileOnDisk
     case .copyBlock: .blockText
+    case .toggleResultMaximized, .toggleScrollSynchronization, .toggleInvisibles, .goToLine:
+      .nothing
     }
   }
 }

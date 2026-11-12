@@ -23,15 +23,19 @@ extension SessionCommand {
   /// concept of the menus puts them among those.
   public static func groups(in menu: Menu) -> [[SessionCommand]] {
     switch menu {
-    case .file: []
+    case .file: [[.openInEditor]]
     case .edit: [[.copyBlock]]
     case .view:
-      []
+      [
+        [.toggleBase, .toggleResultMaximized],
+        [.toggleScrollSynchronization, .toggleInvisibles, .toggleCollapsedLines],
+        [.zoomIn, .zoomOut, .actualSize],
+      ]
     case .go:
       [
         [.nextConflict, .previousConflict],
         [.nextChange, .previousChange, .firstChange, .lastChange],
-        [.nextPane, .previousPane],
+        [.nextPane, .previousPane], [.goToLine],
       ]
     case .compare:
       [[.compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace]]

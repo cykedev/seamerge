@@ -134,7 +134,8 @@ final class MergePresentation {
       pane.highlightProvider = provider
       pane.setContent(
         PaneContent(
-          source: role, of: changes, document: document, ignoredDifferences: ignoredDifferences),
+          source: role, of: changes, document: document, ignoredDifferences: ignoredDifferences,
+          conflictMarkRole: changes.conflictMarkRole(baseIsShown: layout.showsBase)),
         collapsedRuns: sourceRuns)
     }
     let result = ResultPaneContent(
@@ -174,14 +175,15 @@ final class MergePresentation {
   /// The block that holds the first line of the current block in B stays current, or the next
   /// changed block after it; the runs that the user expanded collapse again.
   func show(_ document: ResultDocument, text: String) {
-    let lineOfB = lineOfBAtReadingLine
     let currentLineOfB = currentBlock.map { changes.blocks[$0].lines(in: .b).lowerBound }
-    self.document = document
-    resultText = text
-    changes = SessionChanges(session: document.session)
-    collapsed = CollapsedRows(session: document.session, document: document)
-    scrollMap = ScrollMap(document: document, text: text)
-    showDocument()
+    keepingTheLineOfBInPlace {
+      self.document = document
+      resultText = text
+      changes = SessionChanges(session: document.session)
+      collapsed = CollapsedRows(session: document.session, document: document)
+      scrollMap = ScrollMap(document: document, text: text)
+      showDocument()
+    }
     let rowLayout = changes.session.rowLayout
     currentBlock = nil
     setCurrentBlock(
@@ -189,27 +191,107 @@ final class MergePresentation {
         let row = rowLayout.row(ofLine: line, in: .b)
         return changes.blocks.firstIndex { rowLayout.rows(of: $0).upperBound > row }
       })
-    if let lineOfB, let pane = leadingPane {
-      let row = rowLayout.row(ofLine: lineOfB, in: .b)
-      let leadingRow =
-        pane === layout.resultPane ? scrollMap.resultLine(atRow: Double(row)) : Double(row)
-      pane.scroll(toPlaceRowAtReadingLine: Int(leadingRow), motion: .cut)
+  }
+
+  /// Shows the panes above the result again, after the base came into view or went out of it,
+  /// which decides the pane that carries the marks of conflicts.
+  func showSourcesAgain() {
+    showDocument()
+  }
+
+  /// Whether long runs of unchanged rows are collapsed.
+  var collapsesUnchangedRows: Bool {
+    collapsed.collapsesUnchangedRows
+  }
+
+  /// Whether Show All Lines or Collapse Unchanged Lines would change what the panes show: there
+  /// are collapsed runs to show, or runs to collapse, leaving out the one of the line
+  /// `caretLine` of the result if the insertion point is there.
+  func canToggleCollapsedRows(caretLine: Int?) -> Bool {
+    if collapsed.collapsesUnchangedRows {
+      return !collapsed.runs.isEmpty
     }
+    var collapsing = collapsed
+    collapsing.collapseUnchangedRows(document: document, caretRow: caretRow(ofLine: caretLine))
+    return !collapsing.runs.isEmpty
+  }
+
+  /// Shows every row of every pane.
+  func showAllRows() {
+    collapsed.showAllRows()
+    showCollapsedRuns()
+  }
+
+  /// Collapses every long run of unchanged rows again, except where the result is worked on and
+  /// the run of the line `caretLine` of the result, if the insertion point is there.
+  func collapseUnchangedRows(caretLine: Int?) {
+    collapsed.collapseUnchangedRows(document: document, caretRow: caretRow(ofLine: caretLine))
+    showCollapsedRuns()
+  }
+
+  /// The row of the grid of line `line` of the result.
+  private func caretRow(ofLine line: Int?) -> Int? {
+    line.map { Int(scrollMap.row(atResultLine: Double($0)).rounded(.down)) }
+  }
+
+  /// Scrolls `pane` so that `line` of its file, counted from 0, lies at the reading line, and
+  /// makes its block current if the line belongs to a changed block; a run that hides the line
+  /// expands first.
+  ///
+  /// - Returns: The row of the line in `pane`.
+  @discardableResult
+  func go(toLine line: Int, in pane: PaneView) -> Int {
+    let rowLayout = changes.session.rowLayout
+    let row: Int
+    let gridRow: Int
+    if pane === layout.resultPane {
+      row = min(max(line, 0), pane.content.lineNumbers.count - 1)
+      gridRow = Int(scrollMap.row(atResultLine: Double(row)).rounded(.down))
+    } else if let role = layout.sourcePanes.first(where: { $0.pane === pane })?.role {
+      let lineCount = rowLayout.lineCount(in: role)
+      gridRow =
+        lineCount == 0 ? 0 : rowLayout.row(ofLine: min(max(line, 0), lineCount - 1), in: role)
+      row = gridRow
+    } else {
+      return 0
+    }
+    if collapsed.expandToShow(row: gridRow) {
+      showCollapsedRuns()
+    }
+    if let block = pane.content.blocks.firstIndex(where: { $0.rows.contains(row) }) {
+      setCurrentBlock(block)
+    }
+    pane.scroll(toPlaceRowAtReadingLine: row, motion: motion)
+    return row
+  }
+
+  /// Runs `body`, which changes how the panes lay out their rows, and scrolls the line of B that
+  /// was at the reading line back to it.
+  func keepingTheLineOfBInPlace(_ body: () -> Void) {
+    let place = placeAtReadingLine
+    body()
+    guard let place, let pane = leadingPane else { return }
+    let row = changes.session.rowLayout.row(ofLine: place.lineOfB, in: .b)
+    let leadingRow =
+      pane === layout.resultPane ? Int(scrollMap.resultLine(atRow: Double(row))) : row
+    pane.scroll(toPlaceRowAtReadingLine: leadingRow, fraction: place.fraction, motion: .cut)
   }
 
   /// The line of B at the reading line of the panes, or the first line after it if a filler row
-  /// is there, or `nil` if B has no line from there on.
-  private var lineOfBAtReadingLine: Int? {
+  /// is there, with how far down its row the reading line passes; `nil` if B has no line from
+  /// there on.
+  private var placeAtReadingLine: (lineOfB: Int, fraction: CGFloat)? {
     guard let pane = leadingPane else { return nil }
-    let visible = pane.documentView.visibleRect
-    let point = pane.convert(
-      CGPoint(x: 0, y: visible.minY + Theme.readingLine * visible.height), from: pane.documentView)
-    let hitRow = pane.hit(at: point).row
+    let (hitRow, fraction) = pane.rowAtReadingLine
     let rowLayout = changes.session.rowLayout
     let row =
       pane === layout.resultPane
       ? Int(scrollMap.row(atResultLine: Double(hitRow)).rounded(.down)) : hitRow
-    return (row..<rowLayout.rowCount).lazy.compactMap { rowLayout.line(atRow: $0, in: .b) }.first
+    guard
+      let line = (row..<rowLayout.rowCount).lazy.compactMap({ rowLayout.line(atRow: $0, in: .b) })
+        .first
+    else { return nil }
+    return (line, rowLayout.line(atRow: row, in: .b) == line ? fraction : 0)
   }
 
   /// Makes `block` current and scrolls it to the reading line of every pane, as far as the text

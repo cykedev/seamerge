@@ -17,9 +17,18 @@ extension SessionCommand {
     case .previousConflict: return kind == .merge ? (Self.upArrow, jumps) : nil
     case .nextChange: return (Self.downArrow, changeJumps)
     case .previousChange: return (Self.upArrow, changeJumps)
-    case .firstChange, .lastChange, .compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges,
-      .ignoreAllWhitespace, .copyBlock:
+    case .firstChange, .lastChange, .compareExactly, .ignoreLineEndings,
+      .ignoreWhitespaceChanges, .ignoreAllWhitespace, .toggleInvisibles, .copyBlock:
       return nil
+    case .toggleBase: return ("b", [.option, .command])
+    case .toggleResultMaximized: return ("r", [.option, .command])
+    case .toggleScrollSynchronization: return ("y", [.option, .command])
+    case .toggleCollapsedLines: return ("l", [.shift, .command])
+    case .zoomIn: return ("+", [.command])
+    case .zoomOut: return ("-", [.command])
+    case .actualSize: return ("0", [.command])
+    case .goToLine: return ("l", [.command])
+    case .openInEditor: return ("o", [.option, .command])
     case .nextPane: return (Self.tab, [.control])
     case .previousPane: return (Self.tab, [.shift, .control])
     }

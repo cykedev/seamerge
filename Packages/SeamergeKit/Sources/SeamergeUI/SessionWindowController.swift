@@ -47,10 +47,17 @@ public final class SessionWindowController: NSWindowController {
   var displayOptions: DisplayOptions {
     didSet {
       guard displayOptions != oldValue else { return }
-      let theme = displayOptions.theme
-      layout.apply(theme)
-      presentation.apply(theme)
       presentation.displayOptions = displayOptions
+      applyTheme()
+    }
+  }
+
+  /// The size of the code, in points.
+  var fontSize = SessionWindowController.standardFontSize {
+    didSet {
+      guard fontSize != oldValue else { return }
+      presentation.keepingTheLineOfBInPlace { applyTheme() }
+      updateMinimumSize()
     }
   }
 
@@ -85,7 +92,7 @@ public final class SessionWindowController: NSWindowController {
     prompts: any ComparisonPrompts
   ) {
     precondition(session.kind == .merge, "A session window shows a merge")
-    let theme = displayOptions.theme
+    let theme = displayOptions.theme(fontSize: Self.standardFontSize)
     let headers = Dictionary(
       uniqueKeysWithValues: Self.paneOrder.filter(session.roles.contains).map { role in
         (role, SideHeader(role: role, session: session, context: context))
@@ -156,6 +163,13 @@ public final class SessionWindowController: NSWindowController {
     layout.showCallerIsGone()
   }
 
+  /// Draws the window with the theme of its display options and font size.
+  private func applyTheme() {
+    let theme = displayOptions.theme(fontSize: fontSize)
+    layout.apply(theme)
+    presentation.apply(theme)
+  }
+
   /// Titles the window after the session it shows now.
   func sessionDidChange() {
     summary = SessionSummary(changes: presentation.changes, context: context)
@@ -202,13 +216,35 @@ extension SessionWindowController: NSWindowDelegate {
 extension SessionWindowController: NSUserInterfaceValidations {
   /// Whether the command of `item` can have an effect now.
   ///
-  /// A menu item of a comparison mode shows a checkmark while the window compares in it.
+  /// A menu item of a comparison mode, and Synchronize Scrolling, show a checkmark while they
+  /// are in effect; a command that switches something on and off takes the name that says what
+  /// it does now, such as Show Base while the base is hidden.
   public func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
     guard let command = SessionCommand(action: item.action) else { return false }
-    if let menuItem = item as? NSMenuItem, let mode = command.comparisonMode {
-      menuItem.state = mode == comparisonOptions.mode ? .on : .off
+    if let menuItem = item as? NSMenuItem {
+      if let mode = command.comparisonMode {
+        menuItem.state = mode == comparisonOptions.mode ? .on : .off
+      } else if command == .toggleScrollSynchronization {
+        menuItem.state = presentation.scrollSync.isEnabled ? .on : .off
+      }
+      if let alternateTitle = command.alternateTitle {
+        menuItem.title = isSwitchedOn(command) ? alternateTitle : command.title
+      }
     }
     return canPerform(command)
+  }
+
+  /// Whether what `command` switches is on: the base hidden, the result maximized, the
+  /// invisible characters shown, all lines shown.
+  func isSwitchedOn(_ command: SessionCommand) -> Bool {
+    switch command {
+    case .toggleBase: !layout.showsBase
+    case .toggleResultMaximized: layout.maximizesResult
+    case .toggleInvisibles: layout.resultPane.showsInvisibles
+    case .toggleCollapsedLines: !presentation.collapsesUnchangedRows
+    case .toggleScrollSynchronization: presentation.scrollSync.isEnabled
+    default: false
+    }
   }
 
   /// Whether `command` can have an effect now.
@@ -220,8 +256,22 @@ extension SessionWindowController: NSUserInterfaceValidations {
       focusablePanes.count > 1
     case .noComparisonUnderWay:
       !isSwitchingComparison
+    case .basePane:
+      presentation.changes.hasBase && !layout.maximizesResult
+    case .collapsibleRows:
+      presentation.canToggleCollapsedRows(caretLine: caretLineInTextMode)
+    case .largerFontSize:
+      fontSize < Self.fontSizes[Self.fontSizes.count - 1]
+    case .smallerFontSize:
+      fontSize > Self.fontSizes[0]
+    case .otherFontSize:
+      fontSize != Self.standardFontSize
+    case .fileOnDisk:
+      editableFileURL != nil
     case .blockText:
       !blockText(at: CopiedPlace(pane: focusedPane, block: presentation.currentBlock)).isEmpty
+    case .nothing:
+      true
     }
   }
 }

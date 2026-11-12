@@ -67,6 +67,9 @@ struct SessionChanges {
     }
   }
 
-  /// The pane that carries the mark of a conflict: the base, or B where there is no base.
-  var conflictMarkRole: Role { hasBase ? .base : .b }
+  /// The pane that carries the mark of a conflict: the base, or B where there is no base or
+  /// its pane is hidden.
+  func conflictMarkRole(baseIsShown: Bool) -> Role {
+    hasBase && baseIsShown ? .base : .b
+  }
 }

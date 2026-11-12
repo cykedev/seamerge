@@ -80,10 +80,3 @@ enum Rendering {
     return url
   }
 }
-
-extension SessionSplitViewController {
-  /// The pane of `role`, if the input takes part.
-  func sourcePane(_ role: Role) -> PaneView? {
-    sourcePanes.first { $0.role == role }?.pane
-  }
-}

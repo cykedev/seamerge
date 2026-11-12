@@ -68,6 +68,9 @@
     "A": {
       "comment": "The badge of the incoming side."
     },
+    "Actual Size": {
+      "comment": "View menu command."
+    },
     "All whitespace ignored": {
       "comment": "Subtitle: the comparison ignores spaces and tabs entirely."
     },
@@ -94,6 +97,9 @@
     },
     "Change in %@, line %lld": {
       "comment": "VoiceOver: a mark in the overview bar, such as Change in A, line 12."
+    },
+    "Collapse Unchanged Lines": {
+      "comment": "View menu command."
     },
     "Commit": {
       "comment": "Details of a side: the commit."
@@ -161,6 +167,9 @@
     "Git is no longer waiting for this merge.": {
       "comment": "Notice below the result header after the Git command that asked has ended."
     },
+    "Go": {
+      "comment": "Button: jump to the line."
+    },
     "Go back to the change before this one": {
       "comment": "Help tag of Previous Change."
     },
@@ -172,6 +181,18 @@
     },
     "Go on to the open conflict after this one": {
       "comment": "Help tag of Next Conflict."
+    },
+    "Go to Line": {
+      "comment": "Title of the sheet of Go to Line."
+    },
+    "Go to Line…": {
+      "comment": "Go menu command."
+    },
+    "Hide Base": {
+      "comment": "View menu command."
+    },
+    "Hide Invisibles": {
+      "comment": "View menu command."
     },
     "ISO 8859-1": {
       "comment": "Encoding: ISO Latin 1."
@@ -194,6 +215,9 @@
     "Line Endings": {
       "comment": "Details of a side: LF, CRLF or CR."
     },
+    "Line Number": {
+      "comment": "Placeholder of the field of Go to Line."
+    },
     "Line endings ignored": {
       "comment": "Subtitle: the comparison treats LF, CRLF and CR as equal."
     },
@@ -202,6 +226,9 @@
     },
     "Mac Roman": {
       "comment": "Encoding."
+    },
+    "Maximize Result": {
+      "comment": "View menu command."
     },
     "Mixed": {
       "comment": "Line endings: more than one kind."
@@ -224,6 +251,9 @@
     "Open conflict, line %lld": {
       "comment": "VoiceOver: the mark of an open conflict in the overview bar."
     },
+    "Open in Editor": {
+      "comment": "File menu command."
+    },
     "Paste": {
       "comment": "Context menu: paste text."
     },
@@ -242,6 +272,9 @@
     "Resolved conflict, line %lld": {
       "comment": "VoiceOver: the mark of a decided conflict in the overview bar."
     },
+    "Restore Layout": {
+      "comment": "View menu command."
+    },
     "Result": {
       "comment": "The name of the result pane."
     },
@@ -250,6 +283,15 @@
     },
     "Select All": {
       "comment": "Context menu: select the whole text."
+    },
+    "Show All Lines": {
+      "comment": "View menu command."
+    },
+    "Show Base": {
+      "comment": "View menu command."
+    },
+    "Show Invisibles": {
+      "comment": "View menu command."
     },
     "Show in Finder": {
       "comment": "Context menu of a header."
@@ -262,6 +304,9 @@
     },
     "Switch": {
       "comment": "Button: switch anyway."
+    },
+    "Synchronize Scrolling": {
+      "comment": "View menu command."
     },
     "Take the deletion of %@.": {
       "comment": "Help tag of a toggle that removes the lines, such as Take the deletion of main."
@@ -324,6 +369,12 @@
     },
     "Windows 1252": {
       "comment": "Encoding: Windows code page."
+    },
+    "Zoom In": {
+      "comment": "View menu command."
+    },
+    "Zoom Out": {
+      "comment": "View menu command."
     },
     "cherry-picked commit": {
       "comment": "Role: the commit being cherry-picked."

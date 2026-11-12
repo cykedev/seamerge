@@ -41,6 +41,9 @@ enum WindowMetrics {
   /// The room the title bar keeps on each side of the title for the window's buttons.
   static let titlebarControlsWidth: CGFloat = 80
 
+  /// The width of the field of Go to Line.
+  static let lineFieldWidth: CGFloat = 200
+
   /// The size of a new window.
   static let defaultContentSize = CGSize(width: 1280, height: 800)
 

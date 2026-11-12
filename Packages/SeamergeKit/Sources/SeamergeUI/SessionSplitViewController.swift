@@ -17,6 +17,11 @@ final class SessionSplitViewController: NSSplitViewController {
   /// The result pane.
   let resultPane: PaneView
 
+  /// The pane of `role`, if the input takes part.
+  func sourcePane(_ role: Role) -> PaneView? {
+    sourcePanes.first { $0.role == role }?.pane
+  }
+
   /// Supplies the context menus of the headers; the controller does not retain it.
   weak var delegate: (any SessionLayoutDelegate)?
 
@@ -55,6 +60,34 @@ final class SessionSplitViewController: NSSplitViewController {
     addSplitViewItem(resultItem)
   }
 
+  /// Whether the pane of the base is in view; while it is hidden, A and B share its width.
+  ///
+  /// - Precondition: The merge has a base, if the pane is to be hidden.
+  var showsBase: Bool {
+    get { baseItem.map { !$0.isCollapsed } ?? false }
+    set {
+      guard let baseItem else {
+        precondition(!newValue, "A merge without a base has no base pane to show")
+        return
+      }
+      baseItem.isCollapsed = !newValue
+      if newValue {
+        placeSourceDividers()
+      }
+    }
+  }
+
+  /// Whether the result has the whole window, with the panes above it collapsed.
+  var maximizesResult: Bool {
+    get { splitViewItems.first?.isCollapsed ?? false }
+    set { splitViewItems.first?.isCollapsed = newValue }
+  }
+
+  /// The split view item of the pane of the base, if the merge has one.
+  private var baseItem: NSSplitViewItem? {
+    sourcePanes.firstIndex { $0.role == .base }.map { sourcesController.splitViewItems[$0] }
+  }
+
   /// Gives each source pane the least width its content needs, so that the dividers between
   /// them stay usable; call it once the panes have their content.
   func updateMinimumWidths() {
@@ -83,12 +116,13 @@ final class SessionSplitViewController: NSSplitViewController {
     nil
   }
 
-  /// The narrowest the panes get together: each source pane at its least width, with the
-  /// dividers between them.
+  /// The narrowest the panes get together: each source pane in view at its least width, with
+  /// the dividers between them.
   var minimumWidth: CGFloat {
     let divider = sourcesController.splitView.dividerThickness
-    let panes = sourcePanes.map(\.pane.minimumWidth).reduce(0, +)
-    return max(panes + divider * CGFloat(sourcePanes.count - 1), resultPane.minimumWidth)
+    let shown = zip(sourcesController.splitViewItems, sourcePanes).filter { !$0.0.isCollapsed }
+    let panes = shown.map(\.1.pane.minimumWidth).reduce(0, +)
+    return max(panes + divider * CGFloat(max(shown.count - 1, 0)), resultPane.minimumWidth)
   }
 
   /// The least height of the panes together: the sources and the result each at their least
@@ -112,6 +146,11 @@ final class SessionSplitViewController: NSSplitViewController {
     view.layoutSubtreeIfNeeded()
     splitView.setPosition(
       (splitView.bounds.height * WindowMetrics.sourcesFraction).rounded(), ofDividerAt: 0)
+    placeSourceDividers()
+  }
+
+  /// Makes the source panes equally wide again.
+  private func placeSourceDividers() {
     let sources = sourcesController.splitView
     sources.layoutSubtreeIfNeeded()
     let divider = sources.dividerThickness

@@ -29,9 +29,16 @@ struct DisplayOptions: Hashable {
       reducesMotion: workspace.accessibilityDisplayShouldReduceMotion)
   }
 
-  /// The theme of the panes with these settings.
+  /// The theme of the panes with these settings, with code at its standard size.
   var theme: Theme {
     Theme(
       increasesContrast: increasesContrast, differentiatesWithoutColor: differentiatesWithoutColor)
+  }
+
+  /// The theme of the panes with these settings, with code of `fontSize` points.
+  func theme(fontSize: CGFloat) -> Theme {
+    var theme = theme
+    theme.font = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
+    return theme
   }
 }

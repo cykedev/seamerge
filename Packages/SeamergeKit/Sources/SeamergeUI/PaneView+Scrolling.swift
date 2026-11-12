@@ -38,6 +38,16 @@ extension PaneView {
     return row - hiddenRows
   }
 
+  /// The row at the reading line, and how far down that row the reading line passes, from 0 at
+  /// its top to 1 at its bottom.
+  var rowAtReadingLine: (row: Int, fraction: CGFloat) {
+    let visible = documentView.visibleRect
+    let y = visible.minY + Theme.readingLine * visible.height
+    let row = hit(at: convert(CGPoint(x: 0, y: y), from: documentView)).row
+    let top = CGFloat(displayRow(ofRow: row)) * theme.rowHeight
+    return (row, min(max((y - top) / theme.rowHeight, 0), 1))
+  }
+
   /// Whether every one of `rows` is in full view; for an empty range, whether the boundary it
   /// lies on is.
   func showsWhole(rows: Range<Int>) -> Bool {
@@ -51,12 +61,17 @@ extension PaneView {
 
   /// Scrolls so that `row` comes to rest at the reading line, or as near to it as the text
   /// allows, with `motion`; the panes coupled with this one follow.
-  func scroll(toPlaceRowAtReadingLine row: Int, motion: ScrollMotion) {
+  ///
+  /// - Parameter fraction: How far down the row the reading line passes, from 0 at its top to 1
+  ///   at its bottom.
+  func scroll(toPlaceRowAtReadingLine row: Int, fraction: CGFloat = 0, motion: ScrollMotion) {
     guard let scrollView = documentView.enclosingScrollView else { return }
     let clipView = scrollView.contentView
     let visible = clipView.bounds
     let range = max(documentView.frame.height - visible.height, 0)
-    let y = CGFloat(displayRow(ofRow: row)) * theme.rowHeight - Theme.readingLine * visible.height
+    let y =
+      (CGFloat(displayRow(ofRow: row)) + fraction) * theme.rowHeight - Theme.readingLine
+      * visible.height
     let origin = CGPoint(x: visible.minX, y: min(max(y, 0), range).rounded())
     guard origin != visible.origin else { return }
     let windowHeight = window?.contentLayoutRect.height ?? visible.height

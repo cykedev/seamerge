@@ -46,6 +46,36 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Compares lines without any of their whitespace.
   case ignoreAllWhitespace
 
+  /// Hides the pane of the base, or shows it again; A and B share its width meanwhile.
+  case toggleBase
+
+  /// Gives the result the whole window, or restores the layout.
+  case toggleResultMaximized
+
+  /// Turns the coupling of the panes while they scroll off or on.
+  case toggleScrollSynchronization
+
+  /// Shows spaces, tabs and line endings as quiet symbols, or hides them.
+  case toggleInvisibles
+
+  /// Shows every line, or collapses long runs of unchanged lines again.
+  case toggleCollapsedLines
+
+  /// Makes the text larger.
+  case zoomIn
+
+  /// Makes the text smaller.
+  case zoomOut
+
+  /// Shows the text at its standard size.
+  case actualSize
+
+  /// Asks for a line and jumps to it in the pane with the focus.
+  case goToLine
+
+  /// Opens the file that the result is written to in the app the system has for its type.
+  case openInEditor
+
   /// Copies the lines of the current block in the pane with the focus, or in the pane of a
   /// context menu.
   case copyBlock
@@ -78,10 +108,45 @@ public enum SessionCommand: CaseIterable, Sendable {
         localized: "Ignore Whitespace Changes", bundle: .module, comment: "Compare menu command.")
     case .ignoreAllWhitespace:
       String(localized: "Ignore All Whitespace", bundle: .module, comment: "Compare menu command.")
+    case .toggleBase:
+      String(localized: "Hide Base", bundle: .module, comment: "View menu command.")
+    case .toggleResultMaximized:
+      String(localized: "Maximize Result", bundle: .module, comment: "View menu command.")
+    case .toggleScrollSynchronization:
+      String(localized: "Synchronize Scrolling", bundle: .module, comment: "View menu command.")
+    case .toggleInvisibles:
+      String(localized: "Show Invisibles", bundle: .module, comment: "View menu command.")
+    case .toggleCollapsedLines:
+      String(localized: "Show All Lines", bundle: .module, comment: "View menu command.")
+    case .zoomIn: String(localized: "Zoom In", bundle: .module, comment: "View menu command.")
+    case .zoomOut: String(localized: "Zoom Out", bundle: .module, comment: "View menu command.")
+    case .actualSize:
+      String(localized: "Actual Size", bundle: .module, comment: "View menu command.")
+    case .goToLine:
+      String(localized: "Go to Line…", bundle: .module, comment: "Go menu command.")
+    case .openInEditor:
+      String(localized: "Open in Editor", bundle: .module, comment: "File menu command.")
     case .copyBlock:
       String(
         localized: "Copy Block", bundle: .module,
         comment: "Edit menu command: copy the lines of the current block.")
+    }
+  }
+
+  /// The name of the command while what it switches on is on, for a command whose name changes
+  /// with it, such as Show Base after Hide Base.
+  var alternateTitle: String? {
+    switch self {
+    case .toggleBase:
+      String(localized: "Show Base", bundle: .module, comment: "View menu command.")
+    case .toggleResultMaximized:
+      String(localized: "Restore Layout", bundle: .module, comment: "View menu command.")
+    case .toggleInvisibles:
+      String(localized: "Hide Invisibles", bundle: .module, comment: "View menu command.")
+    case .toggleCollapsedLines:
+      String(localized: "Collapse Unchanged Lines", bundle: .module, comment: "View menu command.")
+    default:
+      nil
     }
   }
 
@@ -151,6 +216,17 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .ignoreLineEndings: #selector(SessionWindowController.ignoreLineEndings(_:))
     case .ignoreWhitespaceChanges: #selector(SessionWindowController.ignoreWhitespaceChanges(_:))
     case .ignoreAllWhitespace: #selector(SessionWindowController.ignoreAllWhitespace(_:))
+    case .toggleBase: #selector(SessionWindowController.toggleBase(_:))
+    case .toggleResultMaximized: #selector(SessionWindowController.toggleResultMaximized(_:))
+    case .toggleScrollSynchronization:
+      #selector(SessionWindowController.toggleScrollSynchronization(_:))
+    case .toggleInvisibles: #selector(SessionWindowController.toggleInvisibles(_:))
+    case .toggleCollapsedLines: #selector(SessionWindowController.toggleCollapsedLines(_:))
+    case .zoomIn: #selector(SessionWindowController.zoomIn(_:))
+    case .zoomOut: #selector(SessionWindowController.zoomOut(_:))
+    case .actualSize: #selector(SessionWindowController.actualSize(_:))
+    case .goToLine: #selector(SessionWindowController.goToLine(_:))
+    case .openInEditor: #selector(SessionWindowController.openInEditor(_:))
     case .copyBlock: #selector(SessionWindowController.copyBlock(_:))
     }
   }
