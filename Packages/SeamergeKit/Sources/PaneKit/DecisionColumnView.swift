@@ -31,6 +31,10 @@ public final class DecisionColumnView: NSView {
   /// Learns what the user presses; the column does not retain it.
   public weak var delegate: (any DecisionColumnDelegate)?
 
+  /// Whether the sign of a block and its controls replace each other at once, as Reduce Motion
+  /// asks, rather than cross-fading.
+  public var reducesMotion = false
+
   /// The pane that the column stands in.
   weak var host: (any DecisionColumnHost)?
 
@@ -50,10 +54,20 @@ public final class DecisionColumnView: NSView {
   /// so that its cursor can stay on it.
   private var signElements: [Int: NSAccessibilityElement] = [:]
 
+  /// What fades out or in at the place of a block while its sign and its controls cross-fade:
+  /// the sign, and the controls that it takes the place of again.
+  private var fades: [Int: Fade] = [:]
+
+  /// The layer above the signs that holds what fades, which neither clicks nor VoiceOver reach.
+  private let fadeLayer = DecisionFadeLayer()
+
   /// Creates an empty column.
   public init() {
     super.init(frame: .zero)
     clipsToBounds = true
+    // The cross-fades run on layers.
+    wantsLayer = true
+    addSubview(fadeLayer)
   }
 
   /// Decision columns are never archived.
@@ -144,9 +158,10 @@ public final class DecisionColumnView: NSView {
   }
 
   private func showControls() {
+    fadeLayer.frame = bounds
     let blocks = blocksWithControls
     for block in groupsByBlock.keys where !blocks.contains(block) {
-      removeControls(of: block)
+      fadeOutControls(of: block)
     }
     for block in blocks {
       guard let host, let decision = decisions[block], let center = signCenter(ofBlock: block)
@@ -154,6 +169,7 @@ public final class DecisionColumnView: NSView {
         removeControls(of: block)
         continue
       }
+      let isNew = groupsByBlock[block] == nil
       let group = group(of: block, showing: decision)
       var x: CGFloat = 0
       for control in group.controls {
@@ -171,6 +187,101 @@ public final class DecisionColumnView: NSView {
           StateSign(state: decision.state, theme: theme).accessibilityLabel,
           host.placeDescription(ofBlock: block),
         ].compactMap(\.self).joined(separator: ", "))
+      if isNew {
+        fadeInControls(group, of: block, replacing: decision.state)
+      }
+    }
+    placeFades()
+  }
+
+  /// Fades `group` in at the place of `block` while the sign of `state` there fades out.
+  private func fadeInControls(
+    _ group: DecisionControlGroup, of block: Int, replacing state: BlockDecision.State
+  ) {
+    // Controls that were still fading out give way at once.
+    fades[block]?.controls?.removeFromSuperview()
+    fades[block]?.controls = nil
+    guard !reducesMotion, window != nil else {
+      endFade(of: block)
+      return
+    }
+    let sign = fades[block]?.sign ?? StateSignView(state: state, theme: theme)
+    fadeLayer.addSubview(sign)
+    fades[block, default: Fade()].sign = sign
+    group.alphaValue = 0
+    runFade {
+      sign.animator().alphaValue = 0
+      group.animator().alphaValue = 1
+    } completion: { [weak self] in
+      guard let self, fades[block]?.sign === sign, sign.alphaValue == 0 else { return }
+      endFade(of: block)
+    }
+  }
+
+  /// Takes the controls of `block` away and fades them out while its sign fades in.
+  private func fadeOutControls(of block: Int) {
+    guard let group = groupsByBlock[block], let decision = decisions[block], !reducesMotion,
+      window != nil
+    else {
+      removeControls(of: block)
+      endFade(of: block)
+      return
+    }
+    removeControls(of: block)
+    let frame = convert(group.frame, to: fadeLayer)
+    fadeLayer.addSubview(group)
+    group.frame = frame
+    let sign = fades[block]?.sign ?? StateSignView(state: decision.state, theme: theme)
+    if sign.superview == nil {
+      sign.alphaValue = 0
+      fadeLayer.addSubview(sign)
+    }
+    fades[block]?.controls?.removeFromSuperview()
+    fades[block] = Fade(sign: sign, controls: group)
+    runFade {
+      sign.animator().alphaValue = 1
+      group.animator().alphaValue = 0
+    } completion: { [weak self] in
+      guard let self, fades[block]?.controls === group else { return }
+      endFade(of: block)
+    }
+  }
+
+  /// Ends the cross-fade at the place of `block`: what faded goes, and the column draws the
+  /// sign again if the block shows no controls.
+  private func endFade(of block: Int) {
+    guard let fade = fades.removeValue(forKey: block) else { return }
+    fade.sign?.removeFromSuperview()
+    fade.controls?.removeFromSuperview()
+    needsDisplay = true
+  }
+
+  /// Runs `changes` as a cross-fade and then `completion`.
+  private func runFade(
+    _ changes: @escaping () -> Void, completion: @escaping @MainActor () -> Void
+  ) {
+    NSAnimationContext.runAnimationGroup { context in
+      context.duration = Theme.decisionFadeDuration
+      context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+      changes()
+    } completionHandler: {
+      MainActor.assumeIsolated { completion() }
+    }
+  }
+
+  /// Keeps what fades at the places of its blocks, which move as the pane scrolls.
+  private func placeFades() {
+    for (block, fade) in fades {
+      guard let center = signCenter(ofBlock: block) else {
+        endFade(of: block)
+        continue
+      }
+      fade.sign?.frame = CGRect(
+        x: Theme.decisionColumnInset, y: (center - Theme.decisionControlSize / 2).rounded(),
+        width: bounds.width - Theme.decisionColumnInset, height: Theme.decisionControlSize)
+      if let controls = fade.controls {
+        controls.frame.origin.y = (center - Theme.decisionControlSize / 2).rounded()
+      }
     }
   }
 
@@ -223,6 +334,9 @@ public final class DecisionColumnView: NSView {
     for block in Array(groupsByBlock.keys) {
       removeControls(of: block)
     }
+    for block in Array(fades.keys) {
+      endFade(of: block)
+    }
   }
 
   @objc private func toggleWasPressed(_ sender: DecisionToggleButton) {
@@ -237,7 +351,8 @@ public final class DecisionColumnView: NSView {
     Theme.backgroundColor.setFill()
     dirtyRect.fill()
     let withControls = blocksWithControls
-    for (block, decision) in decisions where !withControls.contains(block) {
+    // A sign that fades draws in a view of its own.
+    for (block, decision) in decisions where !withControls.contains(block) && fades[block] == nil {
       guard let center = signCenter(ofBlock: block),
         center + Theme.stateSignHeight >= dirtyRect.minY,
         center - Theme.stateSignHeight <= dirtyRect.maxY
@@ -267,6 +382,11 @@ public final class DecisionColumnView: NSView {
   }
 
   public override func mouseMoved(with event: NSEvent) {
+    pointerMoved(to: convert(event.locationInWindow, from: nil))
+  }
+
+  /// Follows the pointer from where it enters, which may already be the place where it rests.
+  public override func mouseEntered(with event: NSEvent) {
     pointerMoved(to: convert(event.locationInWindow, from: nil))
   }
 
@@ -396,4 +516,52 @@ protocol DecisionColumnHost: AnyObject {
 
   /// Where `block` is, in words, such as "Line 12".
   func placeDescription(ofBlock block: Int) -> String
+}
+
+/// What fades at the place of one block of the decision column.
+@MainActor
+private struct Fade {
+  /// The block's sign, fading out as its controls come, or in as they go.
+  var sign: StateSignView?
+  /// The block's controls, fading out as its sign comes back.
+  var controls: DecisionControlGroup?
+}
+
+/// The layer of the decision column that holds what fades: it lets clicks through to the column
+/// and is hidden from VoiceOver, which finds the sign or the controls that stay.
+private final class DecisionFadeLayer: NSView {
+  override var isFlipped: Bool { true }
+
+  override func hitTest(_ point: NSPoint) -> NSView? {
+    nil
+  }
+
+  override func isAccessibilityElement() -> Bool {
+    false
+  }
+
+  override func accessibilityChildren() -> [Any]? {
+    []
+  }
+}
+
+/// The sign of one block in a view of its own, while it fades.
+private final class StateSignView: NSView {
+  private let sign: StateSign
+
+  init(state: BlockDecision.State, theme: Theme) {
+    sign = StateSign(state: state, theme: theme)
+    super.init(frame: .zero)
+  }
+
+  /// Sign views are never archived.
+  required init?(coder: NSCoder) {
+    nil
+  }
+
+  override var isFlipped: Bool { true }
+
+  override func draw(_ dirtyRect: NSRect) {
+    sign.draw(at: CGPoint(x: 0, y: bounds.midY))
+  }
 }

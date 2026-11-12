@@ -184,6 +184,15 @@ import Testing
     #expect(try controller.presentation.mergeDecisionColumn.theme.differentiatesWithoutColor)
   }
 
+  @Test func reducedMotionCutsBetweenTheSignsAndTheTogglesOfTheDecisionColumn() async throws {
+    let session = try await SampleMerges.helloWorld()
+    let controller = makeController(session, context: SessionContext())
+    let column = try controller.presentation.mergeDecisionColumn
+    #expect(!column.reducesMotion)
+    controller.displayOptions = DisplayOptions(reducesMotion: true)
+    #expect(column.reducesMotion)
+  }
+
   private func makeController(
     _ session: Session, context: SessionContext = SessionContext()
   ) -> SessionWindowController {

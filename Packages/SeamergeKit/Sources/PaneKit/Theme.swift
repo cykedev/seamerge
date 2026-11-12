@@ -201,6 +201,9 @@ public struct Theme {
   /// that the column does not flicker while the pointer passes along it.
   static let toggleHoverDelay: TimeInterval = 0.1
 
+  /// How long the sign of a block and its controls take to cross-fade in the decision column.
+  static let decisionFadeDuration: TimeInterval = 0.12
+
   /// How long a preview takes to turn into text, or text into a preview.
   static let previewFadeDuration: CFTimeInterval = 0.15
 
