@@ -11,7 +11,7 @@ final class PaneTextView: NSTextView {
   private(set) var theme = Theme()
   private(set) var content = PaneContent.empty
   private(set) var currentBlock: Int?
-  private(set) var grid = RowGrid(text: "", tabWidth: 1)
+  var grid = RowGrid(text: "", tabWidth: 1)
   private(set) var displayRows = DisplayRows(runs: [], rowCount: 1)
 
   /// Learns about clicks on rows and supplies the context menu.
@@ -39,6 +39,20 @@ final class PaneTextView: NSTextView {
 
   /// The selection as the fragments last drew it.
   private var drawnSelection: [NSValue] = []
+
+  /// The edits that the text is about to undergo, in order, which its changes are checked
+  /// against.
+  var announcements: [Announcement] = []
+
+  /// The edits of the user that the text has undergone and that are reported once the text view
+  /// has finished the change.
+  var completedEdits: [Announcement] = []
+
+  /// Whether the pane is putting new content into its text, a change that nobody announces.
+  private(set) var isShowingContent = false
+
+  /// The version of the text, after whose changes fragments find their rows again.
+  private let textVersion = TextVersion()
 
   /// Sets up the view as a pane; called once, before any content is shown.
   func configure(theme: Theme) {
@@ -77,6 +91,7 @@ final class PaneTextView: NSTextView {
     }
     textLayoutManager?.delegate = self
     textContentStorage?.delegate = self
+    textStorage?.delegate = self
     NotificationCenter.default.addObserver(
       self, selector: #selector(willSwitchToLayoutManager(_:)),
       name: NSTextView.willSwitchToNSLayoutManagerNotification, object: self)
@@ -90,7 +105,11 @@ final class PaneTextView: NSTextView {
   ///
   /// - Precondition: `content` has one line number per row, and the runs lie within its rows.
   func show(_ content: PaneContent, collapsedRuns: [CollapsedRun], theme: Theme) {
-    let grid = RowGrid(text: content.text, tabWidth: theme.tabWidth)
+    let keepsText = (content.text as NSString).isEqual(to: string)
+    // The rows of the same text are those the pane knows.
+    let grid =
+      keepsText && theme.tabWidth == self.theme.tabWidth
+      ? self.grid : RowGrid(text: content.text, tabWidth: theme.tabWidth)
     precondition(
       content.lineNumbers.count == grid.rowCount,
       "\(content.lineNumbers.count) line numbers for \(grid.rowCount) rows")
@@ -101,6 +120,7 @@ final class PaneTextView: NSTextView {
     self.theme = theme
     self.grid = grid
     displayRows = DisplayRows(runs: collapsedRuns, rowCount: grid.rowCount)
+    textVersion.increment()
     if let currentBlock, !content.blocks.indices.contains(currentBlock) {
       self.currentBlock = nil
     }
@@ -109,8 +129,63 @@ final class PaneTextView: NSTextView {
     font = theme.font
     defaultParagraphStyle = attributes[.paragraphStyle] as? NSParagraphStyle
     typingAttributes = attributes
-    textStorage?.setAttributedString(
-      NSAttributedString(string: content.text, attributes: attributes))
+    guard let textStorage else { return }
+    isShowingContent = true
+    defer { isShowingContent = false }
+    if keepsText {
+      // The same text with new rows and blocks: the selection and the scroll position stay.
+      textStorage.setAttributes(attributes, range: NSRange(location: 0, length: textStorage.length))
+      if let textLayoutManager {
+        textLayoutManager.invalidateLayout(for: textLayoutManager.documentRange)
+        textLayoutManager.invalidateRenderingAttributes(for: textLayoutManager.documentRange)
+      }
+    } else {
+      textStorage.setAttributedString(
+        NSAttributedString(string: content.text, attributes: attributes))
+    }
+  }
+
+  /// Replaces the blocks of the content, keeping its text, rows and line numbers, and draws
+  /// again only the rows whose block changed.
+  ///
+  /// - Precondition: The blocks are sorted, do not overlap and lie within the rows.
+  func setBlocks(_ blocks: [PaneBlock]) {
+    precondition(
+      (blocks.last?.rows.upperBound ?? 0) <= grid.rowCount,
+      "Blocks reach beyond the \(grid.rowCount) rows")
+    let oldBlocks = content.blocks
+    var changedRows: [Range<Int>] = []
+    content.blocks = blocks
+    if let currentBlock, !blocks.indices.contains(currentBlock) {
+      self.currentBlock = nil
+    }
+    highlightsByBlock.removeAll()
+    for index in 0..<max(oldBlocks.count, blocks.count) {
+      let old = index < oldBlocks.count ? oldBlocks[index] : nil
+      let new = index < blocks.count ? blocks[index] : nil
+      guard old != new else { continue }
+      changedRows += [old?.rows, new?.rows].compactMap(\.self)
+    }
+    for rows in changedRows where !rows.isEmpty {
+      redraw(rows: rows.clamped(to: 0..<grid.rowCount))
+    }
+  }
+
+  /// Takes over a change of the text that rewrote rows as `change` says, so that rows, blocks and
+  /// collapsed runs stay described until the pane's owner gives it the exact blocks.
+  ///
+  /// A collapsed run that the change reached into is expanded: its rows are no longer unchanged.
+  func takeOver(_ change: RowChange, text: String) {
+    content.takeOver(change, text: text)
+    textVersion.increment()
+    let runs = displayRows.runs.compactMap { run -> CollapsedRun? in
+      guard !run.rows.overlaps(change.oldRows) else { return nil }
+      let rows = change.newRows(of: run.rows)
+      return rows.isEmpty ? nil : CollapsedRun(rows: rows)
+    }
+    displayRows = DisplayRows(runs: runs, rowCount: grid.rowCount)
+    highlightsByBlock.removeAll()
+    interaction?.textDidChange()
   }
 
   /// Hides `runs` of rows behind bars, each one row high, and lays out the text again.
@@ -200,14 +275,19 @@ final class PaneTextView: NSTextView {
   override func setFrameSize(_ newSize: NSSize) {
     let widthChanged = newSize.width != frame.width
     super.setFrameSize(newSize)
-    // The fragments fill their rows to the width of the view when they are created.
-    if widthChanged, let textLayoutManager {
-      textLayoutManager.invalidateLayout(for: textLayoutManager.documentRange)
+    // The fragments in view lay out again, so that their rendering surfaces take the new width;
+    // the others ask for it when they come into view. Laying out the whole text again would make
+    // TextKit lay out every paragraph above the visible part, as often as a line typed at the
+    // right edge makes the text wider.
+    if widthChanged, let textLayoutManager,
+      let viewport = textLayoutManager.textViewportLayoutController.viewportRange
+    {
+      textLayoutManager.invalidateLayout(for: viewport)
     }
   }
 
   /// The attributes of all text: one font, rows of the grid's height, no wrapping.
-  private var textAttributes: [NSAttributedString.Key: Any] {
+  var textAttributes: [NSAttributedString.Key: Any] {
     let paragraph = NSMutableParagraphStyle()
     paragraph.minimumLineHeight = theme.rowHeight
     paragraph.maximumLineHeight = theme.rowHeight
@@ -340,16 +420,9 @@ extension PaneTextView: @MainActor NSTextLayoutManagerDelegate {
     _ textLayoutManager: NSTextLayoutManager,
     textLayoutFragmentFor location: any NSTextLocation, in textElement: NSTextElement
   ) -> NSTextLayoutFragment {
-    let documentStart = textLayoutManager.documentRange.location
-    let start = textLayoutManager.offset(from: documentStart, to: location)
-    let end =
-      textElement.elementRange.map {
-        textLayoutManager.offset(from: documentStart, to: $0.endLocation)
-      } ?? start
-    return RowLayoutFragment(
-      textElement: textElement, range: textElement.elementRange, paragraphStart: start,
-      rows: grid.rows(ofParagraphFrom: start, to: end), rowHeight: theme.rowHeight,
-      painter: self)
+    RowLayoutFragment(
+      textElement: textElement, range: textElement.elementRange, rowHeight: theme.rowHeight,
+      textVersion: textVersion, painter: self)
   }
 }
 
@@ -370,6 +443,10 @@ extension PaneTextView: @MainActor NSTextContentStorageDelegate {
 extension PaneTextView: RowPainter {
   func displayRows(ofRows rows: Range<Int>) -> Range<Int> {
     displayRows.displayRows(ofRows: rows)
+  }
+
+  func rows(ofParagraphFrom start: Int, to end: Int) -> Range<Int> {
+    grid.rows(ofParagraphFrom: start, to: end)
   }
 
   var extent: RowLayoutFragment.Extent {

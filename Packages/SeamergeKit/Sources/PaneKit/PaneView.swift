@@ -35,6 +35,18 @@ public final class PaneView: NSView {
     show(content, collapsedRuns: collapsedRuns)
   }
 
+  /// Gives the content new blocks and keeps its text, rows and line numbers: what the owner of an
+  /// editable pane gives it after an edit, in place of new content.
+  ///
+  /// Only the rows whose block changed are drawn again, so that typing stays fast in a long text.
+  ///
+  /// - Precondition: The blocks are sorted, do not overlap and lie within the rows.
+  public func setBlocks(_ blocks: [PaneBlock]) {
+    textView.setBlocks(blocks)
+    gutterView.content = content
+    gutterView.currentBlock = textView.currentBlock
+  }
+
   /// The runs of rows that the pane hides, each behind a bar one row high that the user can
   /// expand.
   ///
@@ -66,6 +78,27 @@ public final class PaneView: NSView {
 
   /// Learns about clicks and supplies the context menu; the pane does not retain it.
   public weak var delegate: (any PaneViewDelegate)?
+
+  /// Decides every edit of the text; the pane does not retain it.
+  ///
+  /// With a delegate, the user can edit the text, and every edit passes through the delegate
+  /// before it changes the text; without one, the text is read-only. The text view keeps no undo
+  /// of its own: undo belongs to the delegate, which knows what an edit means.
+  public weak var editingDelegate: (any PaneEditingDelegate)? {
+    didSet { textView.isEditable = editingDelegate != nil }
+  }
+
+  /// Carries out `edits` in order, each in the text that the edits before it left, without
+  /// asking the editing delegate, and returns the text that each of them replaced.
+  ///
+  /// Use it for what the delegate decides on its own, such as choosing a source or undoing an
+  /// edit. The insertion point and the selection move with the text as with any edit.
+  ///
+  /// - Precondition: Each range lies within the text as the edits before it left it.
+  @discardableResult
+  public func carryOut(_ edits: [PaneEdit]) -> [String] {
+    textView.carryOut(edits)
+  }
 
   /// Whether spaces, tabs and line endings show as quiet symbols.
   ///
@@ -300,6 +333,25 @@ extension PaneView: RowInteraction {
 
   func askToExpandRun(at index: Int) {
     delegate?.pane(self, didAskToExpand: displayRows.runs[index])
+  }
+
+  func edits(for edit: PaneEdit) -> [PaneEdit] {
+    editingDelegate?.pane(self, editsFor: edit) ?? []
+  }
+
+  func didCarryOut(_ edits: [PaneEdit], replacing replacedTexts: [String]) {
+    editingDelegate?.pane(self, didCarryOut: edits, replacing: replacedTexts)
+  }
+
+  func textDidChangeWithoutAnnouncing(_ edit: PaneEdit) {
+    editingDelegate?.pane(self, didChangeTextWithoutAnnouncing: edit)
+  }
+
+  func textDidChange() {
+    removeRunBars()
+    gutterView.content = content
+    showDisplayRows()
+    needsLayout = true
   }
 
   private func hit(atRow row: Int) -> PaneHit {

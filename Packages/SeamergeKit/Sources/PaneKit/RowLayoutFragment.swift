@@ -75,29 +75,67 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     var baseline: CGFloat
   }
 
-  /// The offset at which the fragment's paragraph starts in the text.
-  let paragraphStart: Int
-
-  /// The rows that the fragment lays out.
-  let rows: Range<Int>
-
   /// The height of a row.
   let rowHeight: CGFloat
 
   /// Supplies what the fragment draws besides its glyphs.
   private weak var painter: (any RowPainter)?
 
-  /// Creates a fragment for the paragraph `textElement`, which starts at `paragraphStart` and
-  /// lays out `rows`.
+  /// The version of the pane's text, which tells when the place of the fragment has to be found
+  /// again.
+  private let textVersion: TextVersion
+
+  /// Where the fragment's paragraph starts in the text and the rows it lays out, as of the
+  /// version of the text they were found in.
+  private var cachedPlace: (version: Int, paragraphStart: Int, rows: Range<Int>)?
+
+  /// Creates a fragment for the paragraph `textElement` of a text whose version `textVersion`
+  /// counts.
   init(
-    textElement: NSTextElement, range: NSTextRange?, paragraphStart: Int, rows: Range<Int>,
-    rowHeight: CGFloat, painter: any RowPainter
+    textElement: NSTextElement, range: NSTextRange?, rowHeight: CGFloat, textVersion: TextVersion,
+    painter: any RowPainter
   ) {
-    self.paragraphStart = paragraphStart
-    self.rows = rows
     self.rowHeight = rowHeight
+    self.textVersion = textVersion
     self.painter = painter
     super.init(textElement: textElement, range: range)
+  }
+
+  /// The offset at which the fragment's paragraph starts in the text.
+  var paragraphStart: Int {
+    place.paragraphStart
+  }
+
+  /// The rows that the fragment lays out.
+  var rows: Range<Int> {
+    place.rows
+  }
+
+  /// Where the fragment's paragraph starts and the rows it lays out.
+  ///
+  /// TextKit keeps the fragments of paragraphs that an edit does not touch and moves their
+  /// elements, so the place is found again from the element once the text has changed. TextKit
+  /// asks for the frames of many fragments in a row to find the one at a position, so the place
+  /// is kept until then.
+  private var place: (paragraphStart: Int, rows: Range<Int>) {
+    let version = textVersion.value
+    if let cachedPlace, cachedPlace.version == version {
+      return (cachedPlace.paragraphStart, cachedPlace.rows)
+    }
+    guard let painter else { return (0, 0..<1) }
+    var offsets = 0..<0
+    if let element = textElement, let manager = element.textContentManager,
+      let range = element.elementRange
+    {
+      let documentStart = manager.documentRange.location
+      let start = manager.offset(from: documentStart, to: range.location)
+      offsets = start..<max(manager.offset(from: documentStart, to: range.endLocation), start)
+    }
+    let rows = MainActor.assumeIsolated {
+      painter.rows(ofParagraphFrom: offsets.lowerBound, to: offsets.upperBound)
+    }
+    cachedPlace = (version, offsets.lowerBound, rows)
+    return (offsets.lowerBound, rows)
   }
 
   /// What the fragment draws now, or `nil` once its pane is gone.
@@ -291,6 +329,24 @@ protocol RowPainter: AnyObject, Sendable {
   /// The display rows that a fragment laying out `rows` takes.
   func displayRows(ofRows rows: Range<Int>) -> Range<Int>
 
+  /// The rows that the fragment of the paragraph from offset `start` to `end` lays out.
+  func rows(ofParagraphFrom start: Int, to end: Int) -> Range<Int>
+
   /// What the fragment that lays out `rows` draws now.
   func painting(forRows rows: Range<Int>) -> RowLayoutFragment.Painting
+}
+
+/// The version of a pane's text, a number that changes with every change of the text, after which
+/// its fragments find their rows again.
+///
+/// The fragments read it each time TextKit asks for their frame, often thousands of times in a
+/// row, so it is a plain box rather than a property of the pane behind the main actor. The pane
+/// and its fragments use it on the main thread only.
+final class TextVersion {
+  private(set) var value = 0
+
+  /// Counts a change of the text.
+  func increment() {
+    value += 1
+  }
 }

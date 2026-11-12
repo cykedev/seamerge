@@ -68,6 +68,51 @@ public struct PaneContent: Sendable {
   func isFiller(row: Int) -> Bool {
     lineNumbers[row] < 0
   }
+
+  /// How the lines end that an edit breaks into rows of their own: like the line the break was
+  /// typed in, or the line before it where that one has no ending; without either, like most
+  /// lines of the content, and with a line feed if no line has an ending.
+  private func newLineEnding(for change: RowChange) -> LineEnding {
+    let first = change.oldRows.lowerBound
+    for row in [first, first - 1] where lineEndings.indices.contains(row) {
+      if lineEndings[row] != .none { return lineEndings[row] }
+    }
+    var counts: [LineEnding: Int] = [:]
+    for ending in lineEndings where ending != .none {
+      counts[ending, default: 0] += 1
+    }
+    return counts.max { $0.value < $1.value }?.key ?? .lineFeed
+  }
+
+  /// Takes over an edit of the text, now `text`, that rewrote rows as `change` says.
+  ///
+  /// The rewritten rows show lines of their own, numbered on from the line before them, and the
+  /// lines after them follow on. Blocks keep their rows as ``RowChange`` maps them. The owner of
+  /// the content gives the pane the exact blocks afterwards; until then, this keeps every row
+  /// described.
+  mutating func takeOver(_ change: RowChange, text: String) {
+    self.text = text
+    let ending = lineEndings[change.oldRows.upperBound - 1]
+    lineEndings.replaceSubrange(
+      change.oldRows,
+      with: Array(repeating: newLineEnding(for: change), count: change.newRows.count - 1)
+        + [ending])
+    lineNumbers.replaceSubrange(
+      change.oldRows, with: Array(repeating: 0, count: change.newRows.count))
+    var next = (lineNumbers[..<change.newRows.lowerBound].last { $0 >= 0 } ?? -1) + 1
+    for row in change.newRows.lowerBound..<lineNumbers.count
+    where change.newRows.contains(row) || lineNumbers[row] >= 0 {
+      lineNumbers[row] = next
+      next += 1
+    }
+    for index in blocks.indices {
+      blocks[index].rows = change.newRows(of: blocks[index].rows)
+    }
+    ignoredDifferenceRows = IndexSet(
+      ignoredDifferenceRows.compactMap { row in
+        change.oldRows.contains(row) ? nil : change.newBoundary(of: row)
+      })
+  }
 }
 
 /// A run of rows that changed on at least one side, as one pane shows it.

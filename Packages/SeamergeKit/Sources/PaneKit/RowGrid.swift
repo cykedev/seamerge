@@ -1,28 +1,84 @@
+import Foundation
+
 /// The rows of a pane's text: where each starts and how many columns the widest one takes.
 ///
 /// Offsets are UTF-16 offsets, as TextKit counts them. Row *r* is paragraph *r*; rows are
 /// separated by line feeds, so a text that ends with one has an empty last row.
 struct RowGrid {
   /// The offset at which each row starts.
-  private let rowStarts: [Int]
+  private var rowStarts: [Int]
 
   /// The length of the text.
-  let textLength: Int
+  private(set) var textLength: Int
 
   /// The number of columns that the widest row takes, with tabs expanded.
-  let widestRowColumns: Int
+  ///
+  /// After an edit, the widest row that the edit left or made counts as well, even if the edit
+  /// removed it, so that the width does not shrink under the user's hands while they type.
+  private(set) var widestRowColumns: Int
+
+  /// The width of a tab, in columns.
+  private let tabWidth: Int
 
   /// Finds the rows of `text`, expanding tabs to multiples of `tabWidth` columns.
   init(text: String, tabWidth: Int) {
     var rowStarts = [0]
     var offset = 0
+    let widestRowColumns = Self.measure(text.unicodeScalars, tabWidth: tabWidth) { length in
+      offset += length
+      rowStarts.append(offset)
+    }
+    self.rowStarts = rowStarts
+    self.textLength = text.utf16.count
+    self.widestRowColumns = widestRowColumns
+    self.tabWidth = tabWidth
+  }
+
+  /// Takes over an edit of the text that replaced `range` by `length` code units, given the text
+  /// after the edit, and returns the rows that the edit rewrote: those it touched before, and
+  /// those they became.
+  mutating func replace(_ range: Range<Int>, withLength length: Int, in text: NSString)
+    -> RowChange
+  {
+    let firstRow = row(containingOffset: range.lowerBound)
+    let lastRow = row(containingOffset: range.upperBound)
+    let rowStart = rowStarts[firstRow]
+    let delta = length - range.count
+    // The rewritten rows reach from the start of the first to the end of the last, which now lies
+    // `delta` further on.
+    let oldEnd = lastRow + 1 < rowStarts.count ? rowStarts[lastRow + 1] - 1 : textLength
+    let newEnd = oldEnd + delta
+    var newStarts: [Int] = []
+    let rows = text.substring(with: NSRange(location: rowStart, length: newEnd - rowStart))
+    var offset = rowStart
+    let columns = Self.measure(rows.unicodeScalars, tabWidth: tabWidth) { rowLength in
+      offset += rowLength
+      newStarts.append(offset)
+    }
+    rowStarts.replaceSubrange(firstRow + 1..<lastRow + 1, with: newStarts)
+    for row in firstRow + 1 + newStarts.count..<rowStarts.count {
+      rowStarts[row] += delta
+    }
+    textLength += delta
+    widestRowColumns = max(widestRowColumns, columns)
+    return RowChange(
+      oldRows: firstRow..<lastRow + 1, newRows: firstRow..<firstRow + newStarts.count + 1)
+  }
+
+  /// Measures the rows of `scalars` and returns the columns of the widest; `rowEnded` learns the
+  /// length of each row that a line feed ends, the line feed included.
+  private static func measure(
+    _ scalars: some Sequence<Unicode.Scalar>, tabWidth: Int, rowEnded: (Int) -> Void
+  ) -> Int {
+    var length = 0
     var columns = 0
     var widestRowColumns = 0
-    for scalar in text.unicodeScalars {
-      offset += scalar.utf16.count
+    for scalar in scalars {
+      length += scalar.utf16.count
       switch scalar {
       case "\n":
-        rowStarts.append(offset)
+        rowEnded(length)
+        length = 0
         widestRowColumns = max(widestRowColumns, columns)
         columns = 0
       case "\t":
@@ -31,9 +87,7 @@ struct RowGrid {
         columns += Self.columns(of: scalar)
       }
     }
-    self.rowStarts = rowStarts
-    self.textLength = offset
-    self.widestRowColumns = max(widestRowColumns, columns)
+    return max(widestRowColumns, columns)
   }
 
   /// The number of rows.
@@ -100,5 +154,35 @@ struct RowGrid {
       default: return scalar.properties.isEmojiPresentation ? 2 : 1
       }
     }
+  }
+}
+
+/// The rows that an edit rewrote: the rows it touched, and the rows they became.
+///
+/// Rows before them keep their place; rows after them move by the difference in count.
+struct RowChange: Equatable {
+  /// The rows of the text before the edit that the edit touched.
+  var oldRows: Range<Int>
+
+  /// The rows of the text after the edit that took their place.
+  var newRows: Range<Int>
+
+  /// The number of rows that the edit added, negative if it removed rows.
+  var rowDelta: Int { newRows.count - oldRows.count }
+
+  /// Where boundary `row` of the rows before the edit lies after it: unchanged before the edit,
+  /// moved after it, and within the rewritten rows, after all of them, so that the rewritten rows
+  /// go to the range in which the edit starts, as typed text does.
+  ///
+  /// The mapping keeps the order of boundaries, so ranges of rows stay sorted and apart.
+  func newBoundary(of row: Int) -> Int {
+    if row <= oldRows.lowerBound { return row }
+    if row >= oldRows.upperBound { return row + rowDelta }
+    return newRows.upperBound
+  }
+
+  /// Where `rows` of the text before the edit lie after it.
+  func newRows(of rows: Range<Int>) -> Range<Int> {
+    newBoundary(of: rows.lowerBound)..<newBoundary(of: rows.upperBound)
   }
 }
