@@ -16,6 +16,22 @@ enum SampleMerges {
       b: SourceFile(bytes: Data(b.utf8), label: "b.txt"), options: options)
   }
 
+  /// A merge of `lineCount` lines in which A changes every `spacing`-th line and both sides the
+  /// line half way to the next, so that every conflict takes one row more in the result than
+  /// above; with the default spacing, no unchanged run is long enough to collapse.
+  static func manyBlocks(lineCount: Int = 300, spacing: Int = 10) async throws -> Session {
+    let base = (1...lineCount).map { "line \($0)" }
+    var a = base
+    var b = base
+    for index in stride(from: 2, to: base.count - spacing / 2, by: spacing) {
+      a[index] += " from A"
+      a[index + spacing / 2] += " also from A"
+      b[index + spacing / 2] += " from B"
+    }
+    func text(_ lines: [String]) -> String { lines.joined(separator: "\n") + "\n" }
+    return try await merge(base: text(base), a: text(a), b: text(b))
+  }
+
   /// The sample merge of P4Merge's documentation, which the window is compared with: a Java
   /// class whose comments A rewrites, whose `main` both sides change differently, and whose
   /// greeting A repeats.

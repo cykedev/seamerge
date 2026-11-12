@@ -31,6 +31,7 @@ public final class SessionWindowController: NSWindowController {
       let theme = displayOptions.theme
       layout.apply(theme)
       presentation.apply(theme)
+      presentation.displayOptions = displayOptions
     }
   }
 
@@ -75,7 +76,7 @@ public final class SessionWindowController: NSWindowController {
     self.displayOptions = displayOptions
     presentation = MergePresentation(
       session: session, layout: layout, headers: headers, resultHeader: resultHeader,
-      theme: theme)
+      displayOptions: displayOptions)
     summary = SessionSummary(changes: presentation.changes, context: context)
 
     let window = NSWindow(
@@ -97,6 +98,7 @@ public final class SessionWindowController: NSWindowController {
     layout.updateMinimumWidths()
     layout.placeDividers()
     updateSubtitle()
+    presentation.showCurrentBlock()
   }
 
   /// The order of the panes above the result, from left to right.

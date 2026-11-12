@@ -69,29 +69,12 @@ import Testing
     #expect(checked.isSuperset(of: 1..<result.content.blocks.count - 2))
   }
 
-  /// A window at its standard size with a merge of `lineCount` lines in which A changes every
-  /// `spacing`-th line and both sides the line half way to the next, so that every conflict takes
-  /// one row more in the result than above; with the default spacing, no unchanged run is long
-  /// enough to collapse.
+  /// A window at its standard size with the merge of many blocks.
   private func windowWithManyBlocks(
     lineCount: Int = 300, spacing: Int = 10
   ) async throws -> SessionWindowController {
-    let base = (1...lineCount).map { "line \($0)" }
-    var a = base
-    var b = base
-    for index in stride(from: 2, to: base.count - spacing / 2, by: spacing) {
-      a[index] += " from A"
-      a[index + spacing / 2] += " also from A"
-      b[index + spacing / 2] += " from B"
-    }
-    func text(_ lines: [String]) -> String { lines.joined(separator: "\n") + "\n" }
-    let session = try await SampleMerges.merge(base: text(base), a: text(a), b: text(b))
-    let controller = SessionWindowController(
-      session: session, context: SessionContext(), undoManager: UndoManager(),
-      displayOptions: DisplayOptions())
-    let window = try #require(controller.window)
-    window.contentView?.layoutSubtreeIfNeeded()
-    return controller
+    let session = try await SampleMerges.manyBlocks(lineCount: lineCount, spacing: spacing)
+    return try Windows.controller(for: session)
   }
 
   /// Whether `pane` shows the end of its text, so that it cannot scroll further down.
