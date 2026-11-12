@@ -10,7 +10,7 @@ import Testing
 @Suite struct ScrollLinkTests {
   @Test func scrollingTheResultBringsTheSameBlockToTheReadingLineAbove() async throws {
     let controller = try await windowWithManyBlocks()
-    let result = controller.layout.resultPane
+    let result = try controller.mergeResult
     let blocks = result.content.blocks
     #expect(blocks.count > 40)
     #expect(result.collapsedRuns.isEmpty)
@@ -34,7 +34,7 @@ import Testing
       let rows = blocks[index].rows
       let middle = (CGFloat(rows.lowerBound) + CGFloat(rows.count) / 2) * a.theme.rowHeight
       a.documentView.scroll(CGPoint(x: 0, y: middle - readingLine(of: a)))
-      let result = controller.layout.resultPane
+      let result = try controller.mergeResult
       #expect(result.hit(at: CGPoint(x: 0, y: readingLine(of: result))).block == index)
       let b = try #require(controller.layout.sourcePane(.b))
       #expect(b.hit(at: CGPoint(x: 0, y: readingLine(of: b))).block == index)
@@ -43,7 +43,7 @@ import Testing
 
   @Test func blocksMeetAtTheReadingLineWithCollapsedRunsToo() async throws {
     let controller = try await windowWithManyBlocks(lineCount: 600, spacing: 30)
-    let result = controller.layout.resultPane
+    let result = try controller.mergeResult
     #expect(!result.collapsedRuns.isEmpty)
     #expect(controller.layout.sourcePanes.allSatisfy { !$0.pane.collapsedRuns.isEmpty })
     let reading = readingLine(of: result)

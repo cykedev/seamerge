@@ -88,7 +88,7 @@ import Testing
   @Test func turningOffSynchronizedScrollingLetsEachPaneScrollOnItsOwn() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
     let a = try #require(controller.layout.sourcePane(.a))
-    let result = controller.layout.resultPane
+    let result = try controller.mergeResult
     let item = menuItem(for: .toggleScrollSynchronization, in: controller)
     #expect(item.state == .on)
     controller.toggleScrollSynchronization(nil)
@@ -145,7 +145,7 @@ import Testing
     controller.zoomIn(nil)
     #expect(controller.fontSize == 14)
     #expect(b.theme.font.pointSize == 14)
-    #expect(controller.layout.resultPane.theme.font.pointSize == 14)
+    #expect(try controller.mergeResult.theme.font.pointSize == 14)
     #expect(abs(lineAtReadingLine(of: b) - line) <= 1)
     controller.actualSize(nil)
     #expect(controller.fontSize == SessionWindowController.standardFontSize)
@@ -174,7 +174,7 @@ import Testing
 
   @Test func goToLineInTheResultPutsTheInsertionPointThereInTextMode() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
-    let result = controller.layout.resultPane
+    let result = try controller.mergeResult
     controller.enterTextMode()
     #expect(controller.focusedPane === result)
     controller.go(toLine: 120, in: result)

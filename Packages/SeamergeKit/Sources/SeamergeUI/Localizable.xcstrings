@@ -14,7 +14,7 @@
       "comment": "The name of a commit followed by its branch, such as 1a2b3c4 Fix typo · main."
     },
     "%@ ↔ %@": {
-      "comment": "A recent comparison: the names of the left and the right file."
+      "comment": "The names of the left and the right file of a comparison, in a title or list."
     },
     "%@ ↔ %@ ↔ %@": {
       "comment": "A recent merge: the names of A, the base and B."
@@ -30,6 +30,29 @@
     },
     "%@, line %lld": {
       "comment": "VoiceOver: a mark in the overview bar of the result, such as From A, line 12."
+    },
+    "%lld Changes": {
+      "comment": "Toolbar: the changes of a comparison while none is current, such as 12 Changes.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Change"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Changes"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld Conflicts Left": {
       "comment": "Toolbar: how many conflicts are still open, such as 2 Conflicts Left.",
@@ -139,6 +162,9 @@
     "Cancel": {
       "comment": "Button: close the sheet and do nothing."
     },
+    "Change %lld of %lld": {
+      "comment": "Toolbar: the current change of a comparison, such as Change 4 of 12."
+    },
     "Change Comparison": {
       "comment": "Undo menu: the switch to another comparison mode or merge strategy."
     },
@@ -149,7 +175,7 @@
       "comment": "VoiceOver: a mark in the overview bar, such as Change in A, line 12."
     },
     "Changes": {
-      "comment": "Toolbar."
+      "comment": "Toolbar item: the current change."
     },
     "Check that the file exists and that you may read it, then try again.": {
       "comment": "Alert: what to do when a file cannot be read."
@@ -253,6 +279,9 @@
     "File": {
       "comment": "Details of a side: where the file was read from."
     },
+    "File %lld of %lld": {
+      "comment": "Subtitle: which file of a git difftool run is compared, such as File 3 of 12."
+    },
     "First Change": {
       "comment": "Go menu command."
     },
@@ -352,6 +381,9 @@
     "Next Pane": {
       "comment": "Go menu command."
     },
+    "No Changes": {
+      "comment": "Toolbar: the two files are equal under the comparison mode."
+    },
     "No Conflicts": {
       "comment": "Toolbar: the merge had no conflict."
     },
@@ -389,7 +421,7 @@
       "comment": "Toolbar item in the customization sheet."
     },
     "Quit other apps to free memory, then try again.": {
-      "comment": "Alert: what to do when the files of a merge are too large."
+      "comment": "Alert: what to do when the files of a session are too large."
     },
     "Rebase onto %@ · Commit %lld of %lld": {
       "comment": "Subtitle: how far a rebase has come, such as Rebase onto main · Commit 3 of 7."
@@ -422,12 +454,12 @@
       "comment": "Help tag of Done in the toolbar."
     },
     "Seamerge can’t read “%@”.": {
-      "comment": "Alert: a file of a merge cannot be read."
+      "comment": "Alert: a file of a merge or comparison cannot be read."
     },
     "Seamerge couldn’t compare the files.": {
-      "comment": "Alert: the comparison of a merge failed."
+      "comment": "Alert: the comparison of the files of a session failed."
     },
-    "Seamerge merges text. Use the app that made the file to merge it.": {
+    "Seamerge works with text. Use the app that made the file instead.": {
       "comment": "Alert: what to do with a binary file."
     },
     "Select All": {
@@ -445,11 +477,17 @@
     "Show in Finder": {
       "comment": "Context menu of a header."
     },
+    "Show the right file on the left and the left file on the right": {
+      "comment": "Help tag of Compare > Swap Sides."
+    },
     "Show where this side comes from": {
       "comment": "Help tag of ⓘ."
     },
     "Stash": {
       "comment": "The name of a stash in a header."
+    },
+    "Swap Sides": {
+      "comment": "Compare menu: swap the left and the right file."
     },
     "Swapped %@ and %@": {
       "comment": "VoiceOver: two fields swapped their files."
@@ -466,8 +504,8 @@
     "Take the version of %@.": {
       "comment": "Help tag of a toggle, such as Take the version of feature/login."
     },
-    "The files are too large to merge.": {
-      "comment": "Alert: the files of a merge do not fit in memory."
+    "The files are too large to compare.": {
+      "comment": "Alert: the files of a merge or comparison do not fit in memory."
     },
     "The switch discards %lld decisions.": {
       "comment": "Sheet before switching the comparison, such as The switch discards 3 decisions.",
@@ -504,8 +542,8 @@
     "Treat “a  b” as “a b”, but not as “ab”": {
       "comment": "Help tag of Compare > Ignore Whitespace Changes, with an example."
     },
-    "Try again. If it fails again, merge the files with another tool.": {
-      "comment": "Alert: what to do when the comparison of a merge failed."
+    "Try again. If it fails again, use another tool for these files.": {
+      "comment": "Alert: what to do when the comparison of the files failed."
     },
     "UTF-16 BE": {
       "comment": "Encoding: UTF-16 big-endian."
@@ -534,6 +572,12 @@
     "Zoom Out": {
       "comment": "View menu command."
     },
+    "after": {
+      "comment": "Role: the file after the change."
+    },
+    "before": {
+      "comment": "Role: the file before the change."
+    },
     "cherry-picked commit": {
       "comment": "Role: the commit being cherry-picked."
     },
@@ -552,6 +596,9 @@
     "the base": {
       "comment": "The common ancestor in the help tag of a toggle: Take the version of the base."
     },
+    "working copy": {
+      "comment": "Role: the file in the working tree, which the user can edit."
+    },
     "your commit": {
       "comment": "Role: the user's own commit that a rebase moves."
     },
@@ -559,7 +606,7 @@
       "comment": "Role: the branch the user is on."
     },
     "“%@” isn’t a text file.": {
-      "comment": "Alert: a file of a merge is binary."
+      "comment": "Alert: a file of a merge or comparison is binary."
     }
   },
   "version": "1.0"

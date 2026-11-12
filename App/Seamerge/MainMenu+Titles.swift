@@ -57,8 +57,6 @@ extension MainMenu {
 
     static let go = String(localized: "Go", comment: "Menu bar.")
     static let compare = String(localized: "Compare", comment: "Menu bar: the comparison modes.")
-    static let swapSides = String(
-      localized: "Swap Sides", comment: "Compare menu: swap the left and the right file.")
 
     static let merge = String(localized: "Merge", comment: "Menu bar: the decisions of a merge.")
     static let useA = String(localized: "Use A", comment: "Merge menu.")

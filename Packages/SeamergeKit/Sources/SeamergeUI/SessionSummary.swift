@@ -2,26 +2,35 @@ import AppKit
 import GitSupport
 import MergeModel
 
-/// The title and subtitle of a merge window: the name of the file, how many changes each side
-/// brings, and how far the Git operation has come.
+/// The title and subtitle of a session window: the name of the file, how many changes each side
+/// of a merge brings, how far the Git operation has come, and which file of a run of
+/// `git difftool` a comparison shows.
 struct SessionSummary: Equatable {
-  /// The title: the name of the file that the result is written to.
+  /// The title: the name of the file that the result of a merge is written to, or the names of
+  /// the files a comparison shows.
   let title: String
 
   /// The parts of the subtitle in the order they stand; the operation is the first to go when
-  /// the window is narrow.
+  /// the window is narrow, then where the file stands among the files of the Git command.
   let changes: String
   let operation: String?
-  let remainingFiles: String?
+  let fileProgress: String?
 
-  /// Summarizes `changes` of a merge in `context`.
-  init(changes: SessionChanges, context: SessionContext) {
+  /// Summarizes `changes` in `context`, with the sides of a comparison where `arrangement` puts
+  /// them.
+  init(changes: SessionChanges, context: SessionContext, arrangement: PaneArrangement) {
     let session = changes.session
-    let file = session.file(for: .b)
-    title =
-      context.resultURL?.lastPathComponent ?? file?.url?.lastPathComponent ?? file?.label ?? ""
-    self.changes = [Self.changeCounts(of: changes), Self.modeNote(for: session.options.mode)]
-      .compactMap(\.self).joined(separator: Self.separator)
+    let modeNote = Self.modeNote(for: session.options.mode)
+    if arrangement.showsResult {
+      let file = session.file(for: .b)
+      title =
+        context.resultURL?.lastPathComponent ?? file?.url?.lastPathComponent ?? file?.label ?? ""
+      self.changes = [Self.changeCounts(of: changes), modeNote].compactMap(\.self)
+        .joined(separator: Self.separator)
+    } else {
+      title = Self.title(of: arrangement.sourceRoles.compactMap(session.file(for:)))
+      self.changes = modeNote ?? ""
+    }
     operation = context.git?.rebaseProgress.map { progress in
       String(
         localized:
@@ -29,28 +38,50 @@ struct SessionSummary: Equatable {
         bundle: .module,
         comment: "Subtitle: how far a rebase has come, such as Rebase onto main · Commit 3 of 7.")
     }
-    remainingFiles = context.git?.remainingConflictedFileCount.flatMap { count in
+    let remainingFiles = context.git?.remainingConflictedFileCount.flatMap { count in
       count > 0
         ? String(
           localized: "\(count) more files with conflicts", bundle: .module,
           comment: "Subtitle: how many other files of the operation still have conflicts.")
         : nil
     }
+    let filePosition = context.difftool?.filePosition.map { position in
+      String(
+        localized: "File \(position.number) of \(position.count)", bundle: .module,
+        comment: "Subtitle: which file of a git difftool run is compared, such as File 3 of 12.")
+    }
+    fileProgress = remainingFiles ?? filePosition
   }
 
   /// The whole subtitle, as the help tag and VoiceOver give it.
   var fullSubtitle: String {
-    [changes, operation, remainingFiles].compactMap(\.self).joined(separator: Self.separator)
+    Self.joined([changes, operation, fileProgress])
+  }
+
+  /// The parts that are there, with the separator between them.
+  private static func joined(_ parts: [String?]) -> String {
+    parts.compactMap(\.self).filter { !$0.isEmpty }.joined(separator: separator)
+  }
+
+  /// The title of a comparison of `files`, from left to right: their name if both have the
+  /// same, and both names otherwise.
+  ///
+  /// The names come from the labels, since Git compares temporary copies whose names are made
+  /// up.
+  private static func title(of files: [SourceFile]) -> String {
+    let names = files.map { ($0.label as NSString).lastPathComponent }
+    guard let first = names.first, let last = names.last, first != last else {
+      return names.first ?? ""
+    }
+    return String(
+      localized: "\(first) ↔ \(last)", bundle: .module,
+      comment: "The names of the left and the right file of a comparison, in a title or list.")
   }
 
   /// The longest subtitle that fits in `width` points in `font`: the whole one, then without the
   /// operation, then the changes alone.
   func subtitle(fittingWidth width: CGFloat, font: NSFont) -> String {
-    let candidates = [
-      fullSubtitle,
-      [changes, remainingFiles].compactMap(\.self).joined(separator: Self.separator),
-      changes,
-    ]
+    let candidates = [fullSubtitle, Self.joined([changes, fileProgress]), changes]
     return candidates.first { candidate in
       (candidate as NSString).size(withAttributes: [.font: font]).width <= width
     } ?? changes

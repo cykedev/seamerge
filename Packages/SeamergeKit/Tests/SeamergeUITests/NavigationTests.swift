@@ -45,8 +45,9 @@ import Testing
     let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
     let window = try #require(controller.window)
     let presentation = controller.presentation
+    let document = try presentation.mergeResult.document
     let open = presentation.changes.blocks.indices.filter {
-      presentation.document.segment(for: presentation.changes.blocks[$0]).state == .open
+      document.segment(for: presentation.changes.blocks[$0]).state == .open
     }
     #expect(open.count > 10)
     var visited = [try #require(presentation.currentBlock)]

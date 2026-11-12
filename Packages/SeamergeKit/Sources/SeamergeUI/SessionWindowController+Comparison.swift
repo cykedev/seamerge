@@ -3,13 +3,14 @@ import MergeModel
 import os
 
 extension SessionWindowController {
-  /// How the window compares its files: the comparison mode and the merge strategy.
+  /// How the window compares its files: the comparison mode and, in a merge, the merge
+  /// strategy.
   public var comparisonOptions: ComparisonOptions {
     presentation.changes.session.options
   }
 
-  /// Compares the files anew with `options` and shows the outcome, keeping each decision whose
-  /// block has the same lines in the new comparison and the line of B where it is.
+  /// Compares the files anew with `options` and shows the outcome, keeping each decision of a
+  /// merge whose block has the same lines in the new comparison, and the line of B where it is.
   ///
   /// The window shows the old comparison until the new one is ready. If decisions would be lost,
   /// a sheet asks first. The switch is a single step of undo. While one switch runs, another one
@@ -39,16 +40,22 @@ extension SessionWindowController {
       await comparisonFailed(error)
       return
     }
-    let modeSwitch = presentation.document.planSwitching(
-      to: switched, text: presentation.resultText)
+    guard let result = presentation.result else {
+      show(switched, result: nil)
+      return
+    }
+    let modeSwitch = result.document.planSwitching(to: switched, text: result.text)
     if modeSwitch.discardedDecisionCount > 0 {
       guard let window,
         await prompts.confirmDiscarding(modeSwitch.discardedDecisionCount, in: window)
       else { return }
     }
-    var document = presentation.document
-    _ = document.apply(modeSwitch.plan, replacedTexts: [presentation.resultText])
-    show(document, text: modeSwitch.plan.replacements.map(\.text).joined())
+    var document = result.document
+    _ = document.apply(modeSwitch.plan, replacedTexts: [result.text])
+    show(
+      document.session,
+      result: ResultState(
+        document: document, text: modeSwitch.plan.replacements.map(\.text).joined()))
   }
 
   /// Compares lines byte for byte.
@@ -77,14 +84,25 @@ extension SessionWindowController {
     Task { await switchComparison(to: options) }
   }
 
-  /// Shows `document` with `text` in place of the result shown now, as a step of undo that shows
-  /// the one before again.
-  private func show(_ document: ResultDocument, text: String) {
-    let previous = (presentation.document, presentation.resultText)
-    presentation.show(document, text: text)
+  /// Puts the two files of a comparison the other way round, with their headers, colors and
+  /// markers; the current change and the place at the reading line stay.
+  ///
+  /// It changes only how the files are shown, so it is no step of undo.
+  @objc func swapSides(_ sender: Any?) {
+    guard canPerform(.swapSides) else { return }
+    presentation.swapSides()
+    sessionDidChange()
+    stateDidChange()
+  }
+
+  /// Shows `session` with `result`, the result of a merge, in place of what the window shows
+  /// now, as a step of undo that shows that again.
+  private func show(_ session: Session, result: ResultState?) {
+    let previous = (presentation.changes.session, presentation.result)
+    presentation.show(session, result: result)
     sessionDidChange()
     sessionUndoManager.registerUndo(withTarget: self) { controller in
-      MainActor.assumeIsolated { controller.show(previous.0, text: previous.1) }
+      MainActor.assumeIsolated { controller.show(previous.0, result: previous.1) }
     }
     sessionUndoManager.setActionName(
       String(

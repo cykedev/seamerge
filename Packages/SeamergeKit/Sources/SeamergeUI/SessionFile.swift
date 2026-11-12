@@ -34,13 +34,24 @@ extension Session {
       return try await merge(
         base: baseFile, a: aFile, b: bFile, options: ComparisonOptions(mode: .windowDefault))
     } catch {
-      throw switch error {
-      case .binaryInput(let role):
-        [Role.base: base, .a: a, .b: b][role].flatMap(\.self).map { .binaryFile($0.url) }
-          ?? .comparisonFailed
-      case .inputTooLarge, .outOfMemory: .filesTooLarge
-      case .comparisonFailed: .comparisonFailed
-      }
+      throw SessionLoadingError(error, files: [.base: base, .a: a, .b: b].compactMapValues(\.self))
+    }
+  }
+
+  /// Reads the files and compares the older file `old` with the newer file `new` in the
+  /// comparison mode of the window, away from the main actor.
+  ///
+  /// - Throws: ``SessionLoadingError`` with the file that cannot be read or is not text, or why
+  ///   the files cannot be compared.
+  @concurrent
+  public static func loadDiff(
+    old: SessionFile, new: SessionFile
+  ) async throws(SessionLoadingError) -> Session {
+    let (oldFile, newFile) = (try read(old), try read(new))
+    do {
+      return try await diff(old: oldFile, new: newFile, mode: .windowDefault)
+    } catch {
+      throw SessionLoadingError(error, files: [.a: old, .b: new])
     }
   }
 

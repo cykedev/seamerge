@@ -1,3 +1,5 @@
+import MergeModel
+
 extension SessionCommand {
   /// A menu of the main menu that holds commands of a session window.
   public enum Menu: CaseIterable, Sendable {
@@ -38,13 +40,31 @@ extension SessionCommand {
         [.nextPane, .previousPane], [.goToLine],
       ]
     case .compare:
-      [[.compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace]]
+      [
+        [.compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace],
+        [.swapSides],
+      ]
     }
   }
 
-  /// The groups of the options menu of the toolbar: those of the Compare and View menus.
-  static var optionsGroups: [[SessionCommand]] {
-    groups(in: .compare) + groups(in: .view)
+  /// The groups of the options menu of the toolbar of a window of `kind`: those of the Compare
+  /// and View menus, without the commands that never act in such a window.
+  ///
+  /// The main menu shows those deactivated; the options menu belongs to one window and leaves
+  /// them out.
+  static func optionsGroups(in kind: Session.Kind) -> [[SessionCommand]] {
+    (groups(in: .compare) + groups(in: .view)).map { $0.filter { $0.acts(in: kind) } }
+      .filter { !$0.isEmpty }
+  }
+
+  /// Whether the command can act in a window of `kind` at all: Swap Sides only in a comparison,
+  /// the commands of the base and the result only in a merge.
+  private func acts(in kind: Session.Kind) -> Bool {
+    switch self {
+    case .swapSides: kind == .diff
+    case .nextConflict, .previousConflict, .toggleBase, .toggleResultMaximized: kind == .merge
+    default: true
+    }
   }
 
   /// The jumps that the context menu offers, on a changed block or on unchanged text, as far as

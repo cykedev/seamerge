@@ -3,25 +3,26 @@ import MergeModel
 import PaneKit
 
 extension PaneContent {
-  /// The content of the pane of `role`, one of the inputs of the merge, on the row grid of the
-  /// panes above the result.
+  /// The content of the pane of `role`, one of the inputs of the session, on the row grid of the
+  /// panes side by side.
   ///
   /// - Parameters:
-  ///   - changes: The changed blocks of the merge, which become the blocks of the content.
-  ///   - document: The result, which tells which conflicts are still open.
+  ///   - changes: The changed blocks of the session, which become the blocks of the content.
+  ///   - document: The result of a merge, which tells which conflicts are still open; `nil` for
+  ///     a comparison.
   ///   - ignoredDifferences: The lines whose differences the comparison ignores, which get a ring
   ///     in the gutter.
   ///   - conflictMarkRole: The pane that carries the mark of a conflict.
-  /// - Precondition: `role` takes part in the merge.
+  /// - Precondition: `role` takes part in the session.
   init(
-    source role: Role, of changes: SessionChanges, document: ResultDocument,
+    source role: Role, of changes: SessionChanges, document: ResultDocument?,
     ignoredDifferences: IgnoredDifferences, conflictMarkRole: Role
   ) {
     let session = changes.session
     let layout = session.rowLayout
     guard let displayText = layout.displayText(for: role), let file = session.file(for: role)
     else {
-      preconditionFailure("The merge has no input \(role)")
+      preconditionFailure("The session has no input \(role)")
     }
     guard layout.rowCount > 0 else {
       self = .empty
@@ -40,7 +41,7 @@ extension PaneContent {
       line < 0 ? LineEnding.none : endingsByLine[Int(line)]
     }
     let blocks = changes.blocks.map { block in
-      let isOpen = document.segment(for: block).state == .open
+      let isOpen = document?.segment(for: block).state == .open
       let carriesConflictMark = block.kind == .conflict && role == conflictMarkRole
       return PaneBlock(
         rows: layout.rows(of: block),

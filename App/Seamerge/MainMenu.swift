@@ -166,16 +166,10 @@ final class MainMenu {
     Self.menu(Titles.go, SessionCommand.groups(in: .go).map { commands($0) })
   }
 
+  /// The Compare menu, whose Swap Sides also swaps the outer files of the window Compare Files,
+  /// which has an action of the same name.
   private func compareMenu() -> NSMenu {
-    Self.menu(
-      Titles.compare,
-      SessionCommand.groups(in: .compare).map { commands($0) } + [
-        [
-          Self.item(
-            Titles.swapSides, #selector(CompareFilesWindowController.swapSides(_:)), key: "s",
-            modifiers: [.option, .command])
-        ]
-      ])
+    Self.menu(Titles.compare, SessionCommand.groups(in: .compare).map { commands($0) })
   }
 
   private func mergeMenu() -> NSMenu {

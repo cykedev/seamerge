@@ -5,10 +5,15 @@ import MergeModel
 
 extension SessionWindowController {
   /// Resolves every open conflict with the text of `roles`, as if the user had chosen it.
+  ///
+  /// - Precondition: The window shows a merge.
   func resolveOpenConflicts(with roles: [Role]) {
-    var document = presentation.document
+    guard let result = presentation.result else {
+      preconditionFailure("Only a merge has conflicts to resolve")
+    }
+    var document = result.document
     let plan = document.planResolvingOpenConflicts(with: roles)
-    var text = presentation.resultText
+    var text = result.text
     var replaced: [String] = []
     for replacement in plan.replacements {
       let units = Array(text.utf16)
@@ -19,7 +24,7 @@ extension SessionWindowController {
         + String(decoding: units[replacement.range.upperBound...], as: UTF16.self)
     }
     _ = document.apply(plan, replacedTexts: replaced)
-    presentation.show(document, text: text)
+    presentation.show(document.session, result: ResultState(document: document, text: text))
     stateDidChange()
   }
 }

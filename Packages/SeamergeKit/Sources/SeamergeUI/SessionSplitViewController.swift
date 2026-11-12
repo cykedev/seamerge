@@ -3,19 +3,20 @@ import MergeModel
 import PaneKit
 import SwiftUI
 
-/// The panes of a merge window and how they are laid out: A, Base and B side by side and equally
-/// wide above, the result across the full width below, each with its header.
+/// The panes of a session window and how they are laid out: the inputs side by side and equally
+/// wide, A, Base and B in a merge, and below them in a merge the result across the full width,
+/// each pane with its header.
 ///
 /// The headers are accessories at the top of the split view items, as the system lays them out,
 /// with a hard edge, since dense code would blur under a soft one. The controller only arranges;
 /// what the panes show is set from outside.
 @MainActor
 final class SessionSplitViewController: NSSplitViewController {
-  /// The panes of the inputs, in the order A, Base, B, as many as take part.
-  let sourcePanes: [(role: Role, pane: PaneView)]
+  /// The panes of the inputs from left to right, each with the input it shows now.
+  private(set) var sourcePanes: [(role: Role, pane: PaneView)]
 
-  /// The result pane.
-  let resultPane: PaneView
+  /// The result pane, which only a merge has.
+  let resultPane: PaneView?
 
   /// The pane of `role`, if the input takes part.
   func sourcePane(_ role: Role) -> PaneView? {
@@ -27,22 +28,24 @@ final class SessionSplitViewController: NSSplitViewController {
 
   private let sourcesController = NSSplitViewController()
   private let sourceHeaderViews: [HeaderHostingView<SideHeaderView>]
-  private let resultHeaderView: HeaderHostingView<ResultHeaderView>
+  private let resultHeaderView: HeaderHostingView<ResultHeaderView>?
 
-  /// Creates the panes for the inputs of `headers`, drawn with `theme`.
-  init(headers: [SideHeader], resultHeader: ResultHeader, theme: Theme) {
+  /// Creates the panes for the inputs of `headers`, from left to right, and for the result of
+  /// `resultHeader` below them if there is one, drawn with `theme`.
+  init(headers: [SideHeader], resultHeader: ResultHeader?, theme: Theme) {
     sourcePanes = headers.map { ($0.role, PaneView(theme: theme)) }
-    resultPane = PaneView(theme: theme)
+    resultPane = resultHeader.map { _ in PaneView(theme: theme) }
     sourceHeaderViews = headers.map {
       HeaderHostingView(rootView: SideHeaderView(header: $0, theme: theme), role: $0.role)
     }
-    resultHeaderView = HeaderHostingView(
-      rootView: ResultHeaderView(header: resultHeader, callerIsGone: false), role: nil)
+    resultHeaderView = resultHeader.map {
+      HeaderHostingView(rootView: ResultHeaderView(header: $0, callerIsGone: false), role: nil)
+    }
     super.init(nibName: nil, bundle: nil)
     for headerView in sourceHeaderViews {
       headerView.menuProvider = { [weak self] role in self?.headerMenu(for: role) }
     }
-    resultHeaderView.menuProvider = { [weak self] role in self?.headerMenu(for: role) }
+    resultHeaderView?.menuProvider = { [weak self] role in self?.headerMenu(for: role) }
     splitView.isVertical = false
     sourcesController.splitView.isVertical = true
     for (headerView, (_, pane)) in zip(sourceHeaderViews, sourcePanes) {
@@ -54,10 +57,26 @@ final class SessionSplitViewController: NSSplitViewController {
     // The headers of the sources lie within this item; the result's lies outside its own.
     sourcesItem.minimumThickness = WindowMetrics.minimumPaneHeight + WindowMetrics.headerHeight
     addSplitViewItem(sourcesItem)
-    let resultItem = NSSplitViewItem(viewController: PaneItemController(pane: resultPane))
-    resultItem.minimumThickness = WindowMetrics.minimumPaneHeight
-    resultItem.addTopAlignedAccessoryViewController(Self.accessory(resultHeaderView))
-    addSplitViewItem(resultItem)
+    if let resultPane, let resultHeaderView {
+      let resultItem = NSSplitViewItem(viewController: PaneItemController(pane: resultPane))
+      resultItem.minimumThickness = WindowMetrics.minimumPaneHeight
+      resultItem.addTopAlignedAccessoryViewController(Self.accessory(resultHeaderView))
+      addSplitViewItem(resultItem)
+    }
+  }
+
+  /// Shows the inputs of `headers` in the panes from left to right, each below its header; the
+  /// panes keep their widths and places.
+  ///
+  /// - Precondition: `headers` has one header for each pane.
+  func show(_ headers: [SideHeader]) {
+    precondition(headers.count == sourcePanes.count, "Every pane needs a header")
+    for (index, header) in headers.enumerated() {
+      sourcePanes[index].role = header.role
+      let headerView = sourceHeaderViews[index]
+      headerView.role = header.role
+      headerView.rootView = SideHeaderView(header: header, theme: headerView.rootView.theme)
+    }
   }
 
   /// Whether the pane of the base is in view; while it is hidden, A and B share its width.
@@ -78,9 +97,14 @@ final class SessionSplitViewController: NSSplitViewController {
   }
 
   /// Whether the result has the whole window, with the panes above it collapsed.
+  ///
+  /// - Precondition: The window has a result, if it is to be maximized.
   var maximizesResult: Bool {
-    get { splitViewItems.first?.isCollapsed ?? false }
-    set { splitViewItems.first?.isCollapsed = newValue }
+    get { resultPane != nil && splitViewItems.first?.isCollapsed == true }
+    set {
+      precondition(resultPane != nil || !newValue, "Only a window with a result maximizes it")
+      splitViewItems.first?.isCollapsed = newValue
+    }
   }
 
   /// The split view item of the pane of the base, if the merge has one.
@@ -101,7 +125,7 @@ final class SessionSplitViewController: NSSplitViewController {
     for (_, pane) in sourcePanes {
       pane.theme = theme
     }
-    resultPane.theme = theme
+    resultPane?.theme = theme
     for headerView in sourceHeaderViews {
       headerView.rootView = SideHeaderView(header: headerView.rootView.header, theme: theme)
     }
@@ -117,23 +141,26 @@ final class SessionSplitViewController: NSSplitViewController {
   }
 
   /// The narrowest the panes get together: each source pane in view at its least width, with
-  /// the dividers between them.
+  /// the dividers between them, and the result no narrower than it needs.
   var minimumWidth: CGFloat {
     let divider = sourcesController.splitView.dividerThickness
     let shown = zip(sourcesController.splitViewItems, sourcePanes).filter { !$0.0.isCollapsed }
     let panes = shown.map(\.1.pane.minimumWidth).reduce(0, +)
-    return max(panes + divider * CGFloat(max(shown.count - 1, 0)), resultPane.minimumWidth)
+    return max(
+      panes + divider * CGFloat(max(shown.count - 1, 0)), resultPane?.minimumWidth ?? 0)
   }
 
-  /// The least height of the panes together: the sources and the result each at their least
-  /// height below their headers, with the divider between them.
+  /// The least height of the panes together: the sources and the result, if there is one, each
+  /// at their least height below their headers, with the divider between them.
   var minimumHeight: CGFloat {
     view.layoutSubtreeIfNeeded()
     return view.fittingSize.height
   }
 
-  /// Shows below the result header that Git no longer waits for the merge.
+  /// Shows below the result header that Git no longer waits for the merge; a comparison, which
+  /// has nothing to save, does not say so.
   func showCallerIsGone() {
+    guard let resultHeaderView else { return }
     resultHeaderView.rootView = ResultHeaderView(
       header: resultHeaderView.rootView.header, callerIsGone: true)
   }
@@ -144,8 +171,10 @@ final class SessionSplitViewController: NSSplitViewController {
   /// - Precondition: The view is in its window, at the window's size.
   func placeDividers() {
     view.layoutSubtreeIfNeeded()
-    splitView.setPosition(
-      (splitView.bounds.height * WindowMetrics.sourcesFraction).rounded(), ofDividerAt: 0)
+    if resultPane != nil {
+      splitView.setPosition(
+        (splitView.bounds.height * WindowMetrics.sourcesFraction).rounded(), ofDividerAt: 0)
+    }
     placeSourceDividers()
   }
 
@@ -186,7 +215,7 @@ protocol SessionLayoutDelegate: AnyObject {
 @MainActor
 final class HeaderHostingView<Content: View>: NSHostingView<Content> {
   /// The input of the pane below, or `nil` for the result.
-  let role: Role?
+  var role: Role?
 
   /// Supplies the context menu for the role of the header.
   var menuProvider: (Role?) -> NSMenu? = { _ in nil }

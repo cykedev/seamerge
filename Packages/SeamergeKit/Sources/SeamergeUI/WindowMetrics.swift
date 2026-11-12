@@ -47,6 +47,10 @@ enum WindowMetrics {
   /// The width of the field of Go to Line.
   static let lineFieldWidth: CGFloat = 200
 
+  /// The least width of a window, at which the toolbar shows the title, the count with its
+  /// arrows, and the options without moving any of them into its overflow menu.
+  static let minimumToolbarWidth: CGFloat = 640
+
   /// The size of a new window.
   static let defaultContentSize = CGSize(width: 1280, height: 800)
 

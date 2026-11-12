@@ -31,6 +31,12 @@ extension SessionCommand {
     /// Copying a block needs a current block with text.
     case blockText
 
+    /// Maximizing the result needs a result.
+    case resultPane
+
+    /// Swapping the sides needs a comparison of two files.
+    case swappableSides
+
     /// The command always has an effect.
     case nothing
   }
@@ -54,8 +60,9 @@ extension SessionCommand {
     case .actualSize: .otherFontSize
     case .openInEditor: .fileOnDisk
     case .copyBlock: .blockText
-    case .toggleResultMaximized, .toggleScrollSynchronization, .toggleInvisibles, .goToLine:
-      .nothing
+    case .toggleResultMaximized: .resultPane
+    case .swapSides: .swappableSides
+    case .toggleScrollSynchronization, .toggleInvisibles, .goToLine: .nothing
     }
   }
 }

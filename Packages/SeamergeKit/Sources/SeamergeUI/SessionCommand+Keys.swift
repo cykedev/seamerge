@@ -20,6 +20,7 @@ extension SessionCommand {
     case .firstChange, .lastChange, .compareExactly, .ignoreLineEndings,
       .ignoreWhitespaceChanges, .ignoreAllWhitespace, .toggleInvisibles, .copyBlock:
       return nil
+    case .swapSides: return ("s", [.option, .command])
     case .toggleBase: return ("b", [.option, .command])
     case .toggleResultMaximized: return ("r", [.option, .command])
     case .toggleScrollSynchronization: return ("y", [.option, .command])

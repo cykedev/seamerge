@@ -18,7 +18,7 @@ import Testing
       #expect(pane.currentBlock == conflict)
     }
     #expect(presentation.sourcesOverviewBar.currentBlock == conflict)
-    #expect(presentation.resultOverviewBar.currentBlock == conflict)
+    #expect(try presentation.mergeResultOverviewBar.currentBlock == conflict)
   }
 
   @Test func windowWithoutConflictsOpensWithTheFirstChangeCurrent() async throws {
@@ -74,8 +74,10 @@ import Testing
   @Test func clickOnAMarkOfEitherOverviewBarMakesItsBlockCurrent() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
     let presentation = controller.presentation
-    for (bar, block) in [(presentation.sourcesOverviewBar, 5), (presentation.resultOverviewBar, 7)]
-    {
+    let bars = [
+      (presentation.sourcesOverviewBar, 5), (try presentation.mergeResultOverviewBar, 7),
+    ]
+    for (bar, block) in bars {
       let marks = try #require(bar.accessibilityChildren() as? [NSAccessibilityElement])
       let index = try #require(bar.marks.firstIndex { $0.block == block })
       #expect(marks[index].accessibilityPerformPress())
@@ -85,8 +87,8 @@ import Testing
 
   @Test func clickInTheDecisionColumnMakesTheBlockBesideItCurrent() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
-    let result = controller.layout.resultPane
-    let column = controller.presentation.decisionColumn
+    let result = try controller.mergeResult
+    let column = try controller.presentation.mergeDecisionColumn
     let block = 4
     let point = result.convert(Windows.point(inBlock: block, of: result), to: column)
     column.mouseDown(with: try mouseDown(at: CGPoint(x: 2, y: point.y), in: column))
@@ -107,7 +109,7 @@ import Testing
   @Test func clickScrollsTheOtherAreaOnlyWhereTheBlockIsNotInFullView() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
     let a = try #require(controller.layout.sourcePane(.a))
-    let result = controller.layout.resultPane
+    let result = try controller.mergeResult
     let blocks = a.content.blocks.indices
     // In the result, which is lower than the panes above, a block low in A lies out of view.
     let inBoth = try #require(

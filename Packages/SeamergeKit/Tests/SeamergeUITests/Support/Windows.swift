@@ -25,9 +25,39 @@ enum Windows {
     return controller
   }
 
-  /// Every pane of the window: A, Base and B as far as they take part, then the result.
+  /// Draws the window of `session` at `size`, or at its least size for `nil`, after `prepare`.
+  ///
+  /// A responder that saves and closes stands in for the one that comes with saving, so that
+  /// the button shows as it does in the app. With `actsAsKey`, the window acts as the key
+  /// window, so that the focus shows in the accent color.
+  static func picture(
+    _ session: Session, context: SessionContext, look: Look,
+    options: DisplayOptions = DisplayOptions(), doneStyle: SessionToolbar.DoneStyle = .standard,
+    actsAsKey: Bool = false, size: CGSize? = WindowMetrics.defaultContentSize, named name: String,
+    prepare: (SessionWindowController) -> Void = { _ in }
+  ) throws {
+    let controller = SessionWindowController(
+      session: session, context: context, undoManager: UndoManager(), displayOptions: options,
+      pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(), prompts: PromptRecorder(),
+      doneStyle: doneStyle,
+      window: actsAsKey ? KeySessionWindow() : SessionWindow())
+    let window = try #require(controller.window)
+    defer { window.close() }
+    let saver = SaveAndCloseStandIn()
+    controller.nextResponder = saver
+    Rendering.prepare(window, size: size ?? window.contentMinSize, appearance: look.appearance)
+    controller.layout.placeDividers()
+    controller.stateDidChange()
+    prepare(controller)
+    try Rendering.write(Rendering.bitmap(of: window), named: name)
+    // The window does not retain its next responder.
+    withExtendedLifetime(saver) {}
+  }
+
+  /// Every pane of the window: A, Base and B as far as they take part, then the result, if
+  /// there is one.
   static func panes(of controller: SessionWindowController) -> [PaneView] {
-    controller.layout.sourcePanes.map(\.pane) + [controller.layout.resultPane]
+    controller.layout.sourcePanes.map(\.pane) + [controller.layout.resultPane].compactMap(\.self)
   }
 
   /// The point in `pane` at the middle of the first row of `block`, a little into the text.
@@ -75,5 +105,29 @@ final class PromptRecorder: ComparisonPrompts {
 
   func reportFailedComparison(in window: NSWindow) async {
     failureCount += 1
+  }
+}
+
+extension SessionWindowController {
+  /// The result pane of a merge window.
+  var mergeResult: PaneView {
+    get throws { try #require(layout.resultPane, "A merge window has a result pane") }
+  }
+}
+
+extension SessionPresentation {
+  /// The result of a merge as it stands.
+  var mergeResult: ResultState {
+    get throws { try #require(result, "A merge has a result") }
+  }
+
+  /// The overview bar beside the result of a merge.
+  var mergeResultOverviewBar: OverviewBar {
+    get throws { try #require(resultOverviewBar, "A merge has a result") }
+  }
+
+  /// The decision column beside the result of a merge.
+  var mergeDecisionColumn: DecisionColumnView {
+    get throws { try #require(decisionColumn, "A merge has a result") }
   }
 }

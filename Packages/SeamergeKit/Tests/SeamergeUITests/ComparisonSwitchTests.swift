@@ -29,7 +29,7 @@ import Testing
     #expect(controller.presentation.changes.blocks.count > blocksBefore)
     #expect(window.subtitle.hasSuffix("Compared exactly"))
     #expect(
-      controller.layout.resultPane.content.blocks.count
+      try controller.mergeResult.content.blocks.count
         == controller.presentation.changes.blocks.count)
     #expect(undoManager.undoMenuItemTitle == "Undo Change Comparison")
 
@@ -52,13 +52,14 @@ import Testing
     // The engine compares off the main thread while the window shows the old comparison; what
     // the user waits for at the end is the window showing the new one.
     let switched = try await session.recomputed(options: ComparisonOptions(mode: .exact))
-    var document = presentation.document
-    let modeSwitch = document.planSwitching(to: switched, text: presentation.resultText)
-    _ = document.apply(modeSwitch.plan, replacedTexts: [presentation.resultText])
+    let result = try presentation.mergeResult
+    var document = result.document
+    let modeSwitch = document.planSwitching(to: switched, text: result.text)
+    _ = document.apply(modeSwitch.plan, replacedTexts: [result.text])
     let text = modeSwitch.plan.replacements.map(\.text).joined()
 
     let start = ContinuousClock.now
-    presentation.show(document, text: text)
+    presentation.show(document.session, result: ResultState(document: document, text: text))
     let duration = ContinuousClock.now - start
     #expect(duration < .seconds(1), "rebuilding took \(duration)")
     #expect(presentation.changes.session.options.mode == .exact)
@@ -70,9 +71,10 @@ import Testing
     let prompts = PromptRecorder()
     let controller = try Windows.controller(for: try await decidedSample(), prompts: prompts)
     controller.resolveOpenConflicts(with: [.a])
-    let document = controller.presentation.document
-    let exact = try await document.session.recomputed(options: ComparisonOptions(mode: .exact))
-    let expected = document.planSwitching(to: exact, text: controller.presentation.resultText)
+    let result = try controller.presentation.mergeResult
+    let exact = try await result.document.session.recomputed(
+      options: ComparisonOptions(mode: .exact))
+    let expected = result.document.planSwitching(to: exact, text: result.text)
       .discardedDecisionCount
     #expect(expected > 0)
 

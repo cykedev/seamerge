@@ -52,13 +52,13 @@ import Testing
     #expect(window.firstResponder === panes[1].documentView)
     controller.selectPreviousPane(nil)
     controller.selectPreviousPane(nil)
-    #expect(window.firstResponder === controller.layout.resultPane.documentView)
+    #expect(try window.firstResponder === controller.mergeResult.documentView)
   }
 
   @Test func movingTheFocusIntoTheResultKeepsItsInsertionPoint() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
     let window = try #require(controller.window)
-    let result = controller.layout.resultPane.documentView
+    let result = try controller.mergeResult.documentView
     controller.enterTextMode()
     let caret = NSRange(location: 500, length: 0)
     result.setSelectedRange(caret)
@@ -90,7 +90,7 @@ import Testing
     window.makeFirstResponder(b.documentView)
     controller.presentation.jump(to: 8)
     try press("\r", in: controller)
-    let result = controller.layout.resultPane
+    let result = try controller.mergeResult
     #expect(controller.isInTextMode)
     let caret = result.documentView.selectedRange()
     #expect(caret.length == 0)

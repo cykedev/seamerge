@@ -35,7 +35,7 @@ public struct FileComparison: Sendable, Hashable {
         comment: "A recent merge: the names of A, the base and B.")
       : String(
         localized: "\(names[0]) ↔ \(names[1])", bundle: .module,
-        comment: "A recent comparison: the names of the left and the right file.")
+        comment: "The names of the left and the right file of a comparison, in a title or list.")
   }
 
   /// The innermost folder that holds every file, with the home folder as a tilde.

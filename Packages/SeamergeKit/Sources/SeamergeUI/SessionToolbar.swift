@@ -5,8 +5,13 @@ import MergeModel
 /// that jump between them, at the trailing end a menu of the comparison and view options and
 /// the button that saves and closes.
 ///
-/// The toolbar can be customized; the arrows between changes and the choice of the comparison
-/// mode can be dragged in, but are not there by default. Every item sends the action of a
+/// A comparison of two files has no conflicts and nothing to save: in the middle it says which
+/// change is current, with the arrows that jump between changes, and at the trailing end it has
+/// only the menu of options.
+///
+/// The toolbar can be customized, for each kind of window on its own; in a merge, the arrows
+/// between changes can be dragged in, and in both the choice of the comparison mode, but they
+/// are not there by default. Every item sends the action of a
 /// command of the window, which the main menu offers as well. The toolbar does not validate its
 /// items itself: the window tells it when they change.
 @MainActor
@@ -23,18 +28,32 @@ final class SessionToolbar: NSObject {
     static let standard = DoneStyle.word
   }
 
-  /// The toolbar of the window.
-  let toolbar = NSToolbar(identifier: "SessionToolbar")
+  /// What the toolbar counts in its middle.
+  enum Count: Equatable {
+    /// The conflicts of a merge: how many are open, and whether the merge had any.
+    case conflicts(open: Int, hadAny: Bool)
 
+    /// The changes of a comparison: the index of the current one, if any, and how many there
+    /// are.
+    case changes(current: Int?, total: Int)
+  }
+
+  /// The toolbar of the window.
+  let toolbar: NSToolbar
+
+  private let kind: Session.Kind
   private let doneStyle: DoneStyle
   private let countLabel = NSTextField(labelWithString: "")
   private let progressIndicator = NSProgressIndicator()
   private let countView: NSStackView
   private var items: [NSToolbarItem.Identifier: NSToolbarItem] = [:]
 
-  /// Creates the toolbar, with the button that saves and closes in `doneStyle`.
-  init(doneStyle: DoneStyle) {
+  /// Creates the toolbar of a window of `kind`, with the button that saves and closes in
+  /// `doneStyle` if it has one.
+  init(kind: Session.Kind, doneStyle: DoneStyle) {
+    self.kind = kind
     self.doneStyle = doneStyle
+    toolbar = NSToolbar(identifier: kind == .merge ? "SessionToolbar" : "ComparisonToolbar")
     progressIndicator.style = .spinning
     progressIndicator.controlSize = .small
     progressIndicator.isDisplayedWhenStopped = false
@@ -47,44 +66,45 @@ final class SessionToolbar: NSObject {
     toolbar.displayMode = .iconOnly
     toolbar.allowsUserCustomization = true
     toolbar.autosavesConfiguration = true
-    toolbar.centeredItemIdentifiers = [.conflictCount, .conflictNavigation]
+    toolbar.centeredItemIdentifiers =
+      kind == .merge ? [.conflictCount, .conflictNavigation] : [.changeCount, .changeNavigation]
   }
 
-  /// The left edge of the number of open conflicts in the coordinates of the window, once the
+  /// The left edge of the count in the middle in the coordinates of the window, once the
   /// toolbar has laid it out.
-  var conflictCountMinX: CGFloat? {
+  var countMinX: CGFloat? {
     guard countView.window != nil, countView.frame.width > 0 else { return nil }
     return countView.convert(countView.bounds, to: nil).minX
   }
 
-  /// Shows the state of the window: the number of open conflicts, which arrows lead anywhere,
+  /// Shows the state of the window: the count in the middle, which arrows lead anywhere,
   /// whether a comparison is under way, and whether the button that saves and closes can act
   /// and is the one to press.
   ///
   /// - Parameters:
-  ///   - openConflictCount: The conflicts still open.
-  ///   - hasConflicts: Whether the merge had any conflict at all.
+  ///   - count: The conflicts or changes to count.
   ///   - isComparing: Whether the files are being compared anew for long enough to say so.
   ///   - isValid: Whether a command can act now.
   ///   - canSaveAndClose: Whether a responder saves and closes.
   func update(
-    openConflictCount: Int, hasConflicts: Bool, isComparing: Bool,
-    isValid: (SessionCommand) -> Bool, canSaveAndClose: Bool
+    count: Count, isComparing: Bool, isValid: (SessionCommand) -> Bool, canSaveAndClose: Bool
   ) {
-    let count = Self.countText(openConflictCount: openConflictCount, hasConflicts: hasConflicts)
     countLabel.stringValue =
       isComparing
       ? String(
         localized: "Comparing…", bundle: .module,
         comment: "Toolbar: the files are being compared anew.")
-      : count
+      : Self.countText(count)
     countView.setAccessibilityLabel(countLabel.stringValue)
     if isComparing {
       progressIndicator.startAnimation(nil)
     } else {
       progressIndicator.stopAnimation(nil)
     }
-    items[.conflictNavigation]?.isHidden = openConflictCount == 0
+    switch count {
+    case .conflicts(let open, _): items[.conflictNavigation]?.isHidden = open == 0
+    case .changes(_, let total): items[.changeNavigation]?.isHidden = total == 0
+    }
     for item in [items[.conflictNavigation], items[.changeNavigation]] {
       for subitem in (item as? NSToolbarItemGroup)?.subitems ?? [] {
         subitem.isEnabled = SessionCommand(action: subitem.action).map(isValid) ?? false
@@ -92,8 +112,37 @@ final class SessionToolbar: NSObject {
     }
     if let done = items[.done] {
       done.isEnabled = canSaveAndClose
-      done.style = openConflictCount == 0 ? .prominent : .plain
+      let isResolved = if case .conflicts(open: 0, _) = count { true } else { false }
+      done.style = isResolved ? .prominent : .plain
     }
+  }
+
+  /// What the toolbar says in its middle.
+  static func countText(_ count: Count) -> String {
+    switch count {
+    case .conflicts(let open, let hadAny):
+      countText(openConflictCount: open, hasConflicts: hadAny)
+    case .changes(let current, let total):
+      countText(currentChange: current, changeCount: total)
+    }
+  }
+
+  /// What the toolbar of a comparison says about the changes: which one is current, counted
+  /// from 1, or how many there are while none is.
+  static func countText(currentChange: Int?, changeCount: Int) -> String {
+    guard changeCount > 0 else {
+      return String(
+        localized: "No Changes", bundle: .module,
+        comment: "Toolbar: the two files are equal under the comparison mode.")
+    }
+    guard let currentChange else {
+      return String(
+        localized: "\(changeCount) Changes", bundle: .module,
+        comment: "Toolbar: the changes of a comparison while none is current, such as 12 Changes.")
+    }
+    return String(
+      localized: "Change \(currentChange + 1) of \(changeCount)", bundle: .module,
+      comment: "Toolbar: the current change of a comparison, such as Change 4 of 12.")
   }
 
   /// What the toolbar says about the conflicts.
@@ -122,6 +171,14 @@ final class SessionToolbar: NSObject {
       item.isBordered = false
       item.label = String(
         localized: "Conflicts", bundle: .module, comment: "Toolbar item: the open conflicts.")
+      item.paletteLabel = item.label
+      return item
+    case .changeCount:
+      let item = NSToolbarItem(itemIdentifier: identifier)
+      item.view = countView
+      item.isBordered = false
+      item.label = String(
+        localized: "Changes", bundle: .module, comment: "Toolbar item: the current change.")
       item.paletteLabel = item.label
       return item
     case .conflictNavigation:
@@ -161,7 +218,7 @@ final class SessionToolbar: NSObject {
       item.toolTip = String(
         localized: "Change how the files are compared and shown", bundle: .module,
         comment: "Help tag of the options item in the toolbar.")
-      item.menu = Self.menu(of: SessionCommand.optionsGroups)
+      item.menu = Self.menu(of: SessionCommand.optionsGroups(in: kind))
       return item
     case .done:
       let item = NSToolbarItem(itemIdentifier: identifier)
@@ -240,20 +297,27 @@ extension SessionToolbar: NSToolbarDelegate {
     return item
   }
 
-  /// The three elements: the conflicts in the middle, the options and Done at the end, the
-  /// two apart, since the toolbar would join a checkmark and the options into one group.
+  /// The three elements of a merge: the conflicts in the middle, the options and Done at the
+  /// end, the two apart, since the toolbar would join a checkmark and the options into one group;
+  /// the two of a comparison: the changes in the middle, the options at the end.
   func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-    switch doneStyle {
-    case .word: [.conflictCount, .conflictNavigation, .flexibleSpace, .options, .done]
-    case .checkmark: [.conflictCount, .conflictNavigation, .flexibleSpace, .options, .space, .done]
+    switch (kind, doneStyle) {
+    case (.merge, .word): [.conflictCount, .conflictNavigation, .flexibleSpace, .options, .done]
+    case (.merge, .checkmark):
+      [.conflictCount, .conflictNavigation, .flexibleSpace, .options, .space, .done]
+    case (.diff, _): [.changeCount, .changeNavigation, .flexibleSpace, .options]
     }
   }
 
   func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-    [
-      .conflictCount, .conflictNavigation, .changeNavigation, .comparison, .options, .done,
-      .flexibleSpace, .space,
-    ]
+    switch kind {
+    case .merge:
+      [
+        .conflictCount, .conflictNavigation, .changeNavigation, .comparison, .options, .done,
+        .flexibleSpace, .space,
+      ]
+    case .diff: [.changeCount, .changeNavigation, .comparison, .options, .flexibleSpace, .space]
+    }
   }
 
   func toolbarDidRemoveItem(_ notification: Notification) {
@@ -264,6 +328,7 @@ extension SessionToolbar: NSToolbarDelegate {
 
 extension NSToolbarItem.Identifier {
   static let conflictCount = Self("conflictCount")
+  static let changeCount = Self("changeCount")
   static let conflictNavigation = Self("conflictNavigation")
   static let changeNavigation = Self("changeNavigation")
   static let comparison = Self("comparison")

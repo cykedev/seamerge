@@ -17,8 +17,8 @@ import Testing
     #expect(names[0] == "A, feature, incoming")
     #expect(names[1]?.hasPrefix("Base, ") == true)
     #expect(names[2] == "B, main, yours")
-    #expect(controller.layout.resultPane.accessibilityLabel()?.hasPrefix("Result, ") == true)
-    #expect(controller.layout.resultPane.accessibilityLabel()?.hasSuffix("story.txt") == true)
+    #expect(try controller.mergeResult.accessibilityLabel()?.hasPrefix("Result, ") == true)
+    #expect(try controller.mergeResult.accessibilityLabel()?.hasSuffix("story.txt") == true)
   }
 
   @Test func paneWithoutGitIsNamedAfterItsFile() async throws {
@@ -26,7 +26,7 @@ import Testing
     let controller = makeController(session, context: SessionContext())
     let names = controller.layout.sourcePanes.map { $0.pane.accessibilityLabel() }
     #expect(names == ["A, HelloWorld1.java", "Base, HelloWorld0.java", "B, HelloWorld2.java"])
-    #expect(controller.layout.resultPane.accessibilityLabel() == "Result")
+    #expect(try controller.mergeResult.accessibilityLabel() == "Result")
   }
 
   @Test func mergeWithoutABaseHasNoBasePane() async throws {
@@ -84,7 +84,9 @@ import Testing
     let session = try await SampleMerges.helloWorld()
     let inDefaultMode = try await session.recomputed(
       options: ComparisonOptions(mode: .windowDefault))
-    let summary = SessionSummary(changes: SessionChanges(session: inDefaultMode), context: .init())
+    let summary = SessionSummary(
+      changes: SessionChanges(session: inDefaultMode), context: .init(),
+      arrangement: PaneArrangement(session: inDefaultMode))
     #expect(summary.changes == "3 changes from A · 1 from B")
     #expect(ComparisonMode.windowDefault == .ignoreWhitespaceAmount)
   }
@@ -93,7 +95,9 @@ import Testing
   func subtitleNamesAComparisonModeOtherThanTheDefault(mode: ComparisonMode) async throws {
     let session = try await SampleMerges.helloWorld()
     let other = try await session.recomputed(options: ComparisonOptions(mode: mode))
-    let summary = SessionSummary(changes: SessionChanges(session: other), context: .init())
+    let summary = SessionSummary(
+      changes: SessionChanges(session: other), context: .init(),
+      arrangement: PaneArrangement(session: other))
     let note =
       switch mode {
       case .exact: "Compared exactly"
@@ -107,7 +111,9 @@ import Testing
   @Test func narrowWindowDropsTheRebaseFromTheSubtitleFirst() async throws {
     let scenario = try #require(Scenario.merges.first { $0.name == "rebase" })
     let (session, context) = try await scenario.load()
-    let summary = SessionSummary(changes: SessionChanges(session: session), context: context)
+    let summary = SessionSummary(
+      changes: SessionChanges(session: session), context: context,
+      arrangement: PaneArrangement(session: session))
     let font = NSFont.preferredFont(forTextStyle: .subheadline)
     #expect(summary.fullSubtitle == "1 change from A · 1 from B · Rebase onto main · Commit 2 of 3")
     #expect(summary.subtitle(fittingWidth: 1000, font: font) == summary.fullSubtitle)
@@ -121,7 +127,9 @@ import Testing
   @Test func remainingFilesWithConflictsFollowTheChanges() async throws {
     let scenario = try #require(Scenario.merges.first { $0.name == "many" })
     let (session, context) = try await scenario.load()
-    let summary = SessionSummary(changes: SessionChanges(session: session), context: context)
+    let summary = SessionSummary(
+      changes: SessionChanges(session: session), context: context,
+      arrangement: PaneArrangement(session: session))
     #expect(summary.fullSubtitle == "1 change from A · 1 from B · 11 more files with conflicts")
   }
 
@@ -169,11 +177,11 @@ import Testing
     let session = try await SampleMerges.helloWorld()
     let controller = makeController(session, context: SessionContext())
     controller.displayOptions = DisplayOptions(differentiatesWithoutColor: true)
-    for pane in controller.layout.sourcePanes.map(\.pane) + [controller.layout.resultPane] {
+    for pane in controller.presentation.allPanes {
       #expect(pane.theme.differentiatesWithoutColor)
     }
     #expect(controller.presentation.sourcesOverviewBar.theme.differentiatesWithoutColor)
-    #expect(controller.presentation.decisionColumn.theme.differentiatesWithoutColor)
+    #expect(try controller.presentation.mergeDecisionColumn.theme.differentiatesWithoutColor)
   }
 
   private func makeController(

@@ -54,12 +54,13 @@ struct SideHeader: Equatable {
   /// The header of the pane of `role`.
   ///
   /// The names come from Git where Git started the merge; otherwise, and for a side Git does not
-  /// name, the label of the file stands in.
+  /// name, the label of the file stands in. In a comparison that `git difftool` started, the
+  /// role says whether the side is the file before or after the change, or the working copy.
   ///
   /// - Precondition: `role` takes part in `session`.
   init(role: Role, session: Session, context: SessionContext) {
     guard let file = session.file(for: role) else {
-      preconditionFailure("The merge has no input \(role)")
+      preconditionFailure("The session has no input \(role)")
     }
     let side = context.git.map { git in
       switch role {
@@ -70,7 +71,14 @@ struct SideHeader: Equatable {
     }
     self.role = role
     name = side?.name.map(Self.text(of:)) ?? (file.label.isEmpty ? role.letter : file.label)
-    roleText = side?.role.map(Self.text(of:))
+    let diffRole = context.difftool.flatMap { difftool in
+      switch role {
+      case .a: difftool.leftRole
+      case .b: difftool.rightRole
+      case .base: nil
+      }
+    }
+    roleText = side?.role.map(Self.text(of:)) ?? diffRole.map(Self.text(of:))
     rolePlacement =
       switch context.git?.operation {
       case .merge, nil: .afterName
@@ -116,6 +124,21 @@ struct SideHeader: Equatable {
     case .stash:
       return String(
         localized: "Stash", bundle: .module, comment: "The name of a stash in a header.")
+    }
+  }
+
+  /// What a side of a comparison is, in words.
+  static func text(of role: DiffSideRole) -> String {
+    switch role {
+    case .before:
+      String(
+        localized: "before", bundle: .module, comment: "Role: the file before the change.")
+    case .after:
+      String(localized: "after", bundle: .module, comment: "Role: the file after the change.")
+    case .workingCopy:
+      String(
+        localized: "working copy", bundle: .module,
+        comment: "Role: the file in the working tree, which the user can edit.")
     }
   }
 

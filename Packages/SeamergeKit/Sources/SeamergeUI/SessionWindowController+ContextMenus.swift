@@ -105,15 +105,15 @@ extension SessionWindowController {
   /// is on no block or the block has no text, as an open conflict in the result has none.
   func blockText(at place: CopiedPlace) -> String {
     guard let block = place.block else { return "" }
-    if place.pane === layout.resultPane {
+    if place.pane === layout.resultPane, let result = presentation.result {
       let changedBlock = presentation.changes.blocks[block]
       // An open conflict shows a preview of the sides, which is no text of the result.
-      guard presentation.document.segment(for: changedBlock).state != .open else { return "" }
-      let range = presentation.document.range(of: changedBlock)
-      let text = presentation.resultText.utf16
+      guard result.document.segment(for: changedBlock).state != .open else { return "" }
+      let range = result.document.range(of: changedBlock)
+      let text = result.text.utf16
       let start = text.index(text.startIndex, offsetBy: range.lowerBound)
       let end = text.index(start, offsetBy: range.count)
-      return String(presentation.resultText[start..<end])
+      return String(result.text[start..<end])
     }
     return place.pane.content.text(ofLinesIn: place.pane.content.blocks[block].rows)
   }

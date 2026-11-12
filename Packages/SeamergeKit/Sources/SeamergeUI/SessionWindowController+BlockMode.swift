@@ -16,7 +16,8 @@ extension SessionWindowController: SessionKeyHandling {
       .subtracting([.function, .numericPad, .capsLock])
     let key = event.charactersIgnoringModifiers ?? ""
     if isInTextMode {
-      guard key == Self.escape, modifiers.isEmpty, !layout.resultPane.documentView.hasMarkedText()
+      guard key == Self.escape, modifiers.isEmpty,
+        layout.resultPane?.documentView.hasMarkedText() == false
       else { return false }
       leaveTextMode()
       return true
@@ -51,7 +52,8 @@ extension SessionWindowController: SessionKeyHandling {
 
   /// Whether the focus is in the text of the result.
   var isInTextMode: Bool {
-    window?.firstResponder === layout.resultPane.documentView
+    guard let resultPane = layout.resultPane else { return false }
+    return window?.firstResponder === resultPane.documentView
   }
 
   /// The panes in view, in the order the focus moves through them: A, Base, B, the result.
@@ -66,10 +68,9 @@ extension SessionWindowController: SessionKeyHandling {
   }
 
   /// Moves the focus into the result, with the insertion point at the start of the current
-  /// block.
+  /// block; a comparison, which has no result, stays in block mode.
   func enterTextMode() {
-    let result = layout.resultPane
-    guard result.isShown, let window else { return }
+    guard let result = layout.resultPane, result.isShown, let window else { return }
     window.makeFirstResponder(result.documentView)
     placeInsertionPointAtCurrentBlock()
   }
@@ -96,8 +97,7 @@ extension SessionWindowController: SessionKeyHandling {
   /// Puts the insertion point at the first row of the current block in the result, and brings
   /// it into view as far as needed, as the text view does for its own insertion point.
   private func placeInsertionPointAtCurrentBlock() {
-    let result = layout.resultPane
-    guard let block = presentation.currentBlock else { return }
+    guard let result = layout.resultPane, let block = presentation.currentBlock else { return }
     let offset = result.content.offset(ofRow: result.content.blocks[block].rows.lowerBound)
     let textView = result.documentView
     textView.setSelectedRange(NSRange(location: offset, length: 0))

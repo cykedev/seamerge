@@ -1,21 +1,29 @@
 import MergeModel
 import PaneKit
 
-/// The marks of the two overview bars: the bar beside the panes above, on their row grid, and
-/// the bar beside the result, on its rows.
+/// The marks of the two overview bars: the bar beside the panes side by side, on their row grid,
+/// and the bar beside the result, on its rows.
 ///
-/// A change of A takes the leading part of a bar and a change of B the trailing part, so that the
-/// place says which side changed even without color; a change both made takes both. A conflict
+/// A change of the side on the left takes the leading part of a bar and a change of the side on
+/// the right the trailing part, so that the place says which side changed even without color; a
+/// change both made takes both. A conflict
 /// takes the full width, red while it is open and in the color of its source once it is decided,
 /// so that it stays visible where conflicts were.
 enum OverviewMarks {
-  /// The marks of the bar beside the panes above.
-  static func sources(of changes: SessionChanges, document: ResultDocument) -> [OverviewMark] {
+  /// The marks of the bar beside the panes side by side, whose sides stand as `arrangement`
+  /// places them; `document` is the result of a merge, or `nil` for a comparison.
+  static func sources(
+    of changes: SessionChanges, document: ResultDocument?, arrangement: PaneArrangement
+  ) -> [OverviewMark] {
     let layout = changes.session.rowLayout
+    let sides = [
+      (arrangement.leadingRole, OverviewMark.Placement.leading),
+      (arrangement.trailingRole, .trailing),
+    ]
     var marks: [OverviewMark] = []
     for (index, block) in changes.blocks.enumerated() {
       let rows = layout.rows(of: block)
-      if block.kind == .conflict {
+      if block.kind == .conflict, let document {
         let segment = document.segment(for: block)
         marks.append(
           conflictMark(
@@ -23,8 +31,7 @@ enum OverviewMarks {
             line: firstLine(of: block, in: changes.hasBase ? .base : .b)))
         continue
       }
-      for (role, placement) in [(Role.a, OverviewMark.Placement.leading), (.b, .trailing)]
-      where SessionChanges.changers(of: block).contains(role) {
+      for (role, placement) in sides where SessionChanges.changers(of: block).contains(role) {
         marks.append(
           OverviewMark(
             rows: rows, style: .tinted(role.colorRole), placement: placement, block: index,

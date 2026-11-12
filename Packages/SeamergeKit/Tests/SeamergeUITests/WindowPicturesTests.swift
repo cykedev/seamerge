@@ -13,13 +13,13 @@ import Testing
   @Test(arguments: Scenario.merges, [Look.light, .dark])
   func scenarioIsPictured(scenario: Scenario, look: Look) async throws {
     let (session, context) = try await scenario.load()
-    try picture(
+    try Windows.picture(
       session, context: context, look: look, named: "scenario-\(scenario.name)-\(look.name)")
   }
 
   @Test func helloWorldIsPicturedForTheComparisonWithP4Merge() async throws {
     let session = try await SampleMerges.helloWorld()
-    try picture(
+    try Windows.picture(
       session, context: SampleMerges.helloWorldContext, look: .light,
       named: "p4merge-comparison-light")
   }
@@ -27,7 +27,7 @@ import Testing
   @Test(arguments: Look.all)
   func helloWorldIsPicturedInEveryLook(look: Look) async throws {
     let session = try await SampleMerges.helloWorld()
-    try picture(
+    try Windows.picture(
       session, context: SampleMerges.helloWorldContext, look: look,
       options: DisplayOptions(increasesContrast: look.increasesContrast),
       named: "helloworld-\(look.name)")
@@ -36,7 +36,7 @@ import Testing
   @Test(arguments: [Look.light, .dark])
   func helloWorldIsPicturedWithoutColor(look: Look) async throws {
     let session = try await SampleMerges.helloWorld()
-    try picture(
+    try Windows.picture(
       session, context: SampleMerges.helloWorldContext, look: look,
       options: DisplayOptions(differentiatesWithoutColor: true),
       named: "helloworld-without-color-\(look.name)")
@@ -55,7 +55,7 @@ import Testing
     let name =
       "toolbar-done-\(style == .word ? "word" : "checkmark")-\(resolved ? "resolved" : "open")-"
       + look.name
-    try picture(
+    try Windows.picture(
       session, context: SampleMerges.helloWorldContext, look: look, doneStyle: style,
       actsAsKey: true, named: name
     ) { controller in
@@ -68,7 +68,7 @@ import Testing
   @Test(arguments: Look.all)
   func toolbarIsPicturedInEveryLook(look: Look) async throws {
     let session = try await SampleMerges.helloWorld()
-    try picture(
+    try Windows.picture(
       session, context: SampleMerges.helloWorldContext, look: look,
       options: DisplayOptions(increasesContrast: look.increasesContrast), actsAsKey: true,
       named: "toolbar-\(look.name)")
@@ -76,7 +76,7 @@ import Testing
 
   @Test func toolbarIsPicturedWhileComparing() async throws {
     let session = try await SampleMerges.helloWorld()
-    try picture(
+    try Windows.picture(
       session, context: SampleMerges.helloWorldContext, look: .light,
       named: "toolbar-comparing-light"
     ) { controller in
@@ -88,7 +88,7 @@ import Testing
   @Test(arguments: [Look.light, .dark], [true, false])
   func currentBlockIsPicturedWithAndWithoutFocus(look: Look, hasFocus: Bool) async throws {
     let session = try await SampleMerges.manyBlocks()
-    try picture(
+    try Windows.picture(
       session, context: SessionContext(), look: look,
       options: DisplayOptions(reducesMotion: true), actsAsKey: true,
       size: CGSize(width: 1280, height: 600),
@@ -104,7 +104,7 @@ import Testing
   @Test(arguments: [Look.light, .dark])
   func currentBlockIsPicturedInTextMode(look: Look) async throws {
     let session = try await SampleMerges.manyBlocks()
-    try picture(
+    try Windows.picture(
       session, context: SessionContext(), look: look,
       options: DisplayOptions(reducesMotion: true), actsAsKey: true,
       size: CGSize(width: 1280, height: 600), named: "current-block-text-mode-\(look.name)"
@@ -116,7 +116,7 @@ import Testing
 
   @Test func baseHiddenIsPictured() async throws {
     let session = try await SampleMerges.helloWorld()
-    try picture(
+    try Windows.picture(
       session, context: SampleMerges.helloWorldContext, look: .light, named: "base-hidden-light"
     ) { controller in
       controller.toggleBase(nil)
@@ -163,14 +163,15 @@ import Testing
 
   @Test func smallestWindowIsPictured() async throws {
     let session = try await SampleMerges.helloWorld()
-    try picture(
+    try Windows.picture(
       session, context: SampleMerges.helloWorldContext, look: .light, size: nil,
       named: "helloworld-smallest-light")
   }
 
   @Test func noticeThatGitNoLongerWaitsIsPictured() async throws {
     let (session, context) = try await Scenario.merges[0].load()
-    try picture(session, context: context, look: .light, named: "notice-light") { controller in
+    try Windows.picture(session, context: context, look: .light, named: "notice-light") {
+      controller in
       controller.callerDisconnected()
     }
   }
@@ -185,16 +186,16 @@ import Testing
     let name =
       "touching-\(blocks.rawValue)-\(setting.withoutColor ? "without-color-" : "")"
       + setting.look.name
-    try picture(
+    try Windows.picture(
       session, context: SessionContext(), look: setting.look,
       options: DisplayOptions(differentiatesWithoutColor: setting.withoutColor),
       size: CGSize(width: 1280, height: 600), named: name)
-    try picture(
+    try Windows.picture(
       session, context: SessionContext(), look: setting.look,
       options: DisplayOptions(differentiatesWithoutColor: setting.withoutColor),
       size: CGSize(width: 1280, height: 600), named: "\(name)-second-current"
     ) { controller in
-      for pane in controller.layout.sourcePanes.map(\.pane) + [controller.layout.resultPane] {
+      for pane in controller.presentation.allPanes {
         pane.currentBlock = 1
       }
     }
@@ -217,35 +218,6 @@ import Testing
     let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
     view.cacheDisplay(in: view.bounds, to: bitmap)
     try Rendering.write(bitmap, named: "details-\(look.name)")
-  }
-
-  /// Draws the window of `session` at `size`, or at its least size for `nil`, after `prepare`.
-  ///
-  /// A responder that saves and closes stands in for the one that comes with saving, so that
-  /// the button shows as it does in the app. With `actsAsKey`, the window acts as the key
-  /// window, so that the focus shows in the accent color.
-  private func picture(
-    _ session: Session, context: SessionContext, look: Look,
-    options: DisplayOptions = DisplayOptions(), doneStyle: SessionToolbar.DoneStyle = .standard,
-    actsAsKey: Bool = false, size: CGSize? = WindowMetrics.defaultContentSize, named name: String,
-    prepare: (SessionWindowController) -> Void = { _ in }
-  ) throws {
-    let controller = SessionWindowController(
-      session: session, context: context, undoManager: UndoManager(), displayOptions: options,
-      pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(), prompts: PromptRecorder(),
-      doneStyle: doneStyle,
-      window: actsAsKey ? KeySessionWindow() : SessionWindow())
-    let window = try #require(controller.window)
-    defer { window.close() }
-    let saver = SaveAndCloseStandIn()
-    controller.nextResponder = saver
-    Rendering.prepare(window, size: size ?? window.contentMinSize, appearance: look.appearance)
-    controller.layout.placeDividers()
-    controller.stateDidChange()
-    prepare(controller)
-    try Rendering.write(Rendering.bitmap(of: window), named: name)
-    // The window does not retain its next responder.
-    withExtendedLifetime(saver) {}
   }
 }
 

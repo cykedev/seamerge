@@ -1,13 +1,13 @@
 import MergeModel
 import PaneKit
 
-/// The changed blocks of a merge as the panes number them, and how each side shows them.
+/// The changed blocks of a session as the panes number them, and how each side shows them.
 ///
 /// Every pane of a window has the same blocks in the same order: the blocks of the session that
 /// changed, without the unchanged ones. The index of a block among them is the index the panes,
 /// their overview bars and the decision column use.
 struct SessionChanges {
-  /// The merge.
+  /// The merge or comparison.
   let session: Session
 
   /// The changed blocks, in the order of the session.
@@ -16,12 +16,18 @@ struct SessionChanges {
   /// Whether the merge has a base; without one, the panes compare A with B.
   let hasBase: Bool
 
-  /// Finds the changed blocks of `session`.
+  /// The side that the changes of a comparison read from, the one on the left; `nil` for a
+  /// merge.
+  let origin: Role?
+
+  /// Finds the changed blocks of `session`, whose changes read from `origin` if it is a
+  /// comparison.
   ///
   /// Without a base, the engine counts the lines that A and B share as a change both made to an
   /// empty base; to the user they are unchanged lines, so they are left out too.
-  init(session: Session) {
+  init(session: Session, origin: Role? = nil) {
     self.session = session
+    self.origin = origin
     hasBase = session.file(for: .base) != nil
     let unchangedKinds: Set<Block.Kind> = hasBase ? [.unchanged] : [.unchanged, .changedInBoth]
     blocks = session.blocks.filter { !unchangedKinds.contains($0.kind) }
@@ -56,10 +62,20 @@ struct SessionChanges {
 
   /// The marker in the gutter of `role` at the first row of `block`: how that side changed the
   /// lines of the base, or of the other side where there is no base.
+  ///
+  /// In a comparison, the changes read from the origin to the other side: the side that has the
+  /// lines of a block carries its marker, an insertion on the right and a removal on the left,
+  /// and both sides carry the marker of lines that changed.
   func marker(of role: Role, in block: Block) -> Marker? {
     guard role != .base, Self.changers(of: block).contains(role) else { return nil }
     let own = block.lines(in: role).count
-    let reference = hasBase ? block.base.count : block.lines(in: role == .a ? .b : .a).count
+    let other = block.lines(in: role == .a ? .b : .a).count
+    if let origin {
+      guard own > 0 else { return nil }
+      if other > 0 { return .changed }
+      return role == origin ? .removed : .added
+    }
+    let reference = hasBase ? block.base.count : other
     switch (reference, own) {
     case (0, _): return .added
     case (_, 0): return .removed

@@ -11,7 +11,7 @@ import Testing
 @MainActor
 @Suite struct ToolbarTests {
   @Test func toolbarHasThreeElementsAndMoreToDragIn() throws {
-    let toolbar = SessionToolbar(doneStyle: .standard)
+    let toolbar = SessionToolbar(kind: .merge, doneStyle: .standard)
     let defaults = toolbar.toolbarDefaultItemIdentifiers(toolbar.toolbar)
     #expect(defaults == [.conflictCount, .conflictNavigation, .flexibleSpace, .options, .done])
     #expect(toolbar.toolbar.centeredItemIdentifiers == [.conflictCount, .conflictNavigation])
@@ -75,7 +75,7 @@ import Testing
   }
 
   @Test func checkmarkStandsApartFromTheOptions() throws {
-    let toolbar = SessionToolbar(doneStyle: .checkmark)
+    let toolbar = SessionToolbar(kind: .merge, doneStyle: .checkmark)
     let defaults = toolbar.toolbarDefaultItemIdentifiers(toolbar.toolbar)
     #expect(defaults.suffix(3) == [.options, .space, .done])
     let done = try #require(
@@ -89,7 +89,7 @@ import Testing
     let controller = try Windows.controller(for: try await SampleMerges.helloWorld())
     let options = try #require(try toolbarItems(of: controller)[.options] as? NSMenuToolbarItem)
     let actions = options.menu.items.filter { !$0.isSeparatorItem }.compactMap(\.action)
-    let commands = SessionCommand.optionsGroups.joined().map(\.action)
+    let commands = SessionCommand.optionsGroups(in: .merge).joined().map(\.action)
     #expect(actions == commands)
     #expect(options.menu.items.allSatisfy { $0.keyEquivalent.isEmpty })
     #expect(options.image?.accessibilityDescription == "Options")
@@ -112,7 +112,9 @@ import Testing
     let (session, context) = try await scenario.load()
     let controller = try Windows.controller(for: session, context: context)
     let window = try #require(controller.window)
-    let summary = SessionSummary(changes: controller.presentation.changes, context: context)
+    let summary = SessionSummary(
+      changes: controller.presentation.changes, context: context,
+      arrangement: controller.presentation.arrangement)
     window.setContentSize(CGSize(width: 1280, height: 800))
     #expect(window.subtitle == summary.fullSubtitle)
     window.setContentSize(CGSize(width: 900, height: 800))
@@ -121,8 +123,27 @@ import Testing
     #expect(window.subtitle != summary.fullSubtitle)
     let font = NSFont.preferredFont(forTextStyle: .subheadline)
     let width = (window.subtitle as NSString).size(withAttributes: [.font: font]).width
-    let end = try #require(controller.toolbar.conflictCountMinX)
+    let end = try #require(controller.toolbar.countMinX)
     #expect(WindowMetrics.titlebarControlsWidth + width <= end)
+  }
+
+  @Test(arguments: [Session.Kind.diff, .merge])
+  func everyItemOfTheToolbarStaysInViewInTheSmallestWindow(kind: Session.Kind) async throws {
+    let session =
+      switch kind {
+      case .diff: try await SampleDiffs.greeting()
+      case .merge: try await SampleMerges.merge(base: nil, a: "a\n", b: "b\n")
+      }
+    let controller = try Windows.controller(for: session, context: SampleDiffs.gitContext)
+    let window = try #require(controller.window)
+    Rendering.prepare(window, size: window.contentMinSize, appearance: Look.light.appearance)
+    window.contentView?.superview?.layoutSubtreeIfNeeded()
+
+    let toolbar = controller.toolbar.toolbar
+    let visible = Set((toolbar.visibleItems ?? []).map(\.itemIdentifier))
+    let shown = toolbar.items.filter { !$0.isHidden }.map(\.itemIdentifier)
+    #expect(Set(shown).isSubset(of: visible), "\(kind): \(visible)")
+    #expect(window.contentMinSize.width >= WindowMetrics.minimumToolbarWidth)
   }
 
   /// The items of the toolbar of the window, by their identifiers.

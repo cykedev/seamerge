@@ -32,12 +32,12 @@ import Testing
     let controller = try await helloWorldWindow()
     let rows = controller.layout.sourcePanes.map { $0.pane.content.blocks.map(\.rows) }
     #expect(rows[0] == rows[1] && rows[1] == rows[2])
-    #expect(controller.layout.resultPane.content.blocks.count == rows[0].count)
+    #expect(try controller.mergeResult.content.blocks.count == rows[0].count)
   }
 
   @Test func resultShowsTheOpenConflictAsPreviewsOfAThenB() async throws {
     let controller = try await helloWorldWindow()
-    let content = controller.layout.resultPane.content
+    let content = try controller.mergeResult.content
     let text = content.text as NSString
     #expect(content.previews.map(\.role) == [.a, .b])
     #expect(
@@ -50,7 +50,7 @@ import Testing
 
   @Test func decisionColumnShowsTheSourceTakenAndTheOpenConflict() async throws {
     let controller = try await helloWorldWindow()
-    let decisions = controller.presentation.decisionColumn.decisions
+    let decisions = try controller.presentation.mergeDecisionColumn.decisions
     #expect(decisions[0]?.state == .automatic([.a]))
     #expect(decisions[1]?.state == .open)
     #expect(decisions[2]?.state == .automatic([.a]))
@@ -70,7 +70,7 @@ import Testing
       sources.map(\.accessibilityLabel) == [
         "Change in A, line 1", "Open conflict, line 4", "Change in A, line 9",
       ])
-    let result = controller.presentation.resultOverviewBar.marks
+    let result = try controller.presentation.mergeResultOverviewBar.marks
     #expect(result.map(\.placement) == [.leading, .fullWidth, .leading])
     #expect(
       result.map(\.accessibilityLabel) == [
@@ -78,7 +78,8 @@ import Testing
       ])
     #expect(
       controller.layout.sourcePane(.b)?.overviewBar === controller.presentation.sourcesOverviewBar)
-    #expect(controller.layout.resultPane.overviewBar === controller.presentation.resultOverviewBar)
+    let resultOverviewBar = try controller.presentation.mergeResultOverviewBar
+    #expect(try controller.mergeResult.overviewBar === resultOverviewBar)
   }
 
   @Test func changeBothSidesMadeIsMarkedOnBothSidesOfTheBarAndMixedInTheResult() async throws {
@@ -87,7 +88,7 @@ import Testing
     let marks = controller.presentation.sourcesOverviewBar.marks
     #expect(marks.map(\.placement) == [.leading, .leading, .trailing])
     #expect(marks.map(\.block) == [0, 1, 1])
-    #expect(controller.layout.resultPane.content.blocks.map(\.style) == [.tinted(.a), .combined])
+    #expect(try controller.mergeResult.content.blocks.map(\.style) == [.tinted(.a), .combined])
   }
 
   @Test func mergeWithoutABaseHasNoBasePaneAndMarksConflictsOnB() async throws {
@@ -109,7 +110,7 @@ import Testing
       let endings = zip(content.lineNumbers, content.lineEndings).filter { $0.0 >= 0 }.map(\.1)
       #expect(Set(endings) == [.carriageReturnLineFeed])
     }
-    let result = controller.layout.resultPane.content
+    let result = try controller.mergeResult.content
     #expect(Set(result.lineEndings) == [.carriageReturnLineFeed])
     #expect(!result.text.contains("\r"))
   }
@@ -140,7 +141,7 @@ import Testing
     // Like the panes of the inputs: B has 9 lines, the result 15, each with its number.
     let controller = try await helloWorldWindow()
     #expect(controller.layout.sourcePane(.b)?.content.lineNumbers.filter { $0 >= 0 }.count == 9)
-    #expect(controller.layout.resultPane.content.lineNumbers == (0..<15).map(Int32.init))
+    #expect(try controller.mergeResult.content.lineNumbers == (0..<15).map(Int32.init))
   }
 
   /// The rows of the result pane and the scroll map split the result text into lines each on
@@ -194,15 +195,15 @@ import Testing
     let runs = panes[0].collapsedRuns
     #expect(runs.count == 40)
     #expect(panes.allSatisfy { $0.collapsedRuns == runs })
-    #expect(controller.layout.resultPane.collapsedRuns.count == runs.count)
+    #expect(try controller.mergeResult.collapsedRuns.count == runs.count)
 
     controller.presentation.pane(panes[1], didAskToExpand: runs[3])
     #expect(panes.allSatisfy { $0.collapsedRuns.count == runs.count - 1 })
     #expect(!panes[0].collapsedRuns.contains(runs[3]))
-    #expect(controller.layout.resultPane.collapsedRuns.count == runs.count - 1)
+    #expect(try controller.mergeResult.collapsedRuns.count == runs.count - 1)
 
-    let resultRun = try #require(controller.layout.resultPane.collapsedRuns.last)
-    controller.presentation.pane(controller.layout.resultPane, didAskToExpand: resultRun)
+    let resultRun = try #require(controller.mergeResult.collapsedRuns.last)
+    try controller.presentation.pane(controller.mergeResult, didAskToExpand: resultRun)
     #expect(panes.allSatisfy { $0.collapsedRuns.count == runs.count - 2 })
     #expect(!panes[0].collapsedRuns.contains(runs[runs.count - 1]))
   }

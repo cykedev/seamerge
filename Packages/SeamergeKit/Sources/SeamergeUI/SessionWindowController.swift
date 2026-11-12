@@ -11,8 +11,13 @@ public enum SessionOutcome: Sendable {
   case cancelled
 }
 
-/// The window of a merge: the three inputs side by side above, the result below, a title that
-/// names the file and sums up the changes, and a toolbar with the open conflicts.
+/// The window of a session: the inputs side by side, a title that names the file and sums up the
+/// changes, and a toolbar that counts the open conflicts or the changes.
+///
+/// One window shows both kinds of session, put together from the same parts. A merge shows A,
+/// Base and B above its result, with the decision column beside it. A comparison of two files
+/// shows the older file on the left and the newer one on the right, both read-only, and nothing
+/// below them.
 ///
 /// The controller carries out the commands of the window, ``SessionCommand``, which reach it
 /// along the responder chain from the main menu, the context menus, the toolbar and the single
@@ -23,7 +28,7 @@ public final class SessionWindowController: NSWindowController {
   public var onFinish: ((SessionOutcome) -> Void)?
 
   let layout: SessionSplitViewController
-  let presentation: MergePresentation
+  let presentation: SessionPresentation
 
   /// Where the result goes and what Git is doing.
   let context: SessionContext
@@ -76,14 +81,13 @@ public final class SessionWindowController: NSWindowController {
 
   /// Opens a window for `session`.
   ///
-  /// The window shows the merge as loaded: every conflict open, every other change taken as the
+  /// The window shows a merge as loaded: every conflict open, every other change taken as the
   /// merge takes it.
   ///
   /// - Parameters:
-  ///   - session: A merge.
+  ///   - session: A merge or a comparison of two files.
   ///   - context: Where the result goes and what Git is doing.
   ///   - undoManager: The undo manager of the window, which belongs to this session alone.
-  /// - Precondition: `session` is a merge.
   public convenience init(
     session: Session, context: SessionContext = SessionContext(), undoManager: UndoManager
   ) {
@@ -98,33 +102,37 @@ public final class SessionWindowController: NSWindowController {
 
   /// Opens a window for `session` that draws with `displayOptions`, whatever the system's
   /// settings are, copies to `pasteboard`, opens files with `workspace`, asks with `prompts`,
-  /// shows the button that saves and closes in `doneStyle`, and lays itself out in `window`.
+  /// shows the button that saves and closes of a merge in `doneStyle`, and lays itself out in
+  /// `window`.
   init(
     session: Session, context: SessionContext, undoManager: UndoManager,
     displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace,
     prompts: any ComparisonPrompts, doneStyle: SessionToolbar.DoneStyle, window: SessionWindow
   ) {
-    precondition(session.kind == .merge, "A session window shows a merge")
     let theme = displayOptions.theme(fontSize: Self.standardFontSize)
+    let arrangement = PaneArrangement(session: session)
     let headers = Dictionary(
-      uniqueKeysWithValues: Self.paneOrder.filter(session.roles.contains).map { role in
+      uniqueKeysWithValues: arrangement.sourceRoles.map { role in
         (role, SideHeader(role: role, session: session, context: context))
       })
-    let resultHeader = ResultHeader(session: session, context: context)
+    let resultHeader =
+      arrangement.showsResult ? ResultHeader(session: session, context: context) : nil
     let layout = SessionSplitViewController(
-      headers: Self.paneOrder.compactMap { headers[$0] }, resultHeader: resultHeader, theme: theme)
+      headers: arrangement.sourceRoles.compactMap { headers[$0] }, resultHeader: resultHeader,
+      theme: theme)
     self.layout = layout
     self.context = context
     self.pasteboard = pasteboard
     self.workspace = workspace
     self.prompts = prompts
-    toolbar = SessionToolbar(doneStyle: doneStyle)
+    toolbar = SessionToolbar(kind: session.kind, doneStyle: doneStyle)
     sessionUndoManager = undoManager
     self.displayOptions = displayOptions
-    presentation = MergePresentation(
-      session: session, layout: layout, headers: headers, resultHeader: resultHeader,
-      displayOptions: displayOptions)
-    summary = SessionSummary(changes: presentation.changes, context: context)
+    presentation = SessionPresentation(
+      session: session, arrangement: arrangement, layout: layout, headers: headers,
+      resultHeader: resultHeader, displayOptions: displayOptions)
+    summary = SessionSummary(
+      changes: presentation.changes, context: context, arrangement: arrangement)
 
     window.tabbingMode = .disallowed
     window.isReleasedWhenClosed = false
@@ -136,7 +144,7 @@ public final class SessionWindowController: NSWindowController {
     window.contentViewController = layout
     window.toolbar = toolbar.toolbar
     window.setContentSize(WindowMetrics.defaultContentSize)
-    window.contentMinSize = CGSize(width: layout.minimumWidth, height: layout.minimumHeight)
+    window.contentMinSize = minimumContentSize
     window.title = summary.title
     window.representedURL = context.resultURL
     layout.updateMinimumWidths()
@@ -153,16 +161,27 @@ public final class SessionWindowController: NSWindowController {
     stateDidChange()
   }
 
-  /// Shows in the toolbar what changed: the open conflicts, the arrows that lead anywhere, a
-  /// comparison under way, and whether the window can save and close.
+  /// Shows in the toolbar what changed: the open conflicts or the current change, the arrows
+  /// that lead anywhere, a comparison under way, and whether the window can save and close.
   func stateDidChange() {
-    let navigation = presentation.navigation
     toolbar.update(
-      openConflictCount: navigation.openConflictCount,
-      hasConflicts: presentation.changes.blocks.contains { $0.kind == .conflict },
-      isComparing: showsComparisonProgress, isValid: canPerform,
+      count: toolbarCount, isComparing: showsComparisonProgress, isValid: canPerform,
       canSaveAndClose: responds(along: SessionToolbar.saveAndClose))
     updateSubtitle()
+  }
+
+  /// What the toolbar counts: the open conflicts of a merge, or the current change of a
+  /// comparison, which has no conflicts.
+  private var toolbarCount: SessionToolbar.Count {
+    let changes = presentation.changes
+    switch changes.session.kind {
+    case .merge:
+      return .conflicts(
+        open: presentation.navigation.openConflictCount,
+        hadAny: changes.blocks.contains { $0.kind == .conflict })
+    case .diff:
+      return .changes(current: presentation.currentBlock, total: changes.blocks.count)
+    }
   }
 
   /// Whether a responder of the window, from the view with the focus to the application,
@@ -193,16 +212,13 @@ public final class SessionWindowController: NSWindowController {
     }
   }
 
-  /// The order of the panes above the result, from left to right.
-  private static let paneOrder: [Role] = [.a, .base, .b]
-
   /// Session windows are never archived.
   public required init?(coder: NSCoder) {
     nil
   }
 
-  /// Tells the window that the Git command that asked for the merge no longer waits, so that it
-  /// says so below the result header.
+  /// Tells the window that the Git command that asked for the session no longer waits, so that a
+  /// merge says so below the result header.
   public func callerDisconnected() {
     layout.showCallerIsGone()
   }
@@ -216,19 +232,21 @@ public final class SessionWindowController: NSWindowController {
 
   /// Titles the window after the session it shows now.
   func sessionDidChange() {
-    summary = SessionSummary(changes: presentation.changes, context: context)
+    summary = SessionSummary(
+      changes: presentation.changes, context: context, arrangement: presentation.arrangement)
+    window?.title = summary.title
     window?.setAccessibilityTitle([summary.title, summary.fullSubtitle].joined(separator: ", "))
     updateSubtitle()
   }
 
-  /// Shows as much of the subtitle as the room before the number of open conflicts in the
-  /// toolbar allows; the rest stays in the title that VoiceOver reads.
+  /// Shows as much of the subtitle as the room before the count in the middle of the toolbar
+  /// allows; the rest stays in the title that VoiceOver reads.
   ///
   /// The subtitle stands below the title, after the buttons of the window. Until the toolbar is
   /// laid out, its middle stands for the start of the number.
   private func updateSubtitle() {
     guard let window else { return }
-    let end = toolbar.conflictCountMinX ?? window.frame.width / 2
+    let end = toolbar.countMinX ?? window.frame.width / 2
     let width = end - WindowMetrics.titlebarControlsWidth - WindowMetrics.toolbarSpacing
     window.subtitle = summary.subtitle(
       fittingWidth: width, font: .preferredFont(forTextStyle: .subheadline))
@@ -285,7 +303,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
     switch command {
     case .toggleBase: !layout.showsBase
     case .toggleResultMaximized: layout.maximizesResult
-    case .toggleInvisibles: layout.resultPane.showsInvisibles
+    case .toggleInvisibles: presentation.allPanes.contains(where: \.showsInvisibles)
     case .toggleCollapsedLines: !presentation.collapsesUnchangedRows
     case .toggleScrollSynchronization: presentation.scrollSync.isEnabled
     default: false
@@ -315,19 +333,23 @@ extension SessionWindowController: NSUserInterfaceValidations {
       editableFileURL != nil
     case .blockText:
       !blockText(at: CopiedPlace(pane: focusedPane, block: presentation.currentBlock)).isEmpty
+    case .resultPane:
+      layout.resultPane != nil
+    case .swappableSides:
+      presentation.arrangement.canSwapSides
     case .nothing:
       true
     }
   }
 }
 
-extension SessionWindowController: MergePresentationDelegate {
-  func presentationDidChangeCurrentBlock(_ presentation: MergePresentation) {
+extension SessionWindowController: SessionPresentationDelegate {
+  func presentationDidChangeCurrentBlock(_ presentation: SessionPresentation) {
     stateDidChange()
   }
 
   func presentation(
-    _ presentation: MergePresentation, menuFor hit: PaneHit, in pane: PaneView
+    _ presentation: SessionPresentation, menuFor hit: PaneHit, in pane: PaneView
   ) -> NSMenu {
     contextMenu(for: hit, in: pane)
   }

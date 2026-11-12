@@ -26,7 +26,7 @@ import Testing
 
   @Test func menuOfTheResultOffersCutCopyAndPasteDisabledWhereTheyHaveNoEffect() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
-    let result = controller.layout.resultPane
+    let result = try controller.mergeResult
     let block = try #require(
       controller.presentation.changes.blocks.indices.first {
         controller.presentation.changes.blocks[$0].kind == .changedInA
@@ -44,7 +44,7 @@ import Testing
 
   @Test func openConflictInTheResultHasNoTextToCopy() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.helloWorld())
-    let result = controller.layout.resultPane
+    let result = try controller.mergeResult
     let conflict = try #require(controller.presentation.navigation.firstOpenConflict)
     #expect(
       entries(of: try menu(of: result, inBlock: conflict)) == [
@@ -65,7 +65,7 @@ import Testing
     let b = try #require(controller.layout.sourcePane(.b))
     _ = try menu(of: b, inBlock: 6)
     #expect(controller.presentation.currentBlock == 6)
-    #expect(controller.layout.resultPane.currentBlock == 6)
+    #expect(try controller.mergeResult.currentBlock == 6)
   }
 
   @Test func copyTakesTheSelectionOrElseTheLinesOfTheBlock() async throws {
