@@ -1,7 +1,8 @@
 import MergeModel
 import SwiftUI
 
-/// What the header above the result says: where the result goes and how its lines end.
+/// What the header above the result says: where the result goes, and the encoding and line
+/// endings it is written with.
 struct ResultHeader: Equatable {
   /// Where the result is written, with the home folder as a tilde, if it goes to a file.
   let path: String?
@@ -10,12 +11,17 @@ struct ResultHeader: Equatable {
   /// line breaks.
   let lineEndings: LineEndings?
 
+  /// The encoding the result is written in: that of B, or of the first other input that is
+  /// text.
+  let encoding: FileEncoding?
+
   /// The header of the result of `session` in `context`.
   init(session: Session, context: SessionContext) {
     path = context.resultURL.map {
       ($0.path(percentEncoded: false) as NSString).abbreviatingWithTildeInPath
     }
     lineEndings = [Role.b, .a, .base].lazy.compactMap { session.file(for: $0)?.lineEndings }.first
+    encoding = [Role.b, .a, .base].lazy.compactMap { session.file(for: $0)?.encoding }.first
   }
 
   /// The name of the result pane for VoiceOver.
@@ -47,6 +53,15 @@ struct ResultHeaderView: View {
             .truncationMode(.middle)
         }
         Spacer(minLength: 0)
+        if let encoding = header.encoding {
+          Text(encoding.name)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(
+              Text(
+                "Encoding: \(encoding.name)", bundle: .module,
+                comment: "VoiceOver: the encoding of the result, such as Encoding: UTF-8."))
+        }
         if let lineEndings = header.lineEndings {
           Text(lineEndings.name)
             .font(.subheadline)

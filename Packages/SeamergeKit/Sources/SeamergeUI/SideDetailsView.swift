@@ -2,7 +2,7 @@ import PaneKit
 import SwiftUI
 
 /// The details of a side in the popover of its header: the commit it comes from, its author and
-/// date, where the file was read from, and how its lines end.
+/// date, where the file was read from, its encoding, and how its lines end.
 struct SideDetailsView: View {
   let header: SideHeader
   let theme: Theme
@@ -36,6 +36,11 @@ struct SideDetailsView: View {
           Text(
             "File", bundle: .module, comment: "Details of a side: where the file was read from."),
           value: header.details.location)
+        if let encoding = header.details.encoding {
+          row(
+            Text("Encoding", bundle: .module, comment: "Details of a side: UTF-8 and the like."),
+            value: encoding.name)
+        }
         if let lineEndings = header.details.lineEndings {
           row(
             Text("Line Endings", bundle: .module, comment: "Details of a side: LF, CRLF or CR."),

@@ -113,11 +113,20 @@
     "Details about %@": {
       "comment": "VoiceOver: the ⓘ of a header, such as Details about A, main."
     },
+    "Differs from the encoding of the other files": {
+      "comment": "Help tag of the encoding in a header, shown only where it differs."
+    },
     "Differs from the line endings of the other files": {
       "comment": "Help tag of the line endings in a header, shown only where they differ."
     },
     "Edited by hand": {
       "comment": "VoiceOver: a part of the result that the user typed."
+    },
+    "Encoding": {
+      "comment": "Details of a side: UTF-8 and the like."
+    },
+    "Encoding: %@": {
+      "comment": "VoiceOver: the encoding of the result, such as Encoding: UTF-8."
     },
     "File": {
       "comment": "Details of a side: where the file was read from."
@@ -149,6 +158,9 @@
     "Go on to the open conflict after this one": {
       "comment": "Help tag of Next Conflict."
     },
+    "ISO 8859-1": {
+      "comment": "Encoding: ISO Latin 1."
+    },
     "LF": {
       "comment": "Line endings: line feed."
     },
@@ -163,6 +175,9 @@
     },
     "Line endings: %@": {
       "comment": "VoiceOver: the line endings of the result, such as Line endings: LF."
+    },
+    "Mac Roman": {
+      "comment": "Encoding."
     },
     "Mixed": {
       "comment": "Line endings: more than one kind."
@@ -221,8 +236,26 @@
     "Take the version of %@.": {
       "comment": "Help tag of a toggle, such as Take the version of feature/login."
     },
+    "UTF-16 BE": {
+      "comment": "Encoding: UTF-16 big-endian."
+    },
+    "UTF-16 LE": {
+      "comment": "Encoding: UTF-16 little-endian."
+    },
+    "UTF-32 BE": {
+      "comment": "Encoding: UTF-32 big-endian."
+    },
+    "UTF-32 LE": {
+      "comment": "Encoding: UTF-32 little-endian."
+    },
+    "UTF-8": {
+      "comment": "Encoding."
+    },
     "Whitespace changes ignored": {
       "comment": "Subtitle: the comparison ignores how much whitespace there is."
+    },
+    "Windows 1252": {
+      "comment": "Encoding: Windows code page."
     },
     "cherry-picked commit": {
       "comment": "Role: the commit being cherry-picked."

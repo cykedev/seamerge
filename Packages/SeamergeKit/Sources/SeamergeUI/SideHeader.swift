@@ -25,6 +25,9 @@ struct SideHeader: Equatable {
 
     /// How the lines of the file end, if the file has line breaks.
     var lineEndings: LineEndings?
+
+    /// The encoding the file was read in, if it is text.
+    var encoding: FileEncoding?
   }
 
   /// The input the pane shows.
@@ -41,6 +44,9 @@ struct SideHeader: Equatable {
 
   /// How the lines of the file end, shown only where they differ from the other sides.
   let differingLineEndings: LineEndings?
+
+  /// The encoding of the file, shown only where it differs from the other sides.
+  let differingEncoding: FileEncoding?
 
   /// The facts for the popover.
   let details: Details
@@ -71,10 +77,12 @@ struct SideHeader: Equatable {
       case .rebase, .cherryPick, .revert, .stash: .beforeName
       }
     differingLineEndings = session.lineEndingsDiffer ? file.lineEndings : nil
+    let encodings = Set(session.roles.compactMap { session.file(for: $0)?.encoding })
+    differingEncoding = encodings.count > 1 ? file.encoding : nil
     details = Details(
       commit: side?.commit,
       location: file.url.map { $0.path(percentEncoded: false) } ?? file.label,
-      lineEndings: file.lineEndings)
+      lineEndings: file.lineEndings, encoding: file.encoding)
   }
 
   /// The name of the side as a whole, for VoiceOver and the help tag: letter, role and name in

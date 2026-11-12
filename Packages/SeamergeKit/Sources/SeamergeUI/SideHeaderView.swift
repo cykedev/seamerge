@@ -39,6 +39,15 @@ struct SideHeaderView: View {
               bundle: .module,
               comment: "Help tag of the line endings in a header, shown only where they differ."))
       }
+      if let encoding = header.differingEncoding {
+        Text(encoding.name)
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+          .help(
+            Text(
+              "Differs from the encoding of the other files", bundle: .module,
+              comment: "Help tag of the encoding in a header, shown only where it differs."))
+      }
       Spacer(minLength: 0)
       Button {
         showsDetails = true
@@ -95,6 +104,28 @@ extension LineEndings {
     case .cr: String(localized: "CR", bundle: .module, comment: "Line endings: carriage return.")
     case .mixed:
       String(localized: "Mixed", bundle: .module, comment: "Line endings: more than one kind.")
+    }
+  }
+}
+
+extension FileEncoding {
+  /// The name of the encoding, as editors show it.
+  var name: String {
+    switch self {
+    case .utf8: String(localized: "UTF-8", bundle: .module, comment: "Encoding.")
+    case .utf16LittleEndian:
+      String(localized: "UTF-16 LE", bundle: .module, comment: "Encoding: UTF-16 little-endian.")
+    case .utf16BigEndian:
+      String(localized: "UTF-16 BE", bundle: .module, comment: "Encoding: UTF-16 big-endian.")
+    case .utf32LittleEndian:
+      String(localized: "UTF-32 LE", bundle: .module, comment: "Encoding: UTF-32 little-endian.")
+    case .utf32BigEndian:
+      String(localized: "UTF-32 BE", bundle: .module, comment: "Encoding: UTF-32 big-endian.")
+    case .windows1252:
+      String(localized: "Windows 1252", bundle: .module, comment: "Encoding: Windows code page.")
+    case .isoLatin1:
+      String(localized: "ISO 8859-1", bundle: .module, comment: "Encoding: ISO Latin 1.")
+    case .macRoman: String(localized: "Mac Roman", bundle: .module, comment: "Encoding.")
     }
   }
 }
