@@ -7,12 +7,21 @@ import AppKit
 /// `row × rowHeight` minus the scroll offset of the text.
 final class GutterView: NSView {
   var theme = Theme() {
-    didSet { needsDisplay = true }
+    didSet {
+      numberColumnWidth = Self.numberColumnWidth(of: content, theme: theme)
+      needsDisplay = true
+    }
   }
 
   var content = PaneContent.empty {
-    didSet { needsDisplay = true }
+    didSet {
+      numberColumnWidth = Self.numberColumnWidth(of: content, theme: theme)
+      needsDisplay = true
+    }
   }
+
+  /// The width of the column of line numbers, which only the content and the theme change.
+  private var numberColumnWidth = GutterView.numberColumnWidth(of: .empty, theme: Theme())
 
   var currentBlock: Int? {
     didSet { needsDisplay = true }
@@ -104,7 +113,8 @@ final class GutterView: NSView {
     }
   }
 
-  private var numberColumnWidth: CGFloat {
+  /// The width of the widest line number of `content`, with room for a few digits at least.
+  private static func numberColumnWidth(of content: PaneContent, theme: Theme) -> CGFloat {
     let largest = content.lineNumbers.max().map { Int($0) + 1 } ?? 0
     let digits = max(String(largest).count, Theme.minimumLineNumberDigits)
     let digitWidth = ("0" as NSString).size(withAttributes: [.font: theme.lineNumberFont]).width
@@ -130,7 +140,7 @@ final class GutterView: NSView {
   ) {
     let text = String(number) as NSString
     let size = text.size(withAttributes: attributes)
-    let font = theme.lineNumberFont
+    let font = attributes[.font] as? NSFont ?? theme.lineNumberFont
     // Shares the baseline of the code beside it.
     let origin = CGPoint(
       x: Theme.gutterLeadingInset + numberColumnWidth - size.width,
