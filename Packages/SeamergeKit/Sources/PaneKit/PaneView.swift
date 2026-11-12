@@ -12,7 +12,7 @@ public final class PaneView: NSView {
 
   /// What the pane shows.
   ///
-  /// - Precondition: The content has one line number per row.
+  /// - Precondition: The content has one line number and one line ending per row.
   public var content: PaneContent = .empty {
     didSet { show() }
   }
@@ -32,6 +32,14 @@ public final class PaneView: NSView {
   public var highlightProvider: (any PaneHighlightProvider)? {
     get { textView.highlightProvider }
     set { textView.highlightProvider = newValue }
+  }
+
+  /// Whether spaces, tabs and line endings show as quiet symbols.
+  ///
+  /// The symbols are drawn only: they are neither copied nor read by VoiceOver.
+  public var showsInvisibles: Bool {
+    get { textView.showsInvisibles }
+    set { textView.showsInvisibles = newValue }
   }
 
   /// The view that shows the text, for selection and the find bar.

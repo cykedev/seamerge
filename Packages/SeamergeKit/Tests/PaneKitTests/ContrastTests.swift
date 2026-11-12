@@ -64,6 +64,12 @@ import Testing
               description: "text on \(surfaceName) of \(place)",
               foreground: Contrast.over(resolve(Theme.textColor), surface), surface: surface,
               minimum: Self.text))
+          // An invisible character tells which line ending a line has.
+          pairs.append(
+            Pair(
+              description: "invisible character on \(surfaceName) of \(place)",
+              foreground: Contrast.over(resolve(theme.invisibleCharacterColor), surface),
+              surface: surface, minimum: Self.sign))
         }
         // Marks of removed text stand on any surface of a side's text, with a seam of
         // background color around them that keeps them apart from a selection.

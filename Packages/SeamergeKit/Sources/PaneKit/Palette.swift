@@ -134,6 +134,10 @@ enum Palette {
   static let lineNumberOpacity = AppearanceValues<CGFloat>(
     light: 0.66, dark: 0.66, lightHighContrast: 0.80, darkHighContrast: 0.80)
 
+  /// The opacity of the label color for the invisible characters.
+  static let invisibleCharacterOpacity = AppearanceValues<CGFloat>(
+    light: 0.46, dark: 0.53, lightHighContrast: 0.60, darkHighContrast: 0.60)
+
   /// The opacity of the label color for the preview of a conflict in the result.
   static let previewTextOpacity = AppearanceValues<CGFloat>(
     light: 0.60, dark: 0.80, lightHighContrast: 0.60, darkHighContrast: 0.85)

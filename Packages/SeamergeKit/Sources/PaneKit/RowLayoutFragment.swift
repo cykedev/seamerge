@@ -57,6 +57,19 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     var selections: [Run]
     /// The places within the fragment's lines where text was removed.
     var removals: [Removal]
+    /// What the invisible characters of the fragment's rows look like, or `nil` if they do not
+    /// show.
+    var invisibles: Invisibles?
+  }
+
+  /// The symbols for spaces, tabs and line endings.
+  struct Invisibles: Sendable {
+    /// How the line of each of the fragment's rows ends.
+    var lineEndings: [LineEnding]
+    /// The color of the symbols.
+    var color: NSColor
+    /// The distance from the top of a row to the baseline of its text, as drawn.
+    var baseline: CGFloat
   }
 
   /// The offset at which the fragment's paragraph starts in the text.
@@ -159,6 +172,9 @@ final class RowLayoutFragment: NSTextLayoutFragment {
       let seam = mark.insetBy(dx: -extent.removalMarkSeam, dy: -extent.removalMarkSeam)
       fillRoundedRect(seam, color: painting.background, in: context)
       fillRoundedRect(mark, color: removal.color, in: context)
+    }
+    if let invisibles = painting.invisibles {
+      drawInvisibles(invisibles, at: point, in: context)
     }
   }
 

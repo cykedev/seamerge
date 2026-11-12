@@ -20,18 +20,29 @@ public struct PaneContent: Sendable {
   /// counts both as equal.
   public var ignoredDifferenceRows: IndexSet
 
+  /// How the line of each row ends in the file, shown among the invisible characters.
+  public var lineEndings: [LineEnding]
+
   /// Creates the content of a pane.
   ///
-  /// - Precondition: `lineNumbers` has one entry per row of `text`, and the blocks are sorted,
-  ///   do not overlap and lie within the rows.
+  /// Without `lineEndings`, every row that shows a line ends with a line feed, except the last
+  /// row, which has no ending.
+  ///
+  /// - Precondition: `lineNumbers` and `lineEndings` have one entry per row of `text`, and the
+  ///   blocks are sorted, do not overlap and lie within the rows.
   public init(
     text: String, lineNumbers: [Int32], blocks: [PaneBlock] = [],
-    ignoredDifferenceRows: IndexSet = []
+    ignoredDifferenceRows: IndexSet = [], lineEndings: [LineEnding]? = nil
   ) {
     self.text = text
     self.lineNumbers = lineNumbers
     self.blocks = blocks
     self.ignoredDifferenceRows = ignoredDifferenceRows
+    self.lineEndings =
+      lineEndings
+      ?? lineNumbers.indices.map { row in
+        lineNumbers[row] < 0 || row == lineNumbers.count - 1 ? .none : .lineFeed
+      }
   }
 
   /// A pane without text.

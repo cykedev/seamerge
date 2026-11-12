@@ -12,6 +12,15 @@ final class PaneTextView: NSTextView {
   private(set) var currentBlock: Int?
   private var grid = RowGrid(text: "", tabWidth: 1)
 
+  /// Whether spaces, tabs and line endings show as symbols.
+  var showsInvisibles = false {
+    didSet {
+      if showsInvisibles != oldValue {
+        redraw(rows: 0..<grid.rowCount)
+      }
+    }
+  }
+
   /// Supplies the changed runs within lines, asked once per block when it is first drawn.
   weak var highlightProvider: (any PaneHighlightProvider)? {
     didSet { reloadHighlights() }
@@ -75,6 +84,9 @@ final class PaneTextView: NSTextView {
     precondition(
       content.lineNumbers.count == grid.rowCount,
       "\(content.lineNumbers.count) line numbers for \(grid.rowCount) rows")
+    precondition(
+      content.lineEndings.count == grid.rowCount,
+      "\(content.lineEndings.count) line endings for \(grid.rowCount) rows")
     self.content = content
     self.theme = theme
     self.grid = grid
@@ -307,7 +319,11 @@ extension PaneTextView: RowPainter {
     return RowLayoutFragment.Painting(
       extent: extent, rowFills: rows.map(rowFill(atRow:)), background: Theme.backgroundColor,
       textBandHeight: theme.textBandHeight, runs: changes.runs, selections: selections,
-      removals: changes.removals)
+      removals: changes.removals,
+      invisibles: showsInvisibles
+        ? RowLayoutFragment.Invisibles(
+          lineEndings: Array(content.lineEndings[rows]),
+          color: theme.invisibleCharacterColor, baseline: theme.baseline) : nil)
   }
 }
 

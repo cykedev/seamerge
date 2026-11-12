@@ -31,6 +31,15 @@ extension Theme {
     }
   }
 
+  /// The color of the invisible characters: quiet beside the code, yet legible on every tint and
+  /// within a selection.
+  public var invisibleCharacterColor: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.invisibleCharacterOpacity[appearance])
+    }
+  }
+
   /// The symbol value of `role`: the color of its markers, badges and toggles.
   public func symbolColor(for role: ColorRole) -> NSColor {
     let values = Palette.symbol(of: role)
