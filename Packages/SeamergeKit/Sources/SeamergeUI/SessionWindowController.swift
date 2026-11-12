@@ -150,3 +150,19 @@ extension SessionWindowController: NSWindowDelegate {
     onFinish?(.cancelled)
   }
 }
+
+extension SessionWindowController: NSUserInterfaceValidations {
+  /// Whether the command of `item` can have an effect now.
+  public func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
+    guard let command = SessionCommand(action: item.action) else { return false }
+    return canPerform(command)
+  }
+
+  /// Whether `command` can have an effect now.
+  func canPerform(_ command: SessionCommand) -> Bool {
+    switch command.requirement {
+    case .jumpTarget(let jump):
+      presentation.navigation.target(of: jump) != nil
+    }
+  }
+}

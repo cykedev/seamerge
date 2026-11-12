@@ -110,6 +110,9 @@
     "File": {
       "comment": "Details of a side: where the file was read from."
     },
+    "First Change": {
+      "comment": "Go menu command."
+    },
     "From %@": {
       "comment": "VoiceOver: a part of the result taken from one side, such as From A."
     },
@@ -122,8 +125,23 @@
     "Git is no longer waiting for this merge.": {
       "comment": "Notice below the result header after the Git command that asked has ended."
     },
+    "Go back to the change before this one": {
+      "comment": "Help tag of Previous Change."
+    },
+    "Go back to the open conflict before this one": {
+      "comment": "Help tag of Previous Conflict."
+    },
+    "Go on to the change after this one": {
+      "comment": "Help tag of Next Change."
+    },
+    "Go on to the open conflict after this one": {
+      "comment": "Help tag of Next Conflict."
+    },
     "LF": {
       "comment": "Line endings: line feed."
+    },
+    "Last Change": {
+      "comment": "Go menu command."
     },
     "Line Endings": {
       "comment": "Details of a side: LF, CRLF or CR."
@@ -137,6 +155,12 @@
     "Mixed": {
       "comment": "Line endings: more than one kind."
     },
+    "Next Change": {
+      "comment": "Go menu command."
+    },
+    "Next Conflict": {
+      "comment": "Go menu command."
+    },
     "No changes": {
       "comment": "Subtitle: neither side changed the base."
     },
@@ -145,6 +169,12 @@
     },
     "Open conflict, line %lld": {
       "comment": "VoiceOver: the mark of an open conflict in the overview bar."
+    },
+    "Previous Change": {
+      "comment": "Go menu command."
+    },
+    "Previous Conflict": {
+      "comment": "Go menu command."
     },
     "Rebase onto %@ · Commit %lld of %lld": {
       "comment": "Subtitle: how far a rebase has come, such as Rebase onto main · Commit 3 of 7."

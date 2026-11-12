@@ -165,6 +165,17 @@ final class MergePresentation {
     layout.resultPane.collapsedRuns = resultRuns
   }
 
+  /// Makes `block` current and scrolls it to the reading line of every pane, as far as the text
+  /// allows: what every jump of the Go menu does.
+  func jump(to block: Int) {
+    setCurrentBlock(block)
+    let panes = scrollSync.isEnabled ? [leadingPane].compactMap(\.self) : allPanes.filter(\.isShown)
+    for pane in panes {
+      pane.scroll(
+        toPlaceRowAtReadingLine: pane.content.blocks[block].rows.lowerBound, motion: motion)
+    }
+  }
+
   /// Brings the current block into view, at the reading line, unless it is in full view already;
   /// how a window shows its first conflict when it opens.
   func showCurrentBlock() {

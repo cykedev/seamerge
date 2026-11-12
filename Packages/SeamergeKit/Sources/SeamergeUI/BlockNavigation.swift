@@ -49,6 +49,24 @@ struct BlockNavigation: Equatable {
     isOpenConflict.firstIndex(of: true)
   }
 
+  /// A jump from the current block.
+  enum Jump {
+    case nextOpenConflict, previousOpenConflict, nextChange, previousChange, firstChange
+    case lastChange
+  }
+
+  /// The block that `jump` lands on, or `nil` if it lands nowhere.
+  func target(of jump: Jump) -> Int? {
+    switch jump {
+    case .nextOpenConflict: nextOpenConflict
+    case .previousOpenConflict: previousOpenConflict
+    case .nextChange: nextChange
+    case .previousChange: previousChange
+    case .firstChange: firstChange
+    case .lastChange: lastChange
+    }
+  }
+
   /// How many conflicts are still open.
   var openConflictCount: Int {
     isOpenConflict.count { $0 }
