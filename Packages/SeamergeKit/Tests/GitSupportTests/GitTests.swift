@@ -69,11 +69,13 @@ struct GitTests {
   @Test func commandThatIgnoresTerminationIsKilled() throws {
     try withSandbox { sandbox in
       let pidFile = sandbox.directory.appending(path: "pid")
+      // The script ignores SIGTERM before it reports its pid, and the time limit leaves it
+      // enough time to get there under load; otherwise SIGTERM could end it early.
       let bin = try sandbox.makeExecutable(
-        "git", script: "echo $$ > '\(pidFile.path)'; trap '' TERM; exec /bin/sleep 30"
+        "git", script: "trap '' TERM; echo $$ > '\(pidFile.path)'; exec /bin/sleep 30"
       ).deletingLastPathComponent()
       let environment = sandbox.environment.merging(["PATH": bin.path]) { $1 }
-      let git = Git(environment: environment, timeout: .milliseconds(200))
+      let git = Git(environment: environment, timeout: .seconds(1))
       let start = ContinuousClock.now
 
       #expect(throws: GitError.timedOut(arguments: ["status"])) { try git.run(["status"]) }
