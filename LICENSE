@@ -19,10 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-The diff and merge engine in
-Packages/MergeEngine/Sources/CMergeEngine/Vendor/Perforce is third-party code
-by Perforce Software, Inc., distributed under its own license in
-Packages/MergeEngine/Sources/CMergeEngine/Vendor/Perforce/LICENSE.
