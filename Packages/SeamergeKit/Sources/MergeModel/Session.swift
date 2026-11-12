@@ -69,6 +69,25 @@ public struct Session: Sendable {
       comparison: comparison)
   }
 
+  /// Compares the files of the session anew with `options`.
+  ///
+  /// A comparison of two files uses only the comparison mode. The comparison runs off the calling
+  /// actor.
+  ///
+  /// - Throws: The error of the comparison.
+  @concurrent
+  public func recomputed(options: ComparisonOptions) async throws(MergeModelError) -> Session {
+    guard let a = file(for: .a), let b = file(for: .b) else {
+      preconditionFailure("Every session has the inputs A and B")
+    }
+    switch kind {
+    case .merge:
+      return try await Session.merge(base: file(for: .base), a: a, b: b, options: options)
+    case .diff:
+      return try await Session.diff(old: a, new: b, mode: options.mode)
+    }
+  }
+
   private init(
     kind: Kind, options: ComparisonOptions, inputs: [Role: SourceFile], texts: [Role: Data],
     comparison: EngineAdapter.Comparison
