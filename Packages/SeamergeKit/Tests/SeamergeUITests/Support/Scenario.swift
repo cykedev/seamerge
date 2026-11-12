@@ -1,8 +1,9 @@
 import Foundation
 import GitSupport
 import MergeModel
-import SeamergeUI
 import Testing
+
+@testable import SeamergeUI
 
 /// A merge as `git mergetool` hands it to the tool, in a repository that
 /// `Scripts/make-test-repo.sh` prepares: the three stages of the conflicted file and what Git is
@@ -33,7 +34,11 @@ struct Scenario: Sendable, CustomTestStringConvertible {
 
   /// Prepares the repository in a temporary folder and returns the merge with its context; the
   /// folder is removed before this returns.
-  func load(options: ComparisonOptions = .init()) async throws -> (Session, SessionContext) {
+  ///
+  /// - Parameter options: How to compare; by default in the mode a window starts in.
+  func load(
+    options: ComparisonOptions = .init(mode: .windowDefault)
+  ) async throws -> (Session, SessionContext) {
     let folder = FileManager.default.temporaryDirectory
       .appending(path: "SeamergeUITests-\(UUID().uuidString)", directoryHint: .isDirectory)
     try FileManager.default.createDirectory(

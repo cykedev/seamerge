@@ -1,12 +1,14 @@
 import Foundation
 import MergeModel
-import SeamergeUI
+
+@testable import SeamergeUI
 
 /// Merges of small texts for the tests and pictures.
 enum SampleMerges {
-  /// Merges the given texts, with the label of each file as its name.
+  /// Merges the given texts, with the label of each file as its name, by default in the mode a
+  /// window starts in.
   static func merge(
-    base: String?, a: String, b: String, options: ComparisonOptions = .init()
+    base: String?, a: String, b: String, options: ComparisonOptions = .init(mode: .windowDefault)
   ) async throws -> Session {
     try await Session.merge(
       base: base.map { SourceFile(bytes: Data($0.utf8), label: "base.txt") },
@@ -21,7 +23,8 @@ enum SampleMerges {
     try await Session.merge(
       base: SourceFile(bytes: Data(helloWorldBase.utf8), label: "HelloWorld0.java"),
       a: SourceFile(bytes: Data(helloWorldA.utf8), label: "HelloWorld1.java"),
-      b: SourceFile(bytes: Data(helloWorldB.utf8), label: "HelloWorld2.java"))
+      b: SourceFile(bytes: Data(helloWorldB.utf8), label: "HelloWorld2.java"),
+      options: ComparisonOptions(mode: .windowDefault))
   }
 
   /// The context of the sample merge: the result goes to `HelloWorld.java`.
@@ -92,11 +95,12 @@ enum SampleMerges {
       case .differentSides:
         a.replaceSubrange(2..<4, with: touchingA)
         b.replaceSubrange(4..<6, with: touchingB)
-        options = ComparisonOptions()
+        options = ComparisonOptions(mode: .windowDefault)
       case .conflictThenBoth, .changeThenBoth:
         a.replaceSubrange(2..<6, with: touchingA + touchingB)
         b.replaceSubrange(4..<6, with: touchingB)
-        options = ComparisonOptions(strategy: self == .changeThenBoth ? .guarded : .optimal)
+        options = ComparisonOptions(
+          mode: .windowDefault, strategy: self == .changeThenBoth ? .guarded : .optimal)
       }
       return try await merge(
         base: lines(touchingBase), a: lines(a), b: lines(b), options: options)

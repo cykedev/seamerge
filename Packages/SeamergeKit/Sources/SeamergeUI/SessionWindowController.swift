@@ -11,8 +11,8 @@ public enum SessionOutcome: Sendable {
   case cancelled
 }
 
-/// The window of a merge: the three inputs side by side above, the result below, each with a
-/// header that names it.
+/// The window of a merge: the three inputs side by side above, the result below, and a title
+/// that names the file and sums up the changes.
 @MainActor
 public final class SessionWindowController: NSWindowController {
   /// Called exactly once, when the window closes for good, with how the session ended.
@@ -20,6 +20,7 @@ public final class SessionWindowController: NSWindowController {
 
   let layout: SessionSplitViewController
   let presentation: MergePresentation
+  private let summary: SessionSummary
   private let sessionUndoManager: UndoManager
   private var hasFinished = false
 
@@ -75,6 +76,7 @@ public final class SessionWindowController: NSWindowController {
     presentation = MergePresentation(
       session: session, layout: layout, headers: headers, resultHeader: resultHeader,
       theme: theme)
+    summary = SessionSummary(changes: presentation.changes, context: context)
 
     let window = NSWindow(
       contentRect: CGRect(origin: .zero, size: WindowMetrics.defaultContentSize),
@@ -89,9 +91,12 @@ public final class SessionWindowController: NSWindowController {
     window.contentViewController = layout
     window.setContentSize(WindowMetrics.defaultContentSize)
     window.contentMinSize = CGSize(width: layout.minimumWidth, height: layout.minimumHeight)
+    window.title = summary.title
     window.representedURL = context.resultURL
+    window.setAccessibilityTitle([summary.title, summary.fullSubtitle].joined(separator: ", "))
     layout.updateMinimumWidths()
     layout.placeDividers()
+    updateSubtitle()
   }
 
   /// The order of the panes above the result, from left to right.
@@ -108,6 +113,18 @@ public final class SessionWindowController: NSWindowController {
     layout.showCallerIsGone()
   }
 
+  /// Shows as much of the subtitle as the width of the window allows; the rest stays in the
+  /// title that VoiceOver reads.
+  private func updateSubtitle() {
+    guard let window else { return }
+    let titleWidth = (window.title as NSString).size(withAttributes: [
+      .font: NSFont.titleBarFont(ofSize: 0)
+    ]).width
+    let width = window.frame.width - 2 * WindowMetrics.titlebarControlsWidth - titleWidth
+    window.subtitle = summary.subtitle(
+      fittingWidth: width, font: .preferredFont(forTextStyle: .subheadline))
+  }
+
   @objc private func accessibilityDisplayOptionsDidChange(_ notification: Notification) {
     displayOptions = .current(in: .shared)
   }
@@ -117,6 +134,11 @@ extension SessionWindowController: NSWindowDelegate {
   /// The undo manager of the session, which no other window shares.
   public func windowWillReturnUndoManager(_ window: NSWindow) -> UndoManager? {
     sessionUndoManager
+  }
+
+  /// Fits the subtitle to the new width.
+  public func windowDidResize(_ notification: Notification) {
+    updateSubtitle()
   }
 
   /// Reports the end of the session, once.

@@ -5,7 +5,8 @@ import Testing
 
 @testable import SeamergeUI
 
-/// The window around the panes: their order, sizes, names and headers, and how the window ends.
+/// The window around the panes: their order, sizes, names and headers, the title, and how the
+/// window ends.
 @MainActor
 @Suite struct SessionWindowTests {
   @Test func panesStandInTheOrderABaseBAndEachHasAVoiceOverName() async throws {
@@ -67,6 +68,61 @@ import Testing
     let (session, context) = try await Scenario.merges[0].load()
     let window = try #require(makeController(session, context: context).window)
     #expect(window.representedURL == context.resultURL)
+  }
+
+  @Test func titleNamesTheResultFileAndTheSubtitleCountsTheChanges() async throws {
+    let (session, context) = try await Scenario.merges[0].load()
+    let controller = makeController(session, context: context)
+    let window = try #require(controller.window)
+    #expect(window.title == "story.txt")
+    #expect(window.subtitle == "1 change from A · 1 from B")
+    #expect(window.representedURL == context.resultURL)
+    #expect(window.accessibilityTitle() == "story.txt, 1 change from A · 1 from B")
+  }
+
+  @Test func subtitleSaysNothingOfTheComparisonInTheDefaultMode() async throws {
+    let session = try await SampleMerges.helloWorld()
+    let inDefaultMode = try await session.recomputed(
+      options: ComparisonOptions(mode: .windowDefault))
+    let summary = SessionSummary(changes: SessionChanges(session: inDefaultMode), context: .init())
+    #expect(summary.changes == "3 changes from A · 1 from B")
+    #expect(ComparisonMode.windowDefault == .ignoreWhitespaceAmount)
+  }
+
+  @Test(arguments: ComparisonMode.allCases.filter { $0 != .windowDefault })
+  func subtitleNamesAComparisonModeOtherThanTheDefault(mode: ComparisonMode) async throws {
+    let session = try await SampleMerges.helloWorld()
+    let other = try await session.recomputed(options: ComparisonOptions(mode: mode))
+    let summary = SessionSummary(changes: SessionChanges(session: other), context: .init())
+    let note =
+      switch mode {
+      case .exact: "Compared exactly"
+      case .ignoreLineEndings: "Line endings ignored"
+      case .ignoreWhitespaceAmount: "Whitespace changes ignored"
+      case .ignoreAllWhitespace: "All whitespace ignored"
+      }
+    #expect(summary.changes.hasSuffix(" · \(note)"))
+  }
+
+  @Test func narrowWindowDropsTheRebaseFromTheSubtitleFirst() async throws {
+    let scenario = try #require(Scenario.merges.first { $0.name == "rebase" })
+    let (session, context) = try await scenario.load()
+    let summary = SessionSummary(changes: SessionChanges(session: session), context: context)
+    let font = NSFont.preferredFont(forTextStyle: .subheadline)
+    #expect(summary.fullSubtitle == "1 change from A · 1 from B · Rebase onto main · Commit 2 of 3")
+    #expect(summary.subtitle(fittingWidth: 1000, font: font) == summary.fullSubtitle)
+    #expect(summary.subtitle(fittingWidth: 200, font: font) == "1 change from A · 1 from B")
+
+    let window = try #require(makeController(session, context: context).window)
+    #expect(window.subtitle == summary.fullSubtitle)
+    #expect(window.accessibilityTitle() == "notes.txt, \(summary.fullSubtitle)")
+  }
+
+  @Test func remainingFilesWithConflictsFollowTheChanges() async throws {
+    let scenario = try #require(Scenario.merges.first { $0.name == "many" })
+    let (session, context) = try await scenario.load()
+    let summary = SessionSummary(changes: SessionChanges(session: session), context: context)
+    #expect(summary.fullSubtitle == "1 change from A · 1 from B · 11 more files with conflicts")
   }
 
   @Test func closingReportsCancelledExactlyOnce() async throws {

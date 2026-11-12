@@ -16,8 +16,60 @@
     "%@, line %lld": {
       "comment": "VoiceOver: a mark in the overview bar of the result, such as From A, line 12."
     },
+    "%lld changes from A": {
+      "comment": "Subtitle: the changes of the incoming side, such as 3 changes from A.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld change from A"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld changes from A"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld from B": {
+      "comment": "Subtitle: the changes of the own side after those of A, such as 5 from B."
+    },
+    "%lld more files with conflicts": {
+      "comment": "Subtitle: how many other files of the operation still have conflicts.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld more file with conflicts"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld more files with conflicts"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "A": {
       "comment": "The badge of the incoming side."
+    },
+    "All whitespace ignored": {
+      "comment": "Subtitle: the comparison ignores spaces and tabs entirely."
     },
     "Author": {
       "comment": "Details of a side: the author of the commit."
@@ -39,6 +91,9 @@
     },
     "Commit": {
       "comment": "Details of a side: the commit."
+    },
+    "Compared exactly": {
+      "comment": "Subtitle: the comparison counts every byte, whitespace and line endings too."
     },
     "Date": {
       "comment": "Details of a side: when the commit was made."
@@ -73,17 +128,26 @@
     "Line Endings": {
       "comment": "Details of a side: LF, CRLF or CR."
     },
+    "Line endings ignored": {
+      "comment": "Subtitle: the comparison treats LF, CRLF and CR as equal."
+    },
     "Line endings: %@": {
       "comment": "VoiceOver: the line endings of the result, such as Line endings: LF."
     },
     "Mixed": {
       "comment": "Line endings: more than one kind."
     },
+    "No changes": {
+      "comment": "Subtitle: neither side changed the base."
+    },
     "Nothing taken": {
       "comment": "VoiceOver: a part of the result that takes no lines."
     },
     "Open conflict, line %lld": {
       "comment": "VoiceOver: the mark of an open conflict in the overview bar."
+    },
+    "Rebase onto %@ · Commit %lld of %lld": {
+      "comment": "Subtitle: how far a rebase has come, such as Rebase onto main · Commit 3 of 7."
     },
     "Resolved conflict, line %lld": {
       "comment": "VoiceOver: the mark of a decided conflict in the overview bar."
@@ -105,6 +169,9 @@
     },
     "Take the version of %@.": {
       "comment": "Help tag of a toggle, such as Take the version of feature/login."
+    },
+    "Whitespace changes ignored": {
+      "comment": "Subtitle: the comparison ignores how much whitespace there is."
     },
     "cherry-picked commit": {
       "comment": "Role: the commit being cherry-picked."

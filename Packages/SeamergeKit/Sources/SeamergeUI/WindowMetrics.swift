@@ -38,6 +38,9 @@ enum WindowMetrics {
   /// The part of the window's height that the panes above the result take at first.
   static let sourcesFraction: CGFloat = 0.55
 
+  /// The room the title bar keeps on each side of the title for the window's buttons.
+  static let titlebarControlsWidth: CGFloat = 80
+
   /// The size of a new window.
   static let defaultContentSize = CGSize(width: 1280, height: 800)
 
