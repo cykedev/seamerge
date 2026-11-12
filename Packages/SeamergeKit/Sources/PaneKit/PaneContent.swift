@@ -23,21 +23,31 @@ public struct PaneContent: Sendable {
   /// How the line of each row ends in the file, shown among the invisible characters.
   public var lineEndings: [LineEnding]
 
+  /// The parts of the text that show a preview of what a conflict offers rather than text of the
+  /// file, in order and without overlap.
+  ///
+  /// A preview is drawn quieter than text and cannot be entered: the insertion point skips it,
+  /// and copying leaves it out. Its rows are tinted in the color of its side.
+  public var previews: [PanePreview]
+
   /// Creates the content of a pane.
   ///
   /// Without `lineEndings`, every row that shows a line ends with a line feed, except the last
   /// row, which has no ending.
   ///
   /// - Precondition: `lineNumbers` and `lineEndings` have one entry per row of `text`, and the
-  ///   blocks are sorted, do not overlap and lie within the rows.
+  ///   blocks are sorted, do not overlap and lie within the rows; the previews are sorted, do not
+  ///   overlap and lie within the text.
   public init(
     text: String, lineNumbers: [Int32], blocks: [PaneBlock] = [],
-    ignoredDifferenceRows: IndexSet = [], lineEndings: [LineEnding]? = nil
+    ignoredDifferenceRows: IndexSet = [], lineEndings: [LineEnding]? = nil,
+    previews: [PanePreview] = []
   ) {
     self.text = text
     self.lineNumbers = lineNumbers
     self.blocks = blocks
     self.ignoredDifferenceRows = ignoredDifferenceRows
+    self.previews = previews
     self.lineEndings =
       lineEndings
       ?? lineNumbers.indices.map { row in
@@ -84,13 +94,16 @@ public struct PaneContent: Sendable {
     return counts.max { $0.value < $1.value }?.key ?? .lineFeed
   }
 
-  /// Takes over an edit of the text, now `text`, that rewrote rows as `change` says.
+  /// Takes over an edit of the text, now `text`, that replaced `range` by `length` code units and
+  /// rewrote rows as `change` says.
   ///
   /// The rewritten rows show lines of their own, numbered on from the line before them, and the
-  /// lines after them follow on. Blocks keep their rows as ``RowChange`` maps them. The owner of
-  /// the content gives the pane the exact blocks afterwards; until then, this keeps every row
-  /// described.
-  mutating func takeOver(_ change: RowChange, text: String) {
+  /// lines after them follow on. Blocks keep their rows as ``RowChange`` maps them, previews their
+  /// text. The owner of the content gives the pane the exact content afterwards; until then, this
+  /// keeps every row described.
+  mutating func takeOver(
+    _ change: RowChange, replacing range: Range<Int>, length: Int, text: String
+  ) {
     self.text = text
     let ending = lineEndings[change.oldRows.upperBound - 1]
     lineEndings.replaceSubrange(
@@ -108,10 +121,51 @@ public struct PaneContent: Sendable {
     for index in blocks.indices {
       blocks[index].rows = change.newRows(of: blocks[index].rows)
     }
+    previews = previews.compactMap { $0.takingOver(range, length: length) }
     ignoredDifferenceRows = IndexSet(
       ignoredDifferenceRows.compactMap { row in
         change.oldRows.contains(row) ? nil : change.newBoundary(of: row)
       })
+  }
+}
+
+/// A part of a pane's text that shows a preview of the lines one side offers for a conflict.
+public struct PanePreview: Sendable, Hashable {
+  /// The text of the preview, in UTF-16 code units, the line ending of its last line included.
+  public var range: Range<Int>
+
+  /// The side whose lines the preview shows, which tints its rows.
+  public var role: ColorRole
+
+  /// Creates a preview of the text in `range`, showing the lines of `role`.
+  ///
+  /// - Precondition: `range` is not empty.
+  public init(range: Range<Int>, role: ColorRole) {
+    precondition(!range.isEmpty, "A preview shows at least one character")
+    self.range = range
+    self.role = role
+  }
+
+  /// The preview after an edit that replaced `edited` by `length` code units, or `nil` if the
+  /// edit took all of it.
+  ///
+  /// A preview after the edit moves with the text; one that the edit reached into keeps the part
+  /// before the edit, or else the part after it.
+  func takingOver(_ edited: Range<Int>, length: Int) -> PanePreview? {
+    let delta = length - edited.count
+    var preview = self
+    if range.upperBound <= edited.lowerBound {
+      return preview
+    } else if range.lowerBound >= edited.upperBound {
+      preview.range = range.lowerBound + delta..<range.upperBound + delta
+    } else if range.lowerBound < edited.lowerBound {
+      preview.range = range.lowerBound..<edited.lowerBound
+    } else if range.upperBound > edited.upperBound {
+      preview.range = edited.lowerBound + length..<range.upperBound + delta
+    } else {
+      return nil
+    }
+    return preview
   }
 }
 

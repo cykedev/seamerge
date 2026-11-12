@@ -35,14 +35,16 @@ public final class PaneView: NSView {
     show(content, collapsedRuns: collapsedRuns)
   }
 
-  /// Gives the content new blocks and keeps its text, rows and line numbers: what the owner of an
-  /// editable pane gives it after an edit, in place of new content.
+  /// Gives the content new blocks and previews and keeps its text, rows and line numbers: what
+  /// the owner of an editable pane gives it after an edit, in place of new content.
   ///
-  /// Only the rows whose block changed are drawn again, so that typing stays fast in a long text.
+  /// Only the rows whose block or preview changed are drawn again, so that typing stays fast in a
+  /// long text. A preview that turns into text, or text into a preview, cross-fades.
   ///
-  /// - Precondition: The blocks are sorted, do not overlap and lie within the rows.
-  public func setBlocks(_ blocks: [PaneBlock]) {
-    textView.setBlocks(blocks)
+  /// - Precondition: The blocks are sorted, do not overlap and lie within the rows; the previews
+  ///   are sorted, do not overlap and lie within the text.
+  public func setBlocks(_ blocks: [PaneBlock], previews: [PanePreview]) {
+    textView.setBlocks(blocks, previews: previews)
     gutterView.content = content
     gutterView.currentBlock = textView.currentBlock
   }
@@ -92,7 +94,8 @@ public final class PaneView: NSView {
   /// asking the editing delegate, and returns the text that each of them replaced.
   ///
   /// Use it for what the delegate decides on its own, such as choosing a source or undoing an
-  /// edit. The insertion point and the selection move with the text as with any edit.
+  /// edit. The insertion point and the selection move with the text as with any edit. Edits that
+  /// turn a preview into text, or text into a preview, cross-fade.
   ///
   /// - Precondition: Each range lies within the text as the edits before it left it.
   @discardableResult
@@ -212,11 +215,15 @@ public final class PaneView: NSView {
     super.init(frame: .zero)
     textView.configure(theme: theme)
     scrollView.documentView = textView
+    // The cross-fade between a preview and text runs on the layer of the clip view, which a
+    // window without a screen does not give it on its own.
+    scrollView.contentView.wantsLayer = true
     NotificationCenter.default.addObserver(
       self, selector: #selector(clipViewBoundsDidChange(_:)),
       name: NSView.boundsDidChangeNotification,
       object: scrollView.contentView)
     gutterView.removalRows = { [weak textView] rows in textView?.removalRows(in: rows) ?? [] }
+    gutterView.rowStyle = { [weak textView] row in textView?.style(ofRow: row) ?? .unchanged }
     textView.interaction = self
     gutterView.interaction = self
     addSubview(gutterView)

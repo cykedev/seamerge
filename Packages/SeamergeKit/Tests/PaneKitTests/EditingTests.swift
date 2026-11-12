@@ -209,9 +209,9 @@ import Testing
     let rowHeight = pane.theme.rowHeight
     let point = CGPoint(x: pane.bounds.width - 10, y: 2.5 * rowHeight)
     let before = try Rendering.color(in: try Rendering.bitmap(of: pane), at: point)
-    pane.setBlocks([
-      PaneBlock(rows: 1..<2, style: .tinted(.a)), PaneBlock(rows: 2..<3, style: .handwritten),
-    ])
+    pane.setBlocks(
+      [PaneBlock(rows: 1..<2, style: .tinted(.a)), PaneBlock(rows: 2..<3, style: .handwritten)],
+      previews: [])
     let after = try Rendering.color(in: try Rendering.bitmap(of: pane), at: point)
     #expect(pane.content.blocks.count == 2)
     #expect(pane.content.text == "zero\none\ntwo\nthree")
@@ -362,10 +362,13 @@ import Testing
 
   /// An editable pane with `text`, one line per row, in a key window with the text focused.
   static func editablePane(
-    text: String, blocks: [PaneBlock] = [], size: CGSize = CGSize(width: 400, height: 200)
+    text: String, blocks: [PaneBlock] = [], previews: [PanePreview] = [],
+    size: CGSize = CGSize(width: 400, height: 200)
   ) -> (PaneView, NSWindow, EditRecorder) {
     let pane = PaneView()
-    pane.content = Self.content(text, blocks: blocks)
+    var content = Self.content(text, blocks: blocks)
+    content.previews = previews
+    pane.content = content
     let recorder = EditRecorder()
     pane.editingDelegate = recorder
     let window = Rendering.host(pane, size: size, isKey: true)

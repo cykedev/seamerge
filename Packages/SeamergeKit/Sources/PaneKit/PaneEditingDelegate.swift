@@ -18,9 +18,9 @@ public protocol PaneEditingDelegate: AnyObject {
   /// Tells the delegate that `pane` carried out `edits`, the answer to an edit of the user, and
   /// that they replaced `replacedTexts`, one for each edit.
   ///
-  /// The pane has kept its rows, line numbers, blocks and collapsed runs in step with the text as
-  /// well as it can; give it the blocks that the edits lead to with
-  /// ``PaneView/setBlocks(_:)``, which keeps the text, the selection and the scroll
+  /// The pane has kept its rows, line numbers, blocks, previews and collapsed runs in step with
+  /// the text as well as it can; give it the blocks and previews that the edits lead to with
+  /// ``PaneView/setBlocks(_:previews:)``, which keeps the text, the selection and the scroll
   /// position and draws only what changed.
   ///
   /// An action of the user on several selections, or text dragged within the view, is asked and

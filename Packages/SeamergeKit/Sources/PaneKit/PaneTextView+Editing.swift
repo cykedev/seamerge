@@ -78,6 +78,9 @@ extension PaneTextView {
     guard let textStorage else { return [] }
     // An edit of the user that the text view announced but has not made by now never comes.
     announcements.removeAll { $0.isTyped }
+    if edits.contains(where: { edit in previewSpans.contains { $0.overlaps(edit.range) } }) {
+      fadeAfterPreviewChange()
+    }
     let attributes = textAttributes
     return edits.map { edit in
       precondition(
@@ -126,7 +129,7 @@ extension PaneTextView {
 }
 
 extension PaneTextView: @MainActor NSTextStorageDelegate {
-  /// Keeps the rows, blocks and collapsed runs in step with each change of the text,
+  /// Keeps the rows, blocks, previews and collapsed runs in step with each change of the text,
   /// before TextKit lays out the changed text, and finds changes that nobody announced.
   ///
   /// The edited range that the text storage reports may reach beyond the change, to the whole
@@ -177,7 +180,8 @@ extension PaneTextView: @MainActor NSTextStorageDelegate {
 
   /// Takes over `edit` of the text, now `text`, into the rows and what stands on them.
   private func takeOver(_ edit: PaneEdit, in text: NSString) {
-    let change = grid.replace(edit.range, withLength: edit.text.utf16.count, in: text)
-    takeOver(change, text: text as String)
+    let length = edit.text.utf16.count
+    let change = grid.replace(edit.range, withLength: length, in: text)
+    takeOver(change, replacing: edit.range, length: length, text: text as String)
   }
 }

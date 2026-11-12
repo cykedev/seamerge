@@ -149,6 +149,9 @@ public struct Theme {
   /// The distance between the ellipsis on the bar of a collapsed run and its label.
   static let collapsedRunSymbolSpacing: CGFloat = 4
 
+  /// How long a preview takes to turn into text, or text into a preview.
+  static let previewFadeDuration: CFTimeInterval = 0.15
+
   /// The smallest font size of the interface.
   private static let smallestFontSize: CGFloat = 10
 }

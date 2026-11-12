@@ -51,8 +51,18 @@ final class PaneTextView: NSTextView {
   /// Whether the pane is putting new content into its text, a change that nobody announces.
   private(set) var isShowingContent = false
 
+  /// The offsets of the previews, those next to each other joined, or `nil` until they are asked
+  /// for after a change.
+  var cachedPreviewSpans: [Range<Int>]?
+
   /// The version of the text, after whose changes fragments find their rows again.
   private let textVersion = TextVersion()
+
+  /// Whether text has been given the preview color since the pane last had no previews.
+  var hasColoredPreviews = false
+
+  /// The rows of each preview with its side, or `nil` until they are asked for after a change.
+  var cachedPreviewRows: [(rows: Range<Int>, role: ColorRole)]?
 
   /// Sets up the view as a pane; called once, before any content is shown.
   func configure(theme: Theme) {
@@ -116,6 +126,7 @@ final class PaneTextView: NSTextView {
     precondition(
       content.lineEndings.count == grid.rowCount,
       "\(content.lineEndings.count) line endings for \(grid.rowCount) rows")
+    let previewsChanged = content.previews != self.content.previews
     self.content = content
     self.theme = theme
     self.grid = grid
@@ -125,6 +136,9 @@ final class PaneTextView: NSTextView {
       self.currentBlock = nil
     }
     highlightsByBlock.removeAll()
+    cachedPreviewSpans = nil
+    cachedPreviewRows = nil
+    validatesPreviewColor(!content.previews.isEmpty)
     let attributes = textAttributes
     font = theme.font
     defaultParagraphStyle = attributes[.paragraphStyle] as? NSParagraphStyle
@@ -134,10 +148,14 @@ final class PaneTextView: NSTextView {
     defer { isShowingContent = false }
     if keepsText {
       // The same text with new rows and blocks: the selection and the scroll position stay.
+      if previewsChanged {
+        fadeAfterPreviewChange()
+      }
       textStorage.setAttributes(attributes, range: NSRange(location: 0, length: textStorage.length))
       if let textLayoutManager {
         textLayoutManager.invalidateLayout(for: textLayoutManager.documentRange)
         textLayoutManager.invalidateRenderingAttributes(for: textLayoutManager.documentRange)
+        applyPreviewColor(in: 0..<textStorage.length)
       }
     } else {
       textStorage.setAttributedString(
@@ -145,21 +163,34 @@ final class PaneTextView: NSTextView {
     }
   }
 
-  /// Replaces the blocks of the content, keeping its text, rows and line numbers, and draws
-  /// again only the rows whose block changed.
+  /// Replaces the blocks and previews of the content, keeping its text, rows and line numbers,
+  /// and draws again only the rows whose block or preview changed.
   ///
-  /// - Precondition: The blocks are sorted, do not overlap and lie within the rows.
-  func setBlocks(_ blocks: [PaneBlock]) {
+  /// - Precondition: The blocks are sorted, do not overlap and lie within the rows; the previews
+  ///   are sorted, do not overlap and lie within the text.
+  func setBlocks(_ blocks: [PaneBlock], previews: [PanePreview]) {
     precondition(
       (blocks.last?.rows.upperBound ?? 0) <= grid.rowCount,
       "Blocks reach beyond the \(grid.rowCount) rows")
+    precondition(
+      (previews.last?.range.upperBound ?? 0) <= grid.textLength,
+      "Previews reach beyond the text of length \(grid.textLength)")
     let oldBlocks = content.blocks
-    var changedRows: [Range<Int>] = []
+    let previewsChanged = previews != content.previews
+    var changedRows = previewsChanged ? previewRows().map(\.rows) : []
     content.blocks = blocks
+    content.previews = previews
     if let currentBlock, !blocks.indices.contains(currentBlock) {
       self.currentBlock = nil
     }
     highlightsByBlock.removeAll()
+    cachedPreviewSpans = nil
+    cachedPreviewRows = nil
+    if previewsChanged {
+      fadeAfterPreviewChange()
+      validatesPreviewColor(!previews.isEmpty)
+      changedRows += previewRows().map(\.rows)
+    }
     for index in 0..<max(oldBlocks.count, blocks.count) {
       let old = index < oldBlocks.count ? oldBlocks[index] : nil
       let new = index < blocks.count ? blocks[index] : nil
@@ -171,12 +202,13 @@ final class PaneTextView: NSTextView {
     }
   }
 
-  /// Takes over a change of the text that rewrote rows as `change` says, so that rows, blocks and
-  /// collapsed runs stay described until the pane's owner gives it the exact blocks.
+  /// Takes over a change of the text that replaced `range` by `length` code units and rewrote
+  /// rows as `change` says, so that rows, blocks, previews and collapsed runs stay described until
+  /// the pane's owner gives it the exact content.
   ///
   /// A collapsed run that the change reached into is expanded: its rows are no longer unchanged.
-  func takeOver(_ change: RowChange, text: String) {
-    content.takeOver(change, text: text)
+  func takeOver(_ change: RowChange, replacing range: Range<Int>, length: Int, text: String) {
+    content.takeOver(change, replacing: range, length: length, text: text)
     textVersion.increment()
     let runs = displayRows.runs.compactMap { run -> CollapsedRun? in
       guard !run.rows.overlaps(change.oldRows) else { return nil }
@@ -185,6 +217,8 @@ final class PaneTextView: NSTextView {
     }
     displayRows = DisplayRows(runs: runs, rowCount: grid.rowCount)
     highlightsByBlock.removeAll()
+    cachedPreviewSpans = nil
+    cachedPreviewRows = nil
     interaction?.textDidChange()
   }
 
@@ -350,14 +384,14 @@ final class PaneTextView: NSTextView {
     else { return }
     // Draws the fragments of the rows again, which ask for their painting as they draw.
     textLayoutManager.invalidateRenderingAttributes(for: range)
+    applyPreviewColor(in: offsets)
   }
 
   /// The fill of `row`, or `nil` if it stays on the text background.
   private func rowFill(atRow row: Int) -> NSColor? {
     let blockIndex = content.blockIndex(atRow: row)
     return theme.rowFill(
-      for: blockIndex.map { content.blocks[$0].style } ?? .unchanged,
-      isFiller: content.isFiller(row: row),
+      for: style(ofRow: row), isFiller: content.isFiller(row: row),
       isCurrent: blockIndex != nil && blockIndex == currentBlock)
   }
 

@@ -42,6 +42,9 @@ final class GutterView: NSView {
   /// the gutter names for VoiceOver.
   var removalRows: (Range<Int>) -> [Int] = { _ in [] }
 
+  /// How a row is tinted, which the text knows: like its block, or like the preview it shows.
+  var rowStyle: (Int) -> BlockStyle = { _ in .unchanged }
+
   /// The rows that are visible beside the text, without those behind bars.
   var visibleRows: [Int] {
     rows(in: bounds)
@@ -123,9 +126,10 @@ final class GutterView: NSView {
       let rowRect = rect(ofRow: row)
       let blockIndex = content.blockIndex(atRow: row)
       let isCurrent = blockIndex != nil && blockIndex == currentBlock
-      if isCurrent, let blockIndex {
-        let style = content.blocks[blockIndex].style
-        theme.rowFill(for: style, isFiller: content.isFiller(row: row), isCurrent: true)?.setFill()
+      if isCurrent {
+        theme.rowFill(
+          for: rowStyle(row), isFiller: content.isFiller(row: row), isCurrent: true)?
+          .setFill()
         rowRect.fill()
       }
       let lineNumber = content.lineNumbers[row]
