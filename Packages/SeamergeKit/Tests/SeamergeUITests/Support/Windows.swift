@@ -13,11 +13,12 @@ enum Windows {
   static func controller(
     for session: Session, context: SessionContext = SessionContext(),
     options: DisplayOptions = DisplayOptions(reducesMotion: true),
-    workspace: WorkspaceRecorder = WorkspaceRecorder()
+    workspace: WorkspaceRecorder = WorkspaceRecorder(), prompts: PromptRecorder = PromptRecorder(),
+    undoManager: UndoManager = UndoManager()
   ) throws -> SessionWindowController {
     let controller = SessionWindowController(
-      session: session, context: context, undoManager: UndoManager(), displayOptions: options,
-      pasteboard: .withUniqueName(), workspace: workspace)
+      session: session, context: context, undoManager: undoManager, displayOptions: options,
+      pasteboard: .withUniqueName(), workspace: workspace, prompts: prompts)
     let window = try #require(controller.window)
     window.contentView?.layoutSubtreeIfNeeded()
     return controller
@@ -54,5 +55,24 @@ final class WorkspaceRecorder: Workspace {
 
   func activateFileViewerSelecting(_ fileURLs: [URL]) {
     revealedURLs += fileURLs
+  }
+}
+
+/// Prompts that answer as told and record what the window asked.
+@MainActor
+final class PromptRecorder: ComparisonPrompts {
+  /// Whether to switch when asked about discarded decisions.
+  var switchesAnyway = false
+
+  private(set) var discardedCounts: [Int] = []
+  private(set) var failureCount = 0
+
+  func confirmDiscarding(_ count: Int, in window: NSWindow) async -> Bool {
+    discardedCounts.append(count)
+    return switchesAnyway
+  }
+
+  func reportFailedComparison(in window: NSWindow) async {
+    failureCount += 1
   }
 }

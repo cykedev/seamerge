@@ -108,7 +108,8 @@ import Testing
   ) throws {
     let controller = SessionWindowController(
       session: session, context: context, undoManager: UndoManager(), displayOptions: options,
-      pasteboard: .withUniqueName(), workspace: WorkspaceRecorder())
+      pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(),
+      prompts: PromptRecorder())
     let window = try #require(controller.window)
     defer { window.close() }
     Rendering.prepare(window, size: size ?? window.contentMinSize, appearance: look.appearance)

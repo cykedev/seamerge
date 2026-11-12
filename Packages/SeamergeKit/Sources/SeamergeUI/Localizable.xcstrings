@@ -86,6 +86,12 @@
     "CRLF": {
       "comment": "Line endings: CR LF."
     },
+    "Cancel": {
+      "comment": "Button: close the sheet and do nothing."
+    },
+    "Change Comparison": {
+      "comment": "Undo menu: the switch to another comparison mode or merge strategy."
+    },
     "Change in %@, line %lld": {
       "comment": "VoiceOver: a mark in the overview bar, such as Change in A, line 12."
     },
@@ -103,6 +109,12 @@
     },
     "Copy Path": {
       "comment": "Context menu of a header."
+    },
+    "Couldn’t Compare the Files Anew": {
+      "comment": "Sheet after switching the comparison failed."
+    },
+    "Count every difference, whitespace and line endings too": {
+      "comment": "Help tag of Compare > Exact."
     },
     "Cut": {
       "comment": "Context menu: cut the selected text."
@@ -127,6 +139,9 @@
     },
     "Encoding: %@": {
       "comment": "VoiceOver: the encoding of the result, such as Encoding: UTF-8."
+    },
+    "Exact": {
+      "comment": "Compare menu: compare every byte."
     },
     "File": {
       "comment": "Details of a side: where the file was read from."
@@ -160,6 +175,15 @@
     },
     "ISO 8859-1": {
       "comment": "Encoding: ISO Latin 1."
+    },
+    "Ignore All Whitespace": {
+      "comment": "Compare menu command."
+    },
+    "Ignore Line Endings": {
+      "comment": "Compare menu command."
+    },
+    "Ignore Whitespace Changes": {
+      "comment": "Compare menu command."
     },
     "LF": {
       "comment": "Line endings: line feed."
@@ -236,11 +260,49 @@
     "Stash": {
       "comment": "The name of a stash in a header."
     },
+    "Switch": {
+      "comment": "Button: switch anyway."
+    },
     "Take the deletion of %@.": {
       "comment": "Help tag of a toggle that removes the lines, such as Take the deletion of main."
     },
     "Take the version of %@.": {
       "comment": "Help tag of a toggle, such as Take the version of feature/login."
+    },
+    "The switch discards %lld decisions.": {
+      "comment": "Sheet before switching the comparison, such as The switch discards 3 decisions.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "The switch discards %lld decision."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "The switch discards %lld decisions."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "The window still shows the previous comparison.": {
+      "comment": "Sheet after switching the comparison failed: what happens next."
+    },
+    "Treat LF, CRLF and CR as equal": {
+      "comment": "Help tag of Compare > Ignore Line Endings."
+    },
+    "Treat “a  b” and “ab” as equal": {
+      "comment": "Help tag of Compare > Ignore All Whitespace, with an example."
+    },
+    "Treat “a  b” as “a b”, but not as “ab”": {
+      "comment": "Help tag of Compare > Ignore Whitespace Changes, with an example."
     },
     "UTF-16 BE": {
       "comment": "Encoding: UTF-16 big-endian."

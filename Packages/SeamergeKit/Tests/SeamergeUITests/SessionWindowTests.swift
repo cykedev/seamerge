@@ -182,6 +182,7 @@ import Testing
     SessionWindowController(
       session: session, context: context, undoManager: UndoManager(),
       displayOptions: DisplayOptions(), pasteboard: .withUniqueName(),
-      workspace: WorkspaceRecorder())
+      workspace: WorkspaceRecorder(),
+      prompts: PromptRecorder())
   }
 }

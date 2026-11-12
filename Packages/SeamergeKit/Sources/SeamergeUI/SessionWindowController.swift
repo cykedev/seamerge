@@ -29,9 +29,16 @@ public final class SessionWindowController: NSWindowController {
 
   /// The workspace that opens files and shows them in the Finder.
   let workspace: any Workspace
-  private let summary: SessionSummary
-  private let sessionUndoManager: UndoManager
+
+  /// What the window asks or tells while it switches to another comparison.
+  let prompts: any ComparisonPrompts
+  private var summary: SessionSummary
+  /// The undo manager of the window, which belongs to this session alone.
+  let sessionUndoManager: UndoManager
   private var hasFinished = false
+
+  /// Whether the files are being compared anew.
+  var isSwitchingComparison = false
 
   /// The pane above the result that had the focus last, which gets it back when text mode ends.
   private(set) weak var lastSourcePane: PaneView?
@@ -62,17 +69,20 @@ public final class SessionWindowController: NSWindowController {
   ) {
     self.init(
       session: session, context: context, undoManager: undoManager,
-      displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared)
+      displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
+      prompts: ComparisonSheets())
     NSWorkspace.shared.notificationCenter.addObserver(
       self, selector: #selector(accessibilityDisplayOptionsDidChange(_:)),
       name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
   }
 
   /// Opens a window for `session` that draws with `displayOptions`, whatever the system's
-  /// settings are, and copies to `pasteboard` and opens files with `workspace`.
+  /// settings are, copies to `pasteboard`, opens files with `workspace`, and asks with
+  /// `prompts`.
   init(
     session: Session, context: SessionContext, undoManager: UndoManager,
-    displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace
+    displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace,
+    prompts: any ComparisonPrompts
   ) {
     precondition(session.kind == .merge, "A session window shows a merge")
     let theme = displayOptions.theme
@@ -87,6 +97,7 @@ public final class SessionWindowController: NSWindowController {
     self.context = context
     self.pasteboard = pasteboard
     self.workspace = workspace
+    self.prompts = prompts
     sessionUndoManager = undoManager
     self.displayOptions = displayOptions
     presentation = MergePresentation(
@@ -109,10 +120,9 @@ public final class SessionWindowController: NSWindowController {
     window.contentMinSize = CGSize(width: layout.minimumWidth, height: layout.minimumHeight)
     window.title = summary.title
     window.representedURL = context.resultURL
-    window.setAccessibilityTitle([summary.title, summary.fullSubtitle].joined(separator: ", "))
     layout.updateMinimumWidths()
     layout.placeDividers()
-    updateSubtitle()
+    sessionDidChange()
     presentation.showCurrentBlock()
     presentation.delegate = self
     layout.delegate = self
@@ -144,6 +154,13 @@ public final class SessionWindowController: NSWindowController {
   /// says so below the result header.
   public func callerDisconnected() {
     layout.showCallerIsGone()
+  }
+
+  /// Titles the window after the session it shows now.
+  func sessionDidChange() {
+    summary = SessionSummary(changes: presentation.changes, context: context)
+    window?.setAccessibilityTitle([summary.title, summary.fullSubtitle].joined(separator: ", "))
+    updateSubtitle()
   }
 
   /// Shows as much of the subtitle as the width of the window allows; the rest stays in the
@@ -184,8 +201,13 @@ extension SessionWindowController: NSWindowDelegate {
 
 extension SessionWindowController: NSUserInterfaceValidations {
   /// Whether the command of `item` can have an effect now.
+  ///
+  /// A menu item of a comparison mode shows a checkmark while the window compares in it.
   public func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
     guard let command = SessionCommand(action: item.action) else { return false }
+    if let menuItem = item as? NSMenuItem, let mode = command.comparisonMode {
+      menuItem.state = mode == comparisonOptions.mode ? .on : .off
+    }
     return canPerform(command)
   }
 
@@ -196,6 +218,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
       presentation.navigation.target(of: jump) != nil
     case .anotherPane:
       focusablePanes.count > 1
+    case .noComparisonUnderWay:
+      !isSwitchingComparison
     case .blockText:
       !blockText(at: CopiedPlace(pane: focusedPane, block: presentation.currentBlock)).isEmpty
     }

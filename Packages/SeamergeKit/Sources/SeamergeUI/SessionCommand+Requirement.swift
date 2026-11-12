@@ -7,6 +7,9 @@ extension SessionCommand {
     /// Moving the focus needs another pane in view.
     case anotherPane
 
+    /// Choosing a comparison mode needs no comparison under way.
+    case noComparisonUnderWay
+
     /// Copying a block needs a current block with text.
     case blockText
   }
@@ -21,6 +24,8 @@ extension SessionCommand {
     case .firstChange: .jumpTarget(.firstChange)
     case .lastChange: .jumpTarget(.lastChange)
     case .nextPane, .previousPane: .anotherPane
+    case .compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace:
+      .noComparisonUnderWay
     case .copyBlock: .blockText
     }
   }

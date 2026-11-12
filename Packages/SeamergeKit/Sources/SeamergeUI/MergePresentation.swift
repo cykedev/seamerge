@@ -168,6 +168,50 @@ final class MergePresentation {
     layout.resultPane.collapsedRuns = resultRuns
   }
 
+  /// Shows `document`, a result of the same files with another comparison, whose text is
+  /// `text`, and keeps the line of B at the reading line where it is.
+  ///
+  /// The block that holds the first line of the current block in B stays current, or the next
+  /// changed block after it; the runs that the user expanded collapse again.
+  func show(_ document: ResultDocument, text: String) {
+    let lineOfB = lineOfBAtReadingLine
+    let currentLineOfB = currentBlock.map { changes.blocks[$0].lines(in: .b).lowerBound }
+    self.document = document
+    resultText = text
+    changes = SessionChanges(session: document.session)
+    collapsed = CollapsedRows(session: document.session, document: document)
+    scrollMap = ScrollMap(document: document, text: text)
+    showDocument()
+    let rowLayout = changes.session.rowLayout
+    currentBlock = nil
+    setCurrentBlock(
+      currentLineOfB.flatMap { line in
+        let row = rowLayout.row(ofLine: line, in: .b)
+        return changes.blocks.firstIndex { rowLayout.rows(of: $0).upperBound > row }
+      })
+    if let lineOfB, let pane = leadingPane {
+      let row = rowLayout.row(ofLine: lineOfB, in: .b)
+      let leadingRow =
+        pane === layout.resultPane ? scrollMap.resultLine(atRow: Double(row)) : Double(row)
+      pane.scroll(toPlaceRowAtReadingLine: Int(leadingRow), motion: .cut)
+    }
+  }
+
+  /// The line of B at the reading line of the panes, or the first line after it if a filler row
+  /// is there, or `nil` if B has no line from there on.
+  private var lineOfBAtReadingLine: Int? {
+    guard let pane = leadingPane else { return nil }
+    let visible = pane.documentView.visibleRect
+    let point = pane.convert(
+      CGPoint(x: 0, y: visible.minY + Theme.readingLine * visible.height), from: pane.documentView)
+    let hitRow = pane.hit(at: point).row
+    let rowLayout = changes.session.rowLayout
+    let row =
+      pane === layout.resultPane
+      ? Int(scrollMap.row(atResultLine: Double(hitRow)).rounded(.down)) : hitRow
+    return (row..<rowLayout.rowCount).lazy.compactMap { rowLayout.line(atRow: $0, in: .b) }.first
+  }
+
   /// Makes `block` current and scrolls it to the reading line of every pane, as far as the text
   /// allows: what every jump of the Go menu does.
   func jump(to block: Int) {

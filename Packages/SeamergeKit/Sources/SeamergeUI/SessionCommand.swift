@@ -34,6 +34,18 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Moves the focus to the previous pane.
   case previousPane
 
+  /// Compares lines byte for byte.
+  case compareExactly
+
+  /// Compares lines without their line endings.
+  case ignoreLineEndings
+
+  /// Compares lines as equal where they differ only in the amount of whitespace.
+  case ignoreWhitespaceChanges
+
+  /// Compares lines without any of their whitespace.
+  case ignoreAllWhitespace
+
   /// Copies the lines of the current block in the pane with the focus, or in the pane of a
   /// context menu.
   case copyBlock
@@ -57,6 +69,15 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "Next Pane", bundle: .module, comment: "Go menu command.")
     case .previousPane:
       String(localized: "Previous Pane", bundle: .module, comment: "Go menu command.")
+    case .compareExactly:
+      String(localized: "Exact", bundle: .module, comment: "Compare menu: compare every byte.")
+    case .ignoreLineEndings:
+      String(localized: "Ignore Line Endings", bundle: .module, comment: "Compare menu command.")
+    case .ignoreWhitespaceChanges:
+      String(
+        localized: "Ignore Whitespace Changes", bundle: .module, comment: "Compare menu command.")
+    case .ignoreAllWhitespace:
+      String(localized: "Ignore All Whitespace", bundle: .module, comment: "Compare menu command.")
     case .copyBlock:
       String(
         localized: "Copy Block", bundle: .module,
@@ -83,8 +104,35 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Go back to the change before this one", bundle: .module,
         comment: "Help tag of Previous Change.")
+    case .compareExactly:
+      String(
+        localized: "Count every difference, whitespace and line endings too", bundle: .module,
+        comment: "Help tag of Compare > Exact.")
+    case .ignoreLineEndings:
+      String(
+        localized: "Treat LF, CRLF and CR as equal", bundle: .module,
+        comment: "Help tag of Compare > Ignore Line Endings.")
+    case .ignoreWhitespaceChanges:
+      String(
+        localized: "Treat “a  b” as “a b”, but not as “ab”", bundle: .module,
+        comment: "Help tag of Compare > Ignore Whitespace Changes, with an example.")
+    case .ignoreAllWhitespace:
+      String(
+        localized: "Treat “a  b” and “ab” as equal", bundle: .module,
+        comment: "Help tag of Compare > Ignore All Whitespace, with an example.")
     default:
       nil
+    }
+  }
+
+  /// The comparison mode that the command chooses, if it is one of the Compare menu.
+  var comparisonMode: ComparisonMode? {
+    switch self {
+    case .compareExactly: .exact
+    case .ignoreLineEndings: .ignoreLineEndings
+    case .ignoreWhitespaceChanges: .ignoreWhitespaceAmount
+    case .ignoreAllWhitespace: .ignoreAllWhitespace
+    default: nil
     }
   }
 
@@ -99,6 +147,10 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .lastChange: #selector(SessionWindowController.selectLastChange(_:))
     case .nextPane: #selector(SessionWindowController.selectNextPane(_:))
     case .previousPane: #selector(SessionWindowController.selectPreviousPane(_:))
+    case .compareExactly: #selector(SessionWindowController.compareExactly(_:))
+    case .ignoreLineEndings: #selector(SessionWindowController.ignoreLineEndings(_:))
+    case .ignoreWhitespaceChanges: #selector(SessionWindowController.ignoreWhitespaceChanges(_:))
+    case .ignoreAllWhitespace: #selector(SessionWindowController.ignoreAllWhitespace(_:))
     case .copyBlock: #selector(SessionWindowController.copyBlock(_:))
     }
   }

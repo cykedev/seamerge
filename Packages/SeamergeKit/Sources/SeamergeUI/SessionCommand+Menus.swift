@@ -34,7 +34,7 @@ extension SessionCommand {
         [.nextPane, .previousPane],
       ]
     case .compare:
-      []
+      [[.compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace]]
     }
   }
 
