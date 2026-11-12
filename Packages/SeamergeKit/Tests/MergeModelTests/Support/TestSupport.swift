@@ -35,6 +35,27 @@ extension Session {
     let text = try #require(rowLayout.displayText(for: role))
     return (0..<text.rowCount).map { text.string.utf16Substring(text.utf16Range(ofRow: $0)) }
   }
+
+  /// The highlighted texts in the pane of `role` for the first block of `kind`, without the
+  /// removal marks.
+  func highlightedTexts(of role: Role, inFirst kind: Block.Kind) throws -> [String] {
+    let string = try displayString(of: role)
+    return try inlineRanges(of: role, inFirst: kind).filter { !$0.isEmpty }
+      .map { string.utf16Substring($0) }
+  }
+
+  /// The UTF-16 positions of the removal marks in the pane of `role` for the first block of
+  /// `kind`.
+  func removalMarks(of role: Role, inFirst kind: Block.Kind) throws -> [Int] {
+    try inlineRanges(of: role, inFirst: kind).filter(\.isEmpty).map(\.lowerBound)
+  }
+
+  /// The inline ranges, highlights and removal marks, in the pane of `role` for the first block
+  /// of `kind`.
+  func inlineRanges(of role: Role, inFirst kind: Block.Kind) throws -> [Range<Int>] {
+    let block = try #require(blocks.first { $0.kind == kind })
+    return try inlineHighlights(for: block).ranges(in: role)
+  }
 }
 
 extension String {

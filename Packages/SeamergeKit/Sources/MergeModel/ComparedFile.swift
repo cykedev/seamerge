@@ -79,6 +79,29 @@ struct ComparedFile: Sendable {
     return low
   }
 
+  /// Whether a line starts at byte `offset`, counting the end of the text as the start of the
+  /// line after the last one.
+  ///
+  /// - Precondition: `offset` lies within `0...utf8.count`.
+  func startsLine(at offset: Int) -> Bool {
+    offset == utf8.count || lineStarts[line(containingByte: offset)] == offset
+  }
+
+  /// Whether the content of a line ends at byte `offset`: a line ending follows, or the text
+  /// ends there without one.
+  ///
+  /// - Precondition: `offset` lies within `0...utf8.count`.
+  func endsLineContent(at offset: Int) -> Bool {
+    guard offset < utf8.count else {
+      return utf8.last.map { !Self.isLineEnding($0) } ?? true
+    }
+    return Self.isLineEnding(utf8[offset])
+  }
+
+  private static func isLineEnding(_ byte: UInt8) -> Bool {
+    byte == UInt8(ascii: "\n") || byte == UInt8(ascii: "\r")
+  }
+
   /// The length of the line ending CRLF, LF or CR that ends just before `end`, looking no
   /// further back than `start`.
   ///

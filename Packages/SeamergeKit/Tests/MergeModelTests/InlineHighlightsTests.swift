@@ -168,12 +168,3 @@ struct InlineHighlightsTests {
     #expect(try ignoring.highlightedTexts(of: .b, inFirst: .changed) == ["b,"])
   }
 }
-
-extension Session {
-  /// The highlighted text in the pane of `role` for the first block of `kind`.
-  fileprivate func highlightedTexts(of role: Role, inFirst kind: Block.Kind) throws -> [String] {
-    let block = try #require(blocks.first { $0.kind == kind })
-    let string = try displayString(of: role)
-    return try inlineHighlights(for: block).ranges(in: role).map { string.utf16Substring($0) }
-  }
-}

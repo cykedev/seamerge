@@ -1,13 +1,19 @@
 import Foundation
 
-/// The characters of a block that changed, for the stronger tint within lines.
+/// The characters of a block that changed, and the places where a side removed text, for the
+/// stronger tint and the removal marks within lines.
 ///
 /// The text of a block is compared as a whole, in runs of one character class, with the text it
 /// changed: in a merge, A and B each with the base. Without a base, in a merge as in a comparison
 /// of two files, A and B are compared with each other and both are highlighted. The base pane
 /// stays without highlights, and so does a side that did not change the block. Changes that the
 /// comparison mode ignores are not highlighted. When more than 60 % of the runs of a comparison
-/// changed, it highlights nothing, because the block as a whole is then the change.
+/// changed, removed runs included, it highlights nothing, because the block as a whole is then
+/// the change.
+///
+/// A run that one side replaced is highlighted on both sides. A run that one side lacks is
+/// highlighted on the side that has it and marked by an empty range on the side that lacks it,
+/// unless it consists of whole lines: those already show as rows the other side does not have.
 public struct InlineHighlights: Sendable, Hashable {
   /// The highlighted ranges of each pane.
   private let rangesByRole: [Role: [Range<Int>]]
@@ -16,11 +22,15 @@ public struct InlineHighlights: Sendable, Hashable {
   ///
   /// The ranges are sorted, do not overlap and never split a composed character. A change that
   /// spans several lines is highlighted per line, without the line endings.
+  ///
+  /// An empty range marks a place where the side lacks text that the other side has. It lies at
+  /// the start of a composed character or at the end of a line, and at most once per removal: a
+  /// removal that spans line breaks of the other side is marked once, where the text is missing.
   public func ranges(in role: Role) -> [Range<Int>] {
     rangesByRole[role] ?? []
   }
 
-  /// Whether no pane has a highlight.
+  /// Whether no pane has a highlight or a removal mark.
   public var isEmpty: Bool { rangesByRole.values.allSatisfy(\.isEmpty) }
 
   /// The share of changed runs above which a comparison highlights nothing: three fifths.
@@ -46,14 +56,20 @@ public struct InlineHighlights: Sendable, Hashable {
         changedTokenCount * Self.maximumChangedShare.denominator
           <= tokens.tokenCount * Self.maximumChangedShare.numerator
       else { continue }
+      let runs = shownRuns.map {
+        (
+          first: $0.first.shifted(by: firstBytes.lowerBound),
+          second: $0.second.shifted(by: secondBytes.lowerBound)
+        )
+      }
       if comparison.highlightsFirst {
         rangesByRole[comparison.first] = Self.displayRanges(
-          ofBytes: shownRuns.map { $0.first.shifted(by: firstBytes.lowerBound) },
-          in: firstFile, role: comparison.first, layout: session.rowLayout)
+          of: runs.map { (own: $0.first, other: $0.second) },
+          in: firstFile, against: secondFile, role: comparison.first, layout: session.rowLayout)
       }
       rangesByRole[comparison.second] = Self.displayRanges(
-        ofBytes: shownRuns.map { $0.second.shifted(by: secondBytes.lowerBound) },
-        in: secondFile, role: comparison.second, layout: session.rowLayout)
+        of: runs.map { (own: $0.second, other: $0.first) },
+        in: secondFile, against: firstFile, role: comparison.second, layout: session.rowLayout)
     }
     self.rangesByRole = rangesByRole.filter { !$0.value.isEmpty }
   }
@@ -84,22 +100,34 @@ public struct InlineHighlights: Sendable, Hashable {
     }
   }
 
-  /// Converts byte ranges in the text of a file into UTF-16 ranges in its pane, one per line
-  /// and without line endings, widened to whole composed characters.
+  /// Converts changed runs into UTF-16 ranges in the pane of `file`: a run `file` has into
+  /// highlights, one per line and without line endings, widened to whole composed characters;
+  /// a run only `other` has into a removal mark.
   ///
+  /// - Parameter runs: The byte ranges of each run in `file` and in `other`, in text order.
   /// - Precondition: Every range starts and ends at the start of a Unicode scalar.
   private static func displayRanges(
-    ofBytes byteRanges: [Range<Int>], in file: ComparedFile, role: Role, layout: RowLayout
+    of runs: [(own: Range<Int>, other: Range<Int>)], in file: ComparedFile,
+    against other: ComparedFile, role: Role, layout: RowLayout
   ) -> [Range<Int>] {
     guard let displayText = layout.displayText(for: role) else { return [] }
     let string = displayText.string as NSString
     var ranges: [Range<Int>] = []
-    for byteRange in byteRanges where !byteRange.isEmpty {
-      var line = file.line(containingByte: byteRange.lowerBound)
-      while line < file.lineCount, file.lineStarts[line] < byteRange.upperBound {
+    for run in runs {
+      if run.own.isEmpty {
+        if let mark = removalMark(
+          at: run.own.lowerBound, removing: run.other, in: file, against: other,
+          displayText: displayText, role: role, layout: layout)
+        {
+          insert(mark, into: &ranges)
+        }
+        continue
+      }
+      var line = file.line(containingByte: run.own.lowerBound)
+      while line < file.lineCount, file.lineStarts[line] < run.own.upperBound {
         let content = file.contentByteRange(ofLine: line)
-        let lower = max(byteRange.lowerBound, content.lowerBound) - content.lowerBound
-        let upper = min(byteRange.upperBound, content.upperBound) - content.lowerBound
+        let lower = max(run.own.lowerBound, content.lowerBound) - content.lowerBound
+        let upper = min(run.own.upperBound, content.upperBound) - content.lowerBound
         if lower < upper {
           let rowStart = displayText.utf16Range(ofRow: layout.row(ofLine: line, in: role))
             .lowerBound
@@ -107,17 +135,58 @@ public struct InlineHighlights: Sendable, Hashable {
           let end = rowStart + file.lineIndex.utf16Offset(ofByteOffset: upper, inLine: line)
           let composed = string.rangeOfComposedCharacterSequences(
             for: NSRange(location: start, length: end - start))
-          let range = composed.location..<(composed.location + composed.length)
-          if let last = ranges.last, range.lowerBound <= last.upperBound {
-            ranges[ranges.count - 1] = last.lowerBound..<max(last.upperBound, range.upperBound)
-          } else {
-            ranges.append(range)
-          }
+          insert(composed.location..<(composed.location + composed.length), into: &ranges)
         }
         line += 1
       }
     }
     return ranges
+  }
+
+  /// The empty range in the pane of `file` that marks the place `offset` where `file` lacks the
+  /// bytes `removed` of `other`, or `nil` when they are whole lines.
+  ///
+  /// Whole lines run from the start of a line to the start of another, or from the end of the
+  /// content of a line to the end of the content of another. Any other removal leaves a line
+  /// on this side with something missing: text within a line, at its start or end, or a line
+  /// break that joined two lines. Such a removal is marked once at `offset`, even when `removed`
+  /// spans line breaks, because the place where it is missing is a single one.
+  private static func removalMark(
+    at offset: Int, removing removed: Range<Int>, in file: ComparedFile,
+    against other: ComparedFile, displayText: DisplayText, role: Role, layout: RowLayout
+  ) -> Range<Int>? {
+    let isWholeLines =
+      (other.startsLine(at: removed.lowerBound) && other.startsLine(at: removed.upperBound))
+      || (other.endsLineContent(at: removed.lowerBound)
+        && other.endsLineContent(at: removed.upperBound))
+    guard !isWholeLines, file.lineCount > 0 else { return nil }
+    // A removal that is not whole lines follows a token this side shares, so `offset` lies within
+    // a line or at the end of the last one, never after the final line ending.
+    let line = offset < file.utf8.count ? file.line(containingByte: offset) : file.lineCount - 1
+    let rowStart = displayText.utf16Range(ofRow: layout.row(ofLine: line, in: role)).lowerBound
+    var position =
+      rowStart
+      + file.lineIndex.utf16Offset(ofByteOffset: offset - file.lineStarts[line], inLine: line)
+    let string = displayText.string as NSString
+    if position < string.length {
+      position = string.rangeOfComposedCharacterSequence(at: position).location
+    }
+    return position..<position
+  }
+
+  /// Appends `range` to the sorted `ranges`, joining it with the ranges it overlaps or touches.
+  ///
+  /// A removal mark that touches a highlight is absorbed by it, and a second mark at the same
+  /// place is dropped, so every place is marked once.
+  private static func insert(_ range: Range<Int>, into ranges: inout [Range<Int>]) {
+    var joined = range
+    while let last = ranges.last,
+      last.lowerBound <= joined.upperBound, joined.lowerBound <= last.upperBound
+    {
+      joined = min(last.lowerBound, joined.lowerBound)..<max(last.upperBound, joined.upperBound)
+      ranges.removeLast()
+    }
+    ranges.append(joined)
   }
 }
 
