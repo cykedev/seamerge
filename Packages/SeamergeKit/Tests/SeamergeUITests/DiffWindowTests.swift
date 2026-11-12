@@ -148,7 +148,8 @@ import Testing
     #expect(!controller.canPerform(.toggleResultMaximized))
     #expect(controller.canPerform(.nextChange))
     #expect(controller.canPerform(.swapSides))
-    #expect(controller.canPerform(.toggleCollapsedLines) == false)
+    #expect(controller.canPerform(.showAllLines) == false)
+    #expect(controller.canPerform(.collapseUnchangedLines) == false)
     let item = NSMenuItem(
       title: "", action: SessionCommand.toggleResultMaximized.action, keyEquivalent: "")
     #expect(!controller.validateUserInterfaceItem(item))

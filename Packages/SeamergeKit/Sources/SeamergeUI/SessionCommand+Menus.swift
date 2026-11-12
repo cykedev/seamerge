@@ -30,7 +30,9 @@ extension SessionCommand {
     case .view:
       [
         [.toggleBase, .toggleResultMaximized],
-        [.toggleScrollSynchronization, .toggleInvisibles, .toggleCollapsedLines],
+        [
+          .toggleScrollSynchronization, .toggleInvisibles, .showAllLines, .collapseUnchangedLines,
+        ],
         [.zoomIn, .zoomOut, .actualSize],
       ]
     case .go:

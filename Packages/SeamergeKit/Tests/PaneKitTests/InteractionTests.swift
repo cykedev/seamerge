@@ -87,4 +87,6 @@ private final class Recorder: PaneViewDelegate {
   func pane(_ pane: PaneView, didAskToExpand run: CollapsedRun) {
     expandedRuns.append(run)
   }
+
+  func pane(_ pane: PaneView, didAskToCollapse run: CollapsedRun) {}
 }

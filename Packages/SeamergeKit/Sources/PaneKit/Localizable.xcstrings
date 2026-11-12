@@ -103,6 +103,29 @@
     "Chosen: %@": {
       "comment": "VoiceOver: a block whose sources the user chose, in order, such as B, A."
     },
+    "Collapse %lld Unchanged Lines": {
+      "comment": "VoiceOver: the sign beside an expanded run of unchanged lines that hides them.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Collapse %lld Unchanged Line"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Collapse %lld Unchanged Lines"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Decisions": {
       "comment": "VoiceOver: the column beside the result that shows how each block was decided."
     },

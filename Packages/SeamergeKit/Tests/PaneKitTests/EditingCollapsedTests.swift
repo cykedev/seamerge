@@ -109,4 +109,6 @@ final class Expansions: PaneViewDelegate {
   func pane(_ pane: PaneView, didAskToExpand run: CollapsedRun) {
     runs.append(run)
   }
+
+  func pane(_ pane: PaneView, didAskToCollapse run: CollapsedRun) {}
 }

@@ -44,13 +44,15 @@ extension SessionWindowController {
     }
   }
 
-  /// Shows every line, or collapses long runs of unchanged lines again.
-  @objc func toggleCollapsedLines(_ sender: Any?) {
-    if presentation.collapsesUnchangedRows {
-      presentation.showAllRows()
-    } else {
-      presentation.collapseUnchangedRows(caretLine: caretLineInTextMode)
-    }
+  /// Shows every line of every pane.
+  @objc func showAllLines(_ sender: Any?) {
+    presentation.showAllRows()
+  }
+
+  /// Collapses long runs of unchanged lines again, except where the result is worked on and the
+  /// run of the insertion point.
+  @objc func collapseUnchangedLines(_ sender: Any?) {
+    presentation.collapseUnchangedRows(caretLine: caretLineInTextMode)
   }
 
   /// The line of the result that the insertion point is on in text mode, or `nil` in block

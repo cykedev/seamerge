@@ -39,6 +39,9 @@ extension GutterView {
         children.append(element(named: name, atRow: row, frame: markerSlot(index, in: rowRect)))
       }
     }
+    for index in expandedRuns.indices where rows.contains(expandedRuns[index].rows.lowerBound) {
+      children.append(collapseElement(ofRun: index))
+    }
     let removals = rows.isEmpty ? [] : removalRows(rows[0]..<rows[rows.count - 1] + 1)
     for row in removals where displayRows.runIndex(containingRow: row) == nil {
       children.append(
@@ -49,6 +52,22 @@ extension GutterView {
           atRow: row, frame: rect(ofRow: row)))
     }
     return children
+  }
+
+  /// The button that collapses the expanded run at `index` again, found beside the run's first
+  /// row whether or not the pointer shows its sign.
+  private func collapseElement(ofRun index: Int) -> NSAccessibilityElement {
+    let run = expandedRuns[index]
+    let element = CollapseRunElement { [weak self] in self?.interaction?.askToCollapse(run) }
+    element.setAccessibilityRole(.button)
+    element.setAccessibilityLabel(
+      String(
+        localized: "Collapse \(run.rows.count) Unchanged Lines", bundle: .module,
+        comment: "VoiceOver: the sign beside an expanded run of unchanged lines that hides them."))
+    element.setAccessibilityValue(placeDescription(ofRow: run.rows.lowerBound))
+    element.setAccessibilityParent(self)
+    element.setAccessibilityFrameInParentSpace(collapseSignRect(ofRun: index))
+    return element
   }
 
   private func element(named name: String, atRow row: Int, frame: CGRect) -> NSAccessibilityElement
@@ -100,5 +119,23 @@ extension GutterView {
         localized: "Resolved conflict", bundle: .module,
         comment: "VoiceOver: a conflict that has been decided.")
     }
+  }
+}
+
+/// The element that VoiceOver finds for the sign that collapses an expanded run, which presses
+/// it.
+private final class CollapseRunElement: NSAccessibilityElement {
+  private let collapse: @MainActor @Sendable () -> Void
+
+  init(collapse: @escaping @MainActor @Sendable () -> Void) {
+    self.collapse = collapse
+    super.init()
+  }
+
+  override func accessibilityPerformPress() -> Bool {
+    let collapse = collapse
+    // VoiceOver presses elements on the main thread.
+    MainActor.assumeIsolated { collapse() }
+    return true
   }
 }

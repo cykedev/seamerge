@@ -61,8 +61,11 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Shows spaces, tabs and line endings as quiet symbols, or hides them.
   case toggleInvisibles
 
-  /// Shows every line, or collapses long runs of unchanged lines again.
-  case toggleCollapsedLines
+  /// Shows every line, the collapsed runs of unchanged lines expanded.
+  case showAllLines
+
+  /// Collapses long runs of unchanged lines again, except where the result is worked on.
+  case collapseUnchangedLines
 
   /// Makes the text larger.
   case zoomIn
@@ -126,8 +129,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "Synchronize Scrolling", bundle: .module, comment: "View menu command.")
     case .toggleInvisibles:
       String(localized: "Show Invisibles", bundle: .module, comment: "View menu command.")
-    case .toggleCollapsedLines:
+    case .showAllLines:
       String(localized: "Show All Lines", bundle: .module, comment: "View menu command.")
+    case .collapseUnchangedLines:
+      String(localized: "Collapse Unchanged Lines", bundle: .module, comment: "View menu command.")
     case .zoomIn: String(localized: "Zoom In", bundle: .module, comment: "View menu command.")
     case .zoomOut: String(localized: "Zoom Out", bundle: .module, comment: "View menu command.")
     case .actualSize:
@@ -157,8 +162,6 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "Restore Layout", bundle: .module, comment: "View menu command.")
     case .toggleInvisibles:
       String(localized: "Hide Invisibles", bundle: .module, comment: "View menu command.")
-    case .toggleCollapsedLines:
-      String(localized: "Collapse Unchanged Lines", bundle: .module, comment: "View menu command.")
     default:
       nil
     }
@@ -244,7 +247,8 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .toggleScrollSynchronization:
       #selector(SessionWindowController.toggleScrollSynchronization(_:))
     case .toggleInvisibles: #selector(SessionWindowController.toggleInvisibles(_:))
-    case .toggleCollapsedLines: #selector(SessionWindowController.toggleCollapsedLines(_:))
+    case .showAllLines: #selector(SessionWindowController.showAllLines(_:))
+    case .collapseUnchangedLines: #selector(SessionWindowController.collapseUnchangedLines(_:))
     case .zoomIn: #selector(SessionWindowController.zoomIn(_:))
     case .zoomOut: #selector(SessionWindowController.zoomOut(_:))
     case .actualSize: #selector(SessionWindowController.actualSize(_:))

@@ -173,6 +173,7 @@ import Testing
       Show Invisibles
       Show Ignored Changes (deactivated)
       Show All Lines ⇧⌘L
+      Collapse Unchanged Lines ⌥⇧⌘L
       ---
       Zoom In ⌘+
       Zoom Out ⌘-

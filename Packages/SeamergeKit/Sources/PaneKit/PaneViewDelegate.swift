@@ -19,4 +19,11 @@ public protocol PaneViewDelegate: AnyObject {
   /// The pane leaves the run collapsed; to expand it, take it out of the collapsed runs of every
   /// pane that shows it.
   func pane(_ pane: PaneView, didAskToExpand run: CollapsedRun)
+
+  /// Tells the delegate that the user asked to collapse `run` of `pane` again, one of its
+  /// ``PaneView/expandedRuns``: with a click on its sign in the gutter or with VoiceOver.
+  ///
+  /// The pane leaves the run expanded; to collapse it, put it back among the collapsed runs of
+  /// every pane that shows it.
+  func pane(_ pane: PaneView, didAskToCollapse run: CollapsedRun)
 }

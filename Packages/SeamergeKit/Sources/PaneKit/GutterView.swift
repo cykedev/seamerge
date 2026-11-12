@@ -5,7 +5,8 @@ import AppKit
 ///
 /// The gutter sits beside the scroll view and draws the visible rows itself, each at its display
 /// row times the row height, minus the scroll offset of the text. The bars of collapsed runs
-/// cover their rows across the gutter; it leaves them empty.
+/// cover their rows across the gutter; it leaves them empty. While the pointer is over the rows
+/// of a run that the user expanded, a quiet sign beside its first row collapses it again.
 final class GutterView: NSView {
   var theme = Theme() {
     didSet {
@@ -18,6 +19,11 @@ final class GutterView: NSView {
     didSet {
       numberColumnWidth = Self.numberColumnWidth(of: content, theme: theme)
       needsDisplay = true
+      // Runs beyond the rows of new content cannot be shown until the owner hands new ones.
+      let rowCount = content.lineNumbers.count
+      if expandedRuns.contains(where: { $0.rows.upperBound > rowCount }) {
+        expandedRuns = expandedRuns.filter { $0.rows.upperBound <= rowCount }
+      }
     }
   }
 
@@ -35,7 +41,30 @@ final class GutterView: NSView {
 
   /// The vertical scroll offset of the text beside the gutter.
   var scrollOffset: CGFloat = 0 {
-    didSet { needsDisplay = true }
+    didSet {
+      needsDisplay = true
+      if scrollOffset != oldValue {
+        followPointer()
+      }
+    }
+  }
+
+  /// The runs that the user expanded and that may collapse again, in rows of the content.
+  var expandedRuns: [CollapsedRun] = [] {
+    didSet {
+      guard expandedRuns != oldValue else { return }
+      needsDisplay = true
+      followPointer()
+    }
+  }
+
+  /// The index in ``expandedRuns`` of the run whose rows the pointer is over, whose sign shows.
+  private(set) var hoveredRun: Int? {
+    didSet {
+      if hoveredRun != oldValue {
+        needsDisplay = true
+      }
+    }
   }
 
   /// The rows among the given ones that hold marks of removed text, which the text draws and
@@ -82,7 +111,76 @@ final class GutterView: NSView {
   weak var interaction: (any RowInteraction)?
 
   override func mouseDown(with event: NSEvent) {
-    interaction?.rowWasClicked(row(at: convert(event.locationInWindow, from: nil)))
+    let point = convert(event.locationInWindow, from: nil)
+    if let index = expandedRuns.indices.first(where: {
+      isShowingCollapseSign(ofRun: $0) && collapseSignRect(ofRun: $0).contains(point)
+    }) {
+      interaction?.askToCollapse(expandedRuns[index])
+      return
+    }
+    interaction?.rowWasClicked(row(at: point))
+  }
+
+  override func updateTrackingAreas() {
+    super.updateTrackingAreas()
+    for area in trackingAreas {
+      removeTrackingArea(area)
+    }
+    addTrackingArea(
+      NSTrackingArea(
+        rect: .zero,
+        options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+        owner: self))
+  }
+
+  override func mouseEntered(with event: NSEvent) {
+    pointerMoved(to: convert(event.locationInWindow, from: nil))
+  }
+
+  override func mouseMoved(with event: NSEvent) {
+    pointerMoved(to: convert(event.locationInWindow, from: nil))
+  }
+
+  override func mouseExited(with event: NSEvent) {
+    hoveredRun = nil
+  }
+
+  /// Shows the sign of the expanded run whose rows lie at `point`, if any.
+  func pointerMoved(to point: CGPoint) {
+    guard bounds.contains(point), !expandedRuns.isEmpty else {
+      hoveredRun = nil
+      return
+    }
+    let displayRow = Int(((point.y + scrollOffset) / theme.rowHeight).rounded(.down))
+    guard displayRow >= 0, displayRow < displayRows.count,
+      displayRows.runIndex(atDisplayRow: displayRow) == nil
+    else {
+      hoveredRun = nil
+      return
+    }
+    let row = displayRows.row(atDisplayRow: displayRow)
+    hoveredRun = expandedRuns.firstIndex { $0.rows.contains(row) }
+  }
+
+  /// Follows the pointer after the rows moved under it.
+  private func followPointer() {
+    guard let window, hoveredRun != nil || !expandedRuns.isEmpty else { return }
+    pointerMoved(to: convert(window.mouseLocationOutsideOfEventStream, from: nil))
+  }
+
+  /// Whether the sign that collapses the expanded run at `index` shows: while the pointer is
+  /// over the run's rows.
+  func isShowingCollapseSign(ofRun index: Int) -> Bool {
+    hoveredRun == index
+  }
+
+  /// Where the sign that collapses the expanded run at `index` lies: in the slot of the markers
+  /// beside the run's first row, as large as the smallest target of a click.
+  func collapseSignRect(ofRun index: Int) -> CGRect {
+    let rowRect = rect(ofRow: expandedRuns[index].rows.lowerBound)
+    let size = max(Theme.markerSlotWidth, Theme.decisionControlSize)
+    let height = max(rowRect.height, Theme.decisionControlSize)
+    return CGRect(x: bounds.width - size, y: rowRect.midY - height / 2, width: size, height: height)
   }
 
   override func menu(for event: NSEvent) -> NSMenu? {
@@ -117,6 +215,7 @@ final class GutterView: NSView {
   }
 
   override func draw(_ dirtyRect: NSRect) {
+    defer { drawCollapseSign(in: dirtyRect) }
     let dirtyRect = dirtyRect.intersection(bounds)
     Theme.backgroundColor.setFill()
     dirtyRect.fill()
@@ -259,6 +358,29 @@ final class GutterView: NSView {
       }
     }
     image.draw(in: rect)
+  }
+
+  /// Draws the sign that collapses the expanded run under the pointer beside its first row, in
+  /// the color of the line numbers like the bar of a collapsed run, in place of a ring that may
+  /// stand there.
+  private func drawCollapseSign(in dirtyRect: CGRect) {
+    guard let hoveredRun else { return }
+    let signRect = collapseSignRect(ofRun: hoveredRun)
+    let rowRect = rect(ofRow: expandedRuns[hoveredRun].rows.lowerBound)
+    guard signRect.intersects(dirtyRect), bounds.intersects(rowRect),
+      let symbol = NSImage(
+        systemSymbolName: "arrow.down.and.line.horizontal.and.arrow.up",
+        accessibilityDescription: nil)?
+        .withSymbolConfiguration(
+          NSImage.SymbolConfiguration(pointSize: theme.lineNumberFont.pointSize, weight: .medium)
+            .applying(NSImage.SymbolConfiguration(paletteColors: [theme.lineNumberColor])))
+    else { return }
+    let slot = markerSlot(0, in: rowRect)
+    Theme.backgroundColor.setFill()
+    slot.fill()
+    let size = symbol.size
+    let origin = CGPoint(x: slot.midX - size.width / 2, y: slot.midY - size.height / 2)
+    symbol.draw(in: CGRect(origin: pixelAligned(origin), size: size))
   }
 
   /// `point` moved to the nearest pixel of the screen, so that thin marks stay sharp.

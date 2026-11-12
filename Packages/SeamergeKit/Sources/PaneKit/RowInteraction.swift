@@ -20,6 +20,10 @@ protocol RowInteraction: AnyObject {
   /// result lies in it, or an edit would change rows it hides.
   func askToExpandRun(at index: Int)
 
+  /// Asks to collapse `run` again, one that the user expanded, because the user pressed its sign
+  /// in the gutter.
+  func askToCollapse(_ run: CollapsedRun)
+
   /// The edits that carry out `edit` of the user, which the editing delegate decides; none while
   /// there is no delegate.
   func edits(for edit: PaneEdit) -> [PaneEdit]

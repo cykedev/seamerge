@@ -304,6 +304,7 @@ import Testing
 @MainActor
 private final class ExpansionRecorder: PaneViewDelegate {
   var runs: [CollapsedRun] = []
+  var collapses: [CollapsedRun] = []
 
   func pane(_ pane: PaneView, didClick hit: PaneHit) {}
 
@@ -311,6 +312,10 @@ private final class ExpansionRecorder: PaneViewDelegate {
 
   func pane(_ pane: PaneView, didAskToExpand run: CollapsedRun) {
     runs.append(run)
+  }
+
+  func pane(_ pane: PaneView, didAskToCollapse run: CollapsedRun) {
+    collapses.append(run)
   }
 }
 
@@ -327,4 +332,6 @@ private final class Expander: PaneViewDelegate {
     runs.append(run)
     pane.collapsedRuns.removeAll { $0 == run }
   }
+
+  func pane(_ pane: PaneView, didAskToCollapse run: CollapsedRun) {}
 }

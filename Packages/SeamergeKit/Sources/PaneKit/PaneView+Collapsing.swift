@@ -32,6 +32,19 @@ extension PaneView {
     }
   }
 
+  /// Gives the keyboard focus to the bar of `run`, one of the collapsed runs, if it is in view:
+  /// after the user collapsed the run again, so that the focus stays where it was.
+  ///
+  /// - Returns: Whether the bar took the focus.
+  @discardableResult
+  public func focusBar(of run: CollapsedRun) -> Bool {
+    guard let index = displayRows.runs.firstIndex(of: run) else { return false }
+    layoutSubtreeIfNeeded()
+    placeRunBars()
+    guard let bar = runBars[index], let window else { return false }
+    return window.makeFirstResponder(bar)
+  }
+
   /// Shows a bar for each collapsed run in view, across the gutter and the text, and removes the
   /// bars of runs out of view.
   func placeRunBars() {

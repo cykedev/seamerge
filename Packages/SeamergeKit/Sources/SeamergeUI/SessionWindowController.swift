@@ -358,13 +358,12 @@ extension SessionWindowController: NSUserInterfaceValidations {
   }
 
   /// Whether what `command` switches is on: the base hidden, the result maximized, the
-  /// invisible characters shown, all lines shown.
+  /// invisible characters shown.
   func isSwitchedOn(_ command: SessionCommand) -> Bool {
     switch command {
     case .toggleBase: !layout.showsBase
     case .toggleResultMaximized: layout.maximizesResult
     case .toggleInvisibles: presentation.allPanes.contains(where: \.showsInvisibles)
-    case .toggleCollapsedLines: !presentation.collapsesUnchangedRows
     case .toggleScrollSynchronization: presentation.scrollSync.isEnabled
     default: false
     }
@@ -385,8 +384,10 @@ extension SessionWindowController: NSUserInterfaceValidations {
       !isSwitchingComparison
     case .basePane:
       presentation.changes.hasBase && !layout.maximizesResult
+    case .collapsedRows:
+      presentation.canShowAllRows
     case .collapsibleRows:
-      presentation.canToggleCollapsedRows(caretLine: caretLineInTextMode)
+      presentation.canCollapseUnchangedRows(caretLine: caretLineInTextMode)
     case .largerFontSize:
       fontSize < Self.fontSizes[Self.fontSizes.count - 1]
     case .smallerFontSize:

@@ -107,33 +107,64 @@ import Testing
     #expect(Windows.panes(of: controller).allSatisfy { !$0.showsInvisibles })
   }
 
-  @Test func showAllLinesIsValidOnlyWhereThereAreRunsToShowOrCollapse() async throws {
+  @Test func shortFilesHaveNothingToShowOrCollapse() async throws {
     let short = try Windows.controller(for: try await SampleMerges.manyBlocks())
     #expect(Windows.panes(of: short).allSatisfy { $0.collapsedRuns.isEmpty })
-    #expect(!short.canPerform(.toggleCollapsedLines))
-
-    let session = try await SampleMerges.manyBlocks(lineCount: 600, spacing: 30)
-    let long = try Windows.controller(for: session)
-    #expect(long.canPerform(.toggleCollapsedLines))
-    for run in long.layout.sourcePanes[0].pane.collapsedRuns {
-      long.presentation.pane(long.layout.sourcePanes[0].pane, didAskToExpand: run)
-    }
-    #expect(!long.canPerform(.toggleCollapsedLines))
-    long.toggleCollapsedLines(nil)
-    #expect(long.canPerform(.toggleCollapsedLines))
+    #expect(!short.canPerform(.showAllLines))
+    #expect(!short.canPerform(.collapseUnchangedLines))
   }
 
-  @Test func showAllLinesExpandsEveryRunAndCollapseBringsThemBack() async throws {
+  @Test func eachOfTheThreeStatesOfCollapsingHasTheCommandsThatChangeIt() async throws {
+    let session = try await SampleMerges.manyBlocks(lineCount: 600, spacing: 30)
+    let controller = try Windows.controller(for: session)
+    let pane = controller.layout.sourcePanes[0].pane
+    let runs = pane.collapsedRuns
+    try #require(runs.count > 1)
+    // As loaded, every run is collapsed.
+    #expect(controller.canPerform(.showAllLines))
+    #expect(!controller.canPerform(.collapseUnchangedLines))
+
+    // One run expanded, the others collapsed: both change what the panes show.
+    controller.presentation.pane(pane, didAskToExpand: runs[0])
+    #expect(pane.expandedRuns == [runs[0]])
+    #expect(controller.canPerform(.showAllLines))
+    #expect(controller.canPerform(.collapseUnchangedLines))
+    controller.collapseUnchangedLines(nil)
+    #expect(pane.collapsedRuns == runs)
+    #expect(pane.expandedRuns.isEmpty)
+
+    // Every line shown.
+    controller.showAllLines(nil)
+    #expect(Windows.panes(of: controller).allSatisfy { $0.collapsedRuns.isEmpty })
+    #expect(!controller.canPerform(.showAllLines))
+    #expect(controller.canPerform(.collapseUnchangedLines))
+    controller.collapseUnchangedLines(nil)
+    #expect(pane.collapsedRuns == runs)
+    #expect(title(of: .showAllLines, in: controller) == "Show All Lines")
+    #expect(title(of: .collapseUnchangedLines, in: controller) == "Collapse Unchanged Lines")
+  }
+
+  @Test func signInTheGutterCollapsesOneExpandedRunInEveryPane() async throws {
     let session = try await SampleMerges.manyBlocks(lineCount: 600, spacing: 30)
     let controller = try Windows.controller(for: session)
     let panes = Windows.panes(of: controller)
-    #expect(panes.allSatisfy { !$0.collapsedRuns.isEmpty })
-    #expect(title(of: .toggleCollapsedLines, in: controller) == "Show All Lines")
-    controller.toggleCollapsedLines(nil)
-    #expect(panes.allSatisfy { $0.collapsedRuns.isEmpty })
-    #expect(title(of: .toggleCollapsedLines, in: controller) == "Collapse Unchanged Lines")
-    controller.toggleCollapsedLines(nil)
-    #expect(panes.allSatisfy { !$0.collapsedRuns.isEmpty })
+    let pane = controller.layout.sourcePanes[0].pane
+    let runs = pane.collapsedRuns
+    controller.presentation.pane(pane, didAskToExpand: runs[0])
+    controller.presentation.pane(pane, didAskToExpand: runs[1])
+    let collapsedPerPane = panes.map(\.collapsedRuns.count)
+
+    var announcements: [String] = []
+    controller.presentation.announce = { announcements.append($0) }
+    pane.scroll(toPlaceRowAtReadingLine: runs[1].rows.lowerBound, motion: .cut)
+
+    controller.presentation.pane(pane, didAskToCollapse: runs[1])
+
+    #expect(pane.expandedRuns == [runs[0]])
+    #expect(zip(panes, collapsedPerPane).allSatisfy { $0.collapsedRuns.count == $1 + 1 })
+    #expect(announcements == ["Collapsed \(runs[1].rows.count) unchanged lines"])
+    let focus = try #require(controller.window?.firstResponder as? NSButton)
+    #expect(focus.accessibilityLabel()?.contains("unchanged lines") == true)
   }
 
   @Test func zoomStepsThroughTheSizesAndKeepsTheLineAtTheReadingLine() async throws {
@@ -205,7 +236,8 @@ import Testing
     #expect(Keys.of(.toggleBase, in: .merge) == Keys("b", option))
     #expect(Keys.of(.toggleResultMaximized, in: .merge) == Keys("r", option))
     #expect(Keys.of(.toggleInvisibles, in: .merge) == nil)
-    #expect(Keys.of(.toggleCollapsedLines, in: .merge) == Keys("l", [.shift, .command]))
+    #expect(Keys.of(.showAllLines, in: .merge) == Keys("l", [.shift, .command]))
+    #expect(Keys.of(.collapseUnchangedLines, in: .merge) == Keys("l", [.option, .shift, .command]))
     #expect(Keys.of(.toggleScrollSynchronization, in: .merge) == Keys("y", [.option, .command]))
     #expect(Keys.of(.zoomIn, in: .merge) == Keys("+", .command))
     #expect(Keys.of(.zoomOut, in: .merge) == Keys("-", .command))

@@ -41,6 +41,14 @@ final class SessionPresentation {
   /// presentation does not retain it.
   weak var delegate: (any SessionPresentationDelegate)?
 
+  /// Tells VoiceOver what changed; by default an announcement of the window of the panes.
+  lazy var announce: (String) -> Void = { [weak self] text in
+    guard let window = self?.layout.view.window else { return }
+    NSAccessibility.post(
+      element: window, notification: .announcementRequested,
+      userInfo: [.announcement: text, .priority: NSAccessibilityPriorityLevel.high.rawValue])
+  }
+
   /// The accessibility settings, of which the presentation reads whether movement is reduced.
   var displayOptions: DisplayOptions {
     didSet { decisionColumn?.reducesMotion = displayOptions.reducesMotion }
@@ -156,6 +164,7 @@ final class SessionPresentation {
           ignoredDifferences: ignoredDifferences,
           conflictMarkRole: changes.conflictMarkRole(baseIsShown: layout.showsBase)),
         collapsedRuns: sourceRuns)
+      pane.expandedRuns = sourceExpandedRuns
     }
     sourcesOverviewBar.marks = OverviewMarks.sources(
       of: changes, document: result?.document, arrangement: arrangement)
@@ -163,6 +172,7 @@ final class SessionPresentation {
     let content = ResultPaneContent(
       document: result.document, text: result.text, changes: changes, headers: headers)
     resultPane.setContent(content.content, collapsedRuns: resultRuns)
+    resultPane.expandedRuns = resultExpandedRuns
     resultOverviewBar?.marks = OverviewMarks.result(
       of: changes, document: result.document, result: content.content)
     decisionColumn?.decisions = content.decisions
@@ -175,8 +185,25 @@ final class SessionPresentation {
 
   /// The runs that are collapsed now, in lines of the result, if there is one.
   private var resultRuns: [CollapsedRun] {
+    resultRuns(of: collapsed.runs)
+  }
+
+  /// The runs that the user expanded and that may collapse again, in rows of the grid of the
+  /// panes side by side.
+  private var sourceExpandedRuns: [CollapsedRun] {
+    collapsed.expandedRuns.map { CollapsedRun(rows: $0.rows) }
+  }
+
+  /// The runs that the user expanded and that may collapse again, in lines of the result, if
+  /// there is one.
+  private var resultExpandedRuns: [CollapsedRun] {
+    resultRuns(of: collapsed.expandedRuns)
+  }
+
+  /// `runs` in lines of the result, if there is one, without those that hide no line there.
+  private func resultRuns(of runs: [CollapsedRows.Run]) -> [CollapsedRun] {
     guard let result else { return [] }
-    return collapsed.runs.compactMap { run in
+    return runs.compactMap { run in
       let lines = collapsed.resultLines(of: run, in: result.scrollMap)
       return lines.isEmpty ? nil : CollapsedRun(rows: lines)
     }
@@ -185,10 +212,13 @@ final class SessionPresentation {
   /// Gives every pane the runs that are collapsed now.
   private func showCollapsedRuns() {
     let sourceRuns = sourceRuns
+    let sourceExpandedRuns = sourceExpandedRuns
     for (_, pane) in layout.sourcePanes {
       pane.collapsedRuns = sourceRuns
+      pane.expandedRuns = sourceExpandedRuns
     }
     layout.resultPane?.collapsedRuns = resultRuns
+    layout.resultPane?.expandedRuns = resultExpandedRuns
   }
 
   /// Shows `session`, the same files compared anew, with `result` as the result of a merge,
@@ -240,22 +270,19 @@ final class SessionPresentation {
     showSession()
   }
 
-  /// Whether long runs of unchanged rows are collapsed.
-  var collapsesUnchangedRows: Bool {
-    collapsed.collapsesUnchangedRows
-  }
-
-  /// Whether Show All Lines or Collapse Unchanged Lines would change what the panes show: there
-  /// are collapsed runs to show, or runs to collapse, leaving out the one of the line
-  /// `caretLine` of the result if the insertion point is there.
-  func canToggleCollapsedRows(caretLine: Int?) -> Bool {
-    if collapsed.collapsesUnchangedRows {
-      return !collapsed.runs.isEmpty
-    }
+  /// Whether Collapse Unchanged Lines would change what the panes show: all rows show and there
+  /// are runs to collapse, or the user expanded runs that would collapse again, leaving out the
+  /// one of the line `caretLine` of the result if the insertion point is there.
+  func canCollapseUnchangedRows(caretLine: Int?) -> Bool {
     var collapsing = collapsed
     collapsing.collapseUnchangedRows(
       document: result?.document, caretRow: caretRow(ofLine: caretLine))
-    return !collapsing.runs.isEmpty
+    return collapsing.runs != collapsed.runs
+  }
+
+  /// Whether Show All Lines would change what the panes show: runs are collapsed.
+  var canShowAllRows: Bool {
+    !collapsed.runs.isEmpty
   }
 
   /// Shows every row of every pane.
@@ -427,6 +454,23 @@ extension SessionPresentation: PaneViewDelegate {
     guard let collapsedRun = collapsed.run(containingRow: row) else { return }
     collapsed.expand(collapsedRun)
     showCollapsedRuns()
+  }
+
+  /// Collapses the run again in every pane that shows it, says so and leaves the focus on its
+  /// bar in `pane`.
+  func pane(_ pane: PaneView, didAskToCollapse run: CollapsedRun) {
+    let row = gridRow(ofRow: run.rows.lowerBound, in: pane)
+    guard let expandedRun = collapsed.expandedRuns.first(where: { $0.rows.contains(row) }),
+      collapsed.collapse(expandedRun)
+    else { return }
+    showCollapsedRuns()
+    if let bar = pane.collapsedRuns.first(where: { $0.rows.contains(run.rows.lowerBound) }) {
+      pane.focusBar(of: bar)
+    }
+    announce(
+      String(
+        localized: "Collapsed \(run.rows.count) unchanged lines", bundle: .module,
+        comment: "VoiceOver: a run of unchanged lines was hidden again, such as 12."))
   }
 }
 

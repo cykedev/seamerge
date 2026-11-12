@@ -62,6 +62,18 @@ public final class PaneView: NSView {
     set { collapse(newValue) }
   }
 
+  /// The runs that the user expanded and that may collapse again, in rows of the content.
+  ///
+  /// While the pointer is over the rows of one of them, a sign beside its first row in the
+  /// gutter collapses it; the delegate learns when the user presses it.
+  ///
+  /// - Precondition: The runs are sorted, do not overlap, lie within the rows of the content and
+  ///   outside its collapsed runs.
+  public var expandedRuns: [CollapsedRun] {
+    get { gutterView.expandedRuns }
+    set { gutterView.expandedRuns = newValue }
+  }
+
   /// The index of the current block in the content's blocks, or `nil` if there is none.
   ///
   /// The rows of the current block are tinted more strongly and its line-number cells filled.
@@ -304,6 +316,8 @@ public final class PaneView: NSView {
     // The runs, and with them the indices of the bars, may change; the text reports its new
     // selection while it changes.
     removeRunBars()
+    // The old expanded runs need not fit the new rows; the owner hands new ones.
+    gutterView.expandedRuns = []
     textView.show(content, collapsedRuns: collapsedRuns, theme: theme)
     gutterView.theme = theme
     gutterView.content = content
@@ -368,6 +382,10 @@ extension PaneView: RowInteraction {
 
   func askToExpandRun(at index: Int) {
     delegate?.pane(self, didAskToExpand: displayRows.runs[index])
+  }
+
+  func askToCollapse(_ run: CollapsedRun) {
+    delegate?.pane(self, didAskToCollapse: run)
   }
 
   func edits(for edit: PaneEdit) -> [PaneEdit] {

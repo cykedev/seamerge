@@ -204,6 +204,29 @@
     "Collapse Unchanged Lines": {
       "comment": "View menu command."
     },
+    "Collapsed %lld unchanged lines": {
+      "comment": "VoiceOver: a run of unchanged lines was hidden again, such as 12.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Collapsed %lld unchanged line"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Collapsed %lld unchanged lines"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Commit": {
       "comment": "Details of a side: the commit."
     },

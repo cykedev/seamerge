@@ -13,7 +13,10 @@ extension SessionCommand {
     /// Hiding or showing the base needs a base and the panes above the result in view.
     case basePane
 
-    /// Collapsing or expanding needs runs of unchanged lines that change with it.
+    /// Showing all lines needs a collapsed run.
+    case collapsedRows
+
+    /// Collapsing needs a run of unchanged lines without work that is expanded.
     case collapsibleRows
 
     /// Zooming in needs a larger size left.
@@ -58,7 +61,8 @@ extension SessionCommand {
     case .compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace:
       .noComparisonUnderWay
     case .toggleBase: .basePane
-    case .toggleCollapsedLines: .collapsibleRows
+    case .showAllLines: .collapsedRows
+    case .collapseUnchangedLines: .collapsibleRows
     case .zoomIn: .largerFontSize
     case .zoomOut: .smallerFontSize
     case .actualSize: .otherFontSize
