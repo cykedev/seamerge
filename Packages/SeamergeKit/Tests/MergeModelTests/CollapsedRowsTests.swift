@@ -184,6 +184,58 @@ struct CollapsedRowsTests {
     #expect(collapsed.runs.isEmpty)
   }
 
+  @Test func expandedRunCollapsesAgainOnItsOwn() async throws {
+    let session = try await diff(
+      Self.lines("u", 10) + "old\n" + Self.lines("v", 10) + "old\n" + Self.lines("w", 10),
+      Self.lines("u", 10) + "new\n" + Self.lines("v", 10) + "new\n" + Self.lines("w", 10))
+    var collapsed = CollapsedRows(session: session)
+    try #require(collapsed.runs.count == 3)
+    #expect(collapsed.expandedRuns.isEmpty)
+    let first = collapsed.runs[0]
+    let second = collapsed.runs[1]
+    collapsed.expand(first)
+    collapsed.expand(second)
+    #expect(collapsed.expandedRuns == [first, second])
+
+    let didCollapse = collapsed.collapse(second)
+    #expect(didCollapse)
+    #expect(collapsed.runs.contains(second) && !collapsed.runs.contains(first))
+    #expect(collapsed.expandedRuns == [first])
+    // A run that is collapsed already, or every run while all rows show, does not change.
+    let didCollapseAgain = collapsed.collapse(second)
+    #expect(!didCollapseAgain)
+    collapsed.showAllRows()
+    #expect(collapsed.expandedRuns.isEmpty)
+    let didCollapseWhileAllShow = collapsed.collapse(first)
+    #expect(!didCollapseWhileAllShow)
+    #expect(collapsed.runs.isEmpty)
+  }
+
+  @Test func runWithWorkInTheResultNeverCollapsesOnItsOwn() async throws {
+    let session = try await merge(
+      base: "x\n" + Self.lines("u", 20) + "y\n", a: "a\n" + Self.lines("u", 20) + "y\n",
+      b: "x\n" + Self.lines("u", 20) + "b\n")
+    var buffer = ResultBuffer(session)
+    let unchanged = try #require(session.blocks.first { $0.kind == .unchanged })
+    var collapsed = CollapsedRows(session: session, document: buffer.document)
+    let run = try #require(collapsed.runs.first)
+
+    buffer.type("typed ", at: buffer.document.range(of: unchanged).lowerBound + 30)
+    collapsed.keepWorkExpanded(in: buffer.document)
+    buffer.undo()
+    collapsed.keepWorkExpanded(in: buffer.document)
+
+    #expect(collapsed.expandedRuns.isEmpty)
+    let didCollapseOverWork = collapsed.collapse(run)
+    #expect(!didCollapseOverWork)
+    #expect(collapsed.runs.isEmpty)
+    // Collapse Unchanged Lines forgets the work that was undone; the run collapses then.
+    collapsed.collapseUnchangedRows(document: buffer.document, caretRow: nil)
+    #expect(collapsed.runs == [run])
+    collapsed.expand(run)
+    #expect(collapsed.expandedRuns == [run])
+  }
+
   @Test func resultHidesTheLinesOfTheRunOneForOne() async throws {
     let session = try await merge(
       base: "x\n" + Self.lines("u", 20) + "y\n",

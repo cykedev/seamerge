@@ -43,6 +43,10 @@ public struct CollapsedRows: Sendable {
   /// The blocks whose runs are expanded.
   private var expandedBlocks: Set<Int> = []
 
+  /// The blocks whose runs stay expanded because their segments in the result had work, until
+  /// the panes collapse their unchanged rows again.
+  private var blocksWithWork: Set<Int> = []
+
   /// Finds the runs that collapse in the grid of `session`.
   ///
   /// - Parameters:
@@ -72,7 +76,8 @@ public struct CollapsedRows: Sendable {
       let end = rows.upperBound == rowCount ? rowCount : rows.upperBound - Self.contextRowCount
       return Run(block: block, rows: start..<end)
     }
-    expandedBlocks = document.map { Self.blocks(withWorkIn: $0, candidates: candidates) } ?? []
+    blocksWithWork = document.map { Self.blocks(withWorkIn: $0, candidates: candidates) } ?? []
+    expandedBlocks = blocksWithWork
     if collapsesUnchangedRows, let caretRow,
       let run = Self.run(in: candidates, containingRow: caretRow)
     {
@@ -84,6 +89,15 @@ public struct CollapsedRows: Sendable {
   /// The collapsed run that hides `row`, if any.
   public func run(containingRow row: Int) -> Run? {
     Self.run(in: runs, containingRow: row)
+  }
+
+  /// The runs that are expanded while the panes collapse their unchanged rows and that may
+  /// collapse again on their own, in row order: those without work in the result.
+  public var expandedRuns: [Run] {
+    guard collapsesUnchangedRows else { return [] }
+    return candidates.filter {
+      expandedBlocks.contains($0.block.id) && !blocksWithWork.contains($0.block.id)
+    }
   }
 
   /// The lines of the result that `run` hides, so that the result pane collapses them too.
@@ -98,10 +112,23 @@ public struct CollapsedRows: Sendable {
     return run.rows.lowerBound + offset..<run.rows.upperBound + offset
   }
 
-  /// Expands `run`, which then stays expanded until ``collapseUnchangedRows(document:caretRow:)``.
+  /// Expands `run`, which then stays expanded until ``collapseUnchangedRows(document:caretRow:)``
+  /// or ``collapse(_:)``.
   public mutating func expand(_ run: Run) {
     guard expandedBlocks.insert(run.block.id).inserted else { return }
     update()
+  }
+
+  /// Collapses `run` again, one of the ``expandedRuns``; a run with work in the result stays
+  /// expanded.
+  ///
+  /// - Returns: Whether the run collapsed.
+  @discardableResult
+  public mutating func collapse(_ run: Run) -> Bool {
+    guard expandedRuns.contains(run) else { return false }
+    expandedBlocks.remove(run.block.id)
+    update()
+    return true
   }
 
   /// Expands the run that hides `row`, so that a target there, such as a match of a search or a
@@ -133,6 +160,7 @@ public struct CollapsedRows: Sendable {
   /// - Precondition: `document` is the result of the session that the runs were found in.
   public mutating func keepWorkExpanded(in document: ResultDocument) {
     let work = Self.blocks(withWorkIn: document, candidates: candidates)
+    blocksWithWork.formUnion(work)
     guard !work.isSubset(of: expandedBlocks) else { return }
     expandedBlocks.formUnion(work)
     update()
@@ -154,7 +182,8 @@ public struct CollapsedRows: Sendable {
   /// - Precondition: `document` is the result of the session that the runs were found in.
   public mutating func collapseUnchangedRows(document: ResultDocument?, caretRow: Int?) {
     collapsesUnchangedRows = true
-    expandedBlocks = document.map { Self.blocks(withWorkIn: $0, candidates: candidates) } ?? []
+    blocksWithWork = document.map { Self.blocks(withWorkIn: $0, candidates: candidates) } ?? []
+    expandedBlocks = blocksWithWork
     if let caretRow, let run = Self.run(in: candidates, containingRow: caretRow) {
       expandedBlocks.insert(run.block.id)
     }
