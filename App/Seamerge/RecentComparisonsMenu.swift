@@ -11,9 +11,6 @@ final class RecentComparisonsMenu: NSObject {
   /// Called with the comparison the user chose.
   var onOpen: ((FileComparison) -> Void)?
 
-  /// Whether a comparison of its kind can be opened now; one that cannot is deactivated.
-  var canOpen: (FileComparison) -> Bool = { _ in false }
-
   private let recentComparisons: RecentComparisons
 
   /// Creates the menu of the comparisons of `recentComparisons`.
@@ -57,11 +54,11 @@ extension RecentComparisonsMenu: NSMenuDelegate {
 }
 
 extension RecentComparisonsMenu: NSMenuItemValidation {
-  /// A comparison works when the app can open its kind; Clear Menu, when there is a comparison.
+  /// A comparison works whenever it is listed; Clear Menu, when there is a comparison.
   func validateMenuItem(_ item: NSMenuItem) -> Bool {
     switch item.action {
     case #selector(openComparison(_:)):
-      (item.representedObject as? FileComparison).map(canOpen) ?? false
+      item.representedObject is FileComparison
     case #selector(clearMenu(_:)):
       !recentComparisons.comparisons.isEmpty
     default:

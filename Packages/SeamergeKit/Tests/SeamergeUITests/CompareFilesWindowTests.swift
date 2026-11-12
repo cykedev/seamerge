@@ -167,18 +167,6 @@ import Testing
     #expect(button.isEnabled)
   }
 
-  @Test func comparisonThatTheAppCannotOpenLeavesTheButtonDeactivated() throws {
-    let files = try SampleFiles()
-    let fixture = try CompareFilesFixture()
-    fixture.delegate.openableKinds = [.merge]
-    #expect(fixture.controller.fill(with: [try files.file("a.txt"), try files.file("b.txt")]))
-
-    #expect(fixture.controller.openButton.title == "Compare")
-    #expect(!fixture.controller.openButton.isEnabled)
-    fixture.controller.openComparison(nil)
-    #expect(fixture.delegate.opened.isEmpty)
-  }
-
   @Test(arguments: [2, 3])
   func defaultButtonOpensExactlyTheShownRoles(fileCount: Int) async throws {
     let files = try SampleFiles()

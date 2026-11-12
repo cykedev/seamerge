@@ -51,7 +51,6 @@ final class AppDelegate: NSObject {
     }
     super.init()
     coordinator.delegate = self
-    recentComparisonsMenu.canOpen = { [weak self] in self?.coordinator.canOpen($0.kind) ?? false }
     recentComparisonsMenu.onOpen = { [weak self] in self?.open($0) }
     NotificationCenter.default.addObserver(
       self, selector: #selector(windowDidBecomeKey(_:)), name: NSWindow.didBecomeKeyNotification,
@@ -164,12 +163,6 @@ extension AppDelegate: SessionCoordinatorDelegate {
 }
 
 extension AppDelegate: CompareFilesWindowControllerDelegate {
-  func compareFilesWindowController(
-    _ controller: CompareFilesWindowController, canOpen kind: Session.Kind
-  ) -> Bool {
-    coordinator.canOpen(kind)
-  }
-
   func compareFilesWindowController(
     _ controller: CompareFilesWindowController, open comparison: FileComparison
   ) async throws {

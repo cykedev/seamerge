@@ -106,13 +106,14 @@ struct SessionCoordinatorTests {
     }
   }
 
-  @Test func quittingClosesEveryWindowAndTellsEachHelper() async throws {
+  @Test func quittingClosesEveryWindowAndTellsEachHelperThatItWasCancelled() async throws {
     let sandbox = try AppSandbox()
     let recorder = WindowRecorder()
     let coordinator = try sandbox.startCoordinator(recorder: recorder)
+    // A comparison that closes reports success, which would let Git go on to the next file.
     let outcomes = [
       perform(try sandbox.mergeRequest(), at: sandbox.socketURL),
-      perform(try sandbox.mergeRequest(), at: sandbox.socketURL),
+      perform(try sandbox.comparisonRequest(), at: sandbox.socketURL),
     ]
     let windows = [await recorder.nextOpened(), await recorder.nextOpened()]
 
@@ -126,16 +127,37 @@ struct SessionCoordinatorTests {
     #expect(!FileManager.default.fileExists(atPath: sandbox.socketURL.path(percentEncoded: false)))
   }
 
-  @Test func comparisonOfTwoFilesIsRefusedForNow() async throws {
+  @Test func comparisonFromGitOpensAWindowAndClosingItReportsSaved() async throws {
     let sandbox = try AppSandbox()
-    let coordinator = try sandbox.startCoordinator(recorder: WindowRecorder())
-    let request = SessionRequest.diff(
-      .init(left: try sandbox.file("old.txt"), right: try sandbox.file("new.txt")))
+    let recorder = WindowRecorder()
+    let coordinator = try sandbox.startCoordinator(recorder: recorder)
+    let outcome = perform(try sandbox.comparisonRequest(), at: sandbox.socketURL)
 
-    await #expect(throws: SessionError.rejected(.unsupportedRequest)) {
-      try await perform(request, at: sandbox.socketURL).value
-    }
-    #expect(!coordinator.canOpen(.diff))
+    let controller = await recorder.nextOpened()
+    let window = try #require(controller.window)
+    #expect(window.isVisible)
+    #expect(window.title == "story.txt")
+    #expect(window.subtitle == "File 2 of 3")
+    #expect(coordinator.kind(of: window) == .diff)
+    window.close()
+
+    #expect(try await outcome.value == .saved)
+    #expect(coordinator.windowControllers.isEmpty)
+    await coordinator.finish()
+  }
+
+  @Test func skippingTheRemainingFilesReportsCancelled() async throws {
+    let sandbox = try AppSandbox()
+    let recorder = WindowRecorder()
+    let coordinator = try sandbox.startCoordinator(recorder: recorder)
+    let outcome = perform(try sandbox.comparisonRequest(), at: sandbox.socketURL)
+    let controller = await recorder.nextOpened()
+
+    NSApplication.shared.sendAction(
+      SessionCommand.skipRemainingFiles.action, to: controller, from: nil)
+
+    #expect(try await outcome.value == .cancelled)
+    #expect(controller.window?.isVisible == false)
     #expect(coordinator.windowControllers.isEmpty)
     await coordinator.finish()
   }
@@ -157,6 +179,39 @@ struct SessionCoordinatorTests {
     await coordinator.finish()
   }
 
+  @Test(arguments: [true, false])
+  func comparisonThatCannotBeShownStillOpensAWindowAndLetsGitGoOn(isBinary: Bool) async throws {
+    let sandbox = try AppSandbox()
+    let recorder = WindowRecorder()
+    let coordinator = try sandbox.startCoordinator(recorder: recorder)
+    let right =
+      isBinary
+      ? try sandbox.file("logo_REMOTE.png", "\u{0}\u{1}\u{2}PNG\u{0}")
+      : sandbox.folder.appending(path: "missing.txt")
+    let request = SessionRequest.diff(
+      SessionRequest.Diff(
+        left: try sandbox.file("logo_LOCAL.png", "a\n"), right: right, displayPath: "logo.png",
+        context: SessionRequest.DiffContext(
+          filePosition: SessionRequest.FilePosition(number: 1, count: 2))))
+    let outcome = perform(request, at: sandbox.socketURL)
+
+    let controller = await recorder.nextOpened()
+    let window = try #require(controller.window)
+    #expect(window.title == "logo.png")
+    #expect(sandbox.presenter.errors.isEmpty)
+    #expect(!controller.validateUserInterfaceItem(menuItem(for: .nextChange)))
+    #expect(controller.validateUserInterfaceItem(menuItem(for: .skipRemainingFiles)))
+    window.close()
+
+    #expect(try await outcome.value == .saved)
+    await coordinator.finish()
+  }
+
+  /// An item of the main menu that sends the action of `command`.
+  private func menuItem(for command: SessionCommand) -> NSMenuItem {
+    NSMenuItem(title: command.title, action: command.action, keyEquivalent: "")
+  }
+
   @Test func filesFromTheWindowCompareFilesOpenAMergeInTheirRoles() async throws {
     let sandbox = try AppSandbox()
     let recorder = WindowRecorder()
@@ -174,6 +229,25 @@ struct SessionCoordinatorTests {
     #expect(controller.window?.representedURL == nil)
     #expect(controller.comparisonOptions.mode == .windowDefault)
     #expect(coordinator.kind(of: try #require(controller.window)) == .merge)
+    controller.close()
+  }
+
+  @Test func twoFilesFromTheWindowCompareFilesOpenAComparisonInTheirRoles() async throws {
+    let sandbox = try AppSandbox()
+    let recorder = WindowRecorder()
+    let coordinator = SessionCoordinator(
+      socketURL: sandbox.socketURL, presentError: sandbox.presentError)
+    coordinator.delegate = recorder
+    let comparison = FileComparison(
+      left: try sandbox.file("old.txt", "a\nb\n"), right: try sandbox.file("new.txt", "a\nc\n"))
+
+    try await coordinator.open(comparison)
+
+    let controller = await recorder.nextOpened()
+    let window = try #require(controller.window)
+    #expect(window.title == "old.txt ↔ new.txt")
+    #expect(controller.comparisonOptions.mode == .windowDefault)
+    #expect(coordinator.kind(of: window) == .diff)
     controller.close()
   }
 

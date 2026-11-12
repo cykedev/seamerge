@@ -65,6 +65,18 @@ final class AppSandbox {
         output: try file("story.txt", "one\n<<<<<<< HEAD\nmine\n=======\ntheirs\n>>>>>>> b\n"),
         context: context))
   }
+
+  /// A comparison as `git difftool` asks for it: the second of three files, a temporary copy
+  /// before the change on the left and the working copy on the right.
+  func comparisonRequest() throws -> SessionRequest {
+    .diff(
+      SessionRequest.Diff(
+        left: try file("story_LEFT.txt", "one\ntwo\nthree\n"),
+        right: try file("story.txt", "one\nchanged\nthree\n"), displayPath: "src/story.txt",
+        context: SessionRequest.DiffContext(
+          leftRole: .before, rightRole: .workingCopy,
+          filePosition: SessionRequest.FilePosition(number: 2, count: 3))))
+  }
 }
 
 /// A presenter that records what the app would show and do instead.

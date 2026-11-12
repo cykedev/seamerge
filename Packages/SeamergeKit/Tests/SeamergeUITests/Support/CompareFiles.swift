@@ -1,5 +1,4 @@
 import AppKit
-import MergeModel
 import Testing
 
 @testable import SeamergeUI
@@ -63,20 +62,11 @@ final class CompareFilesFixture {
 /// A delegate that opens nothing and records what it was asked to open.
 @MainActor
 final class CompareFilesRecorder: CompareFilesWindowControllerDelegate {
-  /// The kinds of session the app in the test can open.
-  var openableKinds: Set<Session.Kind> = [.diff, .merge]
-
   /// The error opening fails with, if it should.
   var failure: (any Error)?
 
   private(set) var opened: [FileComparison] = []
   private let (openings, openingSink) = AsyncStream.makeStream(of: Void.self)
-
-  func compareFilesWindowController(
-    _ controller: CompareFilesWindowController, canOpen kind: Session.Kind
-  ) -> Bool {
-    openableKinds.contains(kind)
-  }
 
   func compareFilesWindowController(
     _ controller: CompareFilesWindowController, open comparison: FileComparison

@@ -2,8 +2,8 @@ import GitSupport
 import SessionIPC
 
 // The request carries values of its own, so that the helper and the app share no more than the
-// protocol. These initializers carry over what the helper found out, field by field, into the
-// values the window shows.
+// protocol. These initializers carry over what the helper found out about a merge or a
+// comparison, field by field, into the values the window shows.
 
 extension GitContext {
   /// What the helper found out about a merge; `hasCommonAncestor` tells whether it sent a base.
@@ -16,6 +16,31 @@ extension GitContext {
       hasCommonAncestor: hasCommonAncestor,
       rebaseProgress: context.rebaseProgress.map(RebaseProgress.init),
       remainingConflictedFileCount: context.remainingConflictedFileCount)
+  }
+}
+
+extension DifftoolContext {
+  /// What the helper found out about a comparison through `git difftool`, or `nil` if the
+  /// comparison has no path in the repository, as one Git did not start.
+  init?(_ diff: SessionRequest.Diff) {
+    guard let path = diff.displayPath else { return nil }
+    self.init(
+      path: path, leftRole: DiffSideRole(diff.context.leftRole),
+      rightRole: DiffSideRole(diff.context.rightRole),
+      filePosition: diff.context.filePosition.map {
+        FilePosition(number: $0.number, count: $0.count)
+      })
+  }
+}
+
+extension DiffSideRole {
+  init(_ role: SessionRequest.DiffSideRole) {
+    self =
+      switch role {
+      case .before: .before
+      case .after: .after
+      case .workingCopy: .workingCopy
+      }
   }
 }
 

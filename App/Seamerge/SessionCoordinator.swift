@@ -16,10 +16,10 @@ protocol SessionCoordinatorDelegate: AnyObject {
 /// Opens a window for each session: those the helper hands over through the socket, and those
 /// the window Compare Files puts together.
 ///
-/// Every session gets a window of its own with an undo manager of its own, built in the
-/// comparison mode of the window. For the helper, the coordinator answers `opened` once the
-/// window shows, and the outcome once it closes; if the helper goes away first, it tells the
-/// window, which stays open.
+/// Every session, a merge or a comparison of two files, gets a window of its own with an undo
+/// manager of its own, built in the comparison mode of the window. For the helper, the
+/// coordinator answers `opened` once the window shows, and the outcome once it closes; if the
+/// helper goes away first, it tells the window, which stays open.
 @MainActor
 final class SessionCoordinator {
   /// Learns when windows open and close; the coordinator does not retain it.
@@ -79,37 +79,31 @@ final class SessionCoordinator {
     }
   }
 
-  /// Whether the app can open a window for a session of `kind`.
-  ///
-  /// The session window shows merges only; until it compares two files too, the app refuses
-  /// comparisons, and the helper says so.
-  func canOpen(_ kind: Session.Kind) -> Bool {
-    kind == .merge
-  }
-
   /// The kind of session that `window` shows, if it is a session window.
   func kind(of window: NSWindow) -> Session.Kind? {
     windowControllers.first { $0.window === window }.flatMap { kinds[ObjectIdentifier($0)] }
   }
 
-  /// Opens a window for the files of `comparison` in their roles and returns once it shows.
+  /// Opens a window for the files of `comparison` in their roles and returns once it shows: a
+  /// merge with a base, a comparison without one.
   ///
-  /// Such a merge has no file to save to and no Git behind it. While the app quits, nothing
+  /// Such a session has no file to save to and no Git behind it. While the app quits, nothing
   /// opens.
   ///
   /// - Throws: Why the files cannot be opened.
-  /// - Precondition: The comparison has a base; the session window shows merges only.
   func open(_ comparison: FileComparison) async throws(SessionLoadingError) {
-    guard let base = comparison.base else {
-      preconditionFailure("The session window shows merges only")
-    }
-    let controller = try await Self.makeWindow(
-      base: SessionFile(url: base, label: base.lastPathComponent),
-      a: SessionFile(url: comparison.left, label: comparison.left.lastPathComponent),
-      b: SessionFile(url: comparison.right, label: comparison.right.lastPathComponent),
-      context: SessionContext())
+    let file = { (url: URL) in SessionFile(url: url, label: url.lastPathComponent) }
+    let session =
+      if let base = comparison.base {
+        try await Session.loadMerge(
+          base: file(base), a: file(comparison.left), b: file(comparison.right))
+      } else {
+        try await Session.loadDiff(old: file(comparison.left), new: file(comparison.right))
+      }
+    let controller = SessionWindowController(
+      session: session, context: SessionContext(), undoManager: UndoManager())
     guard !isFinishing else { return }
-    show(controller, kind: .merge) { _ in }
+    show(controller, kind: session.kind) { _ in }
   }
 
   /// Serves the request of one helper until its window closes or the helper goes away.
@@ -124,26 +118,9 @@ final class SessionCoordinator {
         idleWaiters = []
       }
     }
-    switch connection.request {
-    case .merge(let merge):
-      await serve(merge, on: connection)
-    case .diff:
-      Self.logger.notice("Refusing a comparison: the session window shows merges only")
-      await send(.rejected(.unsupportedRequest), on: connection)
-    }
-  }
-
-  private func serve(_ merge: SessionRequest.Merge, on connection: SessionConnection) async {
-    let label = merge.output.lastPathComponent
     let controller: SessionWindowController
     do {
-      controller = try await Self.makeWindow(
-        base: merge.base.map { SessionFile(url: $0, label: label) },
-        a: SessionFile(url: merge.remote, label: label),
-        b: SessionFile(url: merge.local, label: label),
-        context: SessionContext(
-          resultURL: merge.output,
-          git: GitContext(merge.context, hasCommonAncestor: merge.base != nil)))
+      controller = try await Self.makeWindow(for: connection.request)
     } catch {
       presentError(error)
       await send(.closed(.cancelled), on: connection)
@@ -155,7 +132,7 @@ final class SessionCoordinator {
     }
 
     let (endings, ending) = AsyncStream.makeStream(of: SessionEnding.self)
-    show(controller, kind: .merge) { outcome in
+    show(controller, kind: connection.request.kind) { outcome in
       ending.yield(.closed(outcome))
     }
     do {
@@ -207,12 +184,57 @@ final class SessionCoordinator {
     }
   }
 
-  /// Reads the files and opens a window for their merge, in the comparison mode of the window.
+  /// Reads the files of `request` and opens a window for their merge or comparison, in the
+  /// comparison mode of the window.
+  ///
+  /// Every side of a merge shows the name of the file it is merged into, since Git hands over
+  /// temporary copies; so does every side of a comparison that Git started, unless the command
+  /// line names it. A comparison whose files cannot be compared, such as of an image, still gets
+  /// a window that says why, so that a run of `git difftool` goes on past it.
+  ///
+  /// - Throws: Why the files of a merge cannot be opened.
   private static func makeWindow(
-    base: SessionFile?, a: SessionFile, b: SessionFile, context: SessionContext
+    for request: SessionRequest
   ) async throws(SessionLoadingError) -> SessionWindowController {
-    let session = try await Session.loadMerge(base: base, a: a, b: b)
-    return SessionWindowController(session: session, context: context, undoManager: UndoManager())
+    switch request {
+    case .merge(let merge):
+      let label = merge.output.lastPathComponent
+      let session = try await Session.loadMerge(
+        base: merge.base.map { SessionFile(url: $0, label: label) },
+        a: SessionFile(url: merge.remote, label: label),
+        b: SessionFile(url: merge.local, label: label))
+      let context = SessionContext(
+        resultURL: merge.output,
+        git: GitContext(merge.context, hasCommonAncestor: merge.base != nil))
+      return SessionWindowController(
+        session: session, context: context, undoManager: UndoManager())
+    case .diff(let diff):
+      let file = { (url: URL, label: String?) in
+        SessionFile(url: url, label: label ?? diff.displayPath ?? url.lastPathComponent)
+      }
+      let (old, new) = (file(diff.left, diff.leftLabel), file(diff.right, diff.rightLabel))
+      let context = SessionContext(difftool: DifftoolContext(diff))
+      do {
+        let session = try await Session.loadDiff(old: old, new: new)
+        return SessionWindowController(
+          session: session, context: context, undoManager: UndoManager())
+      } catch {
+        Self.logger.notice("Showing why the files cannot be compared: \(String(describing: error))")
+        return try await SessionWindowController(
+          unavailable: UnavailableComparison(old: old, new: new, reason: error), context: context,
+          undoManager: UndoManager())
+      }
+    }
+  }
+}
+
+extension SessionRequest {
+  /// Whether the request asks for a merge or a comparison.
+  fileprivate var kind: Session.Kind {
+    switch self {
+    case .merge: .merge
+    case .diff: .diff
+    }
   }
 }
 

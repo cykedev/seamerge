@@ -190,15 +190,28 @@ struct AppDelegateTests {
     #expect(!delegate.recentComparisonsMenu.validateMenuItem(menu.items[0]))
   }
 
-  @Test func comparisonOfTwoFilesCannotBeOpenedYet() throws {
+  @Test func comparisonOfTwoFilesOpensFromTheWindowCompareFilesAndFromOpenRecent() async throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
-    delegate.showCompareFiles(nil)
-    let controller = try #require(delegate.compareFilesWindowController)
+    let recorder = WindowRecorder()
+    delegate.coordinator.delegate = recorder
+    let comparison = FileComparison(
+      left: try sandbox.file("old.txt", "a\n"), right: try sandbox.file("new.txt", "b\n"))
+    let controller = CompareFilesWindowController(recentComparisons: delegate.recentComparisons)
 
-    #expect(!delegate.compareFilesWindowController(controller, canOpen: .diff))
-    #expect(delegate.compareFilesWindowController(controller, canOpen: .merge))
-    controller.close()
+    try await delegate.compareFilesWindowController(controller, open: comparison)
+    let first = await recorder.nextOpened()
+    first.close()
+    delegate.recentComparisons.add(comparison)
+    let menu = delegate.recentComparisonsMenu.menu
+    delegate.recentComparisonsMenu.menuNeedsUpdate(menu)
+    #expect(delegate.recentComparisonsMenu.validateMenuItem(menu.items[0]))
+    menu.performActionForItem(at: 0)
+    let second = await recorder.nextOpened()
+
+    #expect(first.window?.title == "old.txt ↔ new.txt")
+    #expect(second.window?.title == "old.txt ↔ new.txt")
+    second.close()
   }
 
   private func makeDelegate(in sandbox: AppSandbox, arguments: [String]) -> AppDelegate {

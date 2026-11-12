@@ -1,15 +1,8 @@
 import AppKit
-import MergeModel
 
-/// What the window Compare Files asks of the app: which sessions it can open, and to open one.
+/// What the window Compare Files asks of the app: to open a session.
 @MainActor
 public protocol CompareFilesWindowControllerDelegate: AnyObject {
-  /// Whether the app can open a window for a session of `kind` now; the button that would open
-  /// one is deactivated otherwise.
-  func compareFilesWindowController(
-    _ controller: CompareFilesWindowController, canOpen kind: Session.Kind
-  ) -> Bool
-
   /// Opens a session for the files of `comparison`, in their roles, and returns once its window
   /// shows.
   ///
@@ -27,7 +20,8 @@ public protocol CompareFilesWindowControllerDelegate: AnyObject {
 /// never opens anything by itself.
 @MainActor
 public final class CompareFilesWindowController: NSWindowController {
-  /// Decides what the window can open and opens it; the window does not retain it.
+  /// Opens the sessions of the window; the window does not retain it, and opens nothing
+  /// without one.
   public weak var delegate: (any CompareFilesWindowControllerDelegate)? {
     didSet { selectionDidChange() }
   }
@@ -227,14 +221,14 @@ public final class CompareFilesWindowController: NSWindowController {
 
   /// Opens the files of the fields in their roles and closes the window.
   @objc func openComparison(_ sender: Any?) {
-    guard let comparison = selection.comparison, canOpen(comparison) else { return }
+    guard let comparison = selection.comparison else { return }
     open(comparison)
   }
 
   /// Opens `comparison`; once its window shows, remembers it and closes, and otherwise says why
   /// in a sheet and keeps the files.
   func open(_ comparison: FileComparison) {
-    guard canOpen(comparison), !isOpening, let delegate, let window else { return }
+    guard !isOpening, let delegate, let window else { return }
     isOpening = true
     selectionDidChange()
     Task {
@@ -252,10 +246,6 @@ public final class CompareFilesWindowController: NSWindowController {
       selection = FileSelection()
       close()
     }
-  }
-
-  private func canOpen(_ comparison: FileComparison) -> Bool {
-    delegate?.compareFilesWindowController(self, canOpen: comparison.kind) ?? false
   }
 
   func fill(_ places: [FileSlot: URL]) {
@@ -307,7 +297,7 @@ public final class CompareFilesWindowController: NSWindowController {
       : String(
         localized: "Compare", bundle: .module,
         comment: "Compare Files: the default button with two files.")
-    openButton.isEnabled = !isOpening && (selection.comparison.map(canOpen) ?? false)
+    openButton.isEnabled = !isOpening && selection.comparison != nil && delegate != nil
   }
 
   /// Says below each field its role, or the role a drop would give it while one would fill it,
