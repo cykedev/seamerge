@@ -88,10 +88,11 @@ extension SessionWindowController {
     workspace.activateFileViewerSelecting([url])
   }
 
-  /// The pane that Copy Block acts in: the one with the focus, or else A.
+  /// The pane that Copy Block and Go to Line act in: the one with the focus, or else the pane
+  /// above the result that had it last.
   var focusedPane: PaneView {
     presentation.allPanes.first { window?.firstResponder === $0.documentView }
-      ?? layout.sourcePanes[0].pane
+      ?? lastSourcePane ?? layout.sourcePanes[0].pane
   }
 
   /// Whether text is selected in `pane`.

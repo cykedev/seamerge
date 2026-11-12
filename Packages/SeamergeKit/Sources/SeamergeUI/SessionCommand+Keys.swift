@@ -19,10 +19,51 @@ extension SessionCommand {
     case .previousChange: return (Self.upArrow, changeJumps)
     case .firstChange, .lastChange, .copyBlock:
       return nil
+    case .nextPane: return (Self.tab, [.control])
+    case .previousPane: return (Self.tab, [.shift, .control])
     }
+  }
+
+  /// The keys without Command or Control that carry out the command in block mode, while the
+  /// focus is in a pane above the result.
+  var blockModeKeys: [Keystroke] {
+    switch self {
+    case .nextConflict: [Keystroke("n")]
+    case .previousConflict: [Keystroke("n", .shift)]
+    case .nextChange: [Keystroke(Self.downArrow)]
+    case .previousChange: [Keystroke(Self.upArrow)]
+    case .firstChange: [Keystroke(Self.home)]
+    case .lastChange: [Keystroke(Self.end)]
+    case .nextPane: [Keystroke(Self.tab)]
+    case .previousPane: [Keystroke(Self.tab, .shift), Keystroke(Self.backTab, .shift)]
+    default: []
+    }
+  }
+
+  /// The command that `keystroke` carries out in block mode, if any.
+  init?(blockModeKey keystroke: Keystroke) {
+    guard let command = Self.allCases.first(where: { $0.blockModeKeys.contains(keystroke) })
+    else { return nil }
+    self = command
   }
 
   /// The characters AppKit gives the keys of commands.
   static let upArrow = "\u{F700}"
   static let downArrow = "\u{F701}"
+  static let home = "\u{F729}"
+  static let end = "\u{F72B}"
+  static let tab = "\t"
+  static let backTab = "\u{19}"
+}
+
+/// A key with the modifier keys held with it, as block mode reads it: the character of the key
+/// without Shift, in lower case.
+struct Keystroke: Equatable {
+  let key: String
+  let modifiers: NSEvent.ModifierFlags
+
+  init(_ key: String, _ modifiers: NSEvent.ModifierFlags = []) {
+    self.key = key.lowercased()
+    self.modifiers = modifiers
+  }
 }

@@ -188,6 +188,9 @@
     "Next Conflict": {
       "comment": "Go menu command."
     },
+    "Next Pane": {
+      "comment": "Go menu command."
+    },
     "No changes": {
       "comment": "Subtitle: neither side changed the base."
     },
@@ -204,6 +207,9 @@
       "comment": "Go menu command."
     },
     "Previous Conflict": {
+      "comment": "Go menu command."
+    },
+    "Previous Pane": {
       "comment": "Go menu command."
     },
     "Rebase onto %@ · Commit %lld of %lld": {

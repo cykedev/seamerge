@@ -33,6 +33,9 @@ public final class SessionWindowController: NSWindowController {
   private let sessionUndoManager: UndoManager
   private var hasFinished = false
 
+  /// The pane above the result that had the focus last, which gets it back when text mode ends.
+  private(set) weak var lastSourcePane: PaneView?
+
   /// The accessibility settings the window draws with.
   var displayOptions: DisplayOptions {
     didSet {
@@ -91,7 +94,7 @@ public final class SessionWindowController: NSWindowController {
       displayOptions: displayOptions)
     summary = SessionSummary(changes: presentation.changes, context: context)
 
-    let window = NSWindow(
+    let window = SessionWindow(
       contentRect: CGRect(origin: .zero, size: WindowMetrics.defaultContentSize),
       styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered,
       defer: true)
@@ -113,6 +116,20 @@ public final class SessionWindowController: NSWindowController {
     presentation.showCurrentBlock()
     presentation.delegate = self
     layout.delegate = self
+    window.keyHandler = self
+    if let first = layout.sourcePanes.first?.pane.documentView {
+      window.initialFirstResponder = first
+      window.makeFirstResponder(first)
+    }
+  }
+
+  /// Remembers which pane above the result has the focus, which gets it back when text mode
+  /// ends.
+  func windowDidChangeFirstResponder(_ window: NSWindow) {
+    let focused = layout.sourcePanes.first { window.firstResponder === $0.pane.documentView }
+    if let focused {
+      lastSourcePane = focused.pane
+    }
   }
 
   /// The order of the panes above the result, from left to right.
@@ -177,6 +194,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
     switch command.requirement {
     case .jumpTarget(let jump):
       presentation.navigation.target(of: jump) != nil
+    case .anotherPane:
+      focusablePanes.count > 1
     case .blockText:
       !blockText(at: CopiedPlace(pane: focusedPane, block: presentation.currentBlock)).isEmpty
     }

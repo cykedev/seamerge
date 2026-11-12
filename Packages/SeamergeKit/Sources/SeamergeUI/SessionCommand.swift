@@ -28,6 +28,12 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Jumps to the last change.
   case lastChange
 
+  /// Moves the focus to the next pane: from A over Base and B to the result, and back to A.
+  case nextPane
+
+  /// Moves the focus to the previous pane.
+  case previousPane
+
   /// Copies the lines of the current block in the pane with the focus, or in the pane of a
   /// context menu.
   case copyBlock
@@ -47,6 +53,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "First Change", bundle: .module, comment: "Go menu command.")
     case .lastChange:
       String(localized: "Last Change", bundle: .module, comment: "Go menu command.")
+    case .nextPane:
+      String(localized: "Next Pane", bundle: .module, comment: "Go menu command.")
+    case .previousPane:
+      String(localized: "Previous Pane", bundle: .module, comment: "Go menu command.")
     case .copyBlock:
       String(
         localized: "Copy Block", bundle: .module,
@@ -87,6 +97,8 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .previousChange: #selector(SessionWindowController.selectPreviousChange(_:))
     case .firstChange: #selector(SessionWindowController.selectFirstChange(_:))
     case .lastChange: #selector(SessionWindowController.selectLastChange(_:))
+    case .nextPane: #selector(SessionWindowController.selectNextPane(_:))
+    case .previousPane: #selector(SessionWindowController.selectPreviousPane(_:))
     case .copyBlock: #selector(SessionWindowController.copyBlock(_:))
     }
   }

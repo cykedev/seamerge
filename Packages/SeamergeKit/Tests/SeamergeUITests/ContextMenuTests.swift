@@ -94,6 +94,9 @@ import Testing
     #expect(controller.canPerform(.copyBlock))
     #expect(window.tryToPerform(SessionCommand.copyBlock.action, with: nil))
     #expect(controller.pasteboard.string(forType: .string) == "line 8 from B\n")
+    // An open conflict in the result shows a preview, which is no text to copy.
+    controller.enterTextMode()
+    #expect(!controller.canPerform(.copyBlock))
   }
 
   @Test func headerOffersToCopyThePathAndShowTheFileInTheFinder() async throws {

@@ -4,6 +4,9 @@ extension SessionCommand {
     /// A jump needs a block to land on.
     case jumpTarget(BlockNavigation.Jump)
 
+    /// Moving the focus needs another pane in view.
+    case anotherPane
+
     /// Copying a block needs a current block with text.
     case blockText
   }
@@ -17,6 +20,7 @@ extension SessionCommand {
     case .previousChange: .jumpTarget(.previousChange)
     case .firstChange: .jumpTarget(.firstChange)
     case .lastChange: .jumpTarget(.lastChange)
+    case .nextPane, .previousPane: .anotherPane
     case .copyBlock: .blockText
     }
   }
