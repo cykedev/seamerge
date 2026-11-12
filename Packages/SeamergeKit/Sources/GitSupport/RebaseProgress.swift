@@ -8,4 +8,11 @@ public struct RebaseProgress: Sendable, Hashable {
 
   /// How many commits the rebase applies in all.
   public var commitCount: Int
+
+  /// Creates the progress of a rebase.
+  public init(targetName: SideName, commitNumber: Int, commitCount: Int) {
+    self.targetName = targetName
+    self.commitNumber = commitNumber
+    self.commitCount = commitCount
+  }
 }

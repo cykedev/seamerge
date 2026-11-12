@@ -42,6 +42,22 @@ public struct GitContext: Sendable, Hashable {
   /// How many files besides the merged one still have conflicts, or `nil` if Git cannot tell.
   public var remainingConflictedFileCount: Int?
 
+  /// Creates a context from what is known about the merge, such as what the command-line tool
+  /// found out and handed over.
+  public init(
+    operation: GitOperation? = nil, remote: MergeSide = MergeSide(),
+    local: MergeSide = MergeSide(), base: MergeSide = MergeSide(), hasCommonAncestor: Bool = true,
+    rebaseProgress: RebaseProgress? = nil, remainingConflictedFileCount: Int? = nil
+  ) {
+    self.operation = operation
+    self.remote = remote
+    self.local = local
+    self.base = base
+    self.hasCommonAncestor = hasCommonAncestor
+    self.rebaseProgress = rebaseProgress
+    self.remainingConflictedFileCount = remainingConflictedFileCount
+  }
+
   /// Finds out what Git is doing, from the conflict markers in the merged file and from the state
   /// of the repository.
   ///
