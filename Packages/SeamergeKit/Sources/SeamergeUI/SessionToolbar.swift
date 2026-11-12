@@ -36,6 +36,9 @@ final class SessionToolbar: NSObject {
     /// The changes of a comparison: the index of the current one, if any, and how many there
     /// are.
     case changes(current: Int?, total: Int)
+
+    /// Nothing, for a comparison whose files cannot be compared.
+    case nothing
   }
 
   /// The toolbar of the window.
@@ -104,6 +107,7 @@ final class SessionToolbar: NSObject {
     switch count {
     case .conflicts(let open, _): items[.conflictNavigation]?.isHidden = open == 0
     case .changes(_, let total): items[.changeNavigation]?.isHidden = total == 0
+    case .nothing: items[.changeNavigation]?.isHidden = true
     }
     for item in [items[.conflictNavigation], items[.changeNavigation]] {
       for subitem in (item as? NSToolbarItemGroup)?.subitems ?? [] {
@@ -124,6 +128,8 @@ final class SessionToolbar: NSObject {
       countText(openConflictCount: open, hasConflicts: hadAny)
     case .changes(let current, let total):
       countText(currentChange: current, changeCount: total)
+    case .nothing:
+      ""
     }
   }
 

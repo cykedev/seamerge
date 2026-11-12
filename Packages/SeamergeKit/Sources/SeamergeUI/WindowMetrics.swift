@@ -51,6 +51,15 @@ enum WindowMetrics {
   /// arrows, and the options without moving any of them into its overflow menu.
   static let minimumToolbarWidth: CGFloat = 640
 
+  /// The distance between the title and the message of a comparison that cannot be shown.
+  static let unavailableSpacing: CGFloat = 8
+
+  /// The widest the title and the message of a comparison that cannot be shown get.
+  static let unavailableWidth: CGFloat = 400
+
+  /// The least room around the title and the message of a comparison that cannot be shown.
+  static let unavailableInset: CGFloat = 24
+
   /// The size of a new window.
   static let defaultContentSize = CGSize(width: 1280, height: 800)
 

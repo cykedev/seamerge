@@ -195,6 +195,12 @@
     "Choose…": {
       "comment": "Compare Files: the button in an empty field that opens the open panel."
     },
+    "Close and compare no more files of this run": {
+      "comment": "Help tag of File > Skip Remaining Files."
+    },
+    "Close the window to go on to the next file.": {
+      "comment": "Comparison window: closing it lets git difftool compare the next file."
+    },
     "Collapse Unchanged Lines": {
       "comment": "View menu command."
     },
@@ -456,6 +462,12 @@
     "Seamerge can’t read “%@”.": {
       "comment": "Alert: a file of a merge or comparison cannot be read."
     },
+    "Seamerge can’t read “%@”. Check that it exists and that you may read it.": {
+      "comment": "Comparison window: a file cannot be read, and what to do."
+    },
+    "Seamerge can’t show the differences of “%@”": {
+      "comment": "Comparison window: the files cannot be compared, such as of “logo.png”."
+    },
     "Seamerge couldn’t compare the files.": {
       "comment": "Alert: the comparison of the files of a session failed."
     },
@@ -483,6 +495,9 @@
     "Show where this side comes from": {
       "comment": "Help tag of ⓘ."
     },
+    "Skip Remaining Files": {
+      "comment": "File menu of a comparison: end the comparisons that Git has left."
+    },
     "Stash": {
       "comment": "The name of a stash in a header."
     },
@@ -504,8 +519,14 @@
     "Take the version of %@.": {
       "comment": "Help tag of a toggle, such as Take the version of feature/login."
     },
+    "The comparison failed. Try again, or use another tool for this file.": {
+      "comment": "Comparison window: the comparison failed for another reason."
+    },
     "The files are too large to compare.": {
       "comment": "Alert: the files of a merge or comparison do not fit in memory."
+    },
+    "The files are too large to compare. Quit other apps to free memory.": {
+      "comment": "Comparison window: the files do not fit in memory."
     },
     "The switch discards %lld decisions.": {
       "comment": "Sheet before switching the comparison, such as The switch discards 3 decisions.",
@@ -607,6 +628,9 @@
     },
     "“%@” isn’t a text file.": {
       "comment": "Alert: a file of a merge or comparison is binary."
+    },
+    "“%@” isn’t a text file. Open it in the app that made it.": {
+      "comment": "Comparison window: a file is binary, and what to do."
     }
   },
   "version": "1.0"

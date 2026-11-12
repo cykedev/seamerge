@@ -79,6 +79,24 @@ final class SessionSplitViewController: NSSplitViewController {
     }
   }
 
+  /// Shows `view` across the panes side by side, below their headers, in place of their lines,
+  /// which a comparison does whose files cannot be compared.
+  func showInPlaceOfTheLines(_ view: NSView) {
+    for (_, pane) in sourcePanes {
+      pane.isHidden = true
+    }
+    guard let header = sourceHeaderViews.first else { return }
+    let container = sourcesController.view
+    view.translatesAutoresizingMaskIntoConstraints = false
+    container.addSubview(view)
+    NSLayoutConstraint.activate([
+      view.topAnchor.constraint(equalTo: header.bottomAnchor),
+      view.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+      view.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+      view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+    ])
+  }
+
   /// Whether the pane of the base is in view; while it is hidden, A and B share its width.
   ///
   /// - Precondition: The merge has a base, if the pane is to be hidden.

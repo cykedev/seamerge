@@ -78,6 +78,14 @@ import Testing
       named: "diff-no-changes-light")
   }
 
+  @Test(arguments: [Look.light, .dark])
+  func comparisonThatCannotBeShownIsPictured(look: Look) async throws {
+    let unavailable = SampleDiffs.unavailable(isBinary: true)
+    try Windows.picture(
+      try await unavailable.emptySession(), context: SampleDiffs.gitContext, look: look,
+      size: Self.size, named: "diff-unavailable-\(look.name)", unavailable: unavailable)
+  }
+
   /// The size of the pictures of the short sample, which shows all of it.
   private static let size = CGSize(width: 1280, height: 560)
 }

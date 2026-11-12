@@ -9,17 +9,18 @@ import Testing
 @MainActor
 enum Windows {
   /// The controller of a window for `session`, laid out, with movement reduced unless
-  /// `options` say otherwise, so that every jump lands at once.
+  /// `options` say otherwise, so that every jump lands at once; for an `unavailable`
+  /// comparison, `session` is its empty session.
   static func controller(
     for session: Session, context: SessionContext = SessionContext(),
     options: DisplayOptions = DisplayOptions(reducesMotion: true),
     workspace: WorkspaceRecorder = WorkspaceRecorder(), prompts: PromptRecorder = PromptRecorder(),
-    undoManager: UndoManager = UndoManager()
+    undoManager: UndoManager = UndoManager(), unavailable: UnavailableComparison? = nil
   ) throws -> SessionWindowController {
     let controller = SessionWindowController(
       session: session, context: context, undoManager: undoManager, displayOptions: options,
       pasteboard: .withUniqueName(), workspace: workspace, prompts: prompts, doneStyle: .standard,
-      window: SessionWindow())
+      window: SessionWindow(), unavailable: unavailable)
     let window = try #require(controller.window)
     window.contentView?.layoutSubtreeIfNeeded()
     return controller
@@ -34,13 +35,14 @@ enum Windows {
     _ session: Session, context: SessionContext, look: Look,
     options: DisplayOptions = DisplayOptions(), doneStyle: SessionToolbar.DoneStyle = .standard,
     actsAsKey: Bool = false, size: CGSize? = WindowMetrics.defaultContentSize, named name: String,
+    unavailable: UnavailableComparison? = nil,
     prepare: (SessionWindowController) -> Void = { _ in }
   ) throws {
     let controller = SessionWindowController(
       session: session, context: context, undoManager: UndoManager(), displayOptions: options,
       pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(), prompts: PromptRecorder(),
       doneStyle: doneStyle,
-      window: actsAsKey ? KeySessionWindow() : SessionWindow())
+      window: actsAsKey ? KeySessionWindow() : SessionWindow(), unavailable: unavailable)
     let window = try #require(controller.window)
     defer { window.close() }
     let saver = SaveAndCloseStandIn()

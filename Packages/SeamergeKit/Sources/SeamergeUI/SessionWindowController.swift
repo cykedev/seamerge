@@ -2,12 +2,13 @@ import AppKit
 import MergeModel
 import PaneKit
 
-/// How a session window ended.
+/// How a session window ended, which the Git command that waits for it takes as success or
+/// failure.
 public enum SessionOutcome: Sendable {
-  /// The result was saved.
+  /// The result of a merge was saved, or a comparison was closed after it was seen.
   case saved
 
-  /// The window closed without saving.
+  /// A merge closed without saving, or a comparison was closed with the files after it skipped.
   case cancelled
 }
 
@@ -47,6 +48,10 @@ public final class SessionWindowController: NSWindowController {
 
   private var summary: SessionSummary
   private var hasFinished = false
+
+  /// The comparison whose files cannot be compared, which the window names and explains in
+  /// place of their lines, or `nil` if the window shows the lines.
+  let unavailable: UnavailableComparison?
 
   /// Whether the files are being compared anew.
   var isSwitchingComparison = false
@@ -95,6 +100,31 @@ public final class SessionWindowController: NSWindowController {
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
       prompts: ComparisonSheets(), doneStyle: .standard, window: SessionWindow())
+    observeDisplayOptions()
+  }
+
+  /// Opens a window for `comparison`, whose files cannot be compared.
+  ///
+  /// The window names the files in its headers and says why in place of their lines; every
+  /// command but Skip Remaining Files is invalid. Closing it lets Git go on to the next file, as
+  /// for any comparison.
+  ///
+  /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the headers can be made.
+  public convenience init(
+    unavailable comparison: UnavailableComparison, context: SessionContext,
+    undoManager: UndoManager
+  ) async throws(SessionLoadingError) {
+    let session = try await comparison.emptySession()
+    self.init(
+      session: session, context: context, undoManager: undoManager,
+      displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
+      prompts: ComparisonSheets(), doneStyle: .standard, window: SessionWindow(),
+      unavailable: comparison)
+    observeDisplayOptions()
+  }
+
+  /// Draws anew whenever the accessibility settings of the system change.
+  private func observeDisplayOptions() {
     NSWorkspace.shared.notificationCenter.addObserver(
       self, selector: #selector(accessibilityDisplayOptionsDidChange(_:)),
       name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
@@ -103,11 +133,12 @@ public final class SessionWindowController: NSWindowController {
   /// Opens a window for `session` that draws with `displayOptions`, whatever the system's
   /// settings are, copies to `pasteboard`, opens files with `workspace`, asks with `prompts`,
   /// shows the button that saves and closes of a merge in `doneStyle`, and lays itself out in
-  /// `window`.
+  /// `window`; for an `unavailable` comparison, it says why in place of the lines.
   init(
     session: Session, context: SessionContext, undoManager: UndoManager,
     displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace,
-    prompts: any ComparisonPrompts, doneStyle: SessionToolbar.DoneStyle, window: SessionWindow
+    prompts: any ComparisonPrompts, doneStyle: SessionToolbar.DoneStyle, window: SessionWindow,
+    unavailable: UnavailableComparison? = nil
   ) {
     let theme = displayOptions.theme(fontSize: Self.standardFontSize)
     let arrangement = PaneArrangement(session: session)
@@ -133,6 +164,12 @@ public final class SessionWindowController: NSWindowController {
       resultHeader: resultHeader, displayOptions: displayOptions)
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: arrangement)
+    self.unavailable = unavailable
+    if let unavailable {
+      layout.showInPlaceOfTheLines(
+        UnavailableComparisonView(
+          title: unavailable.title, message: unavailable.message(in: context)))
+    }
 
     window.tabbingMode = .disallowed
     window.isReleasedWhenClosed = false
@@ -154,7 +191,7 @@ public final class SessionWindowController: NSWindowController {
     presentation.delegate = self
     layout.delegate = self
     window.keyHandler = self
-    if let first = layout.sourcePanes.first?.pane.documentView {
+    if unavailable == nil, let first = layout.sourcePanes.first?.pane.documentView {
       window.initialFirstResponder = first
       window.makeFirstResponder(first)
     }
@@ -179,6 +216,8 @@ public final class SessionWindowController: NSWindowController {
       return .conflicts(
         open: presentation.navigation.openConflictCount,
         hadAny: changes.blocks.contains { $0.kind == .conflict })
+    case .diff where unavailable != nil:
+      return .nothing
     case .diff:
       return .changes(current: presentation.currentBlock, total: changes.blocks.count)
     }
@@ -268,11 +307,32 @@ extension SessionWindowController: NSWindowDelegate {
     updateSubtitle()
   }
 
-  /// Reports the end of the session, once.
+  /// Reports the end of the session, once: closing a merge leaves it unsaved, and closing a
+  /// comparison means it was seen, so that Git goes on to the next file.
   public func windowWillClose(_ notification: Notification) {
+    finish(presentation.arrangement.showsResult ? .cancelled : .saved)
+  }
+}
+
+extension SessionWindowController {
+  /// Closes a comparison that `git difftool` started and tells Git to compare no further files.
+  @objc func skipRemainingFiles(_ sender: Any?) {
+    guard canPerform(.skipRemainingFiles) else { return }
+    cancel()
+  }
+
+  /// Closes the window and reports that the session was cancelled, as when the app quits: Git
+  /// leaves a merge unresolved and compares no further files.
+  public func cancel() {
+    finish(.cancelled)
+    close()
+  }
+
+  /// Reports that the session ended with `outcome`, unless it was reported already.
+  private func finish(_ outcome: SessionOutcome) {
     guard !hasFinished else { return }
     hasFinished = true
-    onFinish?(.cancelled)
+    onFinish?(outcome)
   }
 }
 
@@ -310,9 +370,13 @@ extension SessionWindowController: NSUserInterfaceValidations {
     }
   }
 
-  /// Whether `command` can have an effect now.
+  /// Whether `command` can have an effect now; while the window cannot show the lines of its
+  /// files, only skipping the remaining files can.
   func canPerform(_ command: SessionCommand) -> Bool {
-    switch command.requirement {
+    if unavailable != nil && command != .skipRemainingFiles {
+      return false
+    }
+    return switch command.requirement {
     case .jumpTarget(let jump):
       presentation.navigation.target(of: jump) != nil
     case .anotherPane:
@@ -337,6 +401,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
       layout.resultPane != nil
     case .swappableSides:
       presentation.arrangement.canSwapSides
+    case .remainingFiles:
+      context.difftool?.hasFilesAfterThisOne ?? false
     case .nothing:
       true
     }

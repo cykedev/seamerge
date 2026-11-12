@@ -163,9 +163,6 @@
     "Show Toolbar": {
       "comment": "View menu."
     },
-    "Skip Remaining Files": {
-      "comment": "File menu of a comparison: end the comparisons that Git has left."
-    },
     "Syntax Highlighting": {
       "comment": "View menu: color the code by its syntax."
     },

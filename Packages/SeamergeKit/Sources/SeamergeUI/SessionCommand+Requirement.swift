@@ -37,6 +37,10 @@ extension SessionCommand {
     /// Swapping the sides needs a comparison of two files.
     case swappableSides
 
+    /// Skipping the remaining files needs a run of `git difftool` with files left after this
+    /// one, as far as Git tells.
+    case remainingFiles
+
     /// The command always has an effect.
     case nothing
   }
@@ -62,6 +66,7 @@ extension SessionCommand {
     case .copyBlock: .blockText
     case .toggleResultMaximized: .resultPane
     case .swapSides: .swappableSides
+    case .skipRemainingFiles: .remainingFiles
     case .toggleScrollSynchronization, .toggleInvisibles, .goToLine: .nothing
     }
   }

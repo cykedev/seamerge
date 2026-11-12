@@ -8,7 +8,7 @@ import Testing
 
 /// The window of a comparison of two files: the same window as a merge, put together from two
 /// panes without a result, with a toolbar that counts changes, commands that act without a
-/// merge, and Swap Sides.
+/// merge, the outcome Git expects, and Swap Sides.
 @MainActor
 @Suite struct DiffWindowTests {
   @Test func comparisonShowsTwoPanesSideBySideAndNothingBelow() async throws {
@@ -159,6 +159,58 @@ import Testing
     #expect(!controller.isInTextMode)
   }
 
+  @Test func closingReportsSavedSoThatGitGoesOnToTheNextFile() async throws {
+    let controller = try Windows.controller(
+      for: try await SampleDiffs.greeting(), context: SampleDiffs.gitContext)
+    var outcomes: [SessionOutcome] = []
+    controller.onFinish = { outcomes.append($0) }
+
+    controller.close()
+
+    #expect(outcomes == [.saved])
+  }
+
+  @Test func skipRemainingFilesReportsCancelledOnceAndCloses() async throws {
+    let controller = try Windows.controller(
+      for: try await SampleDiffs.greeting(), context: SampleDiffs.gitContext)
+    var outcomes: [SessionOutcome] = []
+    controller.onFinish = { outcomes.append($0) }
+    controller.showWindow(nil)
+
+    controller.skipRemainingFiles(nil)
+
+    #expect(outcomes == [.cancelled])
+    #expect(controller.window?.isVisible == false)
+  }
+
+  @Test func cancellingReportsCancelledAsWhenTheAppQuits() async throws {
+    let controller = try Windows.controller(
+      for: try await SampleDiffs.greeting(), context: SampleDiffs.gitContext)
+    var outcomes: [SessionOutcome] = []
+    controller.onFinish = { outcomes.append($0) }
+
+    controller.cancel()
+
+    #expect(outcomes == [.cancelled])
+  }
+
+  @Test func skipRemainingFilesNeedsGitAndAFileAfterThisOne() async throws {
+    let session = try await SampleDiffs.greeting()
+    func canSkip(_ position: FilePosition?, git: Bool = true) throws -> Bool {
+      let context = SessionContext(
+        difftool: git
+          ? DifftoolContext(path: "Sources/Greeting.swift", filePosition: position) : nil)
+      return try Windows.controller(for: session, context: context).canPerform(.skipRemainingFiles)
+    }
+
+    #expect(try canSkip(FilePosition(number: 3, count: 12)))
+    #expect(try canSkip(nil))
+    #expect(try !canSkip(FilePosition(number: 12, count: 12)))
+    #expect(try !canSkip(nil, git: false))
+    let merge = try Windows.controller(for: try await SampleMerges.helloWorld())
+    #expect(!merge.canPerform(.skipRemainingFiles))
+  }
+
   @Test func windowIsTitledAfterTheFileWithItsPlaceInTheRunOfGit() async throws {
     let controller = try Windows.controller(
       for: try await SampleDiffs.greeting(), context: SampleDiffs.gitContext)
@@ -287,6 +339,40 @@ import Testing
     #expect([left, right].map(\.content.blocks) == contents.map(\.blocks))
     #expect([left, right].map(Windows.scrollOffset(of:)) == offsets)
     #expect(controller.presentation.currentBlock == 5)
+  }
+
+  @Test(arguments: [true, false])
+  func comparisonThatCannotBeShownSaysWhyAndOnlyCloses(isBinary: Bool) async throws {
+    let unavailable = SampleDiffs.unavailable(isBinary: isBinary)
+    let controller = try Windows.controller(
+      for: try await unavailable.emptySession(), context: SampleDiffs.gitContext,
+      unavailable: unavailable)
+    var outcomes: [SessionOutcome] = []
+    controller.onFinish = { outcomes.append($0) }
+    let window = try #require(controller.window)
+
+    #expect(window.title == "logo.png")
+    #expect(unavailable.title == "Seamerge can’t show the differences of “logo.png”")
+    let reason =
+      isBinary
+      ? "“logo.png” isn’t a text file. Open it in the app that made it."
+      : "Seamerge can’t read “logo.png”. Check that it exists and that you may read it."
+    #expect(unavailable.message(in: SessionContext()) == reason)
+    #expect(
+      unavailable.message(in: SampleDiffs.gitContext)
+        == reason + " Close the window to go on to the next file.")
+    #expect(controller.layout.sourcePanes.allSatisfy { $0.pane.isHidden })
+    let labels = controller.layout.sourcePanes.map { $0.pane.accessibilityLabel() }
+    #expect(labels == ["A, Assets/logo.png, before", "B, Assets/logo.png, working copy"])
+    for command in SessionCommand.allCases {
+      #expect(controller.canPerform(command) == (command == .skipRemainingFiles), "\(command)")
+    }
+    #expect(countLabel(of: controller) == "")
+    #expect(try toolbarItems(of: controller)[.changeNavigation]?.isHidden == true)
+
+    controller.close()
+
+    #expect(outcomes == [.saved])
   }
 
   @Test func commandsOfTheBaseAndTheResultDoNothingInAComparison() async throws {

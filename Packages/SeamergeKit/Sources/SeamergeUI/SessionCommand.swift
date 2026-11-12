@@ -83,6 +83,9 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// context menu.
   case copyBlock
 
+  /// Closes a comparison that `git difftool` started and tells Git to compare no further files.
+  case skipRemainingFiles
+
   /// The name of the command in a menu.
   public var title: String {
     switch self {
@@ -137,6 +140,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Copy Block", bundle: .module,
         comment: "Edit menu command: copy the lines of the current block.")
+    case .skipRemainingFiles:
+      String(
+        localized: "Skip Remaining Files", bundle: .module,
+        comment: "File menu of a comparison: end the comparisons that Git has left.")
     }
   }
 
@@ -196,6 +203,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Show the right file on the left and the left file on the right",
         bundle: .module, comment: "Help tag of Compare > Swap Sides.")
+    case .skipRemainingFiles:
+      String(
+        localized: "Close and compare no more files of this run", bundle: .module,
+        comment: "Help tag of File > Skip Remaining Files.")
     default:
       nil
     }
@@ -240,6 +251,7 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .goToLine: #selector(SessionWindowController.goToLine(_:))
     case .openInEditor: #selector(SessionWindowController.openInEditor(_:))
     case .copyBlock: #selector(SessionWindowController.copyBlock(_:))
+    case .skipRemainingFiles: #selector(SessionWindowController.skipRemainingFiles(_:))
     }
   }
 

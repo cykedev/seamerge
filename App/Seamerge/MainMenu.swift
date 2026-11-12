@@ -27,12 +27,13 @@ final class MainMenu {
   private(set) var commandItems: [SessionCommand: NSMenuItem] = [:]
 
   /// The last item of the File menu, Leave Unresolved, which a comparison calls Skip Remaining
-  /// Files.
+  /// Files; it is the item of that command.
   let leaveUnresolvedItem: NSMenuItem
 
   /// Builds the menu bar with `openRecentMenu` as File > Open Recent, keyed as in a merge window.
   init(openRecentMenu: NSMenu) {
     leaveUnresolvedItem = Self.item(Titles.leaveUnresolved, key: ".")
+    commandItems[.skipRemainingFiles] = leaveUnresolvedItem
     windowsMenu = NSMenu(title: Titles.window)
     helpMenu = NSMenu(title: Titles.help)
     for submenu in [
@@ -47,13 +48,20 @@ final class MainMenu {
   }
 
   /// Gives the commands the key equivalents and the names they have in a window of `kind`.
+  ///
+  /// The last item of the File menu skips the remaining files in a comparison; in a merge it
+  /// leaves the file unresolved, which has no action yet, so it stays deactivated there.
   func update(for kind: Session.Kind) {
-    for (command, item) in commandItems {
+    for (command, item) in commandItems where item !== leaveUnresolvedItem {
       let key = command.keyEquivalent(in: kind)
       item.keyEquivalent = key?.key ?? ""
       item.keyEquivalentModifierMask = key?.modifiers ?? []
     }
-    leaveUnresolvedItem.title = kind == .diff ? Titles.skipRemainingFiles : Titles.leaveUnresolved
+    let skipRemainingFiles = SessionCommand.skipRemainingFiles
+    let isComparison = kind == .diff
+    leaveUnresolvedItem.title = isComparison ? skipRemainingFiles.title : Titles.leaveUnresolved
+    leaveUnresolvedItem.action = isComparison ? skipRemainingFiles.action : nil
+    leaveUnresolvedItem.toolTip = isComparison ? skipRemainingFiles.help : nil
   }
 
   private func appMenu() -> NSMenu {

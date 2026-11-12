@@ -25,7 +25,7 @@ extension SessionCommand {
   /// concept of the menus puts them among those.
   public static func groups(in menu: Menu) -> [[SessionCommand]] {
     switch menu {
-    case .file: [[.openInEditor]]
+    case .file: [[.openInEditor], [.skipRemainingFiles]]
     case .edit: [[.copyBlock]]
     case .view:
       [
@@ -57,11 +57,11 @@ extension SessionCommand {
       .filter { !$0.isEmpty }
   }
 
-  /// Whether the command can act in a window of `kind` at all: Swap Sides only in a comparison,
-  /// the commands of the base and the result only in a merge.
+  /// Whether the command can act in a window of `kind` at all: Swap Sides and Skip Remaining
+  /// Files only in a comparison, the commands of the base and the result only in a merge.
   private func acts(in kind: Session.Kind) -> Bool {
     switch self {
-    case .swapSides: kind == .diff
+    case .swapSides, .skipRemainingFiles: kind == .diff
     case .nextConflict, .previousConflict, .toggleBase, .toggleResultMaximized: kind == .merge
     default: true
     }

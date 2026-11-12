@@ -18,6 +18,9 @@ import Testing
 
   @Test func commandsOfTheSessionWindowSendItsActionsInTheOrderOfTheirGroups() throws {
     let mainMenu = MainMenu(openRecentMenu: NSMenu())
+    // In a merge, Leave Unresolved has no action yet; the item is Skip Remaining Files in a
+    // comparison.
+    mainMenu.update(for: .diff)
     let menus: [(SessionCommand.Menu, String)] = [
       (.file, "File"), (.edit, "Edit"), (.view, "View"), (.go, "Go"), (.compare, "Compare"),
     ]
@@ -46,6 +49,7 @@ import Testing
     #expect(try Self.keys(of: item(.previousChange)) == "⌥⌘↑")
     #expect(try Self.keys(of: item(.nextConflict)) == "")
     #expect(mainMenu.leaveUnresolvedItem.title == "Skip Remaining Files")
+    #expect(mainMenu.leaveUnresolvedItem.action == SessionCommand.skipRemainingFiles.action)
     #expect(Self.keys(of: mainMenu.leaveUnresolvedItem) == "⌘.")
 
     mainMenu.update(for: .merge)
@@ -53,6 +57,7 @@ import Testing
     #expect(try Self.keys(of: item(.nextChange)) == "⌥⇧⌘↓")
     #expect(try Self.keys(of: item(.nextConflict)) == "⌥⌘↓")
     #expect(mainMenu.leaveUnresolvedItem.title == "Leave Unresolved")
+    #expect(mainMenu.leaveUnresolvedItem.action == nil)
   }
 
   @Test func whatHasNoEffectIsDeactivatedAndNothingIsHidden() {

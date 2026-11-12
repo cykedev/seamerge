@@ -59,12 +59,12 @@ final class SessionCoordinator {
     }
   }
 
-  /// Closes every session window, tells each waiting helper that its session was cancelled, and
-  /// stops listening.
+  /// Closes every session window, tells each waiting helper that its session was cancelled, so
+  /// that Git compares no further files either, and stops listening.
   func finish() async {
     isFinishing = true
     for controller in windowControllers {
-      controller.close()
+      controller.cancel()
     }
     await waitUntilIdle()
     serverTask?.cancel()

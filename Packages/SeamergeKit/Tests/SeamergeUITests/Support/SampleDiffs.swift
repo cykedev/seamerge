@@ -71,6 +71,17 @@ enum SampleDiffs {
 
     """
 
+  /// A comparison of an image that `git difftool` hands over as two temporary copies, which
+  /// cannot be compared because the newer one is binary or, with `isBinary` false, cannot be
+  /// read.
+  static func unavailable(isBinary: Bool) -> UnavailableComparison {
+    let folder = URL(filePath: "/private/var/folders/xy/T/", directoryHint: .isDirectory)
+    let old = SessionFile(url: folder.appending(path: "Xy12_logo.png"), label: "Assets/logo.png")
+    let new = SessionFile(url: folder.appending(path: "Ab34_logo.png"), label: "Assets/logo.png")
+    return UnavailableComparison(
+      old: old, new: new, reason: isBinary ? .binaryFile(new.url) : .unreadableFile(new.url))
+  }
+
   /// A comparison of `lineCount` lines in which every `spacing`-th line changed, starting at the
   /// third, so that long runs of unchanged lines lie between the changes.
   static func manyChanges(lineCount: Int = 240, spacing: Int = 20) async throws -> Session {

@@ -21,6 +21,7 @@ extension SessionCommand {
       .ignoreWhitespaceChanges, .ignoreAllWhitespace, .toggleInvisibles, .copyBlock:
       return nil
     case .swapSides: return ("s", [.option, .command])
+    case .skipRemainingFiles: return kind == .diff ? (".", [.command]) : nil
     case .toggleBase: return ("b", [.option, .command])
     case .toggleResultMaximized: return ("r", [.option, .command])
     case .toggleScrollSynchronization: return ("y", [.option, .command])

@@ -26,9 +26,6 @@ extension MainMenu {
     static let saveAndClose = String(localized: "Save and Close", comment: "File menu.")
     static let leaveUnresolved = String(
       localized: "Leave Unresolved", comment: "File menu: close a merge without saving it.")
-    static let skipRemainingFiles = String(
-      localized: "Skip Remaining Files",
-      comment: "File menu of a comparison: end the comparisons that Git has left.")
 
     static let edit = String(localized: "Edit", comment: "Menu bar.")
     static let undo = String(localized: "Undo", comment: "Edit menu.")
