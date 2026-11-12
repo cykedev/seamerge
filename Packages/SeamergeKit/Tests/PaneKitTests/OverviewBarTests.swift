@@ -42,6 +42,33 @@ import Testing
     #expect(visibleRows.contains(54_321.5))
   }
 
+  @Test func marksOfATextThatFitsStandBesideTheirRowsWithoutAKnob() throws {
+    let theme = Theme()
+    let pane = PaneView(theme: theme)
+    pane.content = CodeRows.content(
+      count: 10, length: 20, blocks: [PaneBlock(rows: 3..<4, style: .tinted(.a))])
+    let bar = OverviewBar()
+    bar.theme = theme
+    bar.marks = [
+      OverviewMark(
+        rows: 3..<4, style: .tinted(.a), placement: .leading, block: 0,
+        accessibilityLabel: "Changed in A, line 4")
+    ]
+    pane.overviewBar = bar
+    let window = Rendering.host(pane, size: CGSize(width: 400, height: 600), appearance: appearance)
+    defer { window.close() }
+    #expect(!bar.isEnabled)
+    let bitmap = try Rendering.bitmap(of: pane)
+    let mark = try #require(
+      Contrast.resolve(theme.overviewMarkColor(for: .tinted(.a)), in: appearance))
+    let x = bar.frame.minX + 4
+    let row = 3.5 * theme.rowHeight
+    try expect(in: bitmap, at: CGPoint(x: x, y: row), is: mark)
+    // Stretched over the whole bar, the mark would stand at a third of its height instead.
+    let ground = try Rendering.color(in: bitmap, at: CGPoint(x: x, y: 500))
+    try expect(in: bitmap, at: CGPoint(x: x, y: 0.35 * 600), is: ground)
+  }
+
   @Test func marksOfALieLeftMarksOfBRightAndConflictsAcrossTheBar() throws {
     let theme = Theme()
     let (pane, bar, window) = Self.paneWithBar(theme: theme, appearance: appearance)

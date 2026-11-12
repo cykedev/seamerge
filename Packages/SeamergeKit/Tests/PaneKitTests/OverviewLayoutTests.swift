@@ -10,7 +10,7 @@ import Testing
   @Test func singleRowAmongOneHundredThousandGetsAMarkThatCanBeHit() {
     let layout = OverviewLayout(
       marks: [Self.mark(rows: 54_321..<54_322, .tinted(.a), .leading, block: 7)],
-      rowCount: 100_000, area: area)
+      rowCount: 100_000, rowHeight: 20, area: area)
     let rect = layout.shapes[0].rect
     #expect(rect.height == 3)
     let middle = area.minY + 54_321.5 / 100_000 * area.height
@@ -30,7 +30,7 @@ import Testing
           rows: row..<row + 2, isConflict ? .tinted(.conflict) : .tinted(row % 20 == 0 ? .a : .b),
           isConflict ? .fullWidth : row % 20 == 0 ? .leading : .trailing, block: row))
     }
-    let layout = OverviewLayout(marks: marks, rowCount: 100_000, area: area)
+    let layout = OverviewLayout(marks: marks, rowCount: 100_000, rowHeight: 20, area: area)
     let conflictIndex = layout.shapes.firstIndex(where: \.isOpenConflict)
     #expect(conflictIndex == layout.shapes.count - 1, "drawn last, above every other mark")
     let conflict = layout.shapes[layout.shapes.count - 1]
@@ -47,7 +47,7 @@ import Testing
         Self.mark(rows: 12..<13, .tinted(.a), .leading, block: 1),
         Self.mark(rows: 14..<15, .tinted(.b), .trailing, block: 2),
         Self.mark(rows: 90_000..<90_001, .tinted(.a), .leading, block: 3),
-      ], rowCount: 100_000, area: area)
+      ], rowCount: 100_000, rowHeight: 20, area: area)
     #expect(layout.shapes.map { $0.members.map(\.block) } == [[0, 1], [2], [3]])
     #expect(layout.markRects.count == 4)
   }
@@ -57,7 +57,7 @@ import Testing
       marks: [
         Self.mark(rows: 0..<1, .tinted(.a), .leading, block: 0),
         Self.mark(rows: 99_999..<100_000, .tinted(.b), .trailing, block: 1),
-      ], rowCount: 100_000, area: area)
+      ], rowCount: 100_000, rowHeight: 20, area: area)
     #expect(layout.shapes[0].rect.minY == area.minY)
     #expect(layout.shapes[1].rect.maxY == area.maxY)
   }
@@ -68,12 +68,34 @@ import Testing
         Self.mark(rows: 0..<10, .tinted(.a), .leading, block: 0),
         Self.mark(rows: 20..<30, .tinted(.b), .trailing, block: 1),
         Self.mark(rows: 40..<50, .handwritten, .fullWidth, block: 2),
-      ], rowCount: 100, area: area)
+      ], rowCount: 100, rowHeight: 20, area: area)
     let rects = layout.markRects
     #expect(rects[0].minX == area.minX && rects[0].maxX < area.maxX)
     #expect(rects[1].minX > area.minX && rects[1].maxX == area.maxX)
     #expect(rects[2].minX == area.minX && rects[2].maxX == area.maxX)
     #expect(abs(rects[0].width - area.width * 2 / 3) < 0.001)
+  }
+
+  @Test func rowsOfAShortTextTakeNoMoreHeightThanInTheText() {
+    let layout = OverviewLayout(
+      marks: [
+        Self.mark(rows: 1..<2, .tinted(.a), .leading, block: 0),
+        Self.mark(rows: 7..<9, .tinted(.conflict), .fullWidth, block: 1),
+      ], rowCount: 10, rowHeight: 20, area: area)
+    // Ten rows of 20 points fit into the 600 points of the bar: each mark stands beside its rows.
+    #expect(layout.markRects[0].minY == area.minY + 20)
+    #expect(layout.markRects[0].height == 20)
+    #expect(layout.markRects[1].minY == area.minY + 140)
+    #expect(layout.markRects[1].maxY == area.minY + 180)
+    #expect(layout.block(at: area.minY + 400) == nil)
+  }
+
+  @Test func rowsOfALongTextShareTheWholeBar() {
+    let layout = OverviewLayout(
+      marks: [Self.mark(rows: 99..<100, .tinted(.b), .trailing, block: 0)], rowCount: 100,
+      rowHeight: 20, area: area)
+    #expect(layout.markRects[0].maxY == area.maxY)
+    #expect(layout.markRects[0].height == 6)
   }
 
   private static func mark(

@@ -25,8 +25,9 @@ import Testing
     defer { window.close() }
     let knobSlot = bar.rect(for: .knobSlot)
     let slot = knobSlot.isEmpty ? bar.bounds : knobSlot
-    // 21 display rows: the bar of the run, then rows 80 to 99; row 90 is display row 11.
-    let shownAt = slot.minY + 11.5 / 21 * slot.height
+    // 21 display rows: the bar of the run, then rows 80 to 99; row 90 is display row 11, which
+    // the bar shows beside its row, since all of them fit.
+    let shownAt = slot.minY + 11.5 * theme.rowHeight
     let wouldBeAt = slot.minY + 90.5 / 100 * slot.height
     let bitmap = try Rendering.bitmap(of: pane)
     let mark = try #require(

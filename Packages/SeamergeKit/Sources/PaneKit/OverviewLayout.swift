@@ -24,10 +24,14 @@ struct OverviewLayout {
   /// The place of each mark on its own, before merging, in the order of the marks.
   let markRects: [CGRect]
 
-  /// Lays out `marks` of a grid with `rowCount` rows in `area`: the rows from its top to its
-  /// bottom, the placements across its width.
-  init(marks: [OverviewMark], rowCount: Int, area: CGRect) {
-    let scale = area.height / CGFloat(max(rowCount, 1))
+  /// Lays out `marks` of a grid with `rowCount` rows of `rowHeight` in `area`: the rows from its
+  /// top down, the placements across its width.
+  ///
+  /// The rows fill the height of the area, but none takes more height than in the text: the
+  /// marks of a text that fits beside the bar stand beside their rows, and the rest of the bar
+  /// stays empty.
+  init(marks: [OverviewMark], rowCount: Int, rowHeight: CGFloat, area: CGRect) {
+    let scale = min(area.height / CGFloat(max(rowCount, 1)), rowHeight)
     let partialWidth = area.width * 2 / 3
     var markRects: [CGRect] = []
     var shapes: [Shape] = []

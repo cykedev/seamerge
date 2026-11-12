@@ -144,7 +144,8 @@ public final class OverviewBar: NSScroller {
       shown.rows = displayRows.displayRows(ofRows: mark.rows)
       return shown
     }
-    let layout = OverviewLayout(marks: shownMarks, rowCount: displayRows.count, area: markArea)
+    let layout = OverviewLayout(
+      marks: shownMarks, rowCount: displayRows.count, rowHeight: theme.rowHeight, area: markArea)
     cachedLayout = layout
     return layout
   }
