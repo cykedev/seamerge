@@ -1,0 +1,96 @@
+/// The row grid that aligns the blocks of a session across the panes.
+///
+/// Each block takes as many rows as its longest range has lines and starts on the same row in
+/// every pane. Within a block, a pane shows its own lines first and fills the remaining rows
+/// with filler rows, which belong to no line. Lookups in either direction take logarithmic time.
+public struct RowLayout: Sendable {
+  /// The blocks of the session.
+  private let blocks: [Block]
+
+  /// The first row of each block, followed by the number of rows.
+  private let blockRowStarts: [Int]
+
+  /// The number of lines of each input that takes part.
+  private let lineCounts: [Role: Int]
+
+  /// The text of each pane on the grid.
+  private let displayTexts: [Role: DisplayText]
+
+  /// Lays out `blocks` and the lines of `files` on one grid.
+  init(blocks: [Block], files: [Role: ComparedFile]) {
+    var blockRowStarts = [0]
+    blockRowStarts.reserveCapacity(blocks.count + 1)
+    for block in blocks {
+      blockRowStarts.append(blockRowStarts[blockRowStarts.count - 1] + block.rowCount)
+    }
+    self.blocks = blocks
+    self.blockRowStarts = blockRowStarts
+    lineCounts = files.mapValues(\.lineCount)
+    displayTexts = Dictionary(
+      uniqueKeysWithValues: files.map { role, file in
+        (role, DisplayText(file: file, role: role, blocks: blocks))
+      })
+  }
+
+  /// The number of rows.
+  public var rowCount: Int { blockRowStarts[blockRowStarts.count - 1] }
+
+  /// The text of the pane of `role`, or `nil` if the input does not take part.
+  public func displayText(for role: Role) -> DisplayText? {
+    displayTexts[role]
+  }
+
+  /// The number of lines of the input of `role`, or 0 if it does not take part.
+  public func lineCount(in role: Role) -> Int {
+    lineCounts[role] ?? 0
+  }
+
+  /// The rows of a block.
+  ///
+  /// - Precondition: `block` is one of the blocks the grid was laid out for.
+  public func rows(of block: Block) -> Range<Int> {
+    precondition(blocks.indices.contains(block.id), "Block \(block.id) is not on the grid")
+    return blockRowStarts[block.id]..<blockRowStarts[block.id + 1]
+  }
+
+  /// The block that a row belongs to.
+  ///
+  /// - Precondition: `row` lies within `0..<rowCount`.
+  public func block(atRow row: Int) -> Block {
+    precondition((0..<rowCount).contains(row), "Row \(row) is out of range")
+    return blocks[lastIndex(in: blocks.indices) { blockRowStarts[$0] <= row }]
+  }
+
+  /// The line of the input of `role` that a row shows, or `nil` for a filler row.
+  ///
+  /// - Precondition: `row` lies within `0..<rowCount`.
+  public func line(atRow row: Int, in role: Role) -> Int? {
+    let block = block(atRow: row)
+    let lines = block.lines(in: role)
+    let offset = row - blockRowStarts[block.id]
+    return offset < lines.count ? lines.lowerBound + offset : nil
+  }
+
+  /// The row that shows a line of the input of `role`.
+  ///
+  /// - Precondition: `line` lies within `0..<lineCount(in: role)`.
+  public func row(ofLine line: Int, in role: Role) -> Int {
+    precondition((0..<lineCount(in: role)).contains(line), "Line \(line) is out of range")
+    // Blocks without lines in this input start where the next block does, so the last block
+    // starting at or before the line is the one that contains it.
+    let index = lastIndex(in: blocks.indices) { blocks[$0].lines(in: role).lowerBound <= line }
+    return blockRowStarts[index] + line - blocks[index].lines(in: role).lowerBound
+  }
+
+  /// The last index in `indices` for which `isAtOrBefore` holds, given that it holds for the
+  /// first index and, once it fails, for no later one.
+  private func lastIndex(in indices: Range<Int>, where isAtOrBefore: (Int) -> Bool) -> Int {
+    var low = indices.lowerBound
+    var high = indices.upperBound
+    while high - low > 1 {
+      let middle = (low + high) / 2
+      if isAtOrBefore(middle) { low = middle } else { high = middle }
+    }
+    return low
+  }
+}

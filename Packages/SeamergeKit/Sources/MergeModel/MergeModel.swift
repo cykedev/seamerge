@@ -1,3 +1,3 @@
-// MergeModel holds a merge session: the sides and their base, the blocks the
-// engine found, the line grid that aligns them, the result document and the
-// undoable steps that edit it. It knows nothing about AppKit.
+// MergeModel holds an open merge or comparison: its files, the blocks the
+// engine found and how they line up and differ across the panes. It knows
+// nothing about AppKit.
