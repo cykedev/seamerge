@@ -28,6 +28,32 @@ import Testing
     #expect(try !Self.hasInk(in: bitmap, rect: space))
   }
 
+  @Test func switchingInvisiblesHasEveryFragmentInViewDrawnAgain() throws {
+    let pane = PaneView(theme: theme)
+    pane.content = PaneContent(text: "a b\nc d\ne f", lineNumbers: [0, 1, 2])
+    let window = Rendering.host(
+      pane, size: CGSize(width: 300, height: 100), appearance: appearance, isKey: true)
+    defer { window.close() }
+    window.orderFrontRegardless()
+    pane.layoutSubtreeIfNeeded()
+    window.displayIfNeeded()
+    // TextKit draws each fragment into a view of its own and keeps the drawing in its layer,
+    // which a window on screen shows until the layer is marked as needing display.
+    let views = Self.descendants(of: pane.documentView)
+    for view in views {
+      view.layer?.displayIfNeeded()
+    }
+    try #require(views.count > 2)
+    pane.showsInvisibles = true
+    let stale = views.filter { !($0.layer?.needsDisplay() ?? true) }
+    #expect(stale.isEmpty, "\(stale.map { type(of: $0) })")
+  }
+
+  /// Every view within `view`, at any depth.
+  private static func descendants(of view: NSView) -> [NSView] {
+    view.subviews.flatMap { [$0] + descendants(of: $0) }
+  }
+
   @Test func everyLineEndingHasASymbolOfItsOwn() throws {
     let endings: [LineEnding] = [.lineFeed, .carriageReturnLineFeed, .carriageReturn, .none]
     let pane = PaneView(theme: theme)

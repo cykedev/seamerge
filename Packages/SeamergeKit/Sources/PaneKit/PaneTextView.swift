@@ -233,6 +233,9 @@ final class PaneTextView: NSTextView {
     // Which paragraphs the layout manager enumerates changes with the runs.
     textLayoutManager.invalidateLayout(for: textLayoutManager.documentRange)
     needsDisplay = true
+    // A fragment that keeps its frame, such as the first of a run that started at the top,
+    // would keep drawing as it did behind the bar.
+    setNeedsDisplayOfFragments(in: bounds)
   }
 
   /// Marks the block at `block` as the current one, or none.
@@ -386,6 +389,28 @@ final class PaneTextView: NSTextView {
     // Draws the fragments of the rows again, which ask for their painting as they draw.
     textLayoutManager.invalidateRenderingAttributes(for: range)
     applyPreviewColor(in: offsets)
+    let displayRows = displayRows.displayRows(ofRows: rows)
+    setNeedsDisplayOfFragments(
+      in: CGRect(
+        x: bounds.minX, y: CGFloat(displayRows.lowerBound) * theme.rowHeight, width: bounds.width,
+        height: CGFloat(displayRows.count) * theme.rowHeight))
+  }
+
+  /// Marks the views within the text view that show the fragments in `rect` as needing display.
+  ///
+  /// TextKit draws each fragment into a view of its own and keeps what it drew until the
+  /// fragment's layout changes. Invalidating the rendering attributes of a range lays nothing
+  /// out, so in a window on screen the fragments would keep their old look.
+  func setNeedsDisplayOfFragments(in rect: CGRect) {
+    func mark(_ view: NSView) {
+      for subview in view.subviews {
+        let area = subview.convert(rect, from: self).intersection(subview.bounds)
+        guard !area.isEmpty else { continue }
+        subview.setNeedsDisplay(area)
+        mark(subview)
+      }
+    }
+    mark(self)
   }
 
   /// The fill of `row`, or `nil` if it stays on the text background.
