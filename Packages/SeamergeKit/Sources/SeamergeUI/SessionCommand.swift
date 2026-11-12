@@ -28,6 +28,10 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Jumps to the last change.
   case lastChange
 
+  /// Copies the lines of the current block in the pane with the focus, or in the pane of a
+  /// context menu.
+  case copyBlock
+
   /// The name of the command in a menu.
   public var title: String {
     switch self {
@@ -43,6 +47,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "First Change", bundle: .module, comment: "Go menu command.")
     case .lastChange:
       String(localized: "Last Change", bundle: .module, comment: "Go menu command.")
+    case .copyBlock:
+      String(
+        localized: "Copy Block", bundle: .module,
+        comment: "Edit menu command: copy the lines of the current block.")
     }
   }
 
@@ -79,6 +87,7 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .previousChange: #selector(SessionWindowController.selectPreviousChange(_:))
     case .firstChange: #selector(SessionWindowController.selectFirstChange(_:))
     case .lastChange: #selector(SessionWindowController.selectLastChange(_:))
+    case .copyBlock: #selector(SessionWindowController.copyBlock(_:))
     }
   }
 

@@ -20,6 +20,15 @@ public final class SessionWindowController: NSWindowController {
 
   let layout: SessionSplitViewController
   let presentation: MergePresentation
+
+  /// Where the result goes and what Git is doing.
+  let context: SessionContext
+
+  /// The pasteboard that Copy and Copy Path write to.
+  let pasteboard: NSPasteboard
+
+  /// The workspace that opens files and shows them in the Finder.
+  let workspace: any Workspace
   private let summary: SessionSummary
   private let sessionUndoManager: UndoManager
   private var hasFinished = false
@@ -50,17 +59,17 @@ public final class SessionWindowController: NSWindowController {
   ) {
     self.init(
       session: session, context: context, undoManager: undoManager,
-      displayOptions: .current(in: .shared))
+      displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared)
     NSWorkspace.shared.notificationCenter.addObserver(
       self, selector: #selector(accessibilityDisplayOptionsDidChange(_:)),
       name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
   }
 
   /// Opens a window for `session` that draws with `displayOptions`, whatever the system's
-  /// settings are.
+  /// settings are, and copies to `pasteboard` and opens files with `workspace`.
   init(
     session: Session, context: SessionContext, undoManager: UndoManager,
-    displayOptions: DisplayOptions
+    displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace
   ) {
     precondition(session.kind == .merge, "A session window shows a merge")
     let theme = displayOptions.theme
@@ -72,6 +81,9 @@ public final class SessionWindowController: NSWindowController {
     let layout = SessionSplitViewController(
       headers: Self.paneOrder.compactMap { headers[$0] }, resultHeader: resultHeader, theme: theme)
     self.layout = layout
+    self.context = context
+    self.pasteboard = pasteboard
+    self.workspace = workspace
     sessionUndoManager = undoManager
     self.displayOptions = displayOptions
     presentation = MergePresentation(
@@ -99,6 +111,8 @@ public final class SessionWindowController: NSWindowController {
     layout.placeDividers()
     updateSubtitle()
     presentation.showCurrentBlock()
+    presentation.delegate = self
+    layout.delegate = self
   }
 
   /// The order of the panes above the result, from left to right.
@@ -163,6 +177,22 @@ extension SessionWindowController: NSUserInterfaceValidations {
     switch command.requirement {
     case .jumpTarget(let jump):
       presentation.navigation.target(of: jump) != nil
+    case .blockText:
+      !blockText(at: CopiedPlace(pane: focusedPane, block: presentation.currentBlock)).isEmpty
     }
+  }
+}
+
+extension SessionWindowController: MergePresentationDelegate {
+  func presentation(
+    _ presentation: MergePresentation, menuFor hit: PaneHit, in pane: PaneView
+  ) -> NSMenu {
+    contextMenu(for: hit, in: pane)
+  }
+}
+
+extension SessionWindowController: SessionLayoutDelegate {
+  func layout(_ layout: SessionSplitViewController, menuForHeaderOf role: Role?) -> NSMenu? {
+    headerMenu(for: role)
   }
 }

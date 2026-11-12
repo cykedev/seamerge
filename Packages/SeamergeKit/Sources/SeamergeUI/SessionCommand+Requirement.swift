@@ -3,6 +3,9 @@ extension SessionCommand {
   enum Requirement {
     /// A jump needs a block to land on.
     case jumpTarget(BlockNavigation.Jump)
+
+    /// Copying a block needs a current block with text.
+    case blockText
   }
 
   /// What the command needs to have an effect.
@@ -14,6 +17,7 @@ extension SessionCommand {
     case .previousChange: .jumpTarget(.previousChange)
     case .firstChange: .jumpTarget(.firstChange)
     case .lastChange: .jumpTarget(.lastChange)
+    case .copyBlock: .blockText
     }
   }
 }

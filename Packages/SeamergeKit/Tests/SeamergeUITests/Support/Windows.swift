@@ -12,10 +12,12 @@ enum Windows {
   /// `options` say otherwise, so that every jump lands at once.
   static func controller(
     for session: Session, context: SessionContext = SessionContext(),
-    options: DisplayOptions = DisplayOptions(reducesMotion: true)
+    options: DisplayOptions = DisplayOptions(reducesMotion: true),
+    workspace: WorkspaceRecorder = WorkspaceRecorder()
   ) throws -> SessionWindowController {
     let controller = SessionWindowController(
-      session: session, context: context, undoManager: UndoManager(), displayOptions: options)
+      session: session, context: context, undoManager: UndoManager(), displayOptions: options,
+      pasteboard: .withUniqueName(), workspace: workspace)
     let window = try #require(controller.window)
     window.contentView?.layoutSubtreeIfNeeded()
     return controller
@@ -36,5 +38,21 @@ enum Windows {
   /// The top of the visible part of the text of `pane`.
   static func scrollOffset(of pane: PaneView) -> CGFloat {
     pane.documentView.visibleRect.minY
+  }
+}
+
+/// A workspace that records what the window asks of it instead of opening anything.
+@MainActor
+final class WorkspaceRecorder: Workspace {
+  private(set) var openedURLs: [URL] = []
+  private(set) var revealedURLs: [URL] = []
+
+  func open(_ url: URL) -> Bool {
+    openedURLs.append(url)
+    return true
+  }
+
+  func activateFileViewerSelecting(_ fileURLs: [URL]) {
+    revealedURLs += fileURLs
   }
 }

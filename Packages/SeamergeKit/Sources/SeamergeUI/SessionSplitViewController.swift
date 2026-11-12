@@ -17,20 +17,27 @@ final class SessionSplitViewController: NSSplitViewController {
   /// The result pane.
   let resultPane: PaneView
 
+  /// Supplies the context menus of the headers; the controller does not retain it.
+  weak var delegate: (any SessionLayoutDelegate)?
+
   private let sourcesController = NSSplitViewController()
-  private let sourceHeaderViews: [NSHostingView<SideHeaderView>]
-  private let resultHeaderView: NSHostingView<ResultHeaderView>
+  private let sourceHeaderViews: [HeaderHostingView<SideHeaderView>]
+  private let resultHeaderView: HeaderHostingView<ResultHeaderView>
 
   /// Creates the panes for the inputs of `headers`, drawn with `theme`.
   init(headers: [SideHeader], resultHeader: ResultHeader, theme: Theme) {
     sourcePanes = headers.map { ($0.role, PaneView(theme: theme)) }
     resultPane = PaneView(theme: theme)
     sourceHeaderViews = headers.map {
-      NSHostingView(rootView: SideHeaderView(header: $0, theme: theme))
+      HeaderHostingView(rootView: SideHeaderView(header: $0, theme: theme), role: $0.role)
     }
-    resultHeaderView = NSHostingView(
-      rootView: ResultHeaderView(header: resultHeader, callerIsGone: false))
+    resultHeaderView = HeaderHostingView(
+      rootView: ResultHeaderView(header: resultHeader, callerIsGone: false), role: nil)
     super.init(nibName: nil, bundle: nil)
+    for headerView in sourceHeaderViews {
+      headerView.menuProvider = { [weak self] role in self?.headerMenu(for: role) }
+    }
+    resultHeaderView.menuProvider = { [weak self] role in self?.headerMenu(for: role) }
     splitView.isVertical = false
     sourcesController.splitView.isVertical = true
     for (headerView, (_, pane)) in zip(sourceHeaderViews, sourcePanes) {
@@ -65,6 +72,10 @@ final class SessionSplitViewController: NSSplitViewController {
     for headerView in sourceHeaderViews {
       headerView.rootView = SideHeaderView(header: headerView.rootView.header, theme: theme)
     }
+  }
+
+  private func headerMenu(for role: Role?) -> NSMenu? {
+    delegate?.layout(self, menuForHeaderOf: role)
   }
 
   /// Split view controllers of a window are never archived.
@@ -121,6 +132,42 @@ final class SessionSplitViewController: NSSplitViewController {
     accessory.automaticallyAppliesContentInsets = false
     accessory.preferredScrollEdgeEffectStyle = .hard
     return accessory
+  }
+}
+
+/// Supplies what the layout of a window shows on demand.
+@MainActor
+protocol SessionLayoutDelegate: AnyObject {
+  /// The context menu of the header of the pane of `role`, or of the result for `nil`, or `nil`
+  /// for none.
+  func layout(_ layout: SessionSplitViewController, menuForHeaderOf role: Role?) -> NSMenu?
+}
+
+/// A header hosted in AppKit, with a context menu of its own.
+@MainActor
+final class HeaderHostingView<Content: View>: NSHostingView<Content> {
+  /// The input of the pane below, or `nil` for the result.
+  let role: Role?
+
+  /// Supplies the context menu for the role of the header.
+  var menuProvider: (Role?) -> NSMenu? = { _ in nil }
+
+  init(rootView: Content, role: Role?) {
+    self.role = role
+    super.init(rootView: rootView)
+  }
+
+  required init(rootView: Content) {
+    role = nil
+    super.init(rootView: rootView)
+  }
+
+  required init?(coder: NSCoder) {
+    nil
+  }
+
+  override func menu(for event: NSEvent) -> NSMenu? {
+    menuProvider(role)
   }
 }
 

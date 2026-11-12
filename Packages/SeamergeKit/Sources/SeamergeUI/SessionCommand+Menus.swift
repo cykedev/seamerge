@@ -24,7 +24,7 @@ extension SessionCommand {
   public static func groups(in menu: Menu) -> [[SessionCommand]] {
     switch menu {
     case .file: []
-    case .edit: []
+    case .edit: [[.copyBlock]]
     case .view:
       []
     case .go:
@@ -37,4 +37,9 @@ extension SessionCommand {
     }
   }
 
+  /// The jumps that the context menu offers, on a changed block or on unchanged text, as far as
+  /// each has an effect there.
+  static func contextMenuJumps(onChangedBlock: Bool) -> [SessionCommand] {
+    onChangedBlock ? [.nextConflict, .nextChange] : [.nextConflict]
+  }
 }

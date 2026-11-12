@@ -216,6 +216,7 @@ import Testing
   ) -> SessionWindowController {
     SessionWindowController(
       session: session, context: context, undoManager: UndoManager(),
-      displayOptions: DisplayOptions())
+      displayOptions: DisplayOptions(), pasteboard: .withUniqueName(),
+      workspace: WorkspaceRecorder())
   }
 }

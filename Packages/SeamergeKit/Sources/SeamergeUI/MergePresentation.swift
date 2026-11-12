@@ -33,6 +33,9 @@ final class MergePresentation {
   /// The coupling of the panes, which keeps them at the same place while one of them scrolls.
   let scrollSync = ScrollSync()
 
+  /// Supplies the context menus of the panes; the presentation does not retain it.
+  weak var delegate: (any MergePresentationDelegate)?
+
   /// The accessibility settings, of which the presentation reads whether movement is reduced.
   var displayOptions: DisplayOptions
 
@@ -212,6 +215,14 @@ final class MergePresentation {
   }
 }
 
+/// Supplies what a presentation shows on demand.
+@MainActor
+protocol MergePresentationDelegate: AnyObject {
+  /// The context menu for a secondary click on `hit` in `pane`.
+  func presentation(_ presentation: MergePresentation, menuFor hit: PaneHit, in pane: PaneView)
+    -> NSMenu
+}
+
 extension MergePresentation: PaneViewDelegate {
   /// A click on a row of a changed block makes the block current; the click still places the
   /// insertion point and selects text as in any text.
@@ -219,10 +230,12 @@ extension MergePresentation: PaneViewDelegate {
     select(hit, in: pane)
   }
 
-  /// The panes offer no context menu of their own, nor the text view's standard one, which holds
+  /// A secondary click first makes the block under the pointer current, as a click does, then
+  /// shows the menu of the delegate in place of the text view's standard one, which holds
   /// commands that do not apply to a merge.
   func pane(_ pane: PaneView, menuFor hit: PaneHit) -> NSMenu? {
-    nil
+    select(hit, in: pane)
+    return delegate?.presentation(self, menuFor: hit, in: pane)
   }
 
   /// Expands the run in every pane that shows it.

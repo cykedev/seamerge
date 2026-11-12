@@ -95,6 +95,18 @@
     "Compared exactly": {
       "comment": "Subtitle: the comparison counts every byte, whitespace and line endings too."
     },
+    "Copy": {
+      "comment": "Context menu: copy the selected text, or the block if nothing is selected."
+    },
+    "Copy Block": {
+      "comment": "Edit menu command: copy the lines of the current block."
+    },
+    "Copy Path": {
+      "comment": "Context menu of a header."
+    },
+    "Cut": {
+      "comment": "Context menu: cut the selected text."
+    },
     "Date": {
       "comment": "Details of a side: when the commit was made."
     },
@@ -170,6 +182,9 @@
     "Open conflict, line %lld": {
       "comment": "VoiceOver: the mark of an open conflict in the overview bar."
     },
+    "Paste": {
+      "comment": "Context menu: paste text."
+    },
     "Previous Change": {
       "comment": "Go menu command."
     },
@@ -187,6 +202,12 @@
     },
     "Result, %@": {
       "comment": "VoiceOver: the result pane and the file it is written to."
+    },
+    "Select All": {
+      "comment": "Context menu: select the whole text."
+    },
+    "Show in Finder": {
+      "comment": "Context menu of a header."
     },
     "Show where this side comes from": {
       "comment": "Help tag of ⓘ."
