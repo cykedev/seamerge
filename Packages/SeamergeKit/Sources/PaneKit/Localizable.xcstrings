@@ -1,0 +1,39 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Added": {
+      "comment": "VoiceOver: the side added lines."
+    },
+    "After line %lld": {
+      "comment": "VoiceOver: where a mark beside a filler row is."
+    },
+    "Before the first line": {
+      "comment": "VoiceOver: where a mark beside filler rows at the start is."
+    },
+    "Change markers": {
+      "comment": "VoiceOver: the gutter of a pane."
+    },
+    "Changed": {
+      "comment": "VoiceOver: the side changed lines."
+    },
+    "Ignored difference": {
+      "comment": "VoiceOver: a line that differs only in what the comparison ignores."
+    },
+    "Line %lld": {
+      "comment": "VoiceOver: where a mark is."
+    },
+    "Open conflict": {
+      "comment": "VoiceOver: a conflict that still needs a decision."
+    },
+    "Removed": {
+      "comment": "VoiceOver: the side removed lines."
+    },
+    "Removed text": {
+      "comment": "VoiceOver: the mark where a side removed text within a line."
+    },
+    "Resolved conflict": {
+      "comment": "VoiceOver: a conflict that has been decided."
+    }
+  },
+  "version": "1.0"
+}
