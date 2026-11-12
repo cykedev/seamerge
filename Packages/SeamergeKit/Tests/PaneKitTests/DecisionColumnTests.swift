@@ -160,6 +160,18 @@ import Testing
     #expect(window.firstResponder === shown[2])
   }
 
+  @Test func clickBesideABlockNamesItAndClickBesideUnchangedRowsNamesNone() throws {
+    let (pane, column, window, recorder) = Self.resultPane()
+    defer { window.close() }
+    let block = SampleResult.Block.chosenB.rawValue
+    let rowHeight = pane.theme.rowHeight
+    let row = try #require(pane.content.blocks[block].rows.first)
+    try Clicking.click(column, at: CGPoint(x: 4, y: (CGFloat(row) + 0.5) * rowHeight))
+    try Clicking.click(column, at: CGPoint(x: 4, y: 0.5 * rowHeight))
+    #expect(pane.content.blockIndex(atRow: 0) == nil)
+    #expect(recorder.clicked == [block])
+  }
+
   @Test func pointerShowsTheTogglesOfABlockOnlyOnceItRests() throws {
     let (pane, column, window, _) = Self.resultPane()
     defer { window.close() }
@@ -284,6 +296,7 @@ struct Switch: Equatable {
 final class DecisionRecorder: DecisionColumnDelegate {
   private(set) var switched: [Switch] = []
   private(set) var resets: [Int] = []
+  private(set) var clicked: [Int] = []
 
   func decisionColumn(
     _ column: DecisionColumnView, didSwitchToggle toggle: Int, ofBlock block: Int
@@ -293,5 +306,9 @@ final class DecisionRecorder: DecisionColumnDelegate {
 
   func decisionColumn(_ column: DecisionColumnView, didAskToResetBlock block: Int) {
     resets.append(block)
+  }
+
+  func decisionColumn(_ column: DecisionColumnView, didClickBlock block: Int) {
+    clicked.append(block)
   }
 }

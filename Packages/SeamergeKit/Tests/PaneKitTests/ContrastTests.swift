@@ -202,47 +202,50 @@ import Testing
   }
 
   /// The pairs in the gutter beside the rows of a block of `style`: change and conflict marks,
-  /// the ring and line numbers, on the plain gutter or on the filled cells of the current block.
+  /// the ring and line numbers, on the plain gutter, and on the filled cells of the current
+  /// block, with and without focus, where every mark and number takes the color of selected
+  /// content.
   private func gutterPairs(
     theme: Theme, style: BlockStyle, isCurrent: Bool, ground: NSColor,
     resolve: (NSColor?) -> NSColor?
   ) -> [Pair] {
     var pairs: [Pair] = []
+    guard !isCurrent else {
+      for isEmphasized in [true, false] {
+        let place = "current cell\(isEmphasized ? "" : " without focus")"
+        let cell = Contrast.over(resolve(Theme.currentCellFill(isEmphasized: isEmphasized)), ground)
+        let content = Contrast.over(
+          resolve(Theme.currentCellContentColor(isEmphasized: isEmphasized)), cell)
+        pairs.append(
+          Pair(
+            description: "line number in \(place)", foreground: content, surface: cell,
+            minimum: Self.text))
+      }
+      return pairs
+    }
     for isFiller in [false, true] {
-      let place = "gutter of \(style)\(isCurrent ? ", current" : "")\(isFiller ? ", filler" : "")"
-      let cell =
-        isCurrent
-        ? Contrast.over(
-          resolve(theme.rowFill(for: style, isFiller: isFiller, isCurrent: true)), ground)
-        : ground
+      let place = "gutter of \(style)\(isFiller ? ", filler" : "")"
       func pair(_ name: String, _ color: NSColor, minimum: CGFloat) {
         pairs.append(
           Pair(
-            description: "\(name) in \(place)", foreground: Contrast.over(resolve(color), cell),
-            surface: cell, minimum: minimum))
+            description: "\(name) in \(place)", foreground: Contrast.over(resolve(color), ground),
+            surface: ground, minimum: minimum))
       }
       if case .tinted(let role) = style, role == .a || role == .b {
         pair("change marker", theme.markerColor(for: style), minimum: Self.sign)
       }
-      // The conflict mark stands on the base pane, or on B while the base is hidden, within
-      // a seam of background color.
+      // The conflict mark stands on the base pane, or on B while the base is hidden.
       switch style {
       case .tinted(.conflict), .original, .tinted(.b):
         for conflict in ConflictMarker.allCases {
-          pairs.append(
-            Pair(
-              description: "\(conflict) conflict mark on its seam in \(place)",
-              foreground: Contrast.over(resolve(theme.color(for: conflict)), ground),
-              surface: ground, minimum: Self.sign))
+          pair("\(conflict) conflict mark", theme.color(for: conflict), minimum: Self.sign)
         }
       default:
         break
       }
       pair("ring", Theme.secondaryMarkColor, minimum: Self.sign)
       if !isFiller {
-        pair(
-          "line number", isCurrent ? Theme.currentLineNumberColor : theme.lineNumberColor,
-          minimum: Self.text)
+        pair("line number", theme.lineNumberColor, minimum: Self.text)
       }
     }
     return pairs

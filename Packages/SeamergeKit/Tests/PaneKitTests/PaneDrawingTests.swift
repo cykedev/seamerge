@@ -36,7 +36,7 @@ import Testing
     }
   }
 
-  @Test func currentBlockIsTintedMoreStronglyWithFilledLineNumberCells() throws {
+  @Test func currentBlockIsTintedMoreStronglyWithLineNumberCellsInTheSelectionColor() throws {
     let pane = PaneView(theme: theme)
     pane.content = PaneContent(
       text: "first\nsecond\nthird", lineNumbers: [0, 1, 2],
@@ -44,24 +44,35 @@ import Testing
         PaneBlock(rows: 0..<1, style: .tinted(.b), marker: .changed),
         PaneBlock(rows: 2..<3, style: .tinted(.b), marker: .changed),
       ])
-    let window = Rendering.host(pane, size: CGSize(width: 300, height: 100), appearance: appearance)
+    let window = Rendering.host(
+      pane, size: CGSize(width: 300, height: 100), appearance: appearance, isKey: true)
     defer { window.close() }
     let plain = expectedFill(.tinted(.b), isFiller: false)
     let current = expectedFill(.tinted(.b), isFiller: false, isCurrent: true)
     let ground = expectedFill(.unchanged, isFiller: false)
+    func cell(_ isEmphasized: Bool) -> NSColor {
+      Contrast.over(
+        Contrast.resolve(Theme.currentCellFill(isEmphasized: isEmphasized), in: appearance),
+        ground)
+    }
 
     pane.currentBlock = 0
     var bitmap = try Rendering.bitmap(of: pane)
     try expectColor(in: bitmap, at: CGPoint(x: 290, y: row(0)), current, "current text area")
-    try expectColor(in: bitmap, at: CGPoint(x: 2, y: row(0)), current, "current gutter cell")
+    try expectColor(in: bitmap, at: CGPoint(x: 2, y: row(0)), cell(false), "cell without focus")
     try expectColor(in: bitmap, at: CGPoint(x: 290, y: row(2)), plain)
     try expectColor(in: bitmap, at: CGPoint(x: 2, y: row(2)), ground, "gutter of another block")
+
+    window.makeFirstResponder(pane.documentView)
+    bitmap = try Rendering.bitmap(of: pane)
+    try expectColor(in: bitmap, at: CGPoint(x: 2, y: row(0)), cell(true), "cell with focus")
 
     pane.currentBlock = 1
     bitmap = try Rendering.bitmap(of: pane)
     try expectColor(in: bitmap, at: CGPoint(x: 290, y: row(0)), plain, "former current block")
     try expectColor(in: bitmap, at: CGPoint(x: 2, y: row(0)), ground, "former current cell")
     try expectColor(in: bitmap, at: CGPoint(x: 290, y: row(2)), current)
+    try expectColor(in: bitmap, at: CGPoint(x: 2, y: row(2)), cell(true), "new current cell")
   }
 
   @Test func textSitsInTheMiddleOfItsRow() throws {

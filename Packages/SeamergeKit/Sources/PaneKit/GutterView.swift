@@ -42,8 +42,9 @@ final class GutterView: NSView {
   /// the gutter names for VoiceOver.
   var removalRows: (Range<Int>) -> [Int] = { _ in [] }
 
-  /// How a row is tinted, which the text knows: like its block, or like the preview it shows.
-  var rowStyle: (Int) -> BlockStyle = { _ in .unchanged }
+  /// Whether the pane has the focus in the key window, which the text knows; the cells of the
+  /// current block then show in the accent color, as a focused selection does.
+  var hasFocus: () -> Bool = { false }
 
   /// The rows that are visible beside the text, without those behind bars.
   var visibleRows: [Int] {
@@ -120,16 +121,16 @@ final class GutterView: NSView {
     Theme.backgroundColor.setFill()
     dirtyRect.fill()
     let rows = rows(in: dirtyRect)
-    let numberAttributes = lineNumberAttributes(isCurrent: false)
-    let currentNumberAttributes = lineNumberAttributes(isCurrent: true)
+    let hasFocus = hasFocus()
+    let numberAttributes = lineNumberAttributes(color: theme.lineNumberColor)
+    let currentColor = Theme.currentCellContentColor(isEmphasized: hasFocus)
+    let currentNumberAttributes = lineNumberAttributes(color: currentColor)
     for row in rows {
       let rowRect = rect(ofRow: row)
       let blockIndex = content.blockIndex(atRow: row)
       let isCurrent = blockIndex != nil && blockIndex == currentBlock
       if isCurrent {
-        theme.rowFill(
-          for: rowStyle(row), isFiller: content.isFiller(row: row), isCurrent: true)?
-          .setFill()
+        Theme.currentCellFill(isEmphasized: hasFocus).setFill()
         rowRect.fill()
       }
       let lineNumber = content.lineNumbers[row]
@@ -138,7 +139,8 @@ final class GutterView: NSView {
           Int(lineNumber) + 1, in: rowRect,
           attributes: isCurrent ? currentNumberAttributes : numberAttributes)
       }
-      drawMarkers(ofRow: row, blockIndex: blockIndex, in: rowRect)
+      drawMarkers(
+        ofRow: row, blockIndex: blockIndex, in: rowRect, color: isCurrent ? currentColor : nil)
     }
   }
 
@@ -157,11 +159,8 @@ final class GutterView: NSView {
     }
   }
 
-  private func lineNumberAttributes(isCurrent: Bool) -> [NSAttributedString.Key: Any] {
-    [
-      .font: theme.lineNumberFont,
-      .foregroundColor: isCurrent ? Theme.currentLineNumberColor : theme.lineNumberColor,
-    ]
+  private func lineNumberAttributes(color: NSColor) -> [NSAttributedString.Key: Any] {
+    [.font: theme.lineNumberFont, .foregroundColor: color]
   }
 
   private func drawLineNumber(
@@ -180,15 +179,20 @@ final class GutterView: NSView {
   /// Draws the markers of `row` right-aligned in their slots: the change marker next to the text,
   /// the mark of a conflict before it, and on a row without either the ring of an
   /// ignored difference.
-  private func drawMarkers(ofRow row: Int, blockIndex: Int?, in rowRect: CGRect) {
+  ///
+  /// - Parameter color: The color of every mark on a filled cell of the current block, which
+  ///   takes the color of selected content as the line number does; `nil` on a plain cell, where
+  ///   each mark has its own color.
+  private func drawMarkers(ofRow row: Int, blockIndex: Int?, in rowRect: CGRect, color: NSColor?) {
     var marks: [GutterMark] = []
     if let blockIndex, content.blocks[blockIndex].rows.lowerBound == row {
       let block = content.blocks[blockIndex]
       if let conflict = block.conflict {
-        marks.append(.typed(Self.conflictCharacter, theme.color(for: conflict)))
+        marks.append(.typed(Self.conflictCharacter, color ?? theme.color(for: conflict)))
       }
       if let marker = block.marker {
-        marks.append(.typed(Self.character(for: marker), theme.markerColor(for: block.style)))
+        marks.append(
+          .typed(Self.character(for: marker), color ?? theme.markerColor(for: block.style)))
       }
     }
     if marks.isEmpty && content.ignoredDifferenceRows.contains(row) {
@@ -197,44 +201,48 @@ final class GutterView: NSView {
     for (index, mark) in marks.reversed().enumerated() {
       let slot = markerSlot(index, in: rowRect)
       switch mark {
-      case .typed(let character, let color):
-        drawCharacter(character, color: color, centeredIn: slot)
+      case .typed(let character, let markColor):
+        drawCharacter(character, color: markColor, centeredIn: slot, withSeam: color == nil)
       case .ignoredDifference:
-        drawRing(centeredIn: slot)
+        drawRing(centeredIn: slot, color: color)
       }
     }
   }
 
   /// Draws a typed mark in the code font, on the baseline of the code beside it, within a seam of
-  /// background color.
+  /// background color if `withSeam`.
   ///
-  /// The seam cannot be seen on the plain gutter; on a filled cell it keeps every mark as clear
-  /// as on the plain gutter, whatever the color of the cell.
-  private func drawCharacter(_ character: String, color: NSColor, centeredIn slot: CGRect) {
+  /// The seam cannot be seen on the plain gutter; it keeps a mark in its own color as clear as
+  /// there wherever a fill lies behind it.
+  private func drawCharacter(
+    _ character: String, color: NSColor, centeredIn slot: CGRect, withSeam: Bool
+  ) {
     let text = NSAttributedString(
       string: character, attributes: [.font: theme.font, .foregroundColor: color])
     let origin = pixelAligned(
       CGPoint(
         x: slot.midX - text.size().width / 2, y: slot.minY + theme.baseline - theme.font.ascender))
-    // The stroke is centered on the outline of the glyph, so half of it lies outside.
-    let strokeWidth = 2 * Theme.markSeam / theme.font.pointSize * 100
-    NSAttributedString(
-      string: character,
-      attributes: [
-        .font: theme.font, .strokeColor: Theme.backgroundColor, .strokeWidth: strokeWidth,
-      ]
-    ).draw(at: origin)
+    if withSeam {
+      // The stroke is centered on the outline of the glyph, so half of it lies outside.
+      let strokeWidth = 2 * Theme.markSeam / theme.font.pointSize * 100
+      NSAttributedString(
+        string: character,
+        attributes: [
+          .font: theme.font, .strokeColor: Theme.backgroundColor, .strokeWidth: strokeWidth,
+        ]
+      ).draw(at: origin)
+    }
     text.draw(at: origin)
   }
 
-  /// Draws the hollow ring of a line whose difference the comparison ignores, within a seam of
-  /// background color like the typed marks.
-  private func drawRing(centeredIn slot: CGRect) {
+  /// Draws the hollow ring of a line whose difference the comparison ignores, in `color` or, on a
+  /// plain cell, in the secondary color within a seam of background color like the typed marks.
+  private func drawRing(centeredIn slot: CGRect, color: NSColor?) {
     let ring = NSImage(systemSymbolName: "circle", accessibilityDescription: nil)
     guard
       let image = ring?.withSymbolConfiguration(
         theme.ringSymbolConfiguration.applying(
-          NSImage.SymbolConfiguration(paletteColors: [Theme.secondaryMarkColor]))),
+          NSImage.SymbolConfiguration(paletteColors: [color ?? Theme.secondaryMarkColor]))),
       let seam = ring?.withSymbolConfiguration(
         theme.ringSymbolConfiguration.applying(
           NSImage.SymbolConfiguration(paletteColors: [Theme.backgroundColor])))
@@ -243,9 +251,12 @@ final class GutterView: NSView {
     let rect = CGRect(
       origin: pixelAligned(CGPoint(x: slot.midX - size.width / 2, y: slot.midY - size.height / 2)),
       size: size)
-    // The ring drawn once more, a seam wider on either side, lies below it.
-    for inset in [-Theme.markSeam, 0, Theme.markSeam] {
-      seam.draw(in: rect.insetBy(dx: inset, dy: inset))
+    // The ring drawn once more, a seam wider on either side, lies below it; a ring in the color
+    // of selected content stands on a filled cell and needs none.
+    if color == nil {
+      for inset in [-Theme.markSeam, 0, Theme.markSeam] {
+        seam.draw(in: rect.insetBy(dx: inset, dy: inset))
+      }
     }
     image.draw(in: rect)
   }

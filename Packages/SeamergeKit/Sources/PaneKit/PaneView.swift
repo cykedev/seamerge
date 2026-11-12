@@ -244,7 +244,7 @@ public final class PaneView: NSView {
       name: NSView.boundsDidChangeNotification,
       object: scrollView.contentView)
     gutterView.removalRows = { [weak textView] rows in textView?.removalRows(in: rows) ?? [] }
-    gutterView.rowStyle = { [weak textView] row in textView?.style(ofRow: row) ?? .unchanged }
+    gutterView.hasFocus = { [weak textView] in textView?.isSelectionEmphasized ?? false }
     textView.interaction = self
     gutterView.interaction = self
     addSubview(gutterView)
@@ -362,6 +362,8 @@ extension PaneView: RowInteraction {
 
   func selectionDidChange() {
     markSelectedRunBars()
+    // The cells of the current block show whether the pane has the focus.
+    gutterView.needsDisplay = true
   }
 
   func askToExpandRun(at index: Int) {

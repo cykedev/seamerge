@@ -7,8 +7,18 @@ extension Theme {
   /// The color of the code.
   public static var textColor: NSColor { .textColor }
 
-  /// The color of the line numbers of the current block, whose cells are filled.
-  public static var currentLineNumberColor: NSColor { .labelColor }
+  /// The fill of the gutter cells of the current block, as a selection of content shows: in the
+  /// accent color while the pane has the focus in the key window, quieter otherwise.
+  public static func currentCellFill(isEmphasized: Bool) -> NSColor {
+    isEmphasized
+      ? .selectedContentBackgroundColor : .unemphasizedSelectedContentBackgroundColor
+  }
+
+  /// The color of the line numbers and marks on the gutter cells of the current block, as text
+  /// on a selection of content.
+  public static func currentCellContentColor(isEmphasized: Bool) -> NSColor {
+    isEmphasized ? .alternateSelectedControlTextColor : .labelColor
+  }
 
   /// The color of marks that say something without a role: the ring of an ignored difference
   /// and the mark of a resolved conflict.

@@ -344,7 +344,7 @@ final class PaneTextView: NSTextView {
 
   /// Whether the selection shows in the accent color, as the focused selection of the key window,
   /// or in the quieter color of a selection without focus.
-  private var isSelectionEmphasized: Bool {
+  var isSelectionEmphasized: Bool {
     guard let window else { return false }
     return window.isKeyWindow && window.firstResponder === self
   }

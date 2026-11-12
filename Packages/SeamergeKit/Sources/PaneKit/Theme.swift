@@ -122,7 +122,7 @@ public struct Theme {
   /// Where the reading line lies, as a fraction of the visible height from the top: the line
   /// that panes coupled by blocks align, and where a place that the pane scrolls to comes to
   /// rest.
-  static let readingLine: CGFloat = 0.25
+  public static let readingLine: CGFloat = 0.25
 
   /// The width of the overview bar.
   static let overviewBarWidth: CGFloat = 12

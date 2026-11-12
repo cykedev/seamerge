@@ -12,4 +12,8 @@ public protocol DecisionColumnDelegate: AnyObject {
   /// Tells the delegate that the user asked to reset `block` to how it was loaded, with the arrow
   /// beside its toggles.
   func decisionColumn(_ column: DecisionColumnView, didAskToResetBlock block: Int)
+
+  /// Tells the delegate that the user clicked the column beside `block`, but on none of its
+  /// controls, as a click on a row of the block in the text does.
+  func decisionColumn(_ column: DecisionColumnView, didClickBlock block: Int)
 }

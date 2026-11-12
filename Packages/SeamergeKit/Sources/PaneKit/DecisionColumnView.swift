@@ -223,6 +223,15 @@ public final class DecisionColumnView: NSView {
         owner: self))
   }
 
+  /// Tells the delegate which block the click is beside; a click on a control reaches the
+  /// control instead.
+  public override func mouseDown(with event: NSEvent) {
+    guard let block = host?.block(atY: convert(event.locationInWindow, from: nil).y) else {
+      return
+    }
+    delegate?.decisionColumn(self, didClickBlock: block)
+  }
+
   public override func mouseMoved(with event: NSEvent) {
     pointerMoved(to: convert(event.locationInWindow, from: nil))
   }
