@@ -58,6 +58,34 @@ struct StateSign {
     }
   }
 
+  /// What the sign means, as its help tag and the help that VoiceOver reads.
+  var help: String? {
+    switch state {
+    case .unchanged:
+      return nil
+    case .automatic(let roles):
+      let names = DecisionToggleButton.spokenNames(of: roles)
+      return String(
+        localized: "Takes the lines of \(names), as the merge decided", bundle: .module,
+        comment: "Help tag of the sign of a block whose sources the merge took, such as A and B.")
+    case .chosen(let roles) where roles.isEmpty:
+      return String(
+        localized: "Takes no lines, as you chose", bundle: .module,
+        comment: "Help tag of the trash can: a block that takes no lines from any input.")
+    case .chosen(let roles):
+      let names = DecisionToggleButton.spokenNames(of: roles)
+      return String(
+        localized: "Takes the lines of \(names), in the order you chose", bundle: .module,
+        comment: "Help tag of the sign of a block whose sources the user chose, such as B and A.")
+    case .edited:
+      return String(
+        localized: "Holds lines that you typed or changed", bundle: .module,
+        comment: "Help tag of the pencil: a block whose text the user typed or changed.")
+    case .open:
+      return MarkHelp.conflict(.open)
+    }
+  }
+
   /// The width of the sign.
   var width: CGFloat {
     switch state {

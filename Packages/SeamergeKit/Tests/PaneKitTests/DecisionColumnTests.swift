@@ -58,6 +58,32 @@ import Testing
     #expect(Self.controls(of: column).isEmpty)
   }
 
+  @Test func everySignExplainsItselfInAHelpTagAndToVoiceOver() throws {
+    let (pane, column, window, _) = Self.resultPane()
+    defer { window.close() }
+    pane.currentBlock = nil
+    let signs = try #require(column.accessibilityChildren() as? [NSAccessibilityElement])
+    var helps: [String] = []
+    for sign in signs {
+      let frame = sign.accessibilityFrameInParentSpace()
+      let help = column.view(
+        column, stringForToolTip: 0, point: CGPoint(x: frame.midX, y: frame.midY), userData: nil)
+      #expect(sign.accessibilityHelp() == help)
+      #expect(help.count <= 75)
+      helps.append(help)
+    }
+    #expect(helps.contains("Takes no lines, as you chose"))
+    #expect(helps.contains("Holds lines that you typed or changed"))
+    #expect(helps.contains("Takes the lines of A and B, as the merge decided"))
+    #expect(helps.contains("Takes the lines of B and A, in the order you chose"))
+    #expect(helps.last == "Differs on both sides; choose what the result takes")
+    // The toggles that take the place of a sign keep its meaning.
+    pane.currentBlock = SampleResult.Block.open.rawValue
+    let group = try #require(column.subviews.first { $0 is DecisionControlGroup })
+    #expect(group.accessibilityHelp() == helps.last)
+    #expect(group.toolTip == helps.last)
+  }
+
   @Test func currentBlockShowsItsTogglesForVoiceOverAndTheKeyboard() throws {
     let (pane, column, window, _) = Self.resultPane()
     defer { window.close() }

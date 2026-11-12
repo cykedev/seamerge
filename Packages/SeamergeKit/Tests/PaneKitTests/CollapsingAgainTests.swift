@@ -63,6 +63,19 @@ import Testing
     #expect(recorder.collapses == [CollapsedRun(rows: 32..<40)])
   }
 
+  @Test func signExplainsItselfInAHelpTagAndToVoiceOver() throws {
+    let (pane, window, _) = Self.pane()
+    defer { window.close() }
+    let gutter = pane.gutterView
+    gutter.pointerMoved(to: CGPoint(x: 10, y: 12.5 * pane.theme.rowHeight))
+    let sign = gutter.collapseSignRect(ofRun: 0)
+    let help = gutter.view(
+      gutter, stringForToolTip: 0, point: CGPoint(x: sign.midX, y: sign.midY), userData: nil)
+    #expect(help == "Collapses these unchanged lines again")
+    let elements = try #require(gutter.accessibilityChildren() as? [NSAccessibilityElement])
+    #expect(elements.first { $0.accessibilityRole() == .button }?.accessibilityHelp() == help)
+  }
+
   @Test func newContentDropsExpandedRunsThatNoLongerFit() throws {
     let (pane, window, _) = Self.pane()
     defer { window.close() }

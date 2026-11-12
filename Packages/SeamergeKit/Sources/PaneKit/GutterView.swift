@@ -12,6 +12,7 @@ final class GutterView: NSView {
     didSet {
       numberColumnWidth = Self.numberColumnWidth(of: content, theme: theme)
       needsDisplay = true
+      updateToolTips()
     }
   }
 
@@ -19,6 +20,7 @@ final class GutterView: NSView {
     didSet {
       numberColumnWidth = Self.numberColumnWidth(of: content, theme: theme)
       needsDisplay = true
+      updateToolTips()
       // Runs beyond the rows of new content cannot be shown until the owner hands new ones.
       let rowCount = content.lineNumbers.count
       if expandedRuns.contains(where: { $0.rows.upperBound > rowCount }) {
@@ -36,7 +38,10 @@ final class GutterView: NSView {
 
   /// The rows as the pane shows them, with collapsed runs.
   var displayRows = DisplayRows(runs: [], rowCount: 1) {
-    didSet { needsDisplay = true }
+    didSet {
+      needsDisplay = true
+      updateToolTips()
+    }
   }
 
   /// The vertical scroll offset of the text beside the gutter.
@@ -45,6 +50,7 @@ final class GutterView: NSView {
       needsDisplay = true
       if scrollOffset != oldValue {
         followPointer()
+        updateToolTips()
       }
     }
   }
@@ -55,6 +61,7 @@ final class GutterView: NSView {
       guard expandedRuns != oldValue else { return }
       needsDisplay = true
       followPointer()
+      updateToolTips()
     }
   }
 
@@ -63,6 +70,7 @@ final class GutterView: NSView {
     didSet {
       if hoveredRun != oldValue {
         needsDisplay = true
+        updateToolTips()
       }
     }
   }
@@ -110,6 +118,57 @@ final class GutterView: NSView {
   /// Learns about clicks on rows and supplies the context menu.
   weak var interaction: (any RowInteraction)?
 
+  override func setFrameSize(_ newSize: NSSize) {
+    let changed = newSize != frame.size
+    super.setFrameSize(newSize)
+    if changed {
+      updateToolTips()
+    }
+  }
+
+  /// Gives the marks their help tags again in the new window, which keeps the areas of tags.
+  override func viewDidMoveToWindow() {
+    super.viewDidMoveToWindow()
+    updateToolTips()
+  }
+
+  /// The marks beside `row` from the trailing edge on, each with what it means: the mark of how
+  /// a side changed the block and the mark of a conflict before it at the first row of a block,
+  /// and on a row without either the ring of an ignored difference.
+  func marks(ofRow row: Int) -> [(mark: GutterMark, help: String)] {
+    var marks: [(mark: GutterMark, help: String)] = []
+    if let blockIndex = content.blockIndex(atRow: row),
+      content.blocks[blockIndex].rows.lowerBound == row
+    {
+      let block = content.blocks[blockIndex]
+      if let marker = block.marker {
+        marks.append((.marker(marker, block.style), MarkHelp.marker(marker)))
+      }
+      if let conflict = block.conflict {
+        marks.append((.conflict(conflict), MarkHelp.conflict(conflict)))
+      }
+    }
+    if marks.isEmpty && content.ignoredDifferenceRows.contains(row) {
+      marks.append((.ignoredDifference, MarkHelp.ignoredDifference))
+    }
+    return marks
+  }
+
+  /// Gives each mark in view, and the sign that collapses a run, an area of its own for a help
+  /// tag, whose text ``view(_:stringForToolTip:point:userData:)`` finds.
+  private func updateToolTips() {
+    removeAllToolTips()
+    for row in visibleRows {
+      let rowRect = rect(ofRow: row)
+      for index in marks(ofRow: row).indices {
+        addToolTip(markerSlot(index, in: rowRect), owner: self, userData: nil)
+      }
+    }
+    if let hoveredRun {
+      addToolTip(collapseSignRect(ofRun: hoveredRun), owner: self, userData: nil)
+    }
+  }
+
   override func mouseDown(with event: NSEvent) {
     let point = convert(event.locationInWindow, from: nil)
     if let index = expandedRuns.indices.first(where: {
@@ -123,15 +182,20 @@ final class GutterView: NSView {
 
   override func updateTrackingAreas() {
     super.updateTrackingAreas()
-    for area in trackingAreas {
-      removeTrackingArea(area)
+    // Only the area of the pointer: the help tags have areas of their own.
+    if let pointerArea {
+      removeTrackingArea(pointerArea)
     }
-    addTrackingArea(
-      NSTrackingArea(
-        rect: .zero,
-        options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
-        owner: self))
+    let area = NSTrackingArea(
+      rect: .zero,
+      options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+      owner: self)
+    addTrackingArea(area)
+    pointerArea = area
   }
+
+  /// The area that follows the pointer over the gutter.
+  private var pointerArea: NSTrackingArea?
 
   override func mouseEntered(with event: NSEvent) {
     pointerMoved(to: convert(event.locationInWindow, from: nil))
@@ -238,8 +302,7 @@ final class GutterView: NSView {
           Int(lineNumber) + 1, in: rowRect,
           attributes: isCurrent ? currentNumberAttributes : numberAttributes)
       }
-      drawMarkers(
-        ofRow: row, blockIndex: blockIndex, in: rowRect, color: isCurrent ? currentColor : nil)
+      drawMarkers(ofRow: row, in: rowRect, color: isCurrent ? currentColor : nil)
     }
   }
 
@@ -275,33 +338,23 @@ final class GutterView: NSView {
     text.draw(at: origin, withAttributes: attributes)
   }
 
-  /// Draws the markers of `row` right-aligned in their slots: the change marker next to the text,
-  /// the mark of a conflict before it, and on a row without either the ring of an
-  /// ignored difference.
+  /// Draws the marks of `row` right-aligned in their slots, as ``marks(ofRow:)`` lists them.
   ///
   /// - Parameter color: The color of every mark on a filled cell of the current block, which
   ///   takes the color of selected content as the line number does; `nil` on a plain cell, where
   ///   each mark has its own color.
-  private func drawMarkers(ofRow row: Int, blockIndex: Int?, in rowRect: CGRect, color: NSColor?) {
-    var marks: [GutterMark] = []
-    if let blockIndex, content.blocks[blockIndex].rows.lowerBound == row {
-      let block = content.blocks[blockIndex]
-      if let conflict = block.conflict {
-        marks.append(.typed(Self.conflictCharacter, color ?? theme.color(for: conflict)))
-      }
-      if let marker = block.marker {
-        marks.append(
-          .typed(Self.character(for: marker), color ?? theme.markerColor(for: block.style)))
-      }
-    }
-    if marks.isEmpty && content.ignoredDifferenceRows.contains(row) {
-      marks.append(.ignoredDifference)
-    }
-    for (index, mark) in marks.reversed().enumerated() {
+  private func drawMarkers(ofRow row: Int, in rowRect: CGRect, color: NSColor?) {
+    for (index, entry) in marks(ofRow: row).enumerated() {
       let slot = markerSlot(index, in: rowRect)
-      switch mark {
-      case .typed(let character, let markColor):
-        drawCharacter(character, color: markColor, centeredIn: slot, withSeam: color == nil)
+      switch entry.mark {
+      case .marker(let marker, let style):
+        drawCharacter(
+          Self.character(for: marker), color: color ?? theme.markerColor(for: style),
+          centeredIn: slot, withSeam: color == nil)
+      case .conflict(let conflict):
+        drawCharacter(
+          Self.conflictCharacter, color: color ?? theme.color(for: conflict), centeredIn: slot,
+          withSeam: color == nil)
       case .ignoredDifference:
         drawRing(centeredIn: slot, color: color)
       }
@@ -403,9 +456,28 @@ final class GutterView: NSView {
 }
 
 /// A mark in the gutter.
-private enum GutterMark {
-  /// A character in the code font: the change of a side or a conflict, in its color.
-  case typed(String, NSColor)
+enum GutterMark {
+  /// How a side changed a block, in the color of its style.
+  case marker(Marker, BlockStyle)
+  /// A conflict, open or resolved.
+  case conflict(ConflictMarker)
   /// The hollow ring of a line whose difference the comparison ignores, drawn as a symbol.
   case ignoredDifference
+}
+
+extension GutterView: NSViewToolTipOwner {
+  /// What the mark at `point` means, or what the sign that collapses a run there does.
+  func view(
+    _ view: NSView, stringForToolTip tag: NSView.ToolTipTag, point: NSPoint,
+    userData data: UnsafeMutableRawPointer?
+  ) -> String {
+    if let hoveredRun, collapseSignRect(ofRun: hoveredRun).contains(point) {
+      return MarkHelp.collapseRun
+    }
+    let row = row(at: point)
+    let rowRect = rect(ofRow: row)
+    return marks(ofRow: row).enumerated().first {
+      markerSlot($0.offset, in: rowRect).contains(point)
+    }?.element.help ?? ""
+  }
 }

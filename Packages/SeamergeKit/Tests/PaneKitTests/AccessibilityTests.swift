@@ -37,6 +37,42 @@ import Testing
     #expect(marks.allSatisfy { $0.accessibilityRole() == .image })
   }
 
+  @Test func everyMarkOfTheGutterExplainsItselfInAHelpTagAndToVoiceOver() throws {
+    let pane = PaneView()
+    pane.content = PaneContent(
+      text: "let a = 1\nlet b = 2\n\n\nlet c = 3\nlet d = 4\nlet e = 5",
+      lineNumbers: [0, 1, -1, -1, 2, 3, 4],
+      blocks: [
+        PaneBlock(rows: 0..<1, style: .tinted(.a), marker: .changed),
+        PaneBlock(rows: 2..<4, style: .tinted(.a), marker: .removed),
+        PaneBlock(rows: 4..<5, style: .tinted(.a), marker: .added, conflict: .open),
+        PaneBlock(rows: 6..<7, style: .tinted(.b), marker: .changed, conflict: .resolved),
+      ],
+      ignoredDifferenceRows: [5])
+    let window = Rendering.host(pane, size: CGSize(width: 300, height: 200))
+    defer { window.close() }
+    let gutter = try #require(
+      pane.subviews.first { $0.accessibilityLabel() == "Change markers" })
+    let owner = try #require(gutter as? any NSViewToolTipOwner)
+    let marks = try #require(gutter.accessibilityChildren() as? [NSAccessibilityElement])
+    var helps: [String] = []
+    for mark in marks {
+      let frame = mark.accessibilityFrameInParentSpace()
+      let help = owner.view(
+        gutter, stringForToolTip: 0, point: CGPoint(x: frame.midX, y: frame.midY), userData: nil)
+      #expect(mark.accessibilityHelp() == help)
+      #expect(help.count <= 75)
+      helps.append(help)
+    }
+    #expect(
+      helps == [
+        "Differs on this side", "Lacks lines here that the other side has",
+        "Appears only on this side", "Differs on both sides; choose what the result takes",
+        "Differs only in whitespace or line endings, which this comparison ignores",
+        "Differs on this side", "Differed on both sides; the result takes what you chose",
+      ])
+  }
+
   @Test func removalAtTheEndOfTheTextIsMarkedOnce() throws {
     // The paragraph "let a" is laid out together with the empty row after its line feed.
     let provider = Removals(at: [6])

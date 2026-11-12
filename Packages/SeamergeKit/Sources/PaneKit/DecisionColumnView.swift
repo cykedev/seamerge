@@ -109,7 +109,35 @@ public final class DecisionColumnView: NSView {
   func update() {
     cachedSignPlaces = nil
     showControls()
+    updateToolTips()
     needsDisplay = true
+  }
+
+  /// Gives each sign in view an area of its own for a help tag, whose text
+  /// ``view(_:stringForToolTip:point:userData:)`` finds; the controls have their own tags.
+  private func updateToolTips() {
+    removeAllToolTips()
+    for (block, center) in shownSigns {
+      guard let decision = decisions[block] else { continue }
+      addToolTip(signRect(at: center, for: decision), owner: self, userData: nil)
+    }
+  }
+
+  /// The blocks whose signs are in view, with the middles of their places.
+  private var shownSigns: [(block: Int, center: CGFloat)] {
+    let withControls = blocksWithControls
+    return signPlaces.centers.filter { block, center in
+      !withControls.contains(block) && bounds.minY...bounds.maxY ~= center
+    }.map { ($0.key, $0.value) }
+  }
+
+  /// The area of the sign of `decision` centered at `center`: as wide as the sign and as high as
+  /// the room of a click.
+  private func signRect(at center: CGFloat, for decision: BlockDecision) -> CGRect {
+    let sign = StateSign(state: decision.state, theme: theme)
+    return CGRect(
+      x: Theme.decisionColumnInset, y: center - Theme.decisionControlSize / 2,
+      width: max(sign.width, Theme.decisionControlSize), height: Theme.decisionControlSize)
   }
 
   /// Where the signs stand, until the column updates.
@@ -182,11 +210,13 @@ public final class DecisionColumnView: NSView {
       group.frame = CGRect(
         x: Theme.decisionColumnInset, y: (center - Theme.decisionControlSize / 2).rounded(),
         width: max(x - Theme.decisionControlSpacing, 0), height: Theme.decisionControlSize)
+      let sign = StateSign(state: decision.state, theme: theme)
       group.setAccessibilityLabel(
-        [
-          StateSign(state: decision.state, theme: theme).accessibilityLabel,
-          host.placeDescription(ofBlock: block),
-        ].compactMap(\.self).joined(separator: ", "))
+        [sign.accessibilityLabel, host.placeDescription(ofBlock: block)].compactMap(\.self)
+          .joined(separator: ", "))
+      // The controls take the place of the sign, whose meaning stays with them.
+      group.setAccessibilityHelp(sign.help)
+      group.toolTip = sign.help
       if isNew {
         fadeInControls(group, of: block, replacing: decision.state)
       }
@@ -364,15 +394,20 @@ public final class DecisionColumnView: NSView {
 
   public override func updateTrackingAreas() {
     super.updateTrackingAreas()
-    for area in trackingAreas {
-      removeTrackingArea(area)
+    // Only the area of the pointer: the help tags of the signs have areas of their own.
+    if let pointerArea {
+      removeTrackingArea(pointerArea)
     }
-    addTrackingArea(
-      NSTrackingArea(
-        rect: .zero,
-        options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
-        owner: self))
+    let area = NSTrackingArea(
+      rect: .zero,
+      options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+      owner: self)
+    addTrackingArea(area)
+    pointerArea = area
   }
+
+  /// The area that follows the pointer over the column.
+  private var pointerArea: NSTrackingArea?
 
   /// Tells the delegate which block the click is beside; a click on a control reaches the
   /// control instead.
@@ -473,6 +508,7 @@ public final class DecisionColumnView: NSView {
       let element = signElements[block] ?? NSAccessibilityElement()
       element.setAccessibilityRole(.image)
       element.setAccessibilityLabel(label)
+      element.setAccessibilityHelp(sign.help)
       element.setAccessibilityValue(host.placeDescription(ofBlock: block))
       element.setAccessibilityParent(self)
       element.setAccessibilityFrameInParentSpace(
@@ -516,6 +552,20 @@ protocol DecisionColumnHost: AnyObject {
 
   /// Where `block` is, in words, such as "Line 12".
   func placeDescription(ofBlock block: Int) -> String
+}
+
+extension DecisionColumnView: NSViewToolTipOwner {
+  /// What the sign at `point` means.
+  public func view(
+    _ view: NSView, stringForToolTip tag: NSView.ToolTipTag, point: NSPoint,
+    userData data: UnsafeMutableRawPointer?
+  ) -> String {
+    let hit = shownSigns.first { block, center in
+      decisions[block].map { signRect(at: center, for: $0).contains(point) } == true
+    }
+    guard let hit, let decision = decisions[hit.block] else { return "" }
+    return StateSign(state: decision.state, theme: theme).help ?? ""
+  }
 }
 
 /// What fades at the place of one block of the decision column.

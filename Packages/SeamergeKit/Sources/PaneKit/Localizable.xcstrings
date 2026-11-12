@@ -85,6 +85,9 @@
     "After line %lld": {
       "comment": "VoiceOver: where a mark beside a filler row is."
     },
+    "Appears only on this side": {
+      "comment": "Help tag of the + in the gutter."
+    },
     "B": {
       "comment": "The name of the own side on a toggle."
     },
@@ -126,14 +129,35 @@
         }
       }
     },
+    "Collapses these unchanged lines again": {
+      "comment": "Help tag of the sign beside an expanded run of unchanged lines."
+    },
     "Decisions": {
       "comment": "VoiceOver: the column beside the result that shows how each block was decided."
+    },
+    "Differed on both sides; the result takes what you chose": {
+      "comment": "Help tag of the sign of a resolved conflict."
+    },
+    "Differs on both sides; choose what the result takes": {
+      "comment": "Help tag of the sign of an open conflict."
+    },
+    "Differs on this side": {
+      "comment": "Help tag of the ~ in the gutter."
+    },
+    "Differs only in whitespace or line endings, which this comparison ignores": {
+      "comment": "Help tag of the ring in the gutter."
     },
     "Edited by hand": {
       "comment": "VoiceOver: a block whose text the user typed or changed."
     },
+    "Holds lines that you typed or changed": {
+      "comment": "Help tag of the pencil: a block whose text the user typed or changed."
+    },
     "Ignored difference": {
       "comment": "VoiceOver: a line that differs only in what the comparison ignores."
+    },
+    "Lacks lines here that the other side has": {
+      "comment": "Help tag of the − in the gutter."
     },
     "Line %lld": {
       "comment": "VoiceOver: where a mark is."
@@ -167,6 +191,15 @@
     },
     "Taken automatically: %@": {
       "comment": "VoiceOver: a block whose sources the merge took, such as A."
+    },
+    "Takes no lines, as you chose": {
+      "comment": "Help tag of the trash can: a block that takes no lines from any input."
+    },
+    "Takes the lines of %@, as the merge decided": {
+      "comment": "Help tag of the sign of a block whose sources the merge took, such as A and B."
+    },
+    "Takes the lines of %@, in the order you chose": {
+      "comment": "Help tag of the sign of a block whose sources the user chose, such as B and A."
     }
   },
   "version": "1.0"

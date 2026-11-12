@@ -21,22 +21,11 @@ extension GutterView {
     var children: [NSAccessibilityElement] = []
     for row in rows {
       let rowRect = rect(ofRow: row)
-      var names: [String] = []
-      if let blockIndex = content.blockIndex(atRow: row),
-        content.blocks[blockIndex].rows.lowerBound == row
-      {
-        let block = content.blocks[blockIndex]
-        if let conflict = block.conflict { names.append(Self.name(of: conflict)) }
-        if let marker = block.marker { names.append(Self.name(of: marker)) }
-      }
-      if names.isEmpty && content.ignoredDifferenceRows.contains(row) {
-        names.append(
-          String(
-            localized: "Ignored difference", bundle: .module,
-            comment: "VoiceOver: a line that differs only in what the comparison ignores."))
-      }
-      for (index, name) in names.reversed().enumerated() {
-        children.append(element(named: name, atRow: row, frame: markerSlot(index, in: rowRect)))
+      for (index, entry) in marks(ofRow: row).enumerated() {
+        children.append(
+          element(
+            named: Self.name(of: entry.mark), help: entry.help, atRow: row,
+            frame: markerSlot(index, in: rowRect)))
       }
     }
     for index in expandedRuns.indices where rows.contains(expandedRuns[index].rows.lowerBound) {
@@ -49,7 +38,7 @@ extension GutterView {
           named: String(
             localized: "Removed text", bundle: .module,
             comment: "VoiceOver: the mark where a side removed text within a line."),
-          atRow: row, frame: rect(ofRow: row)))
+          help: nil, atRow: row, frame: rect(ofRow: row)))
     }
     return children
   }
@@ -60,6 +49,7 @@ extension GutterView {
     let run = expandedRuns[index]
     let element = CollapseRunElement { [weak self] in self?.interaction?.askToCollapse(run) }
     element.setAccessibilityRole(.button)
+    element.setAccessibilityHelp(MarkHelp.collapseRun)
     element.setAccessibilityLabel(
       String(
         localized: "Collapse \(run.rows.count) Unchanged Lines", bundle: .module,
@@ -70,11 +60,13 @@ extension GutterView {
     return element
   }
 
-  private func element(named name: String, atRow row: Int, frame: CGRect) -> NSAccessibilityElement
-  {
+  private func element(
+    named name: String, help: String?, atRow row: Int, frame: CGRect
+  ) -> NSAccessibilityElement {
     let element = NSAccessibilityElement()
     element.setAccessibilityRole(.image)
     element.setAccessibilityLabel(name)
+    element.setAccessibilityHelp(help)
     element.setAccessibilityValue(placeDescription(ofRow: row))
     element.setAccessibilityParent(self)
     element.setAccessibilityFrameInParentSpace(frame)
@@ -95,6 +87,18 @@ extension GutterView {
     return String(
       localized: "Before the first line", bundle: .module,
       comment: "VoiceOver: where a mark beside filler rows at the start is.")
+  }
+
+  /// What VoiceOver calls `mark`.
+  private static func name(of mark: GutterMark) -> String {
+    switch mark {
+    case .marker(let marker, _): name(of: marker)
+    case .conflict(let conflict): name(of: conflict)
+    case .ignoredDifference:
+      String(
+        localized: "Ignored difference", bundle: .module,
+        comment: "VoiceOver: a line that differs only in what the comparison ignores.")
+    }
   }
 
   private static func name(of marker: Marker) -> String {
