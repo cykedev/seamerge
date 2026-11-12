@@ -175,7 +175,7 @@
       "comment": "VoiceOver: a mark in the overview bar, such as Change in A, line 12."
     },
     "Changes": {
-      "comment": "Toolbar item: the current change."
+      "comment": "Toolbar items: the current change and the buttons that go through the changes."
     },
     "Check that the file exists and that you may read it, then try again.": {
       "comment": "Alert: what to do when a file cannot be read."
@@ -226,7 +226,7 @@
       "comment": "Toolbar item: the comparison mode."
     },
     "Conflicts": {
-      "comment": "Toolbar item: the open conflicts."
+      "comment": "Toolbar items: the count of the open conflicts and the buttons that go through them."
     },
     "Copy": {
       "comment": "Context menu: copy the selected text, or the block if nothing is selected."

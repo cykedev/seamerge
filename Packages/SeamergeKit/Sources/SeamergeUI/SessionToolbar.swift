@@ -166,6 +166,23 @@ final class SessionToolbar: NSObject {
         localized: "No Conflicts", bundle: .module, comment: "Toolbar: the merge had no conflict.")
   }
 
+  /// The label of the count of the open conflicts and of the buttons that go through them.
+  ///
+  /// Both items take one string, so that the string catalog keeps one comment for it.
+  private static var conflictsLabel: String {
+    String(
+      localized: "Conflicts", bundle: .module,
+      comment:
+        "Toolbar items: the count of the open conflicts and the buttons that go through them.")
+  }
+
+  /// The label of the place of the current change and of the buttons that go through the changes.
+  private static var changesLabel: String {
+    String(
+      localized: "Changes", bundle: .module,
+      comment: "Toolbar items: the current change and the buttons that go through the changes.")
+  }
+
   /// The action that the button that saves and closes sends along the responder chain.
   static let saveAndClose = Selector(("saveAndClose:"))
 
@@ -175,28 +192,26 @@ final class SessionToolbar: NSObject {
       let item = NSToolbarItem(itemIdentifier: identifier)
       item.view = countView
       item.isBordered = false
-      item.label = String(
-        localized: "Conflicts", bundle: .module, comment: "Toolbar item: the open conflicts.")
+      item.label = Self.conflictsLabel
       item.paletteLabel = item.label
       return item
     case .changeCount:
       let item = NSToolbarItem(itemIdentifier: identifier)
       item.view = countView
       item.isBordered = false
-      item.label = String(
-        localized: "Changes", bundle: .module, comment: "Toolbar item: the current change.")
+      item.label = Self.changesLabel
       item.paletteLabel = item.label
       return item
     case .conflictNavigation:
       return group(
-        identifier, label: String(localized: "Conflicts", bundle: .module, comment: "Toolbar."),
+        identifier, label: Self.conflictsLabel,
         paletteLabel: String(
           localized: "Previous and Next Conflict", bundle: .module,
           comment: "Toolbar item in the customization sheet."),
         commands: [.previousConflict, .nextConflict])
     case .changeNavigation:
       return group(
-        identifier, label: String(localized: "Changes", bundle: .module, comment: "Toolbar."),
+        identifier, label: Self.changesLabel,
         paletteLabel: String(
           localized: "Previous and Next Change", bundle: .module,
           comment: "Toolbar item in the customization sheet."),
