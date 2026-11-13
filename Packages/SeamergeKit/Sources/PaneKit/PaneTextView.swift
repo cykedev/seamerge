@@ -61,6 +61,10 @@ final class PaneTextView: NSTextView {
   /// Whether text has been given the preview color since the pane last had no previews.
   var hasColoredPreviews = false
 
+  /// The previews as the pane's owner gave them last, before edits moved them along with the
+  /// text.
+  private var givenPreviews: [PanePreview] = []
+
   /// The rows of each preview with its side, or `nil` until they are asked for after a change.
   var cachedPreviewRows: [(rows: Range<Int>, role: ColorRole)]?
 
@@ -127,6 +131,7 @@ final class PaneTextView: NSTextView {
       content.lineEndings.count == grid.rowCount,
       "\(content.lineEndings.count) line endings for \(grid.rowCount) rows")
     let previewsChanged = content.previews != self.content.previews
+    givenPreviews = content.previews
     self.content = content
     self.theme = theme
     self.grid = grid
@@ -180,6 +185,10 @@ final class PaneTextView: NSTextView {
       "Row tints reach beyond the \(grid.rowCount) rows")
     let oldBlocks = content.blocks
     let previewsChanged = previews != content.previews
+    // Previews that an edit moved along with the text keep the look their fragments had where
+    // they stood before, so their rows draw again although they are as the edit left them.
+    let previewsMoved = previews != givenPreviews
+    givenPreviews = previews
     var changedRows = previewsChanged ? previewRows().map(\.rows) : []
     changedRows += Set(rowTints.keys).union(content.rowTints.keys)
       .filter { rowTints[$0] != content.rowTints[$0] }.map { $0..<$0 + 1 }
@@ -195,6 +204,8 @@ final class PaneTextView: NSTextView {
     if previewsChanged {
       fadeAfterPreviewChange()
       validatesPreviewColor(!previews.isEmpty)
+    }
+    if previewsChanged || previewsMoved {
       changedRows += previewRows().map(\.rows)
     }
     for index in 0..<max(oldBlocks.count, blocks.count) {
