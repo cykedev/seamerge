@@ -168,18 +168,24 @@ final class PaneTextView: NSTextView {
   ///
   /// - Precondition: The blocks are sorted, do not overlap and lie within the rows; the previews
   ///   are sorted, do not overlap and lie within the text.
-  func setBlocks(_ blocks: [PaneBlock], previews: [PanePreview]) {
+  func setBlocks(_ blocks: [PaneBlock], previews: [PanePreview], rowTints: [Int: BlockStyle]) {
     precondition(
       (blocks.last?.rows.upperBound ?? 0) <= grid.rowCount,
       "Blocks reach beyond the \(grid.rowCount) rows")
     precondition(
       (previews.last?.range.upperBound ?? 0) <= grid.textLength,
       "Previews reach beyond the text of length \(grid.textLength)")
+    precondition(
+      rowTints.keys.allSatisfy { $0 < grid.rowCount },
+      "Row tints reach beyond the \(grid.rowCount) rows")
     let oldBlocks = content.blocks
     let previewsChanged = previews != content.previews
     var changedRows = previewsChanged ? previewRows().map(\.rows) : []
+    changedRows += Set(rowTints.keys).union(content.rowTints.keys)
+      .filter { rowTints[$0] != content.rowTints[$0] }.map { $0..<$0 + 1 }
     content.blocks = blocks
     content.previews = previews
+    content.rowTints = rowTints
     if let currentBlock, !blocks.indices.contains(currentBlock) {
       self.currentBlock = nil
     }
@@ -429,12 +435,18 @@ final class PaneTextView: NSTextView {
   /// show no marker there, and let a block read as a band across the panes. Between two tinted
   /// blocks of the same style, or where the lower one has no marker, the hairline alone shows
   /// the boundary and takes the stronger color.
+  ///
+  /// Rows with a tint of their own have edges where the tint changes, within a block or outside
+  /// every block; between rows typed by hand and tinted rows, the hairline is the only boundary,
+  /// as there is no marker.
   private func edges(atRow row: Int) -> RowLayoutFragment.Edges {
-    guard let block = content.blockIndex(atRow: row) else { return RowLayoutFragment.Edges() }
+    guard let block = content.blockIndex(atRow: row) else { return tintEdges(atRow: row) }
     let rows = content.blocks[block].rows
-    var edges = RowLayoutFragment.Edges()
+    var edges = tintEdges(atRow: row)
+    let tints = content.rowTints
     if row == rows.lowerBound {
-      let touchesBlockAbove = row > 0 && content.blockIndex(atRow: row - 1) != nil
+      let touchesBlockAbove =
+        row > 0 && (content.blockIndex(atRow: row - 1) != nil || tints[row - 1] != nil)
       let upper = touchesBlockAbove ? style(ofRow: row - 1) : nil
       let lower = style(ofRow: row)
       let bothTinted = upper.map { $0 != .unchanged } == true && lower != .unchanged
@@ -442,12 +454,44 @@ final class PaneTextView: NSTextView {
       edges.top = theme.edgeColor(between: upper, and: lower, isOnlyBoundary: isOnlyBoundary)
     }
     if row == rows.upperBound - 1 {
+      // A row with a tint of its own below draws the edge at its top.
       let touchesBlockBelow =
-        row + 1 < content.lineNumbers.count && content.blockIndex(atRow: row + 1) != nil
+        row + 1 < content.lineNumbers.count
+        && (content.blockIndex(atRow: row + 1) != nil
+          || tints[row + 1] != nil && style(ofRow: row + 1) != style(ofRow: row))
       if !touchesBlockBelow {
         edges.bottom = theme.edgeColor(
           between: style(ofRow: row), and: nil, isOnlyBoundary: false)
       }
+    }
+    return edges
+  }
+
+  /// The hairlines in `row` where rows with a tint of their own meet other rows.
+  ///
+  /// A row whose tint differs from the row above has one at its top, if either has a tint of its
+  /// own and the row itself is tinted; a row with a tint of its own above a row outside every
+  /// block has one at its bottom. Between rows typed by hand and tinted rows, the hairline is the
+  /// only boundary. The edges of blocks, drawn after these, take precedence.
+  private func tintEdges(atRow row: Int) -> RowLayoutFragment.Edges {
+    let tints = content.rowTints
+    var edges = RowLayoutFragment.Edges()
+    guard !tints.isEmpty else { return edges }
+    let hasTint = tints[row] != nil
+    if row > 0, hasTint || tints[row - 1] != nil {
+      let upper = style(ofRow: row - 1)
+      let lower = style(ofRow: row)
+      if upper != lower && lower != .unchanged {
+        let bothTinted = upper != .unchanged
+        edges.top = theme.edgeColor(
+          between: bothTinted ? upper : nil, and: lower,
+          isOnlyBoundary: bothTinted && (upper == .handwritten || lower == .handwritten))
+      }
+    }
+    let isLastBeforeBackground =
+      row + 1 == grid.rowCount || content.blockIndex(atRow: row + 1) == nil && tints[row + 1] == nil
+    if hasTint, isLastBeforeBackground {
+      edges.bottom = theme.edgeColor(between: style(ofRow: row), and: nil, isOnlyBoundary: false)
     }
     return edges
   }

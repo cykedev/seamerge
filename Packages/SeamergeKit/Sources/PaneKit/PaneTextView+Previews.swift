@@ -39,6 +39,9 @@ extension PaneTextView {
     if let preview = previewRows().first(where: { $0.rows.contains(row) }) {
       return .tinted(preview.role)
     }
+    if let tint = content.rowTints[row] {
+      return tint
+    }
     return content.blockIndex(atRow: row).map { content.blocks[$0].style } ?? .unchanged
   }
 

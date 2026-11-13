@@ -211,11 +211,33 @@ import Testing
     let before = try Rendering.color(in: try Rendering.bitmap(of: pane), at: point)
     pane.setBlocks(
       [PaneBlock(rows: 1..<2, style: .tinted(.a)), PaneBlock(rows: 2..<3, style: .handwritten)],
-      previews: [])
+      previews: [], rowTints: [:])
     let after = try Rendering.color(in: try Rendering.bitmap(of: pane), at: point)
     #expect(pane.content.blocks.count == 2)
     #expect(pane.content.text == "zero\none\ntwo\nthree")
     #expect(textView.selectedRange() == NSRange(location: 6, length: 2))
+    #expect(after.brightnessComponent < before.brightnessComponent - 0.02)
+    #expect(recorder.unannounced.isEmpty)
+  }
+
+  @Test func rowTintsMoveWithTheTextAndTheOwnerSetsThemAnew() throws {
+    let (pane, window, recorder) = Self.editablePane(text: "zero\none\ntwo\nthree")
+    defer { window.close() }
+    pane.setBlocks([], previews: [], rowTints: [1: .handwritten, 3: .handwritten])
+    let textView = pane.documentView
+    textView.setSelectedRange(NSRange(location: 0, length: 0))
+
+    textView.insertText("new\n", replacementRange: textView.selectedRange())
+
+    // The rewritten row drops out; the rows after it move down with the text.
+    #expect(pane.content.rowTints == [2: .handwritten, 4: .handwritten])
+    let rowHeight = pane.theme.rowHeight
+    let point = CGPoint(x: pane.bounds.width - 10, y: 0.5 * rowHeight)
+    let before = try Rendering.color(in: try Rendering.bitmap(of: pane), at: point)
+    pane.setBlocks(
+      [], previews: [], rowTints: [0: .handwritten, 2: .handwritten, 4: .handwritten])
+    let after = try Rendering.color(in: try Rendering.bitmap(of: pane), at: point)
+    #expect(pane.content.rowTints == [0: .handwritten, 2: .handwritten, 4: .handwritten])
     #expect(after.brightnessComponent < before.brightnessComponent - 0.02)
     #expect(recorder.unannounced.isEmpty)
   }

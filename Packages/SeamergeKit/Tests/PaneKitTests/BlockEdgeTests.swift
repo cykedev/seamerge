@@ -36,6 +36,51 @@ import Testing
     #expect(edges.bottom == [3, 7])
   }
 
+  @Test func handwrittenRowsHaveEdgesWithinABlockAndOutsideEveryBlock() throws {
+    // Rows 1 and 2 of a block of A typed by hand, and rows 5 and 6 outside every block.
+    let content = PaneContent(
+      text: (0..<8).map { "row \($0)" }.joined(separator: "\n"),
+      lineNumbers: (0..<8).map(Int32.init),
+      blocks: [PaneBlock(rows: 0..<4, style: .tinted(.a))],
+      rowTints: [1: .handwritten, 2: .handwritten, 5: .handwritten, 6: .handwritten])
+
+    let edges = try edges(of: content)
+
+    #expect(edges.top == [0, 1, 3, 5])
+    #expect(edges.bottom == [3, 6])
+    // Between gray and tinted rows of a block, nothing but the hairline shows the boundary.
+    #expect(edges.strongTop == [1, 3])
+  }
+
+  @Test func handwrittenRowRightAfterABlockSharesItsEdge() throws {
+    let content = PaneContent(
+      text: (0..<4).map { "row \($0)" }.joined(separator: "\n"),
+      lineNumbers: (0..<4).map(Int32.init),
+      blocks: [PaneBlock(rows: 0..<2, style: .tinted(.b))], rowTints: [2: .handwritten])
+
+    let edges = try edges(of: content)
+
+    #expect(edges.top == [0, 2])
+    #expect(edges.bottom == [2])
+    #expect(edges.strongTop == [2])
+  }
+
+  @Test func rowsOfSeveralSourcesInABlockAreParted() throws {
+    // A block of A's lines then B's, the last line typed by hand.
+    let content = PaneContent(
+      text: (0..<6).map { "row \($0)" }.joined(separator: "\n"),
+      lineNumbers: (0..<6).map(Int32.init),
+      blocks: [PaneBlock(rows: 1..<5, style: .combined)],
+      rowTints: [1: .tinted(.a), 2: .tinted(.a), 3: .tinted(.b), 4: .handwritten])
+
+    let edges = try edges(of: content)
+
+    #expect(edges.top == [1, 3, 4])
+    #expect(edges.bottom == [4])
+    // The tints of two sides tell the rows apart; gray and a tint need the strong line.
+    #expect(edges.strongTop == [4])
+  }
+
   @Test func edgeIsStrongWhereNothingElseShowsTheBoundary() throws {
     // Without markers, every edge between two tinted blocks is the only boundary.
     #expect(try edges(of: Self.result).strongTop == [2, 6])

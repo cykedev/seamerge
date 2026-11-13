@@ -23,6 +23,11 @@ public struct PaneContent: Sendable {
   /// How the line of each row ends in the file, shown among the invisible characters.
   public var lineEndings: [LineEnding]
 
+  /// The rows tinted otherwise than their block, or tinted outside every block, by row: lines
+  /// typed by hand, and the lines of a block that takes the texts of several sources, each in
+  /// the tint of its own source.
+  public var rowTints: [Int: BlockStyle]
+
   /// The parts of the text that show a preview of what a conflict offers rather than text of the
   /// file, in order and without overlap.
   ///
@@ -37,17 +42,18 @@ public struct PaneContent: Sendable {
   ///
   /// - Precondition: `lineNumbers` and `lineEndings` have one entry per row of `text`, and the
   ///   blocks are sorted, do not overlap and lie within the rows; the previews are sorted, do not
-  ///   overlap and lie within the text.
+  ///   overlap and lie within the text; the rows of the tints lie within the rows.
   public init(
     text: String, lineNumbers: [Int32], blocks: [PaneBlock] = [],
     ignoredDifferenceRows: IndexSet = [], lineEndings: [LineEnding]? = nil,
-    previews: [PanePreview] = []
+    previews: [PanePreview] = [], rowTints: [Int: BlockStyle] = [:]
   ) {
     self.text = text
     self.lineNumbers = lineNumbers
     self.blocks = blocks
     self.ignoredDifferenceRows = ignoredDifferenceRows
     self.previews = previews
+    self.rowTints = rowTints
     self.lineEndings =
       lineEndings
       ?? lineNumbers.indices.map { row in
@@ -123,9 +129,19 @@ public struct PaneContent: Sendable {
     }
     previews = previews.compactMap { $0.takingOver(range, length: length) }
     ignoredDifferenceRows = IndexSet(
-      ignoredDifferenceRows.compactMap { row in
-        change.oldRows.contains(row) ? nil : change.newBoundary(of: row)
+      ignoredDifferenceRows.compactMap { Self.row($0, after: change) })
+    rowTints = Dictionary(
+      uniqueKeysWithValues: rowTints.compactMap { row, tint in
+        Self.row(row, after: change).map { ($0, tint) }
       })
+  }
+}
+
+extension PaneContent {
+  /// Where `row` lies after an edit that rewrote rows as `change` says: a rewritten row drops
+  /// out until the owner of the content says what it is, and the rows after them move.
+  fileprivate static func row(_ row: Int, after change: RowChange) -> Int? {
+    change.oldRows.contains(row) ? nil : change.newBoundary(of: row)
   }
 }
 

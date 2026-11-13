@@ -35,16 +35,20 @@ public final class PaneView: NSView {
     show(content, collapsedRuns: collapsedRuns)
   }
 
-  /// Gives the content new blocks and previews and keeps its text, rows and line numbers: what
-  /// the owner of an editable pane gives it after an edit, in place of new content.
+  /// Gives the content new blocks, previews and row tints and keeps its text, rows and
+  /// line numbers: what the owner of an editable pane gives it after an edit, in place of new
+  /// content.
   ///
-  /// Only the rows whose block or preview changed are drawn again, so that typing stays fast in a
-  /// long text. A preview that turns into text, or text into a preview, cross-fades.
+  /// Only the rows whose block, preview or tint changed are drawn again, so that typing stays
+  /// fast in a long text. A preview that turns into text, or text into a preview, cross-fades.
   ///
   /// - Precondition: The blocks are sorted, do not overlap and lie within the rows; the previews
-  ///   are sorted, do not overlap and lie within the text.
-  public func setBlocks(_ blocks: [PaneBlock], previews: [PanePreview]) {
-    textView.setBlocks(blocks, previews: previews)
+  ///   are sorted, do not overlap and lie within the text; the rows of the tints lie within the
+  ///   rows.
+  public func setBlocks(
+    _ blocks: [PaneBlock], previews: [PanePreview], rowTints: [Int: BlockStyle]
+  ) {
+    textView.setBlocks(blocks, previews: previews, rowTints: rowTints)
     gutterView.content = content
     gutterView.currentBlock = textView.currentBlock
     decisionColumn?.update()
