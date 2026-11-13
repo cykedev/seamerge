@@ -54,23 +54,17 @@ import Testing
     #expect(countLabel(of: controller) == "All Conflicts Resolved")
   }
 
-  @Test func doneActsOnlyWithAResponderThatSavesAndStandsOutWhenNoConflictIsOpen() async throws {
+  @Test func doneSavesAndClosesAndStandsOutWhenNoConflictIsOpen() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.helloWorld())
     let done = try #require(try toolbarItems(of: controller)[.done])
-    #expect(done.action == SessionToolbar.saveAndClose)
+    #expect(done.action == SessionCommand.saveAndClose.action)
     #expect(done.toolTip == "Save and close")
     #expect(done.title == "Done")
-    #expect(!done.isEnabled)
+    #expect(done.isEnabled)
     #expect(done.style == .plain)
 
-    let saver = SaveAndCloseStandIn()
-    controller.nextResponder = saver
-    controller.stateDidChange()
-    #expect(done.isEnabled)
     controller.resolveOpenConflicts(with: [.a])
     #expect(done.style == .prominent)
-    // The window does not retain its next responder.
-    withExtendedLifetime(saver) {}
   }
 
   @Test func checkmarkStandsAtTheEnd() throws {

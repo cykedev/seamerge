@@ -73,9 +73,6 @@
     "Keyboard Shortcuts": {
       "comment": "Help menu: the sheet of all shortcuts."
     },
-    "Leave Unresolved": {
-      "comment": "File menu: close a merge without saving it."
-    },
     "Merge": {
       "comment": "Menu bar: the decisions of a merge."
     },
@@ -96,15 +93,6 @@
     },
     "Redo": {
       "comment": "Edit menu."
-    },
-    "Save": {
-      "comment": "File menu."
-    },
-    "Save As…": {
-      "comment": "File menu."
-    },
-    "Save and Close": {
-      "comment": "File menu."
     },
     "Seamerge": {
       "comment": "Menu bar: the app menu."

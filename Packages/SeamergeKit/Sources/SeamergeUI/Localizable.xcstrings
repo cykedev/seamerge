@@ -1,6 +1,9 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ The file is unchanged, and the window keeps your work.": {
+      "comment": "Sheet after saving failed: the reason, then what still holds."
+    },
     "%@ added as %@": {
       "comment": "VoiceOver: a file was put in a field, such as LoginView.swift added as Base."
     },
@@ -99,6 +102,29 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld changes from A"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld conflicts are still open. %@": {
+      "comment": "Sheet before closing a merge that a command waits for, such as 2 conflicts are still open. If you don’t save…",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld conflict is still open. %@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld conflicts are still open. %@"
                 }
               }
             }
@@ -207,6 +233,9 @@
     "Close the window to go on to the next file.": {
       "comment": "Comparison window: closing it lets git difftool compare the next file."
     },
+    "Close without saving; the merge counts as not done": {
+      "comment": "Help tag of File > Leave Unresolved."
+    },
     "Collapse Unchanged Lines": {
       "comment": "View menu command."
     },
@@ -275,6 +304,9 @@
     "Couldn’t Compare the Files Anew": {
       "comment": "Sheet after switching the comparison failed."
     },
+    "Couldn’t Save “%@”": {
+      "comment": "Sheet after saving failed."
+    },
     "Count every difference, whitespace and line endings too": {
       "comment": "Help tag of Compare > Exact."
     },
@@ -293,8 +325,17 @@
     "Differs from the line endings of the other files": {
       "comment": "Help tag of the line endings in a header, shown only where they differ."
     },
+    "Do you want to save the changes made to the document “%@”?": {
+      "comment": "Sheet before closing a merge of files with unsaved changes."
+    },
+    "Do you want to save the merge of “%@”?": {
+      "comment": "Sheet before closing a merge that a command waits for, with unsaved changes."
+    },
     "Done": {
       "comment": "Toolbar button: save and close."
+    },
+    "Don’t Save": {
+      "comment": "Button: close without saving."
     },
     "Drop a File": {
       "comment": "Compare Files: an empty field, which takes a file dragged onto it."
@@ -344,6 +385,29 @@
     "Git is no longer waiting for this merge.": {
       "comment": "Notice below the result header after the Git command that asked has ended."
     },
+    "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decisions in %lld blocks are lost.": {
+      "comment": "Sheet before leaving a merge unresolved: Git restores the file it had before the merge tool, such as in 3 blocks.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decision in %lld block is lost."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decisions in %lld blocks are lost."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Go": {
       "comment": "Button: jump to the line."
     },
@@ -364,6 +428,9 @@
     },
     "Go to Line…": {
       "comment": "Go menu command."
+    },
+    "Go to Next Conflict": {
+      "comment": "Button of the sheet before saving with open conflicts: do not save, go on."
     },
     "Hide Base": {
       "comment": "View menu command."
@@ -386,6 +453,12 @@
     "ISO 8859-1": {
       "comment": "Encoding: ISO Latin 1."
     },
+    "If you don’t save, your decisions are lost and Git keeps the file unresolved.": {
+      "comment": "Sheet before closing a merge that Git waits for: what follows."
+    },
+    "If you don’t save, your decisions are lost.": {
+      "comment": "Sheet before closing a merge that a command other than Git waits for: what follows."
+    },
     "Ignore All Whitespace": {
       "comment": "Compare menu command."
     },
@@ -403,6 +476,12 @@
     },
     "Last Change": {
       "comment": "Go menu command."
+    },
+    "Leave Unresolved": {
+      "comment": "File menu: close a merge without saving it and report it as not done."
+    },
+    "Leave “%@” unresolved?": {
+      "comment": "Sheet before leaving a merge unresolved that has decisions."
     },
     "Left": {
       "comment": "Compare Files: the role of a field."
@@ -466,6 +545,12 @@
     },
     "Open conflict, line %lld": {
       "comment": "VoiceOver: the mark of an open conflict in the overview bar."
+    },
+    "Open conflicts are written as conflict markers.": {
+      "comment": "Sheet before saving with open conflicts outside Git."
+    },
+    "Open conflicts are written as conflict markers. Git then treats the file as resolved.": {
+      "comment": "Sheet before saving with open conflicts that Git waits for."
     },
     "Open in Editor": {
       "comment": "File menu command."
@@ -548,8 +633,26 @@
     "Right": {
       "comment": "Compare Files: the role of a field."
     },
+    "Save": {
+      "comment": "File menu command."
+    },
+    "Save As…": {
+      "comment": "File menu command."
+    },
+    "Save and Close": {
+      "comment": "File menu command."
+    },
     "Save and close": {
-      "comment": "Help tag of Done in the toolbar."
+      "comment": "Help tag of Done in the toolbar and of File > Save and Close."
+    },
+    "Save as UTF-8": {
+      "comment": "Button: save in UTF-8 instead."
+    },
+    "Save with Markers": {
+      "comment": "Button of the sheet before saving with open conflicts: save anyway."
+    },
+    "Saved %@": {
+      "comment": "VoiceOver after saving, such as Saved story.txt."
     },
     "Scroll the panes together": {
       "comment": "Help tag of the footer toggle of synchronized scrolling while it is off."
@@ -609,10 +712,13 @@
       "comment": "Help tag of ⓘ."
     },
     "Skip Remaining Files": {
-      "comment": "File menu of a comparison: end the comparisons that Git has left."
+      "comment": "File menu of a comparison: end the comparisons that are left of the run."
     },
     "Some lines shown": {
       "comment": "VoiceOver: the footer toggle of collapsed lines while some runs are expanded."
+    },
+    "Some of its characters don’t exist in %@. UTF-8 holds them all.": {
+      "comment": "Sheet: the result holds characters the encoding lacks."
     },
     "Stash": {
       "comment": "The name of a stash in a header."
@@ -634,6 +740,9 @@
     },
     "Take the version of %@.": {
       "comment": "Help tag of a toggle, such as Take the version of feature/login."
+    },
+    "The command that opened this merge is no longer waiting.": {
+      "comment": "Notice below the result header after a command other than Git that asked has ended."
     },
     "The comparison failed. Try again, or use another tool for this file.": {
       "comment": "Comparison window: the comparison failed for another reason."
@@ -762,6 +871,32 @@
     "Windows 1252": {
       "comment": "Encoding: Windows code page."
     },
+    "Your changes will be lost if you don’t save them.": {
+      "comment": "Sheet before closing a merge of files with unsaved changes: what follows."
+    },
+    "Your decisions in %lld blocks are lost.": {
+      "comment": "Sheet before leaving a merge unresolved that a command other than Git waits for, such as in 3 blocks.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Your decision in %lld block is lost."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Your decisions in %lld blocks are lost."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Zoom In": {
       "comment": "View menu command."
     },
@@ -800,6 +935,17 @@
     },
     "yours": {
       "comment": "Role: the branch the user is on."
+    },
+    "“%@” can’t be saved in %@.": {
+      "comment": "Sheet: the result holds characters the encoding lacks, such as in ISO 8859-1.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "“%1$@” can’t be saved in %2$@."
+          }
+        }
+      }
     },
     "“%@” isn’t a text file.": {
       "comment": "Alert: a file of a merge or comparison is binary."

@@ -16,10 +16,31 @@ public struct SessionContext: Sendable, Hashable {
   /// each side is, and which file of the run it is.
   public var difftool: DifftoolContext?
 
+  /// Who waits for the end of a merge and hears how it ended, if anyone does.
+  ///
+  /// Words about what Git does with the file stand only where Git waits; files that lie in a
+  /// repository, which ``git`` describes, are no sign of that.
+  public var waitingCaller: WaitingCaller?
+
   /// Creates a context; without arguments, one that knows nothing beyond the files.
-  public init(resultURL: URL? = nil, git: GitContext? = nil, difftool: DifftoolContext? = nil) {
+  public init(
+    resultURL: URL? = nil, git: GitContext? = nil, difftool: DifftoolContext? = nil,
+    waitingCaller: WaitingCaller? = nil
+  ) {
     self.resultURL = resultURL
     self.git = git
     self.difftool = difftool
+    self.waitingCaller = waitingCaller
   }
+}
+
+/// Who waits for the end of a merge.
+public enum WaitingCaller: Sendable, Hashable {
+  /// A command on the command line, such as `seamerge merge` typed by hand; it ends with success
+  /// if the merge was saved.
+  case commandLine
+
+  /// Git, which ran the command and waits for it, as `git mergetool` does: it takes the file as
+  /// resolved once the merge is saved, and puts back the file it had before when it is not.
+  case git
 }

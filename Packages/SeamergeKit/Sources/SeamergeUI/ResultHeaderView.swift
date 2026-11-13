@@ -5,23 +5,24 @@ import SwiftUI
 /// endings it is written with.
 struct ResultHeader: Equatable {
   /// Where the result is written, with the home folder as a tilde, if it goes to a file.
-  let path: String?
+  var path: String?
 
-  /// How the lines of the result end: like those of B, or of the first other input that has
-  /// line breaks.
-  let lineEndings: LineEndings?
+  /// How the result is written.
+  var format: ResultFormat
 
-  /// The encoding the result is written in: that of B, or of the first other input that is
-  /// text.
-  let encoding: FileEncoding?
+  /// Whether Git waits for the merge, so that the line after it stopped waiting names Git.
+  let callerIsGit: Bool
 
-  /// The header of the result of `session` in `context`.
+  /// The header of the result of `session` in `context`, written as B is.
   init(session: Session, context: SessionContext) {
-    path = context.resultURL.map {
-      ($0.path(percentEncoded: false) as NSString).abbreviatingWithTildeInPath
-    }
-    lineEndings = [Role.b, .a, .base].lazy.compactMap { session.file(for: $0)?.lineEndings }.first
-    encoding = [Role.b, .a, .base].lazy.compactMap { session.file(for: $0)?.encoding }.first
+    path = context.resultURL.map(Self.path(of:))
+    format = ResultFormat(resultOf: session)
+    callerIsGit = context.waitingCaller == .git
+  }
+
+  /// `url` as the header shows it, with the home folder as a tilde.
+  static func path(of url: URL) -> String {
+    (url.path(percentEncoded: false) as NSString).abbreviatingWithTildeInPath
   }
 
   /// The name of the result pane for VoiceOver.
@@ -53,31 +54,33 @@ struct ResultHeaderView: View {
             .truncationMode(.middle)
         }
         Spacer(minLength: 0)
-        if let encoding = header.encoding {
-          Text(encoding.name)
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .accessibilityLabel(
-              Text(
-                "Encoding: \(encoding.name)", bundle: .module,
-                comment: "VoiceOver: the encoding of the result, such as Encoding: UTF-8."))
-        }
-        if let lineEndings = header.lineEndings {
-          Text(lineEndings.name)
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .accessibilityLabel(
-              Text(
-                "Line endings: \(lineEndings.name)", bundle: .module,
-                comment: "VoiceOver: the line endings of the result, such as Line endings: LF."))
-        }
+        Text(header.format.encoding.name)
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+          .accessibilityLabel(
+            Text(
+              "Encoding: \(header.format.encoding.name)", bundle: .module,
+              comment: "VoiceOver: the encoding of the result, such as Encoding: UTF-8."))
+        Text(header.format.lineEnding.name)
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+          .accessibilityLabel(
+            Text(
+              "Line endings: \(header.format.lineEnding.name)", bundle: .module,
+              comment: "VoiceOver: the line endings of the result, such as Line endings: LF."))
       }
       .frame(height: WindowMetrics.headerHeight)
       if callerIsGone {
         Label {
-          Text(
-            "Git is no longer waiting for this merge.", bundle: .module,
-            comment: "Notice below the result header after the Git command that asked has ended.")
+          header.callerIsGit
+            ? Text(
+              "Git is no longer waiting for this merge.", bundle: .module,
+              comment: "Notice below the result header after the Git command that asked has ended.")
+            : Text(
+              "The command that opened this merge is no longer waiting.", bundle: .module,
+              comment:
+                "Notice below the result header after a command other than Git that asked has ended."
+            )
         } icon: {
           Image(systemName: "exclamationmark.triangle")
         }
@@ -90,5 +93,16 @@ struct ResultHeaderView: View {
     .padding(.horizontal, WindowMetrics.headerInset)
     .accessibilityElement(children: .contain)
     .accessibilityLabel(Text(header.spokenName))
+  }
+}
+
+extension ResultFormat.LineEnding {
+  /// The short name of the line ending, as editors show it.
+  fileprivate var name: String {
+    switch self {
+    case .lf: LineEndings.lf.name
+    case .crlf: LineEndings.crlf.name
+    case .cr: LineEndings.cr.name
+    }
   }
 }

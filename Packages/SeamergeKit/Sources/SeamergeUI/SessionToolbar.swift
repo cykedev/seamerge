@@ -79,18 +79,15 @@ final class SessionToolbar: NSObject {
     return countView.convert(countView.bounds, to: nil).minX
   }
 
-  /// Shows the state of the window: the count in the middle, which arrows lead anywhere,
-  /// whether a comparison is under way, and whether the button that saves and closes can act
-  /// and is the one to press.
+  /// Shows the state of the window: the count in the middle, which arrows lead anywhere and
+  /// whether the button that saves and closes can act, whether a comparison is under way, and
+  /// whether that button is the one to press.
   ///
   /// - Parameters:
   ///   - count: The conflicts or changes to count.
   ///   - isComparing: Whether the files are being compared anew for long enough to say so.
   ///   - isValid: Whether a command can act now.
-  ///   - canSaveAndClose: Whether a responder saves and closes.
-  func update(
-    count: Count, isComparing: Bool, isValid: (SessionCommand) -> Bool, canSaveAndClose: Bool
-  ) {
+  func update(count: Count, isComparing: Bool, isValid: (SessionCommand) -> Bool) {
     countLabel.stringValue =
       isComparing
       ? String(
@@ -114,7 +111,7 @@ final class SessionToolbar: NSObject {
       }
     }
     if let done = items[.done] {
-      done.isEnabled = canSaveAndClose
+      done.isEnabled = isValid(.saveAndClose)
       let isResolved = if case .conflicts(open: 0, _) = count { true } else { false }
       done.style = isResolved ? .prominent : .plain
     }
@@ -182,9 +179,6 @@ final class SessionToolbar: NSObject {
       comment: "Toolbar items: the current change and the buttons that go through the changes.")
   }
 
-  /// The action that the button that saves and closes sends along the responder chain.
-  static let saveAndClose = Selector(("saveAndClose:"))
-
   private func makeItem(_ identifier: NSToolbarItem.Identifier) -> NSToolbarItem? {
     switch identifier {
     case .conflictCount:
@@ -236,9 +230,8 @@ final class SessionToolbar: NSObject {
       }
       item.label = title
       item.paletteLabel = title
-      item.toolTip = String(
-        localized: "Save and close", bundle: .module, comment: "Help tag of Done in the toolbar.")
-      item.action = Self.saveAndClose
+      item.toolTip = SessionCommand.saveAndClose.help
+      item.action = SessionCommand.saveAndClose.action
       item.autovalidates = false
       item.isEnabled = false
       return item

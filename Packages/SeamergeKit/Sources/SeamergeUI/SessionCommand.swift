@@ -92,6 +92,18 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Closes a comparison that `git difftool` started and tells Git to compare no further files.
   case skipRemainingFiles
 
+  /// Writes the result to its file, after asking where the first time if it has none.
+  case save
+
+  /// Writes the result to a file that the user chooses.
+  case saveAs
+
+  /// Writes the result to its file and closes the window.
+  case saveAndClose
+
+  /// Closes a merge that someone waits for without saving, which reports it as not done.
+  case leaveUnresolved
+
   /// Takes only A's text for the current block.
   case useA
 
@@ -199,7 +211,15 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .skipRemainingFiles:
       String(
         localized: "Skip Remaining Files", bundle: .module,
-        comment: "File menu of a comparison: end the comparisons that Git has left.")
+        comment: "File menu of a comparison: end the comparisons that are left of the run.")
+    case .save: String(localized: "Save", bundle: .module, comment: "File menu command.")
+    case .saveAs: String(localized: "Save As…", bundle: .module, comment: "File menu command.")
+    case .saveAndClose:
+      String(localized: "Save and Close", bundle: .module, comment: "File menu command.")
+    case .leaveUnresolved:
+      String(
+        localized: "Leave Unresolved", bundle: .module,
+        comment: "File menu: close a merge without saving it and report it as not done.")
     case .useA: String(localized: "Use A", bundle: .module, comment: "Merge menu command.")
     case .useBase: String(localized: "Use Base", bundle: .module, comment: "Merge menu command.")
     case .useB: String(localized: "Use B", bundle: .module, comment: "Merge menu command.")
@@ -387,6 +407,14 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Close and compare no more files of this run", bundle: .module,
         comment: "Help tag of File > Skip Remaining Files.")
+    case .saveAndClose:
+      String(
+        localized: "Save and close", bundle: .module,
+        comment: "Help tag of Done in the toolbar and of File > Save and Close.")
+    case .leaveUnresolved:
+      String(
+        localized: "Close without saving; the merge counts as not done", bundle: .module,
+        comment: "Help tag of File > Leave Unresolved.")
     default:
       nil
     }
@@ -434,6 +462,10 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .openInEditor: #selector(SessionWindowController.openInEditor(_:))
     case .copyBlock: #selector(SessionWindowController.copyBlock(_:))
     case .skipRemainingFiles: #selector(SessionWindowController.skipRemainingFiles(_:))
+    case .save: #selector(SessionWindowController.saveResult(_:))
+    case .saveAs: #selector(SessionWindowController.saveResultAs(_:))
+    case .saveAndClose: #selector(SessionWindowController.saveAndClose(_:))
+    case .leaveUnresolved: #selector(SessionWindowController.leaveUnresolved(_:))
     case .useA: #selector(SessionWindowController.useA(_:))
     case .useBase: #selector(SessionWindowController.useBase(_:))
     case .useB: #selector(SessionWindowController.useB(_:))

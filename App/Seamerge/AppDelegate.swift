@@ -140,10 +140,15 @@ extension AppDelegate: NSApplicationDelegate {
     false
   }
 
-  /// Closes every session window, which tells each waiting helper that its session was
-  /// cancelled, before the app quits.
+  /// Asks for each merge with unsaved changes whether to save it, then closes every session
+  /// window, which tells each waiting helper how its session ended, before the app quits; a
+  /// window the user keeps open keeps the app running.
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
     Task {
+      guard await coordinator.closeUnsavedWindowsAskingFirst() else {
+        sender.reply(toApplicationShouldTerminate: false)
+        return
+      }
       await coordinator.finish()
       sender.reply(toApplicationShouldTerminate: true)
     }

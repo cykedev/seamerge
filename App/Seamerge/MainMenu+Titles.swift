@@ -21,11 +21,6 @@ extension MainMenu {
     static let clearMenu = String(
       localized: "Clear Menu", comment: "File > Open Recent: forget the recent comparisons.")
     static let close = String(localized: "Close", comment: "File menu.")
-    static let save = String(localized: "Save", comment: "File menu.")
-    static let saveAs = String(localized: "Save As…", comment: "File menu.")
-    static let saveAndClose = String(localized: "Save and Close", comment: "File menu.")
-    static let leaveUnresolved = String(
-      localized: "Leave Unresolved", comment: "File menu: close a merge without saving it.")
 
     static let edit = String(localized: "Edit", comment: "Menu bar.")
     static let undo = String(localized: "Undo", comment: "Edit menu.")

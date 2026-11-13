@@ -22,6 +22,10 @@ extension SessionCommand {
       return nil
     case .swapSides: return ("s", [.option, .command])
     case .skipRemainingFiles: return kind == .diff ? (".", [.command]) : nil
+    case .leaveUnresolved: return kind == .merge ? (".", [.command]) : nil
+    case .save: return ("s", [.command])
+    case .saveAndClose: return ("\r", [.command])
+    case .saveAs: return nil
     case .toggleBase: return ("b", [.option, .command])
     case .toggleResultMaximized: return ("r", [.option, .command])
     case .toggleScrollSynchronization: return ("y", [.option, .command])

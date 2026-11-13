@@ -225,8 +225,3 @@ import Testing
 final class KeySessionWindow: SessionWindow {
   override var isKeyWindow: Bool { true }
 }
-
-/// Stands in for the responder that saves and closes, which does nothing here.
-final class SaveAndCloseStandIn: NSResponder {
-  @objc func saveAndClose(_ sender: Any?) {}
-}

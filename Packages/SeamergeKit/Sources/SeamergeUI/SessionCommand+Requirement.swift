@@ -69,6 +69,12 @@ extension SessionCommand {
     /// Resolving the open conflicts needs one.
     case openConflicts
 
+    /// Saving needs the result of a merge whose files the window shows.
+    case result
+
+    /// Leaving a merge unresolved needs someone who waits for it.
+    case waitingCaller
+
     /// The command always has an effect.
     case nothing
   }
@@ -96,6 +102,8 @@ extension SessionCommand {
     case .toggleResultMaximized: .resultPane
     case .swapSides: .swappableSides
     case .skipRemainingFiles: .remainingFiles
+    case .save, .saveAs, .saveAndClose: .result
+    case .leaveUnresolved: .waitingCaller
     case .toggleScrollSynchronization, .toggleInvisibles, .toggleFooter, .goToLine: .nothing
     case .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone: .choice(chosenRoles ?? [])
     case .toggleSourceA: .toggle(.a)

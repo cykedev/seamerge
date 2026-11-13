@@ -183,6 +183,18 @@ final class SessionSplitViewController: NSSplitViewController {
       header: resultHeaderView.rootView.header, callerIsGone: true)
   }
 
+  /// The header of the result, if there is one.
+  var resultHeader: ResultHeader? {
+    resultHeaderView?.rootView.header
+  }
+
+  /// Shows `header` above the result.
+  func show(_ header: ResultHeader) {
+    guard let resultHeaderView, resultHeaderView.rootView.header != header else { return }
+    resultHeaderView.rootView = ResultHeaderView(
+      header: header, callerIsGone: resultHeaderView.rootView.callerIsGone)
+  }
+
   /// Places the dividers as a new window has them: the source panes equally wide, and above
   /// the result their share of the height.
   ///

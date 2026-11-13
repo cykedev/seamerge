@@ -59,12 +59,23 @@ final class SessionCoordinator {
     }
   }
 
-  /// Closes every session window, tells each waiting helper that its session was cancelled, so
-  /// that Git compares no further files either, and stops listening.
+  /// Asks for each session window whose merge has unsaved changes whether to save it, as
+  /// closing it does, and closes it; tells whether every one closed, which stops at the first
+  /// that the user keeps open.
+  func closeUnsavedWindowsAskingFirst() async -> Bool {
+    for controller in windowControllers where controller.hasUnsavedChanges {
+      guard await controller.closeAskingFirst() else { return false }
+    }
+    return true
+  }
+
+  /// Closes every session window, which tells each waiting helper how its session ended: a merge
+  /// whether it is saved, a comparison that it was cancelled, so that Git compares no further
+  /// files either; then stops listening.
   func finish() async {
     isFinishing = true
     for controller in windowControllers {
-      controller.cancel()
+      controller.closeAsTheAppQuits()
     }
     await waitUntilIdle()
     serverTask?.cancel()
@@ -187,6 +198,7 @@ final class SessionCoordinator {
   /// Reads the files of `request` and opens a window for their merge or comparison, in the
   /// comparison mode of the window.
   ///
+  /// A merge knows who waits for it: Git where the command line says so, else the command line.
   /// Every side of a merge shows the name of the file it is merged into, since Git hands over
   /// temporary copies; so does every side of a comparison that Git started, unless the command
   /// line names it. A comparison whose files cannot be compared, such as of an image, still gets
@@ -205,7 +217,8 @@ final class SessionCoordinator {
         b: SessionFile(url: merge.local, label: label))
       let context = SessionContext(
         resultURL: merge.output,
-        git: GitContext(merge.context, hasCommonAncestor: merge.base != nil))
+        git: GitContext(merge.context, hasCommonAncestor: merge.base != nil),
+        waitingCaller: merge.isRunByGit ? .git : .commandLine)
       return SessionWindowController(
         session: session, context: context, undoManager: UndoManager())
     case .diff(let diff):

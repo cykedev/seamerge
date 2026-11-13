@@ -37,8 +37,8 @@ public final class SessionWindowController: NSWindowController {
   /// Whether the windows show their footer.
   let footerVisibility: FooterVisibility
 
-  /// Where the result goes and what Git is doing.
-  let context: SessionContext
+  /// Where the result goes, what Git is doing, and who waits for the session.
+  public let context: SessionContext
 
   /// The pasteboard that Copy and Copy Path write to.
   let pasteboard: NSPasteboard
@@ -53,7 +53,15 @@ public final class SessionWindowController: NSWindowController {
   let sessionUndoManager: UndoManager
 
   private var summary: SessionSummary
-  private var hasFinished = false
+
+  /// Whether the window has reported how the session ended.
+  private(set) var hasFinished = false
+
+  /// What the window knows about the file of the result of a merge; `nil` for a comparison.
+  var saving: ResultSaving?
+
+  /// Whether the window is asking whether to save before it closes.
+  var isAskingToClose = false
 
   /// The comparison whose files cannot be compared, which the window names and explains in
   /// place of their lines, or `nil` if the window shows the lines.
@@ -189,6 +197,9 @@ public final class SessionWindowController: NSWindowController {
       resultHeader: resultHeader, displayOptions: displayOptions)
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: arrangement)
+    saving = presentation.result.map {
+      ResultSaving(result: $0, session: session, url: context.resultURL)
+    }
     self.unavailable = unavailable
     if let unavailable {
       layout.showInPlaceOfTheLines(
@@ -229,9 +240,8 @@ public final class SessionWindowController: NSWindowController {
   /// Shows in the toolbar what changed: the open conflicts or the current change, the arrows
   /// that lead anywhere, a comparison under way, and whether the window can save and close.
   func stateDidChange() {
-    toolbar.update(
-      count: toolbarCount, isComparing: showsComparisonProgress, isValid: canPerform,
-      canSaveAndClose: responds(along: SessionToolbar.saveAndClose))
+    toolbar.update(count: toolbarCount, isComparing: showsComparisonProgress, isValid: canPerform)
+    window?.isDocumentEdited = isResultEdited
     updateFooter()
     updateSubtitle()
   }
@@ -250,25 +260,6 @@ public final class SessionWindowController: NSWindowController {
     case .diff:
       return .changes(current: presentation.currentBlock, total: changes.blocks.count)
     }
-  }
-
-  /// Whether a responder of the window, from the view with the focus to the application,
-  /// carries out `action`.
-  private func responds(along action: Selector) -> Bool {
-    var responders: [NSResponder] = []
-    var responder = window?.firstResponder
-    while let next = responder {
-      responders.append(next)
-      responder = next.nextResponder
-    }
-    responder = self
-    while let next = responder {
-      responders.append(next)
-      responder = next.nextResponder
-    }
-    let application = NSApplication.shared
-    return responders.contains { $0.responds(to: action) } || application.responds(to: action)
-      || (application.delegate as? NSObject)?.responds(to: action) == true
   }
 
   /// Remembers which pane above the result has the focus, which gets it back when text mode
@@ -344,10 +335,20 @@ extension SessionWindowController: NSWindowDelegate {
     updateSubtitle()
   }
 
-  /// Reports the end of the session, once: closing a merge leaves it unsaved, and closing a
-  /// comparison means it was seen, so that Git goes on to the next file.
+  /// Asks whether to save first while the result of a merge has unsaved changes, and closes
+  /// once the answer allows it.
+  public func windowShouldClose(_ sender: NSWindow) -> Bool {
+    guard isResultEdited, !hasFinished else { return true }
+    Task { await closeAskingFirst() }
+    return false
+  }
+
+  /// Reports the end of the session, once: a merge counts as saved if what the window shows was
+  /// written to its file, and closing a comparison means it was seen, so that Git goes on to the
+  /// next file.
   public func windowWillClose(_ notification: Notification) {
-    finish(presentation.arrangement.showsResult ? .cancelled : .saved)
+    let isSaved = saving.map { $0.url != nil && $0.saved != nil && !isResultEdited } ?? true
+    finish(isSaved ? .saved : .cancelled)
   }
 }
 
@@ -358,15 +359,31 @@ extension SessionWindowController {
     cancel()
   }
 
-  /// Closes the window and reports that the session was cancelled, as when the app quits: Git
-  /// leaves a merge unresolved and compares no further files.
+  /// Closes the window as the app quits, without asking: a merge reports whether what it shows
+  /// is saved, as closing it does, and a comparison reports that it was cancelled, so that Git
+  /// compares no further files.
+  public func closeAsTheAppQuits() {
+    if saving == nil {
+      cancel()
+    } else {
+      close()
+    }
+  }
+
+  /// Whether the result of a merge has changes that are not saved, which closing asks about.
+  public var hasUnsavedChanges: Bool {
+    isResultEdited
+  }
+
+  /// Closes the window and reports that the session was cancelled: Git leaves a merge unresolved
+  /// and compares no further files.
   public func cancel() {
     finish(.cancelled)
     close()
   }
 
   /// Reports that the session ended with `outcome`, unless it was reported already.
-  private func finish(_ outcome: SessionOutcome) {
+  func finish(_ outcome: SessionOutcome) {
     guard !hasFinished else { return }
     hasFinished = true
     onFinish?(outcome)
@@ -462,6 +479,10 @@ extension SessionWindowController: NSUserInterfaceValidations {
       presentation.result?.document.canResetAll ?? false
     case .openConflicts:
       (presentation.result?.document.openConflictCount ?? 0) > 0
+    case .result:
+      saving != nil && !isSwitchingComparison && !isAskingToClose
+    case .waitingCaller:
+      saving != nil && context.waitingCaller != nil && !isAskingToClose
     case .nothing:
       true
     }

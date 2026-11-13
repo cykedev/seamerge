@@ -28,6 +28,26 @@ struct SessionCoordinatorTests {
     await coordinator.finish()
   }
 
+  @Test(arguments: [false, true])
+  func mergeWaitsForGitOnlyWhereTheRequestSaysSo(isRunByGit: Bool) async throws {
+    let sandbox = try AppSandbox()
+    let recorder = WindowRecorder()
+    let coordinator = try sandbox.startCoordinator(recorder: recorder)
+    guard case .merge(var merge) = try sandbox.mergeRequest() else {
+      Issue.record("The sandbox asks for a merge")
+      return
+    }
+    merge.isRunByGit = isRunByGit
+    let outcome = perform(.merge(merge), at: sandbox.socketURL)
+
+    let controller = await recorder.nextOpened()
+    #expect(controller.context.waitingCaller == (isRunByGit ? .git : .commandLine))
+    controller.window?.close()
+
+    #expect(try await outcome.value == .cancelled)
+    await coordinator.finish()
+  }
+
   @Test func everySessionIsComparedInTheModeOfTheWindow() async throws {
     let sandbox = try AppSandbox()
     let recorder = WindowRecorder()

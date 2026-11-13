@@ -29,8 +29,7 @@ enum Windows {
 
   /// Draws the window of `session` at `size`, or at its least size for `nil`, after `prepare`.
   ///
-  /// A responder that saves and closes stands in for the one that comes with saving, so that
-  /// the button shows as it does in the app. With `actsAsKey`, the window acts as the key
+  /// With `actsAsKey`, the window acts as the key
   /// window, so that the focus shows in the accent color.
   static func picture(
     _ session: Session, context: SessionContext, look: Look,
@@ -47,15 +46,11 @@ enum Windows {
       window: actsAsKey ? KeySessionWindow() : SessionWindow(), unavailable: unavailable)
     let window = try #require(controller.window)
     defer { window.close() }
-    let saver = SaveAndCloseStandIn()
-    controller.nextResponder = saver
     Rendering.prepare(window, size: size ?? window.contentMinSize, appearance: look.appearance)
     controller.layout.placeDividers()
     controller.stateDidChange()
     prepare(controller)
     try Rendering.write(Rendering.bitmap(of: window), named: name)
-    // The window does not retain its next responder.
-    withExtendedLifetime(saver) {}
   }
 
   /// Every pane of the window: A, Base and B as far as they take part, then the result, if
@@ -132,6 +127,80 @@ final class PromptRecorder: SessionPrompts {
   func reportFailedComparison(in window: NSWindow) async {
     failureCount += 1
   }
+
+  /// The answer to the sheet before saving with open conflicts.
+  var openConflictsChoice = OpenConflictsChoice.cancel
+
+  /// The answer to the sheet before closing with unsaved changes.
+  var unsavedChangesChoice = UnsavedChangesChoice.cancel
+
+  /// Whether to leave a merge unresolved although decisions would be lost.
+  var leavesUnresolvedAnyway = false
+
+  /// Whether to save in UTF-8 when the encoding cannot hold the result.
+  var savesAsUTF8 = false
+
+  /// Where to save when asked, or `nil` to cancel.
+  var destination: URL?
+
+  /// What the window asked, in order, in short words.
+  private(set) var questions: [String] = []
+
+  /// What happens while the window asks whether to save with open conflicts.
+  var whileAskingToSaveWithOpenConflicts: @MainActor () async -> Void = {}
+
+  func confirmSavingWithOpenConflicts(
+    _ count: Int, gitTakesItAsResolved: Bool, in window: NSWindow
+  ) async -> OpenConflictsChoice {
+    questions.append("save with \(count) open conflicts\(gitTakesItAsResolved ? ", Git" : "")")
+    await whileAskingToSaveWithOpenConflicts()
+    return openConflictsChoice
+  }
+
+  func confirmClosing(
+    _ name: String, openConflictCount: Int, caller: WaitingCaller?, in window: NSWindow
+  ) async -> UnsavedChangesChoice {
+    let callerName =
+      switch caller {
+      case .git: ", Git"
+      case .commandLine: ", command line"
+      case nil: ""
+      }
+    questions.append("close \(name), \(openConflictCount) open\(callerName)")
+    return unsavedChangesChoice
+  }
+
+  func confirmLeavingUnresolved(
+    _ name: String, discarding count: Int, gitPutsBackTheFile: Bool, in window: NSWindow
+  ) async -> Bool {
+    questions.append(
+      "leave \(name) unresolved, \(count) decisions\(gitPutsBackTheFile ? ", Git" : "")")
+    return leavesUnresolvedAnyway
+  }
+
+  /// What happens while the window offers UTF-8.
+  var whileOfferingUTF8: @MainActor () async -> Void = {}
+
+  func offerUTF8(saving name: String, in encoding: FileEncoding, in window: NSWindow) async -> Bool
+  {
+    questions.append("save \(name) as UTF-8 instead of \(encoding.name)")
+    await whileOfferingUTF8()
+    return savesAsUTF8
+  }
+
+  func reportFailedSaving(_ name: String, reason: String, in window: NSWindow) async {
+    questions.append("failed saving \(name)")
+  }
+
+  /// What happens while the window asks where to save, such as a change on disk.
+  var whileAskingWhereToSave: @MainActor () async -> Void = {}
+
+  func chooseDestination(suggesting name: String, in window: NSWindow) async -> URL? {
+    questions.append("where to save \(name)")
+    await whileAskingWhereToSave()
+    return destination
+  }
+
 }
 
 extension SessionWindowController {
