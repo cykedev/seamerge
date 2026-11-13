@@ -522,6 +522,9 @@
     "Hide the base and give A and B its room": {
       "comment": "Help tag of the footer toggle of the base while the base is shown."
     },
+    "Highlight Syntax": {
+      "comment": "View menu command."
+    },
     "ISO 8859-1": {
       "comment": "Encoding: ISO Latin 1."
     },

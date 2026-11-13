@@ -185,7 +185,7 @@ import Testing
       Maximize Result ⌥⌘R
       ---
       Synchronize Scrolling ⌥⌘Y
-      Syntax Highlighting (deactivated)
+      Highlight Syntax
       Show Invisibles
       Show Ignored Changes (deactivated)
       Show All Lines ⇧⌘L

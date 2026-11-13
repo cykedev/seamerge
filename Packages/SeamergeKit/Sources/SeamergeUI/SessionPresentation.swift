@@ -278,6 +278,22 @@ final class SessionPresentation {
     decisionColumn?.decisions = content.decisions
   }
 
+  /// Colors the code of every pane as `language`, or not at all, once its files are lexed anew.
+  func colorSyntax(as language: LanguageDescription?) {
+    guard language != syntax.language else { return }
+    syntax.language = language
+    // The panes hold their tokens weakly, so the tokens of the former language are gone
+    // already; each pane takes their colors away now.
+    for pane in allPanes {
+      pane.syntaxProvider = nil
+    }
+    syntax.lexInputs(of: changes.session)
+    if let result {
+      syntax.lexResult(result.rows)
+    }
+    showSyntax()
+  }
+
   /// Gives each pane the tokens of its file or of the result as far as they are known, and takes
   /// away those that are gone.
   private func showSyntax() {

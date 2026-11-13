@@ -212,9 +212,15 @@ final class SessionSyntax {
   /// comparison, of the newer file, and failing that by the first line of that file.
   static func language(of session: Session, resultURL: URL?) -> LanguageDescription {
     let file = session.file(for: .b) ?? session.file(for: .a)
-    let name = resultURL?.lastPathComponent ?? file?.url?.lastPathComponent ?? file?.label ?? ""
     let firstLine = file?.text.map { String($0.prefix { !$0.isNewline }) } ?? ""
-    return LanguageDescription(fileName: name, firstLine: firstLine)
+    return LanguageDescription(
+      fileName: path(of: session, resultURL: resultURL), firstLine: firstLine)
   }
 
+  /// The path of the file that names the language of `session`: the result, or for a comparison
+  /// the newer file; its label if it has no path.
+  static func path(of session: Session, resultURL: URL?) -> String {
+    let file = session.file(for: .b) ?? session.file(for: .a)
+    return resultURL?.path ?? file?.url?.path ?? file?.label ?? ""
+  }
 }

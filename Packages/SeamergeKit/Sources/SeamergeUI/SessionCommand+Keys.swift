@@ -18,7 +18,8 @@ extension SessionCommand {
     case .nextChange: return (Self.downArrow, changeJumps)
     case .previousChange: return (Self.upArrow, changeJumps)
     case .firstChange, .lastChange, .compareExactly, .ignoreLineEndings,
-      .ignoreWhitespaceChanges, .ignoreAllWhitespace, .toggleInvisibles, .copyBlock:
+      .ignoreWhitespaceChanges, .ignoreAllWhitespace, .toggleSyntaxHighlighting, .toggleInvisibles,
+      .copyBlock:
       return nil
     case .swapSides: return ("s", [.option, .command])
     case .skipRemainingFiles: return kind == .diff ? (".", [.command]) : nil

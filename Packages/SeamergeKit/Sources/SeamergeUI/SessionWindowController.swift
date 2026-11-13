@@ -1,6 +1,7 @@
 import AppKit
 import MergeModel
 import PaneKit
+import SyntaxKit
 
 /// How a session window ended, which the Git command that waits for it takes as success or
 /// failure.
@@ -36,6 +37,12 @@ public final class SessionWindowController: NSWindowController {
 
   /// Whether the windows show their footer.
   let footerVisibility: FooterVisibility
+
+  /// Whether the windows color their code by its syntax.
+  let syntaxHighlighting: SyntaxHighlighting
+
+  /// The language of the files as the window recognized it.
+  let detectedLanguage: LanguageDescription
 
   /// Where the result goes, what Git is doing, and who waits for the session.
   public let context: SessionContext
@@ -228,6 +235,9 @@ public final class SessionWindowController: NSWindowController {
         }))
     content.footer.theme = theme
     footerVisibility = FooterVisibility(defaults: defaults)
+    syntaxHighlighting = SyntaxHighlighting(defaults: defaults)
+    let detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
+    self.detectedLanguage = detectedLanguage
     self.context = context
     self.pasteboard = pasteboard
     self.workspace = workspace
@@ -239,7 +249,7 @@ public final class SessionWindowController: NSWindowController {
     presentation = SessionPresentation(
       session: session, arrangement: arrangement, layout: layout, headers: headers,
       resultHeader: resultHeader, displayOptions: displayOptions,
-      language: SessionSyntax.language(of: session, resultURL: context.resultURL))
+      language: syntaxHighlighting.isOn ? detectedLanguage : nil)
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: arrangement)
     saving = presentation.result.map {
@@ -287,6 +297,7 @@ public final class SessionWindowController: NSWindowController {
     }
     observeStepsOfUndo()
     observeFooterVisibility()
+    observeSyntaxHighlighting()
     stateDidChange()
     watchFiles()
   }
@@ -461,8 +472,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
     if let menuItem = item as? NSMenuItem {
       if let mode = command.comparisonMode {
         menuItem.state = mode == comparisonOptions.mode ? .on : .off
-      } else if command == .toggleScrollSynchronization {
-        menuItem.state = presentation.scrollSync.isEnabled ? .on : .off
+      } else if command == .toggleScrollSynchronization || command == .toggleSyntaxHighlighting {
+        menuItem.state = isSwitchedOn(command) ? .on : .off
       }
       if let alternateTitle = command.alternateTitle {
         menuItem.title = isSwitchedOn(command) ? alternateTitle : command.title
@@ -486,6 +497,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
     case .toggleResultMaximized: layout.maximizesResult
     case .toggleInvisibles: presentation.allPanes.contains(where: \.showsInvisibles)
     case .toggleScrollSynchronization: presentation.scrollSync.isEnabled
+    case .toggleSyntaxHighlighting: syntaxHighlighting.isOn
     default: false
     }
   }

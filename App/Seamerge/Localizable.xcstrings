@@ -124,9 +124,6 @@
     "Show Toolbar": {
       "comment": "View menu."
     },
-    "Syntax Highlighting": {
-      "comment": "View menu: color the code by its syntax."
-    },
     "The path of its connection to the command line is longer than macOS allows. Comparing files still works. This is a bug in Seamerge; please report it.": {
       "comment": "Alert at launch: the path of the socket is too long; what still works."
     },

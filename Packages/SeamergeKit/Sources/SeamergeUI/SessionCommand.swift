@@ -58,6 +58,9 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Turns the coupling of the panes while they scroll off or on.
   case toggleScrollSynchronization
 
+  /// Colors the code of every session window by its syntax, or leaves it in the color of text.
+  case toggleSyntaxHighlighting
+
   /// Shows spaces, tabs and line endings as quiet symbols, or hides them.
   case toggleInvisibles
 
@@ -191,6 +194,8 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "Maximize Result", bundle: .module, comment: "View menu command.")
     case .toggleScrollSynchronization:
       String(localized: "Synchronize Scrolling", bundle: .module, comment: "View menu command.")
+    case .toggleSyntaxHighlighting:
+      String(localized: "Highlight Syntax", bundle: .module, comment: "View menu command.")
     case .toggleInvisibles:
       String(localized: "Show Invisibles", bundle: .module, comment: "View menu command.")
     case .showAllLines:
@@ -458,6 +463,8 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .toggleResultMaximized: #selector(SessionWindowController.toggleResultMaximized(_:))
     case .toggleScrollSynchronization:
       #selector(SessionWindowController.toggleScrollSynchronization(_:))
+    case .toggleSyntaxHighlighting:
+      #selector(SessionWindowController.toggleSyntaxHighlighting(_:))
     case .toggleInvisibles: #selector(SessionWindowController.toggleInvisibles(_:))
     case .showAllLines: #selector(SessionWindowController.showAllLines(_:))
     case .collapseUnchangedLines: #selector(SessionWindowController.collapseUnchangedLines(_:))

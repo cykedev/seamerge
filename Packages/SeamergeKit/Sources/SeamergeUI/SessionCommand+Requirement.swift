@@ -109,7 +109,9 @@ extension SessionCommand {
     case .save, .saveAs, .saveAndClose: .result
     case .leaveUnresolved: .waitingCaller
     case .changeFiles: .ownFiles
-    case .toggleScrollSynchronization, .toggleInvisibles, .toggleFooter, .goToLine: .nothing
+    case .toggleScrollSynchronization, .toggleSyntaxHighlighting, .toggleInvisibles, .toggleFooter,
+      .goToLine:
+      .nothing
     case .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone: .choice(chosenRoles ?? [])
     case .toggleSourceA: .toggle(.a)
     case .toggleSourceBase: .toggle(.base)
