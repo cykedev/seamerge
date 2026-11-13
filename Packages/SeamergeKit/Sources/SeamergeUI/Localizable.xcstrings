@@ -738,6 +738,9 @@
     "Scroll the panes together": {
       "comment": "Help tag of the footer toggle of synchronized scrolling while it is off."
     },
+    "Seamerge can’t merge the contents of this file. Use one side as a whole, or leave it unresolved.": {
+      "comment": "Merge of a file that is not text: what can be done."
+    },
     "Seamerge can’t read “%@”.": {
       "comment": "Alert: a file of a merge or comparison cannot be read."
     },
@@ -948,6 +951,9 @@
     "UTF-8": {
       "comment": "Encoding."
     },
+    "Use %@": {
+      "comment": "Button of the sheet of a binary file: take this side as a whole, such as Use main."
+    },
     "Use A": {
       "comment": "Merge menu command."
     },
@@ -1050,6 +1056,9 @@
           }
         }
       }
+    },
+    "“%@” is a binary file.": {
+      "comment": "Merge of a file that is not text, such as “logo.png” is a binary file."
     },
     "“%@” isn’t a text file.": {
       "comment": "Alert: a file of a merge or comparison is binary."

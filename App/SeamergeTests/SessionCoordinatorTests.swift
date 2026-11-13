@@ -182,19 +182,23 @@ struct SessionCoordinatorTests {
     await coordinator.finish()
   }
 
-  @Test func fileThatIsNotTextIsShownAsAnErrorAndCancelsTheSession() async throws {
+  @Test func mergeOfAFileThatIsNotTextOpensAWindowThatCanLeaveItUnresolved() async throws {
     let sandbox = try AppSandbox()
-    let coordinator = try sandbox.startCoordinator(recorder: WindowRecorder())
+    let recorder = WindowRecorder()
+    let coordinator = try sandbox.startCoordinator(recorder: recorder)
     let binary = try sandbox.file("image.png", "\u{0}\u{1}\u{2}PNG\u{0}")
     let request = SessionRequest.merge(
       .init(
         base: nil, local: try sandbox.file("local.txt"), remote: binary,
         output: try sandbox.file("out.txt")))
+    let outcome = perform(request, at: sandbox.socketURL)
 
-    #expect(try await perform(request, at: sandbox.socketURL).value == .cancelled)
+    let controller = await recorder.nextOpened()
+    NSApplication.shared.sendAction(
+      SessionCommand.leaveUnresolved.action, to: controller, from: nil)
 
-    #expect(
-      sandbox.presenter.errors.compactMap { $0 as? SessionLoadingError } == [.binaryFile(binary)])
+    #expect(try await outcome.value == .cancelled)
+    #expect(sandbox.presenter.errors.isEmpty)
     #expect(coordinator.windowControllers.isEmpty)
     await coordinator.finish()
   }

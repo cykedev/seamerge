@@ -48,6 +48,10 @@ extension SessionWindowController {
   /// merge when the tool fails, with its conflict markers.
   @discardableResult
   func leaveUnresolvedAskingFirst() async -> Bool {
+    if binaryMerge != nil {
+      cancel()
+      return true
+    }
     guard let window, let result = presentation.result else { return false }
     let count = result.document.decisionCount
     let gitPutsBackTheFile = context.waitingCaller == .git

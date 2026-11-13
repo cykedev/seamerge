@@ -341,3 +341,72 @@ struct DiskChangeTests {
     withExtendedLifetime(watcher) {}
   }
 }
+
+/// The merge of a file that is not text.
+@MainActor
+@Suite(.serialized, .timeLimit(.minutes(1)))
+struct BinaryMergeTests {
+  private func window(
+    _ prompts: PromptRecorder, folder: URL
+  ) async throws -> (SessionWindowController, BinaryMerge) {
+    let a = folder.appending(path: "a.png")
+    let b = folder.appending(path: "b.png")
+    try Data([0x89, 0x50, 0, 1]).write(to: a)
+    try Data([0x89, 0x50, 0, 2]).write(to: b)
+    let output = folder.appending(path: "logo.png")
+    try Data([0x89, 0x50, 0, 3]).write(to: output)
+    try FileManager.default.setAttributes([.posixPermissions: 0o640], ofItemAtPath: output.path)
+    let merge = BinaryMerge(
+      a: SessionFile(url: a, label: "logo.png"), b: SessionFile(url: b, label: "logo.png"),
+      output: output)
+    let git = GitContext(
+      remote: MergeSide(name: .reference("feature")), local: MergeSide(name: .reference("main")))
+    let session = try await merge.emptySession()
+    let controller = SessionWindowController(
+      session: session, context: SessionContext(resultURL: output, git: git),
+      undoManager: UndoManager(), displayOptions: DisplayOptions(), pasteboard: .withUniqueName(),
+      workspace: WorkspaceRecorder(), prompts: prompts, doneStyle: .standard,
+      defaults: .privateSuite(), window: SessionWindow(), binaryMerge: merge)
+    return (controller, merge)
+  }
+
+  private func temporaryFolder() throws -> URL {
+    let folder = FileManager.default.temporaryDirectory.appending(
+      path: "BinaryMergeTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    return folder
+  }
+
+  @Test func takingASideWritesItsBytesKeepsThePermissionsAndReportsSaved() async throws {
+    let folder = try temporaryFolder()
+    defer { #expect(throws: Never.self) { try FileManager.default.removeItem(at: folder) } }
+    let prompts = PromptRecorder()
+    prompts.binaryChoices = [.b]
+    let (controller, merge) = try await window(prompts, folder: folder)
+    var outcomes: [SessionOutcome] = []
+    controller.onFinish = { outcomes.append($0) }
+
+    await controller.askWhichSideToTake()
+
+    #expect(prompts.questions == ["binary logo.png: use main or feature"])
+    #expect(try Data(contentsOf: merge.output) == Data([0x89, 0x50, 0, 2]))
+    let attributes = try FileManager.default.attributesOfItem(atPath: merge.output.path)
+    #expect((attributes[.posixPermissions] as? Int) == 0o640)
+    #expect(outcomes.count == 1 && { if case .saved = outcomes[0] { true } else { false } }())
+  }
+
+  @Test func leavingItUnresolvedWritesNothingAndReportsCancelled() async throws {
+    let folder = try temporaryFolder()
+    defer { #expect(throws: Never.self) { try FileManager.default.removeItem(at: folder) } }
+    let prompts = PromptRecorder()
+    let (controller, merge) = try await window(prompts, folder: folder)
+    var outcomes: [SessionOutcome] = []
+    controller.onFinish = { outcomes.append($0) }
+
+    await controller.askWhichSideToTake()
+
+    #expect(try Data(contentsOf: merge.output) == Data([0x89, 0x50, 0, 3]))
+    #expect(outcomes.count == 1 && { if case .cancelled = outcomes[0] { true } else { false } }())
+    #expect(!controller.canPerform(.save))
+  }
+}

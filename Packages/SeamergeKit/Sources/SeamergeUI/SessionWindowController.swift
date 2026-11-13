@@ -90,6 +90,9 @@ public final class SessionWindowController: NSWindowController {
   /// place of their lines, or `nil` if the window shows the lines.
   let unavailable: UnavailableComparison?
 
+  /// The merge of a file that is not text, whose window asks which side to take, or `nil`.
+  let binaryMerge: BinaryMerge?
+
   /// Whether the files are being compared anew.
   var isSwitchingComparison = false
 
@@ -167,6 +170,23 @@ public final class SessionWindowController: NSWindowController {
     observeDisplayOptions()
   }
 
+  /// Opens a window for `merge`, whose files are not text: it names the sides in its headers,
+  /// says why it shows no lines, and asks in a sheet which side to take as a whole, once it
+  /// shows.
+  ///
+  /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the headers can be made.
+  public convenience init(
+    binaryMerge merge: BinaryMerge, context: SessionContext, undoManager: UndoManager
+  ) async throws(SessionLoadingError) {
+    let session = try await merge.emptySession()
+    self.init(
+      session: session, context: context, undoManager: undoManager,
+      displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
+      prompts: SessionSheets(), doneStyle: .standard, defaults: .standard,
+      window: SessionWindow(), binaryMerge: merge)
+    observeDisplayOptions()
+  }
+
   /// Draws anew whenever the accessibility settings of the system change.
   private func observeDisplayOptions() {
     NSWorkspace.shared.notificationCenter.addObserver(
@@ -185,6 +205,7 @@ public final class SessionWindowController: NSWindowController {
     displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace,
     prompts: any SessionPrompts, doneStyle: SessionToolbar.DoneStyle, defaults: UserDefaults,
     window: SessionWindow, unavailable: UnavailableComparison? = nil,
+    binaryMerge: BinaryMerge? = nil,
     now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
   ) {
     let theme = displayOptions.theme(fontSize: Self.standardFontSize)
@@ -224,10 +245,15 @@ public final class SessionWindowController: NSWindowController {
       ResultSaving(result: $0, session: session, url: context.resultURL)
     }
     self.unavailable = unavailable
+    self.binaryMerge = binaryMerge
     if let unavailable {
       layout.showInPlaceOfTheLines(
         UnavailableComparisonView(
           title: unavailable.title, message: unavailable.message(in: context)))
+    } else if let binaryMerge {
+      layout.showInPlaceOfTheLines(
+        UnavailableComparisonView(
+          title: binaryMerge.title, message: BinaryMerge.message))
     }
 
     window.tabbingMode = .disallowed
@@ -252,7 +278,9 @@ public final class SessionWindowController: NSWindowController {
     layout.delegate = self
     layout.chooseResultFormat = { [weak self] choice in self?.choose(choice) }
     window.keyHandler = self
-    if unavailable == nil, let first = layout.sourcePanes.first?.pane.documentView {
+    if unavailable == nil, binaryMerge == nil,
+      let first = layout.sourcePanes.first?.pane.documentView
+    {
       window.initialFirstResponder = first
       window.makeFirstResponder(first)
     }
@@ -280,7 +308,7 @@ public final class SessionWindowController: NSWindowController {
       return .conflicts(
         open: presentation.navigation.openConflictCount,
         hadAny: changes.blocks.contains { $0.kind == .conflict })
-    case .diff where unavailable != nil:
+    case .diff where unavailable != nil || binaryMerge != nil:
       return .nothing
     case .diff:
       return .changes(current: presentation.currentBlock, total: changes.blocks.count)
@@ -373,7 +401,9 @@ extension SessionWindowController: NSWindowDelegate {
   /// next file.
   public func windowWillClose(_ notification: Notification) {
     fileWatchers = []
-    let isSaved = saving.map { $0.url != nil && $0.saved != nil && !isResultEdited } ?? true
+    let isSaved =
+      binaryMerge == nil
+      && (saving.map { $0.url != nil && $0.saved != nil && !isResultEdited } ?? true)
     finish(isSaved ? .saved : .cancelled)
   }
 }
@@ -464,6 +494,9 @@ extension SessionWindowController: NSUserInterfaceValidations {
   func canPerform(_ command: SessionCommand) -> Bool {
     if unavailable != nil && command != .skipRemainingFiles && command != .toggleFooter {
       return false
+    }
+    if binaryMerge != nil {
+      return command == .leaveUnresolved || command == .toggleFooter
     }
     return switch command.requirement {
     case .jumpTarget(let jump):

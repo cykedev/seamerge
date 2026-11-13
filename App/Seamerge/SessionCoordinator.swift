@@ -202,7 +202,8 @@ final class SessionCoordinator {
   /// Every side of a merge shows the name of the file it is merged into, since Git hands over
   /// temporary copies; so does every side of a comparison that Git started, unless the command
   /// line names it. A comparison whose files cannot be compared, such as of an image, still gets
-  /// a window that says why, so that a run of `git difftool` goes on past it.
+  /// a window that says why, so that a run of `git difftool` goes on past it; the merge of a
+  /// file that is not text gets a window that asks which side to take as a whole.
   ///
   /// - Throws: Why the files of a merge cannot be opened.
   private static func makeWindow(
@@ -211,16 +212,24 @@ final class SessionCoordinator {
     switch request {
     case .merge(let merge):
       let label = merge.output.lastPathComponent
-      let session = try await Session.loadMerge(
-        base: merge.base.map { SessionFile(url: $0, label: label) },
-        a: SessionFile(url: merge.remote, label: label),
-        b: SessionFile(url: merge.local, label: label))
+      let (a, b) = (
+        SessionFile(url: merge.remote, label: label), SessionFile(url: merge.local, label: label)
+      )
       let context = SessionContext(
         resultURL: merge.output,
         git: GitContext(merge.context, hasCommonAncestor: merge.base != nil),
         waitingCaller: merge.isRunByGit ? .git : .commandLine)
-      return SessionWindowController(
-        session: session, context: context, undoManager: UndoManager())
+      do {
+        let session = try await Session.loadMerge(
+          base: merge.base.map { SessionFile(url: $0, label: label) }, a: a, b: b)
+        return SessionWindowController(
+          session: session, context: context, undoManager: UndoManager())
+      } catch .binaryFile {
+        Self.logger.notice("Asking which side of the binary file to take")
+        return try await SessionWindowController(
+          binaryMerge: BinaryMerge(a: a, b: b, output: merge.output), context: context,
+          undoManager: UndoManager())
+      }
     case .diff(let diff):
       let file = { (url: URL, label: String?) in
         SessionFile(url: url, label: label ?? diff.displayPath ?? url.lastPathComponent)

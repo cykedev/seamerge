@@ -69,6 +69,11 @@ protocol SessionPrompts: AnyObject {
   /// Asks whether to change the files although `count` decisions would be lost.
   func confirmChangingFiles(discarding count: Int, in window: NSWindow) async -> Bool
 
+  /// Asks which side of the binary file `name` to take as a whole, named `a` and `b`, and
+  /// returns its role, or `nil` to leave the file unresolved.
+  func chooseSide(ofBinaryFile name: String, a: String, b: String, in window: NSWindow) async
+    -> Role?
+
   /// Asks whether to switch although `count` decisions would be lost, and tells whether to.
   func confirmDiscarding(_ count: Int, in window: NSWindow) async -> Bool
 
@@ -298,6 +303,30 @@ final class SessionSheets: SessionPrompts {
         localized: "Change", bundle: .module,
         comment: "Sheet Change Files: the default button, which shows the files in the window."))
     return await Self.confirm(alert, in: window)
+  }
+
+  func chooseSide(ofBinaryFile name: String, a: String, b: String, in window: NSWindow) async
+    -> Role?
+  {
+    let alert = NSAlert()
+    alert.messageText = String(
+      localized: "“\(name)” is a binary file.", bundle: .module,
+      comment: "Merge of a file that is not text, such as “logo.png” is a binary file.")
+    alert.informativeText = BinaryMerge.message
+    for side in [b, a] {
+      alert.addButton(
+        withTitle: String(
+          localized: "Use \(side)", bundle: .module,
+          comment:
+            "Button of the sheet of a binary file: take this side as a whole, such as Use main."
+        ))
+    }
+    alert.addButton(withTitle: SessionCommand.leaveUnresolved.title)
+    return switch await Self.present(alert, in: window) {
+    case .alertFirstButtonReturn: .b
+    case .alertSecondButtonReturn: .a
+    default: nil
+    }
   }
 
   /// Adds Cancel as the first button, which keeps what would be lost and is the default one.

@@ -225,6 +225,16 @@ final class PromptRecorder: SessionPrompts {
     return changesAnyway
   }
 
+  /// The answers to the sheet of a binary file, one per question: a side, or `nil` to leave the
+  /// file unresolved.
+  var binaryChoices: [Role?] = []
+
+  func chooseSide(ofBinaryFile name: String, a: String, b: String, in window: NSWindow) async
+    -> Role?
+  {
+    questions.append("binary \(name): use \(b) or \(a)")
+    return binaryChoices.isEmpty ? nil : binaryChoices.removeFirst()
+  }
 }
 
 extension SessionWindowController {
