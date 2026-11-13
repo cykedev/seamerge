@@ -28,7 +28,7 @@ extension SessionPresentation {
     isCarryingOut = true
     resultPane.carryOut(edits)
     isCarryingOut = false
-    show(ResultState(document: document, resultText: text))
+    show(ResultState(document: document, resultText: text), after: edits)
     return step
   }
 
@@ -76,7 +76,7 @@ extension SessionPresentation: PaneEditingDelegate {
     let replaced = pending.plan.replacements.map { text.carryOut($0).replacedText }
     var document = result.document
     let step = document.apply(pending.plan, replacedTexts: replaced)
-    show(ResultState(document: document, resultText: text))
+    show(ResultState(document: document, resultText: text), after: edits)
     if let first = edits.first, let last = edits.last {
       delegate?.presentation(
         self, didType: step, at: first.range,

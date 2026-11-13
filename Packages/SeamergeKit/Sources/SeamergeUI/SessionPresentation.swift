@@ -269,6 +269,8 @@ final class SessionPresentation {
     showSyntax()
     guard let result, let resultPane = layout.resultPane else { return }
     let content = ResultPaneContent(result: result, changes: changes, headers: headers)
+    syntax.lexResult(result.rows)
+    showSyntax()
     resultPane.setContent(content.content, collapsedRuns: resultRuns)
     resultPane.expandedRuns = resultExpandedRuns
     resultOverviewBar?.marks = OverviewMarks.result(
@@ -276,14 +278,17 @@ final class SessionPresentation {
     decisionColumn?.decisions = content.decisions
   }
 
-  /// Gives each pane the tokens of its file as far as they are known, and takes away those that
-  /// are gone.
+  /// Gives each pane the tokens of its file or of the result as far as they are known, and takes
+  /// away those that are gone.
   private func showSyntax() {
     for (role, pane) in layout.sourcePanes {
       let tokens = syntax.tokens(of: role)
       if pane.syntaxProvider !== tokens {
         pane.syntaxProvider = tokens
       }
+    }
+    if let resultPane = layout.resultPane, resultPane.syntaxProvider !== syntax.resultTokens {
+      resultPane.syntaxProvider = syntax.resultTokens
     }
   }
 
@@ -297,15 +302,27 @@ final class SessionPresentation {
   ///
   /// With `anew`, the pane gets the whole content of `result`, whatever it shows now.
   ///
+  /// The tokens of the result follow `edits`, the edits that led to it, in the offsets of the
+  /// pane's text; without them, or with `anew`, the result is lexed anew in the background.
+  ///
   /// - Precondition: The window shows a merge, and the result pane shows the text of `result`
   ///   unless `anew` is set.
-  func show(_ result: ResultState, anew: Bool = false) {
+  func show(_ result: ResultState, after edits: [PaneEdit] = [], anew: Bool = false) {
     guard let resultPane = layout.resultPane else {
       preconditionFailure("Only a merge has a result")
     }
+    let previousRows = self.result?.rows
     self.result = result
     let content = ResultPaneContent(result: result, changes: changes, headers: headers)
-    if !anew && resultPane.content.lineEndings == content.content.lineEndings {
+    let keepsLines = !anew && resultPane.content.lineEndings == content.content.lineEndings
+    var lexedRows: Range<Int>?
+    if keepsLines, let previousRows {
+      lexedRows = syntax.resultDidChange(by: edits, from: previousRows, to: result.rows)
+    } else {
+      syntax.lexResult(result.rows)
+    }
+    showSyntax()
+    if keepsLines {
       resultPane.setBlocks(
         content.content.blocks, previews: content.content.previews,
         rowTints: content.content.rowTints)
@@ -320,6 +337,9 @@ final class SessionPresentation {
       resultPane.setContent(content.content, collapsedRuns: resultRuns)
     }
     resultPane.expandedRuns = resultExpandedRuns
+    if let lexedRows {
+      resultPane.syntaxDidChange(inRows: lexedRows)
+    }
     resultOverviewBar?.marks = OverviewMarks.result(
       of: changes, document: result.document, result: content.content)
     decisionColumn?.decisions = content.decisions

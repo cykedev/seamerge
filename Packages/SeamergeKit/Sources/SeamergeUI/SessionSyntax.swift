@@ -1,9 +1,11 @@
 import Foundation
 import MergeModel
+import PaneKit
 import SyntaxKit
 
 /// The tokens of the files of a window, lexed by the syntax of their language: each input once,
-/// in the background, so that the window shows its lines before they have colors.
+/// in the background, so that the window shows its lines before they have colors, and the result
+/// as it changes, from the changed lines on only as far as the change reaches.
 ///
 /// The window gives each pane the tokens of its file once they are known; the presentation learns
 /// of them through ``onLexed``.
@@ -19,6 +21,10 @@ final class SessionSyntax {
         source.lexing?.cancel()
       }
       sources.removeAll()
+      resultLexing?.cancel()
+      resultLexing = nil
+      resultTextToLex = nil
+      resultTokens = nil
       onLexed()
     }
   }
@@ -40,6 +46,16 @@ final class SessionSyntax {
     var lexing: Task<Void, Never>?
   }
 
+  /// The tokens of the rows of the result, or `nil` while none are known; while the result is
+  /// being lexed anew, those of its text before.
+  private(set) var resultTokens: SyntaxTokens?
+
+  /// The lexing of the whole result under way, or `nil` if there is none.
+  private var resultLexing: Task<Void, Never>?
+
+  /// The text of the result that changed while it was being lexed, to lex once that is over.
+  private var resultTextToLex: String?
+
   /// Colors the files of a window as `language`, or not at all.
   init(language: LanguageDescription?) {
     self.language = language
@@ -49,6 +65,7 @@ final class SessionSyntax {
     for source in sources.values {
       source.lexing?.cancel()
     }
+    resultLexing?.cancel()
   }
 
   /// The tokens of the input of `role`, or `nil` while none are known.
@@ -76,6 +93,113 @@ final class SessionSyntax {
         })
     }
   }
+
+  /// Lexes the whole result, whose pane shows `rows`, in the background; until then, the tokens
+  /// it had stay, so that its colors do not flicker.
+  ///
+  /// While a lexing of the result is under way, it lexes the latest text once it is over, so
+  /// that a burst of changes costs one more lexing rather than one each.
+  func lexResult(_ rows: ResultPaneContent.Rows) {
+    resultTextToLex = rows.text
+    if resultLexing == nil {
+      lexLatestResult()
+    }
+  }
+
+  /// Lexes the text of the result last asked for, unless there is none.
+  private func lexLatestResult() {
+    guard let language, let text = resultTextToLex else { return }
+    resultTextToLex = nil
+    resultLexing = Task { [weak self] in
+      let lexed = await Self.lex(text, as: language)
+      guard !Task.isCancelled, let self else { return }
+      self.resultLexing = nil
+      guard self.resultTextToLex == nil else {
+        self.lexLatestResult()
+        return
+      }
+      self.resultTokens = SyntaxTokens(lexed)
+      self.onLexed()
+    }
+  }
+
+  /// Lexes again the rows of the result that `edits` rewrote, which changed the rows of its
+  /// pane from `old` to `new`, and the rows after them as far as the change reaches.
+  ///
+  /// The edits follow each other, each in the text the ones before it left, in the offsets of
+  /// the pane's text. Typing usually costs one row.
+  ///
+  /// - Returns: The rows of `new` whose tokens changed, or `nil` if the tokens are lexed anew in
+  ///   the background, as while they are not known yet or if the edits do not lead from `old`
+  ///   to `new`.
+  func resultDidChange(
+    by edits: [PaneEdit], from old: ResultPaneContent.Rows, to new: ResultPaneContent.Rows
+  ) -> Range<Int>? {
+    guard language != nil else { return nil }
+    guard let tokens = resultTokens, resultLexing == nil,
+      let change = Self.rowChange(of: edits, from: old.starts), change.starts == new.starts
+    else {
+      lexResult(new)
+      return nil
+    }
+    let text = new.text.utf16
+    return tokens.lexed.replaceLines(in: change.oldRows, withLineCount: change.newRowCount) {
+      row in
+      let start = text.index(text.startIndex, offsetBy: new.starts[row])
+      let end = text.index(text.startIndex, offsetBy: new.starts[row + 1] - 1)
+      return Substring(text[start..<end])
+    }
+  }
+
+  /// The rows that `edits` rewrote as one stretch, in the rows before the edits, the number of
+  /// rows that took their place, and where the rows start after the edits, given where they
+  /// start before; `nil` if an edit lies beyond the text.
+  ///
+  /// The stretch reaches from the first row an edit touched to the last, so that edits apart
+  /// from each other, as of a command, take the rows between them along.
+  static func rowChange(
+    of edits: [PaneEdit], from starts: [Int]
+  ) -> (oldRows: Range<Int>, newRowCount: Int, starts: [Int])? {
+    var starts = starts
+    var stretch: (start: Int, oldEnd: Int, newEnd: Int)?
+    for edit in edits {
+      guard let last = starts.last, edit.range.upperBound < last else { return nil }
+      let first = row(containing: edit.range.lowerBound, in: starts)
+      let end = row(containing: edit.range.upperBound, in: starts) + 1
+      let breaks = edit.text.utf16.enumerated().filter { $0.element == Self.lineFeed }
+      let delta = edit.text.utf16.count - edit.range.count
+      starts =
+        Array(starts[...first]) + breaks.map { edit.range.lowerBound + $0.offset + 1 }
+        + starts[(end)...].map { $0 + delta }
+      let newEnd = first + breaks.count + 1
+      guard let previous = stretch else {
+        stretch = (first, end, newEnd)
+        continue
+      }
+      // Both stretches together, in the rows before this edit, then after it.
+      let union = max(previous.newEnd, end)
+      stretch = (
+        min(previous.start, first), previous.oldEnd + union - previous.newEnd,
+        union + newEnd - end
+      )
+    }
+    guard let stretch else { return nil }
+    return (stretch.start..<stretch.oldEnd, stretch.newEnd - stretch.start, starts)
+  }
+
+  /// The row whose text, its line feed included, holds `offset`, given where each row starts and,
+  /// last, the length of the text plus one.
+  private static func row(containing offset: Int, in starts: [Int]) -> Int {
+    var low = 0
+    var high = starts.count - 1
+    while high - low > 1 {
+      let middle = (low + high) / 2
+      if starts[middle] <= offset { low = middle } else { high = middle }
+    }
+    return low
+  }
+
+  private static let lineFeed = UInt16(UInt8(ascii: "\n"))
 
   /// The tokens of `text` in `language`, lexed away from the main actor.
   @concurrent

@@ -6,14 +6,15 @@ import Testing
 
 @testable import SeamergeUI
 
-/// Coloring the code by its syntax: the window shows its lines before they are lexed, and every
-/// pane above the result gets the tokens of its file in the background.
+/// Coloring the code by its syntax: the window shows its lines before they are lexed, every pane
+/// gets the tokens of its file in the background, and the tokens of the result follow typing and
+/// commands as a full lex of its text would have them.
 @MainActor
 @Suite(.timeLimit(.minutes(1))) struct SyntaxHighlightingTests {
   @Test func windowShowsItsLinesBeforeTheyAreLexed() async throws {
     let controller = try Windows.controller(for: try await SyntaxFixture.merge())
 
-    for (_, pane) in controller.layout.sourcePanes {
+    for pane in Windows.panes(of: controller) {
       #expect(!pane.content.text.isEmpty)
       #expect(pane.syntaxProvider == nil)
     }
@@ -27,9 +28,69 @@ import Testing
       let text = try #require(controller.presentation.changes.session.file(for: role)?.text)
       try SyntaxFixture.expectTokens(of: pane, asInLexOf: text, "\(role)")
     }
-    let base = try #require(controller.layout.sourcePane(.base))
-    let keyword = try #require(base.syntaxProvider).tokens(inLine: 0).first
+    let result = try controller.mergeResult
+    try SyntaxFixture.expectTokens(of: result, asInLexOf: result.content.text, "result")
+    let keyword = try #require(result.syntaxProvider).tokens(inLine: 0).first
     #expect(keyword == PaneToken(range: 0..<6, kind: .keyword))
+  }
+
+  @Test(arguments: Input.allCases)
+  func typingInTheResultLexesItAgainAtOnce(input: Input) async throws {
+    let controller = try Windows.controller(for: try await SyntaxFixture.merge())
+    await SyntaxFixture.lexing(of: controller)
+    let result = try controller.mergeResult
+    let tokens = try #require(result.syntaxProvider)
+
+    // An opening block comment at the start of the second line reaches to the end of the text.
+    try controller.type("/*", over: 18..<18, with: input)
+    #expect(result.syntaxProvider === tokens)
+    try SyntaxFixture.expectTokens(of: result, asInLexOf: result.content.text, "after /*")
+
+    try controller.type("*/\n", over: 21..<21, with: input)
+    #expect(result.syntaxProvider === tokens)
+    try SyntaxFixture.expectTokens(of: result, asInLexOf: result.content.text, "after */")
+  }
+
+  @Test func commandsAndUndoKeepTheTokensOfTheResult() async throws {
+    let undoManager = UndoManager()
+    let controller = try Windows.controller(
+      for: try await SyntaxFixture.merge(), undoManager: undoManager)
+    await SyntaxFixture.lexing(of: controller)
+    let result = try controller.mergeResult
+    let tokens = try #require(result.syntaxProvider)
+
+    controller.resolveAllWithA(nil)
+    #expect(result.syntaxProvider === tokens)
+    try SyntaxFixture.expectTokens(of: result, asInLexOf: result.content.text, "resolved")
+
+    undoManager.undo()
+    #expect(result.syntaxProvider === tokens)
+    try SyntaxFixture.expectTokens(of: result, asInLexOf: result.content.text, "undone")
+  }
+
+  @Test func rowsOfSeveralEditsAreThoseOfTheTextTheyLeave() throws {
+    let seed: UInt64 = 1913
+    var generator = SeededGenerator(seed: seed)
+    let pieces = ["", "x", "\n", "ab\n", "\n\n", "cd"]
+    for round in 0..<300 {
+      var text = (0..<6).map { _ in pieces.randomElement(using: &generator) ?? "" }.joined()
+      let before = ResultPaneContent.rows(of: text + "\n").starts
+      var edits: [PaneEdit] = []
+      for _ in 0..<Int.random(in: 1...4, using: &generator) {
+        let length = text.utf16.count
+        let lower = Int.random(in: 0...length, using: &generator)
+        let upper = Int.random(in: lower...min(length, lower + 4), using: &generator)
+        let inserted = pieces.randomElement(using: &generator) ?? ""
+        edits.append(PaneEdit(range: lower..<upper, text: inserted))
+        text.replaceUTF16Range(lower..<upper, with: inserted)
+      }
+      let change = try #require(SessionSyntax.rowChange(of: edits, from: before))
+      let after = ResultPaneContent.rows(of: text + "\n").starts
+      #expect(change.starts == after, "seed \(seed), round \(round)")
+      #expect(
+        before.count - 1 - change.oldRows.count + change.newRowCount == after.count - 1,
+        "seed \(seed), round \(round)")
+    }
   }
 
   @Test func fileOfAnUnknownLanguageHasNoTokens() async throws {
@@ -37,7 +98,7 @@ import Testing
       for: try await SyntaxFixture.merge(named: "notes.unknown"))
     await SyntaxFixture.lexing(of: controller)
 
-    for (_, pane) in controller.layout.sourcePanes {
+    for pane in Windows.panes(of: controller) {
       let provider = try #require(pane.syntaxProvider)
       for line in 0..<pane.content.lineNumbers.count {
         #expect(provider.tokens(inLine: line).isEmpty)
@@ -76,9 +137,9 @@ enum SyntaxFixture {
       options: ComparisonOptions(mode: .windowDefault))
   }
 
-  /// Returns once every pane above the result has its tokens.
+  /// Returns once every pane of the window has its tokens.
   static func lexing(of controller: SessionWindowController) async {
-    while controller.layout.sourcePanes.contains(where: { $0.pane.syntaxProvider == nil }) {
+    while Windows.panes(of: controller).contains(where: { $0.syntaxProvider == nil }) {
       await Task.yield()
     }
   }
