@@ -43,7 +43,9 @@ extension SessionCommand {
     case .toggleSourceA: return ("1", [.option, .command])
     case .toggleSourceBase: return ("2", [.option, .command])
     case .toggleSourceB: return ("3", [.option, .command])
-    case .resolveManually, .resolveAllWithA, .resolveAllWithB: return nil
+    case .resetChange: return (Self.backspace, [.option, .command])
+    case .resetAllDecisions: return (Self.backspace, [.shift, .option, .command])
+    case .resolveManually, .reopenAllConflicts, .resolveAllWithA, .resolveAllWithB: return nil
     }
   }
 
@@ -85,6 +87,7 @@ extension SessionCommand {
   static let downArrow = "\u{F701}"
   static let leftArrow = "\u{F702}"
   static let rightArrow = "\u{F703}"
+  static let backspace = "\u{8}"
   static let home = "\u{F729}"
   static let end = "\u{F72B}"
   static let tab = "\t"

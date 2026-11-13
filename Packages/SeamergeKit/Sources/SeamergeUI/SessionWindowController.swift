@@ -41,7 +41,7 @@ public final class SessionWindowController: NSWindowController {
   let workspace: any Workspace
 
   /// What the window asks or tells while it switches to another comparison.
-  let prompts: any ComparisonPrompts
+  let prompts: any SessionPrompts
 
   /// The undo manager of the window, which belongs to this session alone.
   let sessionUndoManager: UndoManager
@@ -105,7 +105,7 @@ public final class SessionWindowController: NSWindowController {
     self.init(
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
-      prompts: ComparisonSheets(), doneStyle: .standard, window: SessionWindow())
+      prompts: SessionSheets(), doneStyle: .standard, window: SessionWindow())
     observeDisplayOptions()
   }
 
@@ -124,7 +124,7 @@ public final class SessionWindowController: NSWindowController {
     self.init(
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
-      prompts: ComparisonSheets(), doneStyle: .standard, window: SessionWindow(),
+      prompts: SessionSheets(), doneStyle: .standard, window: SessionWindow(),
       unavailable: comparison)
     observeDisplayOptions()
   }
@@ -144,7 +144,7 @@ public final class SessionWindowController: NSWindowController {
   init(
     session: Session, context: SessionContext, undoManager: UndoManager,
     displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace,
-    prompts: any ComparisonPrompts, doneStyle: SessionToolbar.DoneStyle, window: SessionWindow,
+    prompts: any SessionPrompts, doneStyle: SessionToolbar.DoneStyle, window: SessionWindow,
     unavailable: UnavailableComparison? = nil,
     now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
   ) {
@@ -424,6 +424,12 @@ extension SessionWindowController: NSUserInterfaceValidations {
       decisionPlan(toggling: role).map { !$0.isEmpty } ?? false
     case .currentResultBlock:
       currentResultBlock != nil && layout.resultPane?.isShown == true
+    case .resettableBlock:
+      currentResultBlock.map { presentation.result?.document.canReset($0) ?? false } ?? false
+    case .resettableConflicts:
+      presentation.result?.document.canResetConflicts ?? false
+    case .resettableBlocks:
+      presentation.result?.document.canResetAll ?? false
     case .openConflicts:
       (presentation.result?.document.openConflictCount ?? 0) > 0
     case .nothing:
@@ -467,6 +473,11 @@ extension SessionWindowController: SessionPresentationDelegate {
     guard toggles.indices.contains(toggle), let role = toggles[toggle].roles.first else { return }
     presentation.setCurrentBlock(block)
     perform(.toggle(role))
+  }
+
+  func presentation(_ presentation: SessionPresentation, didAskToResetBlock block: Int) {
+    presentation.setCurrentBlock(block)
+    perform(.resetChange)
   }
 
   func presentation(

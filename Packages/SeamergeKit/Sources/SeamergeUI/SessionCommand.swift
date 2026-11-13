@@ -119,6 +119,16 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Turns the current block into text to edit by hand and puts the insertion point into it.
   case resolveManually
 
+  /// Returns the current block to how it was after loading.
+  case resetChange
+
+  /// Opens every conflict again and leaves the other blocks as they are.
+  case reopenAllConflicts
+
+  /// Returns every block to how it was after loading, after asking if text typed by hand would
+  /// be lost.
+  case resetAllDecisions
+
   /// Resolves every open conflict with A's text.
   case resolveAllWithA
 
@@ -198,6 +208,14 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .toggleSourceB: Role.b.letter
     case .resolveManually:
       String(localized: "Resolve Manually", bundle: .module, comment: "Merge menu command.")
+    case .resetChange:
+      String(localized: "Reset This Change", bundle: .module, comment: "Merge menu command.")
+    case .reopenAllConflicts:
+      String(localized: "Reopen All Conflicts", bundle: .module, comment: "Merge menu command.")
+    case .resetAllDecisions:
+      String(
+        localized: "Reset All Decisions…", bundle: .module,
+        comment: "Merge menu command; a sheet asks first if text typed by hand would be lost.")
     case .resolveAllWithA:
       String(
         localized: "Resolve All Open Conflicts with A", bundle: .module,
@@ -227,7 +245,7 @@ public enum SessionCommand: CaseIterable, Sendable {
   var undoName: String? {
     switch self {
     case .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone, .resolveManually,
-      .resolveAllWithA, .resolveAllWithB:
+      .resetChange, .reopenAllConflicts, .resolveAllWithA, .resolveAllWithB:
       title
     case .toggleSourceA:
       String(
@@ -241,6 +259,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Toggle B", bundle: .module,
         comment: "Undo menu: B was switched on or off for a block.")
+    case .resetAllDecisions:
+      String(
+        localized: "Reset All Decisions", bundle: .module,
+        comment: "Undo menu: every block was returned to how it was loaded.")
     default:
       nil
     }
@@ -402,6 +424,9 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .toggleSourceBase: #selector(SessionWindowController.toggleSourceBase(_:))
     case .toggleSourceB: #selector(SessionWindowController.toggleSourceB(_:))
     case .resolveManually: #selector(SessionWindowController.resolveManually(_:))
+    case .resetChange: #selector(SessionWindowController.resetChange(_:))
+    case .reopenAllConflicts: #selector(SessionWindowController.reopenAllConflicts(_:))
+    case .resetAllDecisions: #selector(SessionWindowController.resetAllDecisions(_:))
     case .resolveAllWithA: #selector(SessionWindowController.resolveAllWithA(_:))
     case .resolveAllWithB: #selector(SessionWindowController.resolveAllWithB(_:))
     }

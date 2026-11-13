@@ -470,6 +470,24 @@
     "Remove this file from the field": {
       "comment": "Help tag of the button that empties a field of Compare Files."
     },
+    "Reopen All Conflicts": {
+      "comment": "Merge menu command."
+    },
+    "Reset": {
+      "comment": "Resetting decisions: the button of the sheet before resetting every one, and the submenu of a context menu with the ways to reset."
+    },
+    "Reset All Decisions": {
+      "comment": "Undo menu: every block was returned to how it was loaded."
+    },
+    "Reset All Decisions…": {
+      "comment": "Merge menu command; a sheet asks first if text typed by hand would be lost."
+    },
+    "Reset Change": {
+      "comment": "Context menu: return the block to how it was loaded."
+    },
+    "Reset This Change": {
+      "comment": "Merge menu command."
+    },
     "Resolve All Open Conflicts with A": {
       "comment": "Merge menu command."
     },
@@ -591,6 +609,29 @@
     },
     "The window still shows the previous comparison.": {
       "comment": "Sheet after switching the comparison failed: what happens next."
+    },
+    "This discards handwritten text in %lld blocks.": {
+      "comment": "Sheet before resetting every decision, such as in 3 blocks.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "This discards handwritten text in %lld block."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "This discards handwritten text in %lld blocks."
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Toggle A": {
       "comment": "Undo menu: A was switched on or off for a block."

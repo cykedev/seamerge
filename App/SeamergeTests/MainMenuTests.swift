@@ -217,6 +217,10 @@ import Testing
         B ⌥⌘3
       Resolve Manually
       ---
+      Reset This Change ⌥⌘⌫
+      Reopen All Conflicts
+      Reset All Decisions… ⌥⇧⌘⌫
+      ---
       Resolve All Open Conflicts with A
       Resolve All Open Conflicts with B
     Window ▸

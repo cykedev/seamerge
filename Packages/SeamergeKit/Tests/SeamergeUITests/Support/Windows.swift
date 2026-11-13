@@ -93,16 +93,25 @@ final class WorkspaceRecorder: Workspace {
 
 /// Prompts that answer as told and record what the window asked.
 @MainActor
-final class PromptRecorder: ComparisonPrompts {
+final class PromptRecorder: SessionPrompts {
   /// Whether to switch when asked about discarded decisions.
   var switchesAnyway = false
 
+  /// Whether to reset when asked about discarded handwriting.
+  var resetsAnyway = false
+
   private(set) var discardedCounts: [Int] = []
+  private(set) var discardedHandwritingCounts: [Int] = []
   private(set) var failureCount = 0
 
   func confirmDiscarding(_ count: Int, in window: NSWindow) async -> Bool {
     discardedCounts.append(count)
     return switchesAnyway
+  }
+
+  func confirmResettingAll(discardingHandwritingIn count: Int, in window: NSWindow) async -> Bool {
+    discardedHandwritingCounts.append(count)
+    return resetsAnyway
   }
 
   func reportFailedComparison(in window: NSWindow) async {

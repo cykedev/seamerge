@@ -31,6 +31,10 @@ protocol SessionPresentationDelegate: AnyObject {
   func presentation(
     _ presentation: SessionPresentation, didAskToSwitchToggle toggle: Int, ofBlock block: Int)
 
+  /// Tells the delegate that the user asked to reset changed block `block` with the arrow in
+  /// the decision column.
+  func presentation(_ presentation: SessionPresentation, didAskToResetBlock block: Int)
+
   /// The context menu for a secondary click on `hit` in `pane`.
   func presentation(
     _ presentation: SessionPresentation, menuFor hit: PaneHit, in pane: PaneView

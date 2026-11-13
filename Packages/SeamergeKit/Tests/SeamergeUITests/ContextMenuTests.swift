@@ -39,6 +39,29 @@ import Testing
     #expect(decided.prefix(3) == ["A · a.txt", "Base", "B · b.txt ✓"])
   }
 
+  @Test func resetOffersItsReachesInASubmenuWhereMoreThanTheBlockCanBeReset() async throws {
+    let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
+    let result = try controller.mergeResult
+    let conflicts = controller.presentation.changes.blocks.indices.filter {
+      controller.presentation.changes.blocks[$0].kind == .conflict
+    }
+    controller.presentation.setCurrentBlock(conflicts[1])
+    controller.perform(.toggleSourceA)
+    controller.presentation.setCurrentBlock(conflicts[0])
+    controller.perform(.toggleSourceA)
+
+    let menu = try menu(of: result, inBlock: conflicts[0])
+    #expect(
+      entries(of: menu).contains(
+        "Reset ▸ Reset This Change, Reopen All Conflicts, Reset All Decisions…"))
+    let unchanged = entries(of: try self.menu(of: result, at: 0))
+    #expect(
+      unchanged == [
+        "Next Conflict", "Reopen All Conflicts", "Reset All Decisions…", "—", "Cut (disabled)",
+        "Copy (disabled)", "Paste", "Select All",
+      ])
+  }
+
   @Test func decisionOfAContextMenuActsOnTheBlockUnderThePointer() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
     let b = try #require(controller.layout.sourcePane(.b))

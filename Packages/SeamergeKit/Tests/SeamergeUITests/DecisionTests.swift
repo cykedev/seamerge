@@ -104,6 +104,7 @@ import Testing
     #expect(try controller.segmentTexts[3] == "B3\n")
     #expect(controller.presentation.currentBlock == 1)
     #expect(column.decisions[1]?.state == .chosen([.b]))
+    #expect(column.decisions[1]?.canReset == true)
     try controller.checkResultIsShownAsModelled()
   }
 

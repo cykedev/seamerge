@@ -4,7 +4,7 @@ import PaneKit
 
 extension SessionWindowController {
   /// The context menu for `hit` in `pane`, in up to three groups: deciding the block under the
-  /// pointer, jumping, and the text commands.
+  /// pointer, resetting and jumping, and the text commands.
   ///
   /// Each entry stands only where it has an effect, except that Cut, Copy and Paste stay and are
   /// disabled where they have none. The menu holds no key equivalents, and none of the text
@@ -24,7 +24,12 @@ extension SessionWindowController {
         groups.append(sourceDecisionItems(for: role))
       }
     }
-    groups.append(jumpItems(onChangedBlock: hit.block != nil))
+    // On a changed block, resetting it comes first; on unchanged text, the jump to the next
+    // conflict, as the most frequent.
+    let isOnBlock = hit.block != nil
+    let resets = resetItems(onChangedBlock: isOnBlock)
+    let jumps = jumpItems(onChangedBlock: isOnBlock)
+    groups.append(isOnBlock ? resets + jumps : jumps + resets)
     groups.append(textItems(for: hit, in: pane, isResult: isResult))
     for group in groups where !group.isEmpty {
       if !menu.items.isEmpty {
@@ -101,6 +106,41 @@ extension SessionWindowController {
       items.append(item(command.title, action: command.action, target: self))
     }
     return items
+  }
+
+  /// The commands that reset decisions, as far as each has an effect: on a changed block in a
+  /// submenu Reset, or as Reset Change alone if only the block can be reset; on unchanged text
+  /// the two that reset throughout the window.
+  private func resetItems(onChangedBlock: Bool) -> [NSMenuItem] {
+    let windowWide = [SessionCommand.reopenAllConflicts, .resetAllDecisions].filter(canPerform)
+    guard onChangedBlock else {
+      return windowWide.map { item($0.title, action: $0.action, target: self) }
+    }
+    let commands = [SessionCommand.resetChange].filter(canPerform) + windowWide
+    if commands == [.resetChange] {
+      return [
+        item(
+          String(
+            localized: "Reset Change", bundle: .module,
+            comment: "Context menu: return the block to how it was loaded."),
+          action: SessionCommand.resetChange.action, target: self)
+      ]
+    }
+    guard !commands.isEmpty else { return [] }
+    let submenu = NSMenu()
+    submenu.autoenablesItems = false
+    for command in commands {
+      submenu.addItem(item(command.title, action: command.action, target: self))
+    }
+    let reset = NSMenuItem(
+      title: String(
+        localized: "Reset", bundle: .module,
+        comment:
+          "Resetting decisions: the button of the sheet before resetting every one, and the submenu of a context menu with the ways to reset."
+      ),
+      action: nil, keyEquivalent: "")
+    reset.submenu = submenu
+    return [reset]
   }
 
   /// The jumps that have an effect from the block under the pointer, or from unchanged text.

@@ -55,6 +55,7 @@ extension SessionCommand {
           .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone, .toggleSourceA,
           .toggleSourceBase, .toggleSourceB, .resolveManually,
         ],
+        [.resetChange, .reopenAllConflicts, .resetAllDecisions],
         [.resolveAllWithA, .resolveAllWithB],
       ]
     }
@@ -65,9 +66,11 @@ extension SessionCommand {
   ///
   /// The main menu shows those deactivated; the options menu belongs to one window and leaves
   /// them out.
+  ///
+  /// A merge adds the commands that reset decisions throughout the window.
   static func optionsGroups(in kind: Session.Kind) -> [[SessionCommand]] {
-    (groups(in: .compare) + groups(in: .view)).map { $0.filter { $0.acts(in: kind) } }
-      .filter { !$0.isEmpty }
+    (groups(in: .compare) + groups(in: .view) + [[.reopenAllConflicts, .resetAllDecisions]])
+      .map { $0.filter { $0.acts(in: kind) } }.filter { !$0.isEmpty }
   }
 
   /// Whether the command can act in a window of `kind` at all: Swap Sides and Skip Remaining
@@ -77,7 +80,8 @@ extension SessionCommand {
     case .swapSides, .skipRemainingFiles: kind == .diff
     case .nextConflict, .previousConflict, .toggleBase, .toggleResultMaximized: kind == .merge
     case .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone, .toggleSourceA,
-      .toggleSourceBase, .toggleSourceB, .resolveManually, .resolveAllWithA, .resolveAllWithB:
+      .toggleSourceBase, .toggleSourceB, .resolveManually, .resetChange, .reopenAllConflicts,
+      .resetAllDecisions, .resolveAllWithA, .resolveAllWithB:
       kind == .merge
     default: true
     }

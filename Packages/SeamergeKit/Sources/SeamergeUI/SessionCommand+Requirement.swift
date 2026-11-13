@@ -57,6 +57,15 @@ extension SessionCommand {
     /// Resolving by hand needs a current block in a merge whose result is in view.
     case currentResultBlock
 
+    /// Resetting the current block needs one that differs from how it was loaded.
+    case resettableBlock
+
+    /// Reopening the conflicts needs a conflict that differs from how it was loaded.
+    case resettableConflicts
+
+    /// Resetting every block needs one that differs from how it was loaded.
+    case resettableBlocks
+
     /// Resolving the open conflicts needs one.
     case openConflicts
 
@@ -93,6 +102,9 @@ extension SessionCommand {
     case .toggleSourceBase: .toggle(.base)
     case .toggleSourceB: .toggle(.b)
     case .resolveManually: .currentResultBlock
+    case .resetChange: .resettableBlock
+    case .reopenAllConflicts: .resettableConflicts
+    case .resetAllDecisions: .resettableBlocks
     case .resolveAllWithA, .resolveAllWithB: .openConflicts
     }
   }

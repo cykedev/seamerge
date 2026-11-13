@@ -57,8 +57,10 @@ extension SessionPresentation: DecisionColumnDelegate {
     delegate?.presentation(self, didAskToSwitchToggle: toggle, ofBlock: block)
   }
 
-  /// No block offers to be reset, so the arrow beside the toggles never shows.
-  func decisionColumn(_ column: DecisionColumnView, didAskToResetBlock block: Int) {}
+  /// The arrow beside the toggles resets its block, as Reset This Change does.
+  func decisionColumn(_ column: DecisionColumnView, didAskToResetBlock block: Int) {
+    delegate?.presentation(self, didAskToResetBlock: block)
+  }
 
   /// A click beside a block makes it current, as a click on its rows does.
   func decisionColumn(_ column: DecisionColumnView, didClickBlock block: Int) {

@@ -45,7 +45,8 @@ struct ResultPaneContent {
           row: blockRows.lowerBound, in: rows)
       }
       decisions[changedIndex] = Self.decision(
-        for: segment, toggles: document.toggles(in: block), headers: headers)
+        for: segment, toggles: document.toggles(in: block), canReset: document.canReset(block),
+        headers: headers)
       changedIndex += 1
     }
     // Each line of a block with lines from several places in the tint of its own: gray where it
@@ -126,9 +127,10 @@ struct ResultPaneContent {
     return previews
   }
 
-  /// What the decision column shows for a block whose segment is `segment`.
+  /// What the decision column shows for a block whose segment is `segment`, with the arrow that
+  /// resets it if `canReset`.
   private static func decision(
-    for segment: Segment, toggles: [Toggle], headers: [Role: SideHeader]
+    for segment: Segment, toggles: [Toggle], canReset: Bool, headers: [Role: SideHeader]
   ) -> BlockDecision {
     let state: BlockDecision.State =
       switch segment.state {
@@ -148,7 +150,7 @@ struct ResultPaneContent {
           isDeletion: toggle.kind == .deletion,
           help: help(for: toggle, headers: headers))
       },
-      canReset: false)
+      canReset: canReset)
   }
 
   /// What switching `toggle` on does, with the real names of its inputs.

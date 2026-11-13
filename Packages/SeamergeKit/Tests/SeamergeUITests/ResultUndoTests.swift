@@ -6,7 +6,7 @@ import Testing
 @testable import SeamergeUI
 
 /// Undo and redo of the result: one step for each command and each run of typing, restoring
-/// text, segments and signs together.
+/// text, segments and signs together; and resetting in three reaches.
 @MainActor
 @Suite struct ResultUndoTests {
   /// What the window shows of its result, to compare before and after.
@@ -176,6 +176,105 @@ import Testing
     undoManager.undo()
     #expect(try Snapshot(controller) == before)
     #expect(!undoManager.canUndo)
+  }
+
+  @Test func resettingEverythingGivesTheWindowAsOpenedAndIsOneStep() async throws {
+    let session = try await EditingFixture.nineBlocks()
+    let prompts = PromptRecorder()
+    prompts.resetsAnyway = true
+    let controller = try Windows.controller(for: session, prompts: prompts)
+    let fresh = try Snapshot(try Windows.controller(for: session))
+    controller.presentation.setCurrentBlock(1)
+    controller.perform(.useA)
+    controller.endEvent()
+    controller.presentation.setCurrentBlock(0)
+    controller.perform(.useB)
+    controller.endEvent()
+    let decided = try Snapshot(controller)
+
+    // Without text typed by hand, nothing asks.
+    await controller.resetEveryDecision()
+    controller.endEvent()
+    #expect(prompts.discardedHandwritingCounts.isEmpty)
+    #expect(try Snapshot(controller) == fresh)
+    #expect(!controller.canPerform(.resetAllDecisions))
+    let fresher = try Windows.controller(for: session)
+    #expect(
+      try controller.mergeResult.content.blocks == fresher.mergeResult.content.blocks)
+    #expect(
+      try controller.presentation.mergeResultOverviewBar.marks
+        == fresher.presentation.mergeResultOverviewBar.marks)
+    #expect(
+      controller.presentation.sourcesOverviewBar.marks
+        == fresher.presentation.sourcesOverviewBar.marks)
+
+    controller.sessionUndoManager.undo()
+    #expect(try Snapshot(controller) == decided)
+  }
+
+  @Test func resettingEverythingAsksOnlyWhenHandwritingWouldBeLost() async throws {
+    let prompts = PromptRecorder()
+    let controller = try Windows.controller(
+      for: try await EditingFixture.nineBlocks(), prompts: prompts)
+    try controller.type("x", over: 4..<4, with: .insertText)
+    try controller.type("y", over: 16..<16, with: .insertText)
+    controller.endEvent()
+    let typed = try Snapshot(controller)
+
+    await controller.resetEveryDecision()
+    #expect(prompts.discardedHandwritingCounts == [2])
+    #expect(try Snapshot(controller) == typed)
+
+    prompts.resetsAnyway = true
+    await controller.resetEveryDecision()
+    #expect(try controller.presentation.mergeResult.text == EditingFixture.loadedText)
+  }
+
+  @Test func reopeningTheConflictsLeavesTheOtherBlocks() async throws {
+    let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
+    controller.perform(.resolveAllWithA)
+    controller.presentation.setCurrentBlock(0)
+    controller.perform(.useB)
+    #expect(controller.canPerform(.reopenAllConflicts))
+
+    controller.perform(.reopenAllConflicts)
+
+    let states = try controller.segmentStates
+    #expect(states[3] == .open && states[7] == .open)
+    #expect(states[1] == .chosen)
+    #expect(!controller.canPerform(.reopenAllConflicts))
+    try controller.checkResultIsShownAsModelled()
+  }
+
+  @Test func resettingTheBlockWithItsArrowReturnsItAsLoaded() async throws {
+    let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
+    let column = try controller.presentation.mergeDecisionColumn
+    try controller.type("typed", over: 4..<4, with: .insertText)
+    #expect(controller.canPerform(.resetChange))
+
+    controller.presentation.decisionColumn(column, didAskToResetBlock: 0)
+
+    #expect(try controller.segmentTexts[1] == "A1\n")
+    #expect(try controller.segmentStates[1] == .auto)
+    #expect(!controller.canPerform(.resetChange))
+    #expect(column.decisions[0]?.canReset == false)
+    try controller.checkResultIsShownAsModelled()
+  }
+
+  @Test func commandsToResetAreValidOnlyWhenThereIsSomethingToReset() async throws {
+    let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
+    controller.presentation.setCurrentBlock(0)
+    #expect(!controller.canPerform(.resetChange))
+    #expect(!controller.canPerform(.reopenAllConflicts))
+    #expect(!controller.canPerform(.resetAllDecisions))
+
+    controller.perform(.useB)
+    #expect(controller.canPerform(.resetChange))
+    #expect(!controller.canPerform(.reopenAllConflicts))
+    #expect(controller.canPerform(.resetAllDecisions))
+    controller.presentation.setCurrentBlock(1)
+    controller.perform(.useA)
+    #expect(controller.canPerform(.reopenAllConflicts))
   }
 
   /// The controller of a laid-out window for `session` that takes the time from `now`.
