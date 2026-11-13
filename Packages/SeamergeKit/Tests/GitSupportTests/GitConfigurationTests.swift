@@ -12,7 +12,7 @@ struct GitConfigurationTests {
     #expect(
       commands == [
         "git config --global merge.tool seamerge",
-        #"git config --global mergetool.seamerge.cmd '\#(path) merge --base "$BASE" "#
+        #"git config --global mergetool.seamerge.cmd '\#(path) merge --from-git --base "$BASE" "#
           + #"--local "$LOCAL" --remote "$REMOTE" --output "$MERGED"'"#,
         "git config --global mergetool.seamerge.trustExitCode true",
         "git config --global mergetool.prompt false",
@@ -119,8 +119,8 @@ struct GitConfigurationTests {
       _ = try git.run(["mergetool"], in: repository)
 
       let arguments = try recordedArguments(of: helper)
-      #expect(arguments.count == 9)
-      #expect(arguments.first == "merge")
+      #expect(arguments.count == 10)
+      #expect(arguments.prefix(2) == ["merge", "--from-git"])
       #expect(arguments.last == "notes.txt")
       // In a rebase, REMOTE is the user's own commit.
       let remote = try String(contentsOf: helper.appendingPathExtension("remote"), encoding: .utf8)
@@ -194,7 +194,7 @@ struct GitConfigurationTests {
       script: """
         printf '%s\\n' "$@" > "$0.arguments"
         printf '%s\\n' "$1" >> "$0.calls"
-        if [ "$1" = merge ]; then cp "$7" "$0.remote"; fi
+        if [ "$1" = merge ]; then cp "$8" "$0.remote"; fi
         exit \(exitStatus)
         """)
   }

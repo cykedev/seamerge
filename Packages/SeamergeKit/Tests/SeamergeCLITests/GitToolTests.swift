@@ -29,6 +29,7 @@ struct GitToolTests {
       let merge = try #require(try await app.nextRequest().merge)
       #expect(merge.output.path(percentEncoded: false) == merged.path(percentEncoded: false))
       #expect(merge.base != nil)
+      #expect(merge.isRunByGit)
       #expect(merge.context.operation == .merge)
       #expect(merge.context.remote.name == .reference("feature"))
       #expect(merge.context.remote.role == .incoming)

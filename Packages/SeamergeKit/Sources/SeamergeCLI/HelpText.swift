@@ -4,7 +4,7 @@ enum HelpText {
     Usage:
       seamerge merge [--base <file>] --local <file> --remote <file> --output <file>
                      [--label-base <name>] [--label-local <name>]
-                     [--label-remote <name>]
+                     [--label-remote <name>] [--from-git]
       seamerge diff [--path <path>] [--label-left <name>] [--label-right <name>]
                     [--] <old> <new>
       seamerge [--] <old> <new>
@@ -20,6 +20,7 @@ enum HelpText {
       --label-base <name>    Name shown above the base
       --label-local <name>   Name shown above LOCAL
       --label-remote <name>  Name shown above REMOTE
+      --from-git             Git runs the command and waits for it
 
     Diff options:
       --path <path>          Path shown for both files

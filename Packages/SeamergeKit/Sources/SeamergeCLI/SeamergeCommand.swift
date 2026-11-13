@@ -102,7 +102,8 @@ public struct SeamergeCommand: Sendable {
     if let label = arguments.localLabel { context.local.name = .reference(label) }
     if let label = arguments.baseLabel { context.base.name = .reference(label) }
     return SessionRequest.Merge(
-      base: base, local: local, remote: remote, output: output, context: context)
+      base: base, local: local, remote: remote, output: output, context: context,
+      isRunByGit: arguments.isFromGit)
   }
 
   private static func request(

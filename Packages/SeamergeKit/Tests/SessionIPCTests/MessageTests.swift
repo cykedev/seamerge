@@ -149,6 +149,19 @@ struct MessageTests {
     #expect(throws: DecodingError.self) { try decode(SessionRequest.self, from: json) }
   }
 
+  @Test func mergeThatGitRunsSaysSoAndAnyOtherSaysNothing() throws {
+    let url = { (path: String) in URL(filePath: path) }
+    let byHand = SessionRequest.Merge(
+      base: nil, local: url("/l"), remote: url("/r"), output: url("/o"))
+    var fromGit = byHand
+    fromGit.isRunByGit = true
+
+    #expect(try !json(byHand).contains("runByGit"))
+    #expect(try json(fromGit).contains(#""runByGit":true"#))
+    #expect(try roundTrip(fromGit).isRunByGit)
+    #expect(try !roundTrip(byHand).isRunByGit)
+  }
+
   private func roundTrip<Message: Codable>(_ message: Message) throws -> Message {
     try JSONDecoder().decode(Message.self, from: JSONEncoder().encode(message))
   }

@@ -32,13 +32,14 @@ public struct GitConfiguration: Sendable {
 
   /// Creates the configuration for the helper at `helper`.
   ///
-  /// The commands Git runs pass the files as `git mergetool` and `git difftool` name them. Git
-  /// runs them through the shell, so the path of the helper is quoted where it needs to be.
+  /// The commands Git runs pass the files as `git mergetool` and `git difftool` name them, and
+  /// the merge says with `--from-git` that Git runs it and waits. Git runs them through the
+  /// shell, so the path of the helper is quoted where it needs to be.
   public init(helper: URL) {
     let helperCommand = Self.shellQuoted(helper.path)
     let mergeCommand =
-      #"\#(helperCommand) merge --base "$BASE" --local "$LOCAL" --remote "$REMOTE" "#
-      + #"--output "$MERGED""#
+      #"\#(helperCommand) merge --from-git --base "$BASE" --local "$LOCAL" "#
+      + #"--remote "$REMOTE" --output "$MERGED""#
     // Git passes a file of the working tree by its relative path, which may start with a dash,
     // so `--` ends the options before the files. In the merge, every file follows an option.
     let diffCommand = #"\#(helperCommand) diff --path "$MERGED" -- "$LOCAL" "$REMOTE""#

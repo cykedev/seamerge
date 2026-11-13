@@ -23,9 +23,12 @@ enum Invocation {
     let isMerge = arguments.first == "merge"
     let scanned =
       switch arguments.first {
-      case "merge": Self.scan(arguments.dropFirst(), options: Option.merge, filesFollow: false)
-      case "diff": Self.scan(arguments.dropFirst(), options: Option.diff, filesFollow: true)
-      default: Self.scan(arguments[...], options: Option.diff, filesFollow: true)
+      case "merge":
+        Self.scan(
+          arguments.dropFirst(), options: Option.merge, flags: Flag.merge, filesFollow: false)
+      case "diff":
+        Self.scan(arguments.dropFirst(), options: Option.diff, flags: [], filesFollow: true)
+      default: Self.scan(arguments[...], options: Option.diff, flags: [], filesFollow: true)
       }
     if scanned.asksForHelp {
       self = .help
@@ -40,14 +43,15 @@ enum Invocation {
     }
   }
 
-  /// Splits arguments into the values of `options` and the remaining operands.
+  /// Splits arguments into the values of `options`, the `flags` given and the remaining
+  /// operands.
   ///
   /// The scan goes on after a wrong argument, so that `--help` further on still counts.
   ///
   /// - Parameter filesFollow: Whether files follow the options, so that a file whose name starts
   ///   with a dash may be taken for an unknown option.
   private static func scan(
-    _ arguments: ArraySlice<String>, options: [Option], filesFollow: Bool
+    _ arguments: ArraySlice<String>, options: [Option], flags: [Flag], filesFollow: Bool
   ) -> ScannedArguments {
     var scanned = ScannedArguments()
     var remaining = arguments.makeIterator()
@@ -61,6 +65,8 @@ enum Invocation {
         scanned.asksForHelp = true
       } else if argument == "--version" {
         scanned.asksForVersion = true
+      } else if let flag = flags.first(where: { $0.rawValue == argument }) {
+        if !scanned.flags.insert(flag).inserted { scanned.record(.repeatedOption(argument)) }
       } else if let option = options.first(where: { $0.rawValue == argument }) {
         if let value = remaining.next() {
           if scanned.values[option] != nil { scanned.record(.repeatedOption(argument)) }
@@ -98,10 +104,21 @@ enum Option: String {
   static let diff: [Option] = [.path, .leftLabel, .rightLabel]
 }
 
+/// An option that takes no value.
+enum Flag: String {
+  case fromGit = "--from-git"
+
+  /// The flags of `seamerge merge`.
+  static let merge: [Flag] = [.fromGit]
+}
+
 /// The arguments of one form of the command, split into option values and operands.
 struct ScannedArguments {
   /// The value of each option that was given.
   var values: [Option: String] = [:]
+
+  /// The flags that were given.
+  var flags: Set<Flag> = []
 
   /// The arguments that are not options or their values, in their order.
   var operands: [String] = []
@@ -152,8 +169,12 @@ struct MergeArguments {
   /// The name for `REMOTE` given on the command line.
   var remoteLabel: String?
 
+  /// Whether Git runs the command and waits for it.
+  var isFromGit: Bool
+
   fileprivate init(_ scanned: ScannedArguments) throws(CommandError) {
     if let operand = scanned.operands.first { throw .unexpectedArgument(operand) }
+    isFromGit = scanned.flags.contains(.fromGit)
     base = scanned.values[.base]
     local = try scanned.requiredValue(of: .local)
     remote = try scanned.requiredValue(of: .remote)

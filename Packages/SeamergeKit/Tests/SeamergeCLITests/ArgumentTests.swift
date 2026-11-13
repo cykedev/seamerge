@@ -17,7 +17,7 @@ struct ArgumentTests {
       #expect(result.output.hasPrefix("Usage:\n  seamerge merge "))
       for option in [
         "--base", "--local", "--remote", "--output", "--label-base", "--label-local",
-        "--label-remote", "--path", "--label-left", "--label-right", "--version",
+        "--label-remote", "--from-git", "--path", "--label-left", "--label-right", "--version",
       ] {
         #expect(result.output.contains(option), "\(option) is not in the help")
       }
@@ -241,6 +241,25 @@ struct ArgumentTests {
       ])
       #expect(result.exitStatus == 2)
       #expect(result.errorOutput.hasSuffix("/home' is a folder. Name a file instead.\n"))
+    }
+  }
+
+  @Test func onlyAMergeWithFromGitSaysThatGitWaits() async throws {
+    try await withSandbox { sandbox in
+      var app = try ScriptedApp(at: sandbox.socketURL, ending: .close(.saved))
+      try sandbox.makeFile("a.txt")
+      let files = ["--local", "a.txt", "--remote", "a.txt", "--output", "a.txt"]
+
+      #expect(await sandbox.run(["merge"] + files).exitStatus == 0)
+      #expect(try await app.nextRequest().merge?.isRunByGit == false)
+      #expect(await sandbox.run(["merge", "--from-git"] + files).exitStatus == 0)
+      #expect(try await app.nextRequest().merge?.isRunByGit == true)
+      await app.stop()
+
+      let twice = await sandbox.run(["merge", "--from-git", "--from-git"] + files)
+      #expect(
+        twice == CommandResult(exitStatus: 2, errorOutput: "seamerge: Give --from-git only once.\n")
+      )
     }
   }
 

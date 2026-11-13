@@ -31,15 +31,23 @@ public enum SessionRequest: Sendable, Hashable {
     /// Names given on the command line are already in it: they win over everything Git says.
     public var context: MergeContext
 
+    /// Whether Git runs the command that asks for the merge and waits for its end, as
+    /// `git mergetool` does, which the command line says with `--from-git`.
+    ///
+    /// The files lying in a repository does not make a merge one that Git waits for.
+    public var isRunByGit: Bool
+
     /// Creates the description of a merge.
     public init(
-      base: URL?, local: URL, remote: URL, output: URL, context: MergeContext = MergeContext()
+      base: URL?, local: URL, remote: URL, output: URL, context: MergeContext = MergeContext(),
+      isRunByGit: Bool = false
     ) {
       self.base = base
       self.local = local
       self.remote = remote
       self.output = output
       self.context = context
+      self.isRunByGit = isRunByGit
     }
   }
 
@@ -120,10 +128,11 @@ extension SessionRequest: Codable {
 
 extension SessionRequest.Merge: Codable {
   private enum CodingKeys: String, CodingKey {
-    case base, local, remote, output, context
+    case base, local, remote, output, context, runByGit
   }
 
-  /// Decodes the files of a merge.
+  /// Decodes the files of a merge; a request without `runByGit` comes from a merge that Git does
+  /// not wait for.
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     base = try container.decodeFileURLIfPresent(forKey: .base)
@@ -131,9 +140,10 @@ extension SessionRequest.Merge: Codable {
     remote = try container.decodeFileURL(forKey: .remote)
     output = try container.decodeFileURL(forKey: .output)
     context = try container.decode(SessionRequest.MergeContext.self, forKey: .context)
+    isRunByGit = try container.decodeIfPresent(Bool.self, forKey: .runByGit) ?? false
   }
 
-  /// Encodes the files of a merge as absolute paths.
+  /// Encodes the files of a merge as absolute paths; `runByGit` only where Git waits.
   public func encode(to encoder: any Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
     try container.encodeFileURLIfPresent(base, forKey: .base)
@@ -141,6 +151,9 @@ extension SessionRequest.Merge: Codable {
     try container.encodeFileURL(remote, forKey: .remote)
     try container.encodeFileURL(output, forKey: .output)
     try container.encode(context, forKey: .context)
+    if isRunByGit {
+      try container.encode(true, forKey: .runByGit)
+    }
   }
 }
 
