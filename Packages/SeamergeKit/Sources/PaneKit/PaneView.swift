@@ -241,7 +241,7 @@ public final class PaneView: NSView {
     scrollView.reflectScrolledClipView(clipView)
   }
 
-  let textView = PaneTextView(usingTextLayoutManager: true)
+  let textView = PaneTextView()
   let gutterView = GutterView()
   let runBarLayer = CollapsedRunBarLayer()
   private let scrollView = PaneScrollView()

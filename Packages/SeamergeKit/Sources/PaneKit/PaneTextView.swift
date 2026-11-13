@@ -12,7 +12,12 @@ final class PaneTextView: NSTextView {
   private(set) var content = PaneContent.empty
   private(set) var currentBlock: Int?
   var grid = RowGrid(text: "", tabWidth: 1)
-  private(set) var displayRows = DisplayRows(runs: [], rowCount: 1)
+  private(set) var displayRows = DisplayRows(runs: [], rowCount: 1) {
+    didSet { contentStorage.hiddenRanges = hiddenRanges }
+  }
+
+  /// The content storage, which the text view holds only weakly.
+  let contentStorage = PaneContentStorage()
 
   /// Learns about clicks on rows and supplies the context menu.
   weak var interaction: (any RowInteraction)?
@@ -67,6 +72,19 @@ final class PaneTextView: NSTextView {
 
   /// The rows of each preview with its side, or `nil` until they are asked for after a change.
   var cachedPreviewRows: [(rows: Range<Int>, role: ColorRole)]?
+
+  /// Creates an empty text view on TextKit 2.
+  init() {
+    let textLayoutManager = NSTextLayoutManager()
+    contentStorage.addTextLayoutManager(textLayoutManager)
+    let textContainer = NSTextContainer()
+    textLayoutManager.textContainer = textContainer
+    super.init(frame: .zero, textContainer: textContainer)
+  }
+
+  required init?(coder: NSCoder) {
+    nil
+  }
 
   /// Sets up the view as a pane; called once, before any content is shown.
   func configure(theme: Theme) {
@@ -253,6 +271,17 @@ final class PaneTextView: NSTextView {
     // A fragment that keeps its frame, such as the first of a run that started at the top,
     // would keep drawing as it did behind the bar.
     setNeedsDisplayOfFragments(in: bounds)
+  }
+
+  /// The text of the rows that the collapsed runs hide behind their first rows.
+  private var hiddenRanges: [Range<Int>] {
+    displayRows.runs.compactMap { run in
+      guard run.rows.count > 1 else { return nil }
+      let end =
+        run.rows.upperBound < grid.rowCount
+        ? grid.offsets(ofRow: run.rows.upperBound).lowerBound : grid.textLength
+      return grid.offsets(ofRow: run.rows.lowerBound + 1).lowerBound..<end
+    }
   }
 
   /// Marks the block at `block` as the current one, or none.
@@ -621,23 +650,5 @@ extension PaneTextView: RowPainter {
         ? RowLayoutFragment.Invisibles(
           lineEndings: Array(content.lineEndings[rows]),
           color: theme.invisibleCharacterColor, baseline: theme.baseline) : nil)
-  }
-}
-
-extension Array {
-  /// The index of the first element for which `belongs` holds, in an array where it holds for
-  /// a suffix of the elements, or `endIndex` if it holds for none.
-  fileprivate func partitioningIndex(where belongs: (Element) -> Bool) -> Int {
-    var low = startIndex
-    var high = endIndex
-    while low < high {
-      let middle = (low + high) / 2
-      if belongs(self[middle]) {
-        high = middle
-      } else {
-        low = middle + 1
-      }
-    }
-    return low
   }
 }
