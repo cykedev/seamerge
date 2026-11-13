@@ -15,48 +15,84 @@ struct ResultPaneContent {
   /// What the decision column shows, by the index of the block among the changed blocks.
   let decisions: [Int: BlockDecision]
 
-  /// Lays out `text`, the text of `document`, with the changed blocks of the merge.
+  /// Lays out the text of `result` with the changed blocks of the merge.
   ///
   /// - Parameter headers: The headers of the inputs, whose names the help tags of the toggles use.
-  /// - Precondition: `text` is as long as the segments of `document` together.
-  init(
-    document: ResultDocument, text: String, changes: SessionChanges, headers: [Role: SideHeader]
-  ) {
-    let rows = Self.rows(of: text)
+  init(result: ResultState, changes: SessionChanges, headers: [Role: SideHeader]) {
+    let document = result.document
+    let text = result.text
+    let rows = result.rows
     var blocks: [PaneBlock] = []
     var previews: [PanePreview] = []
     var decisions: [Int: BlockDecision] = [:]
     blocks.reserveCapacity(changes.blocks.count)
     var segmentStart = 0
     var changedIndex = 0
+    // Where the segments of unchanged blocks lie in the text, which show no tint unless typed in.
+    var unchangedSegments: [Range<Int>] = []
     for (block, segment) in zip(document.session.blocks, document.segments) {
       defer { segmentStart += segment.length }
       guard changedIndex < changes.blocks.count, changes.blocks[changedIndex] == block else {
+        unchangedSegments.append(segmentStart..<segmentStart + segment.length)
         continue
       }
       let blockRows = rows.rows(ofUTF16: segmentStart..<segmentStart + segment.length)
-      blocks.append(PaneBlock(rows: blockRows, style: Self.style(of: segment)))
+      blocks.append(PaneBlock(rows: blockRows, style: Self.rowStyle(of: segment)))
       if segment.state == .open {
-        previews += Self.previews(of: block, startingAt: blockRows.lowerBound, in: rows)
+        previews += Self.previews(
+          of: block, in: document,
+          startingAt: result.resultText.paneOffset(ofFileOffset: segmentStart),
+          row: blockRows.lowerBound, in: rows)
       }
       decisions[changedIndex] = Self.decision(
         for: segment, toggles: document.toggles(in: block), headers: headers)
       changedIndex += 1
     }
+    // Each line of a block with lines from several places in the tint of its own: gray where it
+    // was typed by hand, and otherwise the tint its source has in the block without the typing,
+    // which in an unchanged block is none.
+    var rowTints: [Int: BlockStyle] = [:]
+    var unchanged = unchangedSegments.makeIterator()
+    var nextUnchanged = unchanged.next()
+    for origin in document.lineOrigins(of: text) {
+      while let segment = nextUnchanged, segment.upperBound <= origin.range.lowerBound {
+        nextUnchanged = unchanged.next()
+      }
+      let isInUnchangedBlock = nextUnchanged?.contains(origin.range.lowerBound) == true
+      guard origin.roles.isEmpty || !isInUnchangedBlock else { continue }
+      let tint = origin.roles.isEmpty ? BlockStyle.handwritten : Self.style(ofSources: origin.roles)
+      for row in rows.rows(ofUTF16: origin.range) {
+        rowTints[row] = tint
+      }
+    }
     content = PaneContent(
       text: rows.text, lineNumbers: rows.lineEndings.indices.map(Int32.init),
-      blocks: blocks, lineEndings: rows.lineEndings, previews: previews)
+      blocks: blocks, lineEndings: rows.lineEndings, previews: previews, rowTints: rowTints)
     self.decisions = decisions
   }
 
-  /// How the rows of a segment are tinted: in the color of the source of its text.
+  /// The style of a segment as its mark in the overview bar shows it: in the color of the
+  /// source of its text, red while open, and gray once edited by hand.
   static func style(of segment: Segment) -> BlockStyle {
     switch segment.state {
-    case .open: return .tinted(.conflict)
-    case .edited: return .handwritten
-    case .untouched, .auto, .chosen: break
+    case .open: .tinted(.conflict)
+    case .edited: .handwritten
+    case .untouched, .auto, .chosen: style(ofSources: segment.sources)
     }
-    let sources = Set(segment.sources)
+  }
+
+  /// How the rows of `segment` are tinted: in the color of the source of its text, red while
+  /// open.
+  ///
+  /// An edited segment keeps the color of its sources; its lines that come from several places
+  /// take the tints of their own (``ResultDocument/lineOrigins(of:)``).
+  private static func rowStyle(of segment: Segment) -> BlockStyle {
+    segment.state == .edited ? style(ofSources: segment.sources) : style(of: segment)
+  }
+
+  /// The tint of text taken from `sources`.
+  static func style(ofSources sources: [Role]) -> BlockStyle {
+    let sources = Set(sources)
     if sources.isSuperset(of: [.a, .b]) { return .combined }
     if sources.contains(.a) { return .tinted(.a) }
     if sources.contains(.b) { return .tinted(.b) }
@@ -64,19 +100,24 @@ struct ResultPaneContent {
     return .unchanged
   }
 
-  /// The previews of an open conflict that starts at `row`: first A's lines, then B's.
+  /// The previews of an open conflict of `document` that starts at `offset` of the pane's text,
+  /// in `row`: first A's lines, then B's, each side's removal note in place of lines it removed.
+  ///
+  /// Where typing removed the line break before the conflict, its preview starts within the row.
   private static func previews(
-    of block: Block, startingAt row: Int, in rows: Rows
+    of block: Block, in document: ResultDocument, startingAt offset: Int, row: Int, in rows: Rows
   ) -> [PanePreview] {
     var previews: [PanePreview] = []
     var start = row
+    var lower = offset
     for (role, color) in [(Role.a, ColorRole.a), (.b, .b)] {
-      let end = start + block.lines(in: role).count
+      let end = start + document.previewLineCount(of: role, in: block)
       // At the end of the text, the last line of the preview has no line feed in the rows, and
       // a preview of one empty line there has no text at all.
       let length = rows.starts[rows.starts.count - 1] - 1
       let upper = min(rows.starts[end], length)
-      let range = min(rows.starts[start], upper)..<upper
+      let range = min(max(rows.starts[start], lower), upper)..<upper
+      lower = upper
       if !range.isEmpty {
         previews.append(PanePreview(range: range, role: color))
       }
@@ -107,7 +148,7 @@ struct ResultPaneContent {
           isDeletion: toggle.kind == .deletion,
           help: help(for: toggle, headers: headers))
       },
-      canReset: segment.state == .chosen || segment.state == .edited)
+      canReset: false)
   }
 
   /// What switching `toggle` on does, with the real names of its inputs.
@@ -162,6 +203,18 @@ struct ResultPaneContent {
       return first..<row(containing: range.upperBound - 1) + 1
     }
 
+    /// The row in which `offset` of ``text`` lies; the end of the text lies in the last row.
+    func row(ofPaneOffset offset: Int) -> Int {
+      var low = 0
+      var high = starts.count - 1
+      // The last start that is at or before the offset.
+      while high - low > 1 {
+        let middle = (low + high) / 2
+        if starts[middle] <= offset { low = middle } else { high = middle }
+      }
+      return low
+    }
+
     /// The row whose line, its break included, holds offset `offset` of the result text, or the
     /// number of rows for an offset after the last line break that ends the text.
     private func row(containing offset: Int) -> Int {
@@ -187,51 +240,69 @@ struct ResultPaneContent {
   ///
   /// A text that ends with a line break has no row after it; a text without any has one row.
   static func rows(of text: String) -> Rows {
-    var units: [UInt16] = []
-    units.reserveCapacity(text.utf16.count)
     var starts = [0]
     var lineEndings: [LineEnding] = []
     var breakOffsets: [Int] = []
-    let source = Array(text.utf16)
+    // UTF-16 offsets into the text, and into the pane's text, which has one unit for CRLF.
+    var offset = 0
+    var paneOffset = 0
+    var hasOtherBreaks = false
+    var utf8 = Array(text.utf8)
+    utf8.append(0)
     var index = 0
-    while index < source.count {
-      let unit = source[index]
-      let ending: LineEnding?
-      switch unit {
-      case Self.carriageReturn where index + 1 < source.count && source[index + 1] == Self.lineFeed:
+    while index < utf8.count - 1 {
+      let byte = utf8[index]
+      var ending: LineEnding?
+      var length = 1
+      var units = 1
+      switch byte {
+      case 0x0A: ending = .lineFeed
+      case 0x0D where utf8[index + 1] == 0x0A:
         ending = .carriageReturnLineFeed
-      case Self.carriageReturn: ending = .carriageReturn
-      case Self.lineFeed, 0x85, 0x2028, 0x2029: ending = .lineFeed
-      default: ending = nil
+        length = 2
+        units = 2
+      case 0x0D: ending = .carriageReturn
+      case 0xC2 where utf8[index + 1] == 0x85:
+        ending = .lineFeed
+        length = 2
+      case 0xE2
+      where utf8[index + 1] == 0x80 && (utf8[index + 2] == 0xA8 || utf8[index + 2] == 0xA9):
+        ending = .lineFeed
+        length = 3
+      case 0x80..<0xC0: units = 0
+      case 0xF0...: units = 2
+      default: break
       }
+      index += length
       guard let ending else {
-        units.append(unit)
-        index += 1
+        offset += units
+        paneOffset += units
         continue
       }
+      hasOtherBreaks = hasOtherBreaks || byte != 0x0A
       // The last unit of the break, so that a part of the text ending with the break ends in
       // its row.
-      let breakEnd = ending == .carriageReturnLineFeed ? index + 1 : index
-      breakOffsets.append(breakEnd)
+      breakOffsets.append(offset + units - 1)
       lineEndings.append(ending)
-      units.append(Self.lineFeed)
-      starts.append(units.count)
-      index = breakEnd + 1
+      offset += units
+      paneOffset += 1
+      starts.append(paneOffset)
     }
-    if units.last == Self.lineFeed {
-      // The text ends with a line break; like the panes of the inputs, the result shows no
-      // empty row after it.
-      units.removeLast()
-    } else {
+    let endsWithBreak = starts.count > 1 && starts[starts.count - 1] == paneOffset
+    if !endsWithBreak {
       lineEndings.append(.none)
-      breakOffsets.append(source.count)
-      starts.append(units.count + 1)
+      breakOffsets.append(offset)
+      starts.append(paneOffset + 1)
+    }
+    let paneText: String
+    if !hasOtherBreaks {
+      // Every line break is a line feed already; the pane leaves out the one that ends the text.
+      paneText = endsWithBreak ? String(text.utf8.dropLast()) ?? "" : text
+    } else {
+      paneText = String(ResultText.visibleForm(of: text).utf8.dropLast(endsWithBreak ? 1 : 0)) ?? ""
     }
     return Rows(
-      text: String(decoding: units, as: UTF16.self), starts: starts, lineEndings: lineEndings,
-      breakOffsets: breakOffsets)
+      text: paneText, starts: starts, lineEndings: lineEndings, breakOffsets: breakOffsets)
   }
 
-  private static let lineFeed = UInt16(UInt8(ascii: "\n"))
-  private static let carriageReturn = UInt16(UInt8(ascii: "\r"))
 }

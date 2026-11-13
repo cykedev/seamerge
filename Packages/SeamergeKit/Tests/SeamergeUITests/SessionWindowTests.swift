@@ -53,6 +53,19 @@ import Testing
     #expect(header.spokenName.hasPrefix("A, \(header.roleText ?? ""), "))
   }
 
+  @Test func nameOfAFileWithALineBreakStandsOnOneLine() async throws {
+    let session = try await Session.merge(
+      base: SourceFile(bytes: Data("one\ntwo\n".utf8), label: "base"),
+      a: SourceFile(bytes: Data("one\n".utf8), label: "first\nline\u{2028}name"),
+      b: SourceFile(bytes: Data("one\nTWO\n".utf8), label: "b"))
+
+    let header = SideHeader(role: .a, session: session, context: SessionContext())
+    #expect(header.name == "first line name")
+    // The preview of the conflict names the side that removed the line, and the window opens.
+    let controller = try Windows.controller(for: session)
+    #expect(try controller.mergeResult.content.text.contains("first line name removed these lines"))
+  }
+
   @Test func disconnectedCallerAddsALineBelowTheResultHeader() async throws {
     let session = try await SampleMerges.helloWorld()
     let controller = makeController(session)

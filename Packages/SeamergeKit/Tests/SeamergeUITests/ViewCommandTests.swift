@@ -167,6 +167,23 @@ import Testing
     #expect(focus.accessibilityLabel()?.contains("unchanged lines") == true)
   }
 
+  @Test func signToCollapseLeavesOutTheRunOfTheInsertionPointInTheResult() async throws {
+    let session = try await SampleMerges.manyBlocks(lineCount: 600, spacing: 30)
+    let controller = try Windows.controller(for: session)
+    let source = controller.layout.sourcePanes[0].pane
+    controller.presentation.pane(source, didAskToExpand: source.collapsedRuns[0])
+    let result = try controller.mergeResult
+    let run = try #require(result.expandedRuns.first)
+
+    let textView = try controller.resultTextView
+    textView.setSelectedRange(
+      NSRange(location: result.content.offset(ofRow: run.rows.lowerBound + 1), length: 0))
+
+    #expect(result.expandedRuns.isEmpty)
+    controller.leaveTextMode()
+    #expect(result.expandedRuns == [run])
+  }
+
   @Test func zoomStepsThroughTheSizesAndKeepsTheLineAtTheReadingLine() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
     let b = try #require(controller.layout.sourcePane(.b))

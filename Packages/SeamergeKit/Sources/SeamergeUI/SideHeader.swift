@@ -33,7 +33,10 @@ struct SideHeader: Equatable {
   /// The input the pane shows.
   let role: Role
 
-  /// The real name of the side: a branch, a commit or the name of the file.
+  /// The real name of the side: a branch, a commit or the name of the file, on one line.
+  ///
+  /// A file name may hold line breaks and other control characters; they stand as spaces, so
+  /// that the name fits wherever it is shown or written, such as in the preview of a conflict.
   let name: String
 
   /// The role of the side in the operation in words, such as "incoming", if it has one.
@@ -70,7 +73,8 @@ struct SideHeader: Equatable {
       }
     }
     self.role = role
-    name = side?.name.map(Self.text(of:)) ?? (file.label.isEmpty ? role.letter : file.label)
+    name = Self.singleLine(
+      side?.name.map(Self.text(of:)) ?? (file.label.isEmpty ? role.letter : file.label))
     let diffRole = context.difftool.flatMap { difftool in
       switch role {
       case .a: difftool.leftRole
@@ -107,6 +111,18 @@ struct SideHeader: Equatable {
       comment:
         "VoiceOver: a pane with its name and role in the order the header shows them, such as A, feature/login, incoming or A, your commit, 1a2b3c4 Fix typo."
     )
+  }
+
+  /// `text` with a space for every line break and every other control character.
+  static func singleLine(_ text: String) -> String {
+    String(
+      String.UnicodeScalarView(
+        text.unicodeScalars.map { scalar in
+          switch scalar.properties.generalCategory {
+          case .control, .lineSeparator, .paragraphSeparator: " "
+          default: scalar
+          }
+        }))
   }
 
   /// A name of a side in words.

@@ -40,7 +40,24 @@ extension PaneContent {
     let lineEndings = lineNumbers.map { line in
       line < 0 ? LineEnding.none : endingsByLine[Int(line)]
     }
-    let blocks = changes.blocks.map { block in
+    let blocks = Self.blocks(
+      source: role, of: changes, document: document, conflictMarkRole: conflictMarkRole)
+    let ignoredRows = IndexSet(
+      ignoredDifferences.lines(in: role).map { layout.row(ofLine: $0, in: role) })
+    self.init(
+      text: displayText.string, lineNumbers: lineNumbers, blocks: blocks,
+      ignoredDifferenceRows: ignoredRows, lineEndings: lineEndings)
+  }
+
+  /// The blocks of the pane of `role`, one of the inputs of the session: each changed block,
+  /// tinted and marked as the side changed it and as far as its conflict is decided in
+  /// `document`.
+  static func blocks(
+    source role: Role, of changes: SessionChanges, document: ResultDocument?,
+    conflictMarkRole: Role
+  ) -> [PaneBlock] {
+    let layout = changes.session.rowLayout
+    return changes.blocks.map { block in
       let isOpen = document?.segment(for: block).state == .open
       let carriesConflictMark = block.kind == .conflict && role == conflictMarkRole
       return PaneBlock(
@@ -49,11 +66,6 @@ extension PaneContent {
         marker: changes.marker(of: role, in: block),
         conflict: carriesConflictMark ? (isOpen ? .open : .resolved) : nil)
     }
-    let ignoredRows = IndexSet(
-      ignoredDifferences.lines(in: role).map { layout.row(ofLine: $0, in: role) })
-    self.init(
-      text: displayText.string, lineNumbers: lineNumbers, blocks: blocks,
-      ignoredDifferenceRows: ignoredRows, lineEndings: lineEndings)
   }
 
   /// How each of the `lineCount` lines of `file` ends.

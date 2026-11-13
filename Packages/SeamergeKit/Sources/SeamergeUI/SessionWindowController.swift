@@ -249,6 +249,7 @@ public final class SessionWindowController: NSWindowController {
     if let focused {
       lastSourcePane = focused.pane
     }
+    presentation.updateResultExpandedRuns()
   }
 
   /// Session windows are never archived.
@@ -413,6 +414,14 @@ extension SessionWindowController: NSUserInterfaceValidations {
 extension SessionWindowController: SessionPresentationDelegate {
   func presentationDidChangeCurrentBlock(_ presentation: SessionPresentation) {
     stateDidChange()
+  }
+
+  func presentationDidChangeResult(_ presentation: SessionPresentation) {
+    stateDidChange()
+  }
+
+  func presentationDidTakeOverUnannouncedChange(_ presentation: SessionPresentation) {
+    sessionUndoManager.removeAllActions()
   }
 
   func presentation(

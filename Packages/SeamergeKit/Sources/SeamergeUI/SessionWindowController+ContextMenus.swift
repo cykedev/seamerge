@@ -10,6 +10,9 @@ extension SessionWindowController {
   func contextMenu(for hit: PaneHit, in pane: PaneView) -> NSMenu {
     let menu = NSMenu()
     menu.autoenablesItems = false
+    // An editable text view would get the services and the writing tools of the system added.
+    menu.allowsContextMenuPlugIns = false
+    menu.automaticallyInsertsWritingToolsItems = false
     for command in SessionCommand.contextMenuJumps(onChangedBlock: hit.block != nil)
     where canPerform(command) {
       menu.addItem(item(command.title, action: command.action, target: self))

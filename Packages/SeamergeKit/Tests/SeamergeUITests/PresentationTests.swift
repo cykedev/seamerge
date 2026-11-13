@@ -174,7 +174,7 @@ import Testing
     func check(_ document: ResultDocument, text: String) throws {
       let changes = SessionChanges(session: session)
       let content = ResultPaneContent(
-        document: document, text: text, changes: changes, headers: [:]
+        result: ResultState(document: document, text: text), changes: changes, headers: [:]
       ).content
       let map = ScrollMap(document: document, text: text)
       let layout = session.rowLayout

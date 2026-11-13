@@ -33,11 +33,11 @@ import Testing
       })
     #expect(
       entries(of: try menu(of: result, inBlock: block)) == [
-        "Next Conflict", "Next Change", "—", "Cut (disabled)", "Copy", "Paste (disabled)",
+        "Next Conflict", "Next Change", "—", "Cut (disabled)", "Copy", "Paste",
       ])
     #expect(
       entries(of: try menu(of: result, at: 0)) == [
-        "Next Conflict", "—", "Cut (disabled)", "Copy (disabled)", "Paste (disabled)",
+        "Next Conflict", "—", "Cut (disabled)", "Copy (disabled)", "Paste",
         "Select All",
       ])
   }
@@ -48,7 +48,7 @@ import Testing
     let conflict = try #require(controller.presentation.navigation.firstOpenConflict)
     #expect(
       entries(of: try menu(of: result, inBlock: conflict)) == [
-        "Next Change", "—", "Cut (disabled)", "Copy (disabled)", "Paste (disabled)",
+        "Next Change", "—", "Cut (disabled)", "Copy (disabled)", "Paste",
       ])
   }
 
@@ -173,10 +173,12 @@ import Testing
     try #require(menu.items.first { $0.title == "Copy" })
   }
 
-  /// The titles of the items of `menu`, a dash for a separator, and disabled items marked.
+  /// The titles of the items of `menu`, a dash for a separator, and disabled items marked; Paste
+  /// goes without, since whether it has an effect depends on the general pasteboard.
   private func entries(of menu: NSMenu) -> [String] {
     menu.items.map { item in
-      item.isSeparatorItem ? "—" : item.title + (item.isEnabled ? "" : " (disabled)")
+      guard !item.isSeparatorItem else { return "—" }
+      return item.title + (item.isEnabled || item.title == "Paste" ? "" : " (disabled)")
     }
   }
 }

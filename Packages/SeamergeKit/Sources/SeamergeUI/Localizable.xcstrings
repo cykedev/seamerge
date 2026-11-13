@@ -10,6 +10,9 @@
     "%@ removed from %@": {
       "comment": "VoiceOver: a field was emptied, such as LoginView.swift removed from Left."
     },
+    "%@ removed these lines": {
+      "comment": "Preview of a conflict in place of the lines a side removed, such as main."
+    },
     "%@ · %@": {
       "comment": "The name of a commit followed by its branch, such as 1a2b3c4 Fix typo · main."
     },

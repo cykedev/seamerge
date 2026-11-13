@@ -1,6 +1,7 @@
 import AppKit
 import MergeModel
 import PaneKit
+import os
 
 /// Shows a session in the panes of a window: what each pane shows, the marks of the overview
 /// bars, the collapsed runs of unchanged rows, the current block, and the coupling that keeps the
@@ -54,9 +55,30 @@ final class SessionPresentation {
     didSet { decisionColumn?.reducesMotion = displayOptions.reducesMotion }
   }
 
-  private let layout: SessionSplitViewController
-  private let headers: [Role: SideHeader]
-  private var collapsed: CollapsedRows
+  /// The observer of the selection of the result, which makes the block of the insertion point
+  /// current.
+  private var selectionObserver: (any NSObjectProtocol)?
+
+  /// Whether the result is to be shown anew once a change of its text that nobody announced is
+  /// over.
+  private var showsResultAnewSoon = false
+
+  /// Whether a command is changing the text of the result, during which the insertion point
+  /// moves with the text rather than by the user.
+  var isCarryingOut = false
+
+  /// The edit of the result that the result pane has asked about and is about to report as
+  /// carried out, with the plan that the document made for it.
+  var pendingTyping: (plan: EditPlan, edits: [PaneEdit])?
+
+  /// The panes of the window and their headers.
+  let layout: SessionSplitViewController
+
+  /// The headers of the inputs, whose names the panes, the toggles and the previews use.
+  let headers: [Role: SideHeader]
+
+  /// The runs of unchanged rows, which ones are collapsed and which the user expanded.
+  var collapsed: CollapsedRows
   private var highlights: [BlockHighlights] = []
 
   /// Shows `session` in the panes of `layout`, arranged as `arrangement` says: a merge as
@@ -70,7 +92,9 @@ final class SessionPresentation {
     session: Session, arrangement: PaneArrangement, layout: SessionSplitViewController,
     headers: [Role: SideHeader], resultHeader: ResultHeader?, displayOptions: DisplayOptions
   ) {
-    let result = arrangement.showsResult ? ResultState(session: session) : nil
+    let result =
+      arrangement.showsResult
+      ? ResultState(session: session, removalNotes: Self.removalNotes(headers: headers)) : nil
     self.arrangement = arrangement
     self.layout = layout
     self.headers = headers
@@ -107,7 +131,55 @@ final class SessionPresentation {
       }
     }
     showSession()
+    if let resultPane = layout.resultPane {
+      resultPane.editingDelegate = self
+      selectionObserver = NotificationCenter.default.addObserver(
+        forName: NSTextView.didChangeSelectionNotification, object: resultPane.documentView,
+        queue: .main
+      ) { [weak self] _ in
+        MainActor.assumeIsolated { self?.followInsertionPoint() }
+      }
+    }
     setCurrentBlock(navigation.firstOpenConflict ?? navigation.firstChange)
+  }
+
+  isolated deinit {
+    if let selectionObserver {
+      NotificationCenter.default.removeObserver(selectionObserver)
+    }
+  }
+
+  /// Makes the block in which the insertion point of the result stands current, while the result
+  /// has the focus.
+  ///
+  /// A block command then acts where the user types. Outside every changed block, the current
+  /// block stays.
+  func followInsertionPoint() {
+    guard !isCarryingOut, pendingTyping == nil else { return }
+    updateResultExpandedRuns()
+    guard let resultPane = layout.resultPane, let result,
+      resultPane.documentView.window?.firstResponder === resultPane.documentView
+    else { return }
+    let caret = resultPane.documentView.selectedRange().location
+    guard caret <= result.resultText.paneLength else { return }
+    let row = result.row(ofPaneOffset: caret)
+    guard let block = resultPane.content.blocks.firstIndex(where: { $0.rows.contains(row) }) else {
+      return
+    }
+    setCurrentBlock(block)
+  }
+
+  /// The line that the preview of a conflict shows in place of the lines of a side that removed
+  /// them, with the side's name.
+  private static func removalNotes(headers: [Role: SideHeader]) -> [Role: String] {
+    var notes: [Role: String] = [:]
+    for role in [Role.a, .b] {
+      guard let name = headers[role]?.name else { continue }
+      notes[role] = String(
+        localized: "\(name) removed these lines", bundle: .module,
+        comment: "Preview of a conflict in place of the lines a side removed, such as main.")
+    }
+    return notes
   }
 
   /// Draws the overview bars and the decision column with `theme`.
@@ -169,13 +241,77 @@ final class SessionPresentation {
     sourcesOverviewBar.marks = OverviewMarks.sources(
       of: changes, document: result?.document, arrangement: arrangement)
     guard let result, let resultPane = layout.resultPane else { return }
-    let content = ResultPaneContent(
-      document: result.document, text: result.text, changes: changes, headers: headers)
+    let content = ResultPaneContent(result: result, changes: changes, headers: headers)
     resultPane.setContent(content.content, collapsedRuns: resultRuns)
     resultPane.expandedRuns = resultExpandedRuns
     resultOverviewBar?.marks = OverviewMarks.result(
       of: changes, document: result.document, result: content.content)
     decisionColumn?.decisions = content.decisions
+  }
+
+  /// Shows `result`, the result after an edit that the result pane has carried out already, or
+  /// after a command whose edits it has carried out, in place of the result shown now.
+  ///
+  /// The result pane gets the blocks, previews and handwritten rows of the new result, the panes
+  /// side by side the tints of decided conflicts, the overview bars their marks and the decision
+  /// column its signs. Should the text of the pane have ended its lines otherwise than the
+  /// result does, the pane gets the whole content anew.
+  ///
+  /// With `anew`, the pane gets the whole content of `result`, whatever it shows now.
+  ///
+  /// - Precondition: The window shows a merge, and the result pane shows the text of `result`
+  ///   unless `anew` is set.
+  func show(_ result: ResultState, anew: Bool = false) {
+    guard let resultPane = layout.resultPane else {
+      preconditionFailure("Only a merge has a result")
+    }
+    self.result = result
+    let content = ResultPaneContent(result: result, changes: changes, headers: headers)
+    if !anew && resultPane.content.lineEndings == content.content.lineEndings {
+      resultPane.setBlocks(
+        content.content.blocks, previews: content.content.previews,
+        rowTints: content.content.rowTints)
+      let runs = resultRuns
+      if resultPane.collapsedRuns != runs {
+        resultPane.collapsedRuns = runs
+      }
+    } else {
+      if !anew {
+        Self.logger.error("The result pane ended its lines otherwise than the result")
+      }
+      resultPane.setContent(content.content, collapsedRuns: resultRuns)
+    }
+    resultPane.expandedRuns = resultExpandedRuns
+    resultOverviewBar?.marks = OverviewMarks.result(
+      of: changes, document: result.document, result: content.content)
+    decisionColumn?.decisions = content.decisions
+    sourcesOverviewBar.marks = OverviewMarks.sources(
+      of: changes, document: result.document, arrangement: arrangement)
+    let conflictMarkRole = changes.conflictMarkRole(baseIsShown: layout.showsBase)
+    for (role, pane) in layout.sourcePanes {
+      pane.setBlocks(
+        PaneContent.blocks(
+          source: role, of: changes, document: result.document,
+          conflictMarkRole: conflictMarkRole),
+        previews: [], rowTints: [:])
+    }
+    delegate?.presentationDidChangeResult(self)
+  }
+
+  /// Takes `result`, the result after a change of the result pane's text that nobody announced,
+  /// without showing it while the pane processes the change, and shows it anew once the change
+  /// is over, after any further such changes.
+  func takeOverUnannounced(_ result: ResultState) {
+    self.result = result
+    guard !showsResultAnewSoon else { return }
+    showsResultAnewSoon = true
+    // The pane's content must stay as it is while its text processes the change.
+    Task { @MainActor [weak self] in
+      guard let self, let result = self.result else { return }
+      showsResultAnewSoon = false
+      show(result, anew: true)
+      delegate?.presentationDidTakeOverUnannouncedChange(self)
+    }
   }
 
   /// The runs that are collapsed now, in rows of the grid of the panes side by side.
@@ -195,9 +331,23 @@ final class SessionPresentation {
   }
 
   /// The runs that the user expanded and that may collapse again, in lines of the result, if
-  /// there is one.
+  /// there is one; not the one of the insertion point while the result has the focus, which
+  /// collapsing would hide, as Collapse Unchanged Lines leaves it out too.
   private var resultExpandedRuns: [CollapsedRun] {
-    resultRuns(of: collapsed.expandedRuns)
+    let runs = resultRuns(of: collapsed.expandedRuns)
+    guard let resultPane = layout.resultPane, let result,
+      resultPane.documentView.window?.firstResponder === resultPane.documentView
+    else { return runs }
+    let caret = resultPane.documentView.selectedRange().location
+    guard caret <= result.resultText.paneLength else { return runs }
+    let row = result.row(ofPaneOffset: caret)
+    return runs.filter { !$0.rows.contains(row) }
+  }
+
+  /// Gives the result the runs that may collapse again, after the insertion point or the focus
+  /// moved.
+  func updateResultExpandedRuns() {
+    layout.resultPane?.expandedRuns = resultExpandedRuns
   }
 
   /// `runs` in lines of the result, if there is one, without those that hide no line there.
@@ -210,7 +360,7 @@ final class SessionPresentation {
   }
 
   /// Gives every pane the runs that are collapsed now.
-  private func showCollapsedRuns() {
+  func showCollapsedRuns() {
     let sourceRuns = sourceRuns
     let sourceExpandedRuns = sourceExpandedRuns
     for (_, pane) in layout.sourcePanes {
@@ -307,7 +457,7 @@ final class SessionPresentation {
 
   /// The row of the grid at `row` of `pane`: the same row in a pane side by side, and the row
   /// that a line of the result lies on.
-  private func gridRow(ofRow row: Int, in pane: PaneView) -> Int {
+  func gridRow(ofRow row: Int, in pane: PaneView) -> Int {
     guard pane === layout.resultPane, let result else { return row }
     return result.gridRow(ofLine: row)
   }
@@ -402,7 +552,7 @@ final class SessionPresentation {
 
   /// Makes the block of `hit` in `pane` current, if the hit lies in a changed block, and brings
   /// it into view in the other area of a merge, unless it is in full view there already.
-  private func select(_ hit: PaneHit, in pane: PaneView) {
+  func select(_ hit: PaneHit, in pane: PaneView) {
     guard let block = hit.block else { return }
     setCurrentBlock(block)
     let others =
@@ -415,85 +565,10 @@ final class SessionPresentation {
       toPlaceRowAtReadingLine: other.content.blocks[block].rows.lowerBound, motion: motion)
   }
 
+  static let logger = Logger(subsystem: "app.eiden.seamerge", category: "SeamergeUI")
+
   /// How the panes move when they scroll to a block.
   private var motion: PaneView.ScrollMotion {
     displayOptions.reducesMotion ? .cut : .glideWithinAWindowHeight
-  }
-}
-
-/// Learns what changes in a presentation and supplies what it shows on demand.
-@MainActor
-protocol SessionPresentationDelegate: AnyObject {
-  /// Tells the delegate that another block became current, or none.
-  func presentationDidChangeCurrentBlock(_ presentation: SessionPresentation)
-
-  /// The context menu for a secondary click on `hit` in `pane`.
-  func presentation(
-    _ presentation: SessionPresentation, menuFor hit: PaneHit, in pane: PaneView
-  ) -> NSMenu
-}
-
-extension SessionPresentation: PaneViewDelegate {
-  /// A click on a row of a changed block makes the block current; the click still places the
-  /// insertion point and selects text as in any text.
-  func pane(_ pane: PaneView, didClick hit: PaneHit) {
-    select(hit, in: pane)
-  }
-
-  /// A secondary click first makes the block under the pointer current, as a click does, then
-  /// shows the menu of the delegate in place of the text view's standard one, which holds
-  /// commands that do not apply to a session.
-  func pane(_ pane: PaneView, menuFor hit: PaneHit) -> NSMenu? {
-    select(hit, in: pane)
-    return delegate?.presentation(self, menuFor: hit, in: pane)
-  }
-
-  /// Expands the run in every pane that shows it.
-  func pane(_ pane: PaneView, didAskToExpand run: CollapsedRun) {
-    let row = gridRow(ofRow: run.rows.lowerBound, in: pane)
-    guard let collapsedRun = collapsed.run(containingRow: row) else { return }
-    collapsed.expand(collapsedRun)
-    showCollapsedRuns()
-  }
-
-  /// Collapses the run again in every pane that shows it, says so and leaves the focus on its
-  /// bar in `pane`.
-  func pane(_ pane: PaneView, didAskToCollapse run: CollapsedRun) {
-    let row = gridRow(ofRow: run.rows.lowerBound, in: pane)
-    guard let expandedRun = collapsed.expandedRuns.first(where: { $0.rows.contains(row) }),
-      collapsed.collapse(expandedRun)
-    else { return }
-    showCollapsedRuns()
-    if let bar = pane.collapsedRuns.first(where: { $0.rows.contains(run.rows.lowerBound) }) {
-      pane.focusBar(of: bar)
-    }
-    announce(
-      String(
-        localized: "Collapsed \(run.rows.count) unchanged lines", bundle: .module,
-        comment: "VoiceOver: a run of unchanged lines was hidden again, such as 12."))
-  }
-}
-
-extension SessionPresentation: OverviewBarDelegate {
-  /// A click on a mark makes its block current; the bar scrolls to it on its own.
-  func overviewBar(_ overviewBar: OverviewBar, didSelectBlock block: Int) {
-    setCurrentBlock(block)
-  }
-}
-
-extension SessionPresentation: DecisionColumnDelegate {
-  /// The result is read-only, so a toggle shows how a block came by its text but changes nothing.
-  func decisionColumn(
-    _ column: DecisionColumnView, didSwitchToggle toggle: Int, ofBlock block: Int
-  ) {}
-
-  /// The result is read-only, so every block stays as it was loaded.
-  func decisionColumn(_ column: DecisionColumnView, didAskToResetBlock block: Int) {}
-
-  /// A click beside a block makes it current, as a click on its rows does.
-  func decisionColumn(_ column: DecisionColumnView, didClickBlock block: Int) {
-    guard let resultPane = layout.resultPane else { return }
-    select(
-      PaneHit(row: resultPane.content.blocks[block].rows.lowerBound, block: block), in: resultPane)
   }
 }
