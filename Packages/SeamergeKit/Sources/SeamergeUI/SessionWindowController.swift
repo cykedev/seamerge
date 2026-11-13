@@ -31,6 +31,9 @@ public final class SessionWindowController: NSWindowController {
   let layout: SessionSplitViewController
   let presentation: SessionPresentation
 
+  /// The panes and the footer below them.
+  let content: SessionContentController
+
   /// Where the result goes and what Git is doing.
   let context: SessionContext
 
@@ -105,7 +108,8 @@ public final class SessionWindowController: NSWindowController {
     self.init(
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
-      prompts: SessionSheets(), doneStyle: .standard, window: SessionWindow())
+      prompts: SessionSheets(), doneStyle: .standard,
+      window: SessionWindow())
     observeDisplayOptions()
   }
 
@@ -124,8 +128,8 @@ public final class SessionWindowController: NSWindowController {
     self.init(
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
-      prompts: SessionSheets(), doneStyle: .standard, window: SessionWindow(),
-      unavailable: comparison)
+      prompts: SessionSheets(), doneStyle: .standard,
+      window: SessionWindow(), unavailable: comparison)
     observeDisplayOptions()
   }
 
@@ -160,6 +164,13 @@ public final class SessionWindowController: NSWindowController {
       headers: arrangement.sourceRoles.compactMap { headers[$0] }, resultHeader: resultHeader,
       theme: theme)
     self.layout = layout
+    content = SessionContentController(
+      layout: layout,
+      footer: SessionFooterView(
+        toggles: FooterToggle.allCases.filter {
+          $0 != .base || arrangement.sourceRoles.contains(.base)
+        }))
+    content.footer.theme = theme
     self.context = context
     self.pasteboard = pasteboard
     self.workspace = workspace
@@ -187,7 +198,8 @@ public final class SessionWindowController: NSWindowController {
     // The delegate comes first: the window asks it for its undo manager once and keeps the
     // answer.
     window.delegate = self
-    window.contentViewController = layout
+    window.contentViewController = content
+    content.showsFooter = true
     window.toolbar = toolbar.toolbar
     window.setContentSize(WindowMetrics.defaultContentSize)
     window.contentMinSize = minimumContentSize
@@ -214,6 +226,7 @@ public final class SessionWindowController: NSWindowController {
     toolbar.update(
       count: toolbarCount, isComparing: showsComparisonProgress, isValid: canPerform,
       canSaveAndClose: responds(along: SessionToolbar.saveAndClose))
+    updateFooter()
     updateSubtitle()
   }
 
@@ -278,6 +291,7 @@ public final class SessionWindowController: NSWindowController {
     let theme = displayOptions.theme(fontSize: fontSize)
     layout.apply(theme)
     presentation.apply(theme)
+    content.footer.theme = theme
   }
 
   /// Titles the window after the session it shows now.
@@ -460,6 +474,11 @@ extension SessionWindowController: SessionPresentationDelegate {
     _ presentation: SessionPresentation, didMoveInsertionPointTo selection: NSRange
   ) {
     endTypingRun(unlessContinuedAt: selection)
+    updateFooter()
+  }
+
+  func presentationDidChangeCollapsedRows(_ presentation: SessionPresentation) {
+    updateFooter()
   }
 
   func presentationDidTakeOverUnannouncedChange(_ presentation: SessionPresentation) {

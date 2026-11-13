@@ -1,5 +1,3 @@
-import MergeModel
-
 extension SessionCommand {
   /// A menu of the main menu that holds commands of a session window.
   public enum Menu: CaseIterable, Sendable {
@@ -61,30 +59,20 @@ extension SessionCommand {
     }
   }
 
-  /// The groups of the options menu of the toolbar of a window of `kind`: those of the Compare
-  /// and View menus, without the commands that never act in such a window.
-  ///
-  /// The main menu shows those deactivated; the options menu belongs to one window and leaves
-  /// them out.
-  ///
-  /// A merge adds the commands that reset decisions throughout the window.
-  static func optionsGroups(in kind: Session.Kind) -> [[SessionCommand]] {
-    (groups(in: .compare) + groups(in: .view) + [[.reopenAllConflicts, .resetAllDecisions]])
-      .map { $0.filter { $0.acts(in: kind) } }.filter { !$0.isEmpty }
+  /// The name of the choice of the comparison mode, where the toolbar or the footer offers the
+  /// commands of the Compare menu that choose it.
+  static var comparisonModeLabel: String {
+    String(
+      localized: "Comparison", bundle: .module,
+      comment:
+        "The choice of the comparison mode: a toolbar item and the pop-up button of the footer.")
   }
 
-  /// Whether the command can act in a window of `kind` at all: Swap Sides and Skip Remaining
-  /// Files only in a comparison, the commands of the base and the result only in a merge.
-  private func acts(in kind: Session.Kind) -> Bool {
-    switch self {
-    case .swapSides, .skipRemainingFiles: kind == .diff
-    case .nextConflict, .previousConflict, .toggleBase, .toggleResultMaximized: kind == .merge
-    case .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone, .toggleSourceA,
-      .toggleSourceBase, .toggleSourceB, .resolveManually, .resetChange, .reopenAllConflicts,
-      .resetAllDecisions, .resolveAllWithA, .resolveAllWithB:
-      kind == .merge
-    default: true
-    }
+  /// The help tag of the choice of the comparison mode.
+  static var comparisonModeHelp: String {
+    String(
+      localized: "Choose how lines are compared", bundle: .module,
+      comment: "Help tag of the choice of the comparison mode in the toolbar and the footer.")
   }
 
   /// The jumps that the context menu offers, on a changed block or on unchanged text, as far as

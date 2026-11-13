@@ -2,12 +2,11 @@ import AppKit
 import MergeModel
 
 /// The toolbar of a session window: in the middle the number of open conflicts with the arrows
-/// that jump between them, at the trailing end a menu of the comparison and view options and
-/// the button that saves and closes.
+/// that jump between them, at the trailing end the button that saves and closes.
 ///
 /// A comparison of two files has no conflicts and nothing to save: in the middle it says which
-/// change is current, with the arrows that jump between changes, and at the trailing end it has
-/// only the menu of options.
+/// change is current, with the arrows that jump between changes, and nothing else. How the
+/// files are compared and shown stands in the footer of the window.
 ///
 /// The toolbar can be customized, for each kind of window on its own; in a merge, the arrows
 /// between changes can be dragged in, and in both the choice of the comparison mode, but they
@@ -218,28 +217,12 @@ final class SessionToolbar: NSObject {
         commands: [.previousChange, .nextChange])
     case .comparison:
       let item = NSMenuToolbarItem(itemIdentifier: identifier)
-      item.label = String(
-        localized: "Comparison", bundle: .module, comment: "Toolbar item: the comparison mode.")
+      item.label = SessionCommand.comparisonModeLabel
       item.image = NSImage(
         systemSymbolName: "equal.square", accessibilityDescription: item.label)
       item.paletteLabel = item.label
-      item.toolTip = String(
-        localized: "Choose how lines are compared", bundle: .module,
-        comment: "Help tag of the comparison item in the toolbar.")
+      item.toolTip = SessionCommand.comparisonModeHelp
       item.menu = Self.menu(of: SessionCommand.groups(in: .compare))
-      return item
-    case .options:
-      let item = NSMenuToolbarItem(itemIdentifier: identifier)
-      item.label = String(
-        localized: "Options", bundle: .module, comment: "Toolbar item: comparison and view options."
-      )
-      item.image = NSImage(systemSymbolName: "ellipsis", accessibilityDescription: item.label)
-      item.showsIndicator = false
-      item.paletteLabel = item.label
-      item.toolTip = String(
-        localized: "Change how the files are compared and shown", bundle: .module,
-        comment: "Help tag of the options item in the toolbar.")
-      item.menu = Self.menu(of: SessionCommand.optionsGroups(in: kind))
       return item
     case .done:
       let item = NSToolbarItem(itemIdentifier: identifier)
@@ -318,15 +301,12 @@ extension SessionToolbar: NSToolbarDelegate {
     return item
   }
 
-  /// The three elements of a merge: the conflicts in the middle, the options and Done at the
-  /// end, the two apart, since the toolbar would join a checkmark and the options into one group;
-  /// the two of a comparison: the changes in the middle, the options at the end.
+  /// The elements of a merge: the conflicts in the middle and Done at the end; those of a
+  /// comparison: the changes in the middle.
   func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-    switch (kind, doneStyle) {
-    case (.merge, .word): [.conflictCount, .conflictNavigation, .flexibleSpace, .options, .done]
-    case (.merge, .checkmark):
-      [.conflictCount, .conflictNavigation, .flexibleSpace, .options, .space, .done]
-    case (.diff, _): [.changeCount, .changeNavigation, .flexibleSpace, .options]
+    switch kind {
+    case .merge: [.conflictCount, .conflictNavigation, .flexibleSpace, .done]
+    case .diff: [.changeCount, .changeNavigation]
     }
   }
 
@@ -334,10 +314,10 @@ extension SessionToolbar: NSToolbarDelegate {
     switch kind {
     case .merge:
       [
-        .conflictCount, .conflictNavigation, .changeNavigation, .comparison, .options, .done,
+        .conflictCount, .conflictNavigation, .changeNavigation, .comparison, .done,
         .flexibleSpace, .space,
       ]
-    case .diff: [.changeCount, .changeNavigation, .comparison, .options, .flexibleSpace, .space]
+    case .diff: [.changeCount, .changeNavigation, .comparison, .flexibleSpace, .space]
     }
   }
 
@@ -353,6 +333,5 @@ extension NSToolbarItem.Identifier {
   static let conflictNavigation = Self("conflictNavigation")
   static let changeNavigation = Self("changeNavigation")
   static let comparison = Self("comparison")
-  static let options = Self("options")
   static let done = Self("done")
 }

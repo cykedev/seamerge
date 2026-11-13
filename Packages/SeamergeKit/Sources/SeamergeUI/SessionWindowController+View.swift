@@ -17,6 +17,7 @@ extension SessionWindowController {
       window?.makeFirstResponder(b.documentView)
     }
     updateMinimumSize()
+    updateFooter()
   }
 
   /// Gives the result the whole window, or restores the layout; without a result it does
@@ -29,11 +30,13 @@ extension SessionWindowController {
       enterTextMode()
     }
     updateMinimumSize()
+    updateFooter()
   }
 
   /// Turns the coupling of the panes while they scroll off or on.
   @objc func toggleScrollSynchronization(_ sender: Any?) {
     presentation.scrollSync.isEnabled.toggle()
+    updateFooter()
   }
 
   /// Shows spaces, tabs and line endings as quiet symbols, or hides them.
@@ -42,6 +45,7 @@ extension SessionWindowController {
     for pane in presentation.allPanes {
       pane.showsInvisibles = showsInvisibles
     }
+    updateFooter()
   }
 
   /// Shows every line of every pane.
@@ -144,12 +148,13 @@ extension SessionWindowController {
     window?.contentMinSize = minimumContentSize
   }
 
-  /// The least size of the content of the window: what the panes in view need, and no narrower
-  /// than the toolbar needs to keep its count, arrows and options in view.
+  /// The least size of the content of the window: what the panes in view and the footer need,
+  /// and no narrower than the toolbar needs to keep its count and arrows in view.
   var minimumContentSize: CGSize {
-    CGSize(
-      width: max(layout.minimumWidth, WindowMetrics.minimumToolbarWidth),
-      height: layout.minimumHeight)
+    let footerWidth = content.showsFooter ? content.footer.minimumWidth : 0
+    return CGSize(
+      width: max(layout.minimumWidth, WindowMetrics.minimumToolbarWidth, footerWidth),
+      height: layout.minimumHeight + content.footerHeightInView)
   }
 
   /// The size of the code at Actual Size.

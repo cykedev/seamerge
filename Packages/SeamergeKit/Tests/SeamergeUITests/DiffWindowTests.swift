@@ -70,9 +70,7 @@ import Testing
     let (previous, next) = (navigation.subitems[0], navigation.subitems[1])
 
     #expect(
-      toolbar.toolbarDefaultItemIdentifiers(toolbar.toolbar) == [
-        .changeCount, .changeNavigation, .flexibleSpace, .options,
-      ])
+      toolbar.toolbarDefaultItemIdentifiers(toolbar.toolbar) == [.changeCount, .changeNavigation])
     #expect(toolbar.toolbar.centeredItemIdentifiers == [.changeCount, .changeNavigation])
     #expect(items[.done] == nil)
     #expect(items[.conflictCount] == nil)
@@ -94,20 +92,6 @@ import Testing
     #expect(SessionToolbar.countText(currentChange: nil, changeCount: 12) == "12 Changes")
     #expect(SessionToolbar.countText(currentChange: nil, changeCount: 1) == "1 Change")
     #expect(SessionToolbar.countText(currentChange: nil, changeCount: 0) == "No Changes")
-  }
-
-  @Test func optionsLeaveOutWhatOnlyTheOtherKindOfWindowHas() async throws {
-    let diffOptions = SessionCommand.optionsGroups(in: .diff).flatMap(\.self)
-    let mergeOptions = SessionCommand.optionsGroups(in: .merge).flatMap(\.self)
-    #expect(diffOptions.contains(.swapSides))
-    #expect(!diffOptions.contains(.toggleBase))
-    #expect(!diffOptions.contains(.toggleResultMaximized))
-    #expect(!mergeOptions.contains(.swapSides))
-
-    let controller = try Windows.controller(for: try await SampleDiffs.greeting())
-    let options = try #require(try toolbarItems(of: controller)[.options] as? NSMenuToolbarItem)
-    let actions = options.menu.items.filter { !$0.isSeparatorItem }.compactMap(\.action)
-    #expect(actions == diffOptions.map(\.action))
   }
 
   @Test func optionCommandDownArrowGoesFromChangeToChange() async throws {

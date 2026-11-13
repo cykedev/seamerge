@@ -5,15 +5,14 @@ import Testing
 
 @testable import SeamergeUI
 
-/// The toolbar: three elements by default, the number of open conflicts with arrows that follow
-/// the jumps, and Done, which acts only with a responder that saves and stands out once no
+/// The toolbar: the number of open conflicts with arrows that follow the jumps, and Done, which acts only with a responder that saves and stands out once no
 /// conflict is open.
 @MainActor
 @Suite struct ToolbarTests {
-  @Test func toolbarHasThreeElementsAndMoreToDragIn() throws {
+  @Test func toolbarHasTheConflictsAndDoneAndMoreToDragIn() throws {
     let toolbar = SessionToolbar(kind: .merge, doneStyle: .standard)
     let defaults = toolbar.toolbarDefaultItemIdentifiers(toolbar.toolbar)
-    #expect(defaults == [.conflictCount, .conflictNavigation, .flexibleSpace, .options, .done])
+    #expect(defaults == [.conflictCount, .conflictNavigation, .flexibleSpace, .done])
     #expect(toolbar.toolbar.centeredItemIdentifiers == [.conflictCount, .conflictNavigation])
     let allowed = toolbar.toolbarAllowedItemIdentifiers(toolbar.toolbar)
     #expect(allowed.contains(.changeNavigation))
@@ -74,10 +73,10 @@ import Testing
     withExtendedLifetime(saver) {}
   }
 
-  @Test func checkmarkStandsApartFromTheOptions() throws {
+  @Test func checkmarkStandsAtTheEnd() throws {
     let toolbar = SessionToolbar(kind: .merge, doneStyle: .checkmark)
     let defaults = toolbar.toolbarDefaultItemIdentifiers(toolbar.toolbar)
-    #expect(defaults.suffix(3) == [.options, .space, .done])
+    #expect(defaults.suffix(2) == [.flexibleSpace, .done])
     let done = try #require(
       toolbar.toolbar(
         toolbar.toolbar, itemForItemIdentifier: .done, willBeInsertedIntoToolbar: false))
@@ -85,19 +84,16 @@ import Testing
     #expect(done.label == "Done")
   }
 
-  @Test func optionsHoldTheCommandsOfTheCompareAndViewMenus() async throws {
+  @Test func comparisonModeCanBeDraggedInWithTheCommandsOfTheCompareMenu() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.helloWorld())
-    let options = try #require(try toolbarItems(of: controller)[.options] as? NSMenuToolbarItem)
-    let actions = options.menu.items.filter { !$0.isSeparatorItem }.compactMap(\.action)
-    let commands = SessionCommand.optionsGroups(in: .merge).joined().map(\.action)
-    #expect(actions == commands)
-    #expect(options.menu.items.allSatisfy { $0.keyEquivalent.isEmpty })
-    #expect(options.image?.accessibilityDescription == "Options")
     let comparison = try #require(
       controller.toolbar.toolbar(
         controller.toolbar.toolbar, itemForItemIdentifier: .comparison,
         willBeInsertedIntoToolbar: false))
     #expect(comparison.image?.accessibilityDescription == "Comparison")
+    let menu = try #require((comparison as? NSMenuToolbarItem)?.menu)
+    let actions = menu.items.filter { !$0.isSeparatorItem }.compactMap(\.action)
+    #expect(actions == SessionCommand.groups(in: .compare).joined().map(\.action))
   }
 
   @Test func countShowsThatAComparisonIsUnderWay() async throws {

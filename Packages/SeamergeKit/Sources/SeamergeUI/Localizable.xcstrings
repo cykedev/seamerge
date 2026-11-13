@@ -177,9 +177,6 @@
     "Change Comparison": {
       "comment": "Undo menu: the switch to another comparison mode or merge strategy."
     },
-    "Change how the files are compared and shown": {
-      "comment": "Help tag of the options item in the toolbar."
-    },
     "Change in %@, line %lld": {
       "comment": "VoiceOver: a mark in the overview bar, such as Change in A, line 12."
     },
@@ -196,7 +193,7 @@
       "comment": "VoiceOver hint of a field of Compare Files."
     },
     "Choose how lines are compared": {
-      "comment": "Help tag of the comparison item in the toolbar."
+      "comment": "Help tag of the choice of the comparison mode in the toolbar and the footer."
     },
     "Choose the file for %@.": {
       "comment": "Open panel of a field of Compare Files, such as Choose the file for Left."
@@ -212,6 +209,12 @@
     },
     "Collapse Unchanged Lines": {
       "comment": "View menu command."
+    },
+    "Collapse unchanged lines (none in this file)": {
+      "comment": "Help tag of the footer toggle of collapsed lines in a file without long runs."
+    },
+    "Collapsed": {
+      "comment": "VoiceOver: the footer toggle of collapsed lines while every run is collapsed."
     },
     "Collapsed %lld unchanged lines": {
       "comment": "VoiceOver: a run of unchanged lines was hidden again, such as 12.",
@@ -255,7 +258,7 @@
       "comment": "Toolbar: the files are being compared anew."
     },
     "Comparison": {
-      "comment": "Toolbar item: the comparison mode."
+      "comment": "The choice of the comparison mode: a toolbar item and the pop-up button of the footer."
     },
     "Conflicts": {
       "comment": "Toolbar items: the count of the open conflicts and the buttons that go through them."
@@ -311,6 +314,9 @@
     "Encoding: %@": {
       "comment": "VoiceOver: the encoding of the result, such as Encoding: UTF-8."
     },
+    "Every line shown": {
+      "comment": "VoiceOver: the footer toggle of collapsed lines while no run is collapsed."
+    },
     "Exact": {
       "comment": "Compare menu: compare every byte."
     },
@@ -322,6 +328,9 @@
     },
     "First Change": {
       "comment": "Go menu command."
+    },
+    "Footer": {
+      "comment": "VoiceOver: the footer with the comparison mode and the view toggles."
     },
     "From %@": {
       "comment": "VoiceOver: a part of the result taken from one side, such as From A."
@@ -362,6 +371,15 @@
     "Hide Invisibles": {
       "comment": "View menu command."
     },
+    "Hide long runs of unchanged lines behind a bar": {
+      "comment": "Help tag of the footer toggle of collapsed lines while runs can collapse."
+    },
+    "Hide spaces, tabs and line endings": {
+      "comment": "Help tag of the footer toggle of invisibles while they are shown."
+    },
+    "Hide the base and give A and B its room": {
+      "comment": "Help tag of the footer toggle of the base while the base is shown."
+    },
     "ISO 8859-1": {
       "comment": "Encoding: ISO Latin 1."
     },
@@ -374,6 +392,9 @@
     "Ignore Whitespace Changes": {
       "comment": "Compare menu command."
     },
+    "Invisibles": {
+      "comment": "VoiceOver: the footer toggle that shows spaces, tabs and line endings."
+    },
     "LF": {
       "comment": "Line endings: line feed."
     },
@@ -382,6 +403,9 @@
     },
     "Left": {
       "comment": "Compare Files: the role of a field."
+    },
+    "Let each pane scroll on its own": {
+      "comment": "Help tag of the footer toggle of synchronized scrolling while it is on."
     },
     "Line Endings": {
       "comment": "Details of a side: LF, CRLF or CR."
@@ -431,14 +455,17 @@
     "Nothing taken": {
       "comment": "VoiceOver: a part of the result that takes no lines."
     },
+    "Off": {
+      "comment": "VoiceOver: a footer toggle that is off."
+    },
+    "On": {
+      "comment": "VoiceOver: a footer toggle that is on."
+    },
     "Open conflict, line %lld": {
       "comment": "VoiceOver: the mark of an open conflict in the overview bar."
     },
     "Open in Editor": {
       "comment": "File menu command."
-    },
-    "Options": {
-      "comment": "Toolbar item: comparison and view options."
     },
     "Paste": {
       "comment": "Context menu: paste text."
@@ -521,6 +548,9 @@
     "Save and close": {
       "comment": "Help tag of Done in the toolbar."
     },
+    "Scroll the panes together": {
+      "comment": "Help tag of the footer toggle of synchronized scrolling while it is off."
+    },
     "Seamerge can’t read “%@”.": {
       "comment": "Alert: a file of a merge or comparison cannot be read."
     },
@@ -548,8 +578,23 @@
     "Show Invisibles": {
       "comment": "View menu command."
     },
+    "Show every line": {
+      "comment": "Help tag of the footer toggle of collapsed lines while every run is collapsed."
+    },
     "Show in Finder": {
       "comment": "Context menu of a header."
+    },
+    "Show invisible characters (no lines to show)": {
+      "comment": "Help tag of the footer toggle of invisibles in a window without lines."
+    },
+    "Show or hide the base (restore the layout first)": {
+      "comment": "Help tag of the footer toggle of the base while the result fills the window."
+    },
+    "Show spaces, tabs and line endings": {
+      "comment": "Help tag of the footer toggle of invisibles while they are hidden."
+    },
+    "Show the base between A and B": {
+      "comment": "Help tag of the footer toggle of the base while the base is hidden."
     },
     "Show the right file on the left and the left file on the right": {
       "comment": "Help tag of Compare > Swap Sides."
@@ -559,6 +604,9 @@
     },
     "Skip Remaining Files": {
       "comment": "File menu of a comparison: end the comparisons that Git has left."
+    },
+    "Some lines shown": {
+      "comment": "VoiceOver: the footer toggle of collapsed lines while some runs are expanded."
     },
     "Stash": {
       "comment": "The name of a stash in a header."
@@ -574,6 +622,9 @@
     },
     "Synchronize Scrolling": {
       "comment": "View menu command."
+    },
+    "Synchronize scrolling (no lines to scroll)": {
+      "comment": "Help tag of the footer toggle of synchronized scrolling in a window without lines."
     },
     "Take the version of %@.": {
       "comment": "Help tag of a toggle, such as Take the version of feature/login."

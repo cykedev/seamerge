@@ -11,6 +11,9 @@ protocol SessionPresentationDelegate: AnyObject {
   /// Tells the delegate that the result changed, by typing or by a command.
   func presentationDidChangeResult(_ presentation: SessionPresentation)
 
+  /// Tells the delegate that runs of unchanged rows collapsed or expanded.
+  func presentationDidChangeCollapsedRows(_ presentation: SessionPresentation)
+
   /// Tells the delegate that the insertion point or the selection of the result moved to
   /// `selection` by anything but an edit.
   func presentation(

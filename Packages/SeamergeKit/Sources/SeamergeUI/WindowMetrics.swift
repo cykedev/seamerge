@@ -5,6 +5,33 @@ enum WindowMetrics {
   /// The height of a pane header.
   static let headerHeight: CGFloat = 28
 
+  /// The height of the footer, the bottom border of the window.
+  static let footerHeight: CGFloat = 28
+
+  /// The distance of the content of the footer from the edges of the window, as far as the
+  /// content of a header from the edges of its pane.
+  static let footerInset: CGFloat = 12
+
+  /// The distance between the comparison mode and the toggles in the footer.
+  static let footerGroupSpacing: CGFloat = 16
+
+  /// The distance between two toggles of the footer.
+  static let footerToggleSpacing: CGFloat = 4
+
+  /// The width of a toggle of the footer that shows its symbol alone: the same for every
+  /// symbol, so that the toggles stand evenly.
+  static let footerSymbolButtonWidth: CGFloat = 28
+
+  /// The radius of the corners of the gray area behind a toggle of the footer that is on, and
+  /// of the outline of one in the mixed state.
+  static let footerToggleCornerRadius: CGFloat = 5
+
+  /// The width of the outline of a toggle of the footer in the mixed state.
+  static let footerToggleOutlineWidth: CGFloat = 1
+
+  /// The least room on either side of the symbol in a toggle of the footer.
+  static let footerSymbolPadding: CGFloat = 4
+
   /// The height of the line below the result header that says Git no longer waits.
   static let noticeHeight: CGFloat = 24
 
@@ -48,7 +75,7 @@ enum WindowMetrics {
   static let lineFieldWidth: CGFloat = 200
 
   /// The least width of a window, at which the toolbar shows the title, the count with its
-  /// arrows, and the options without moving any of them into its overflow menu.
+  /// arrows, and Done without moving any of them into its overflow menu.
   static let minimumToolbarWidth: CGFloat = 640
 
   /// The distance between the title and the message of a comparison that cannot be shown.

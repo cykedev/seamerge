@@ -79,7 +79,13 @@ final class SessionPresentation {
   let headers: [Role: SideHeader]
 
   /// The runs of unchanged rows, which ones are collapsed and which the user expanded.
-  var collapsed: CollapsedRows
+  var collapsed: CollapsedRows {
+    didSet {
+      if collapsed.runs != oldValue.runs || collapsed.expandedRuns != oldValue.expandedRuns {
+        delegate?.presentationDidChangeCollapsedRows(self)
+      }
+    }
+  }
   private var highlights: [BlockHighlights] = []
 
   /// Shows `session` in the panes of `layout`, arranged as `arrangement` says: a merge as
