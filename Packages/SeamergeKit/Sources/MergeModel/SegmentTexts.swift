@@ -24,9 +24,15 @@ struct SegmentTexts: Sendable {
   /// last line of a file that does not end with one; in ascending order.
   let blocksEndingWithoutLineEnding: [Int]
 
-  /// Prepares the texts of `blocks` from `files`.
-  init(files: [Role: ComparedFile], blocks: [Block]) {
+  /// The line that the preview of a conflict shows in place of the lines of a side that removed
+  /// them, by side.
+  let removalNotes: [Role: String]
+
+  /// Prepares the texts of `blocks` from `files`, with `removalNotes` for the previews of
+  /// conflicts in which a side removed the lines of the base.
+  init(files: [Role: ComparedFile], blocks: [Block], removalNotes: [Role: String]) {
     self.files = files
+    self.removalNotes = removalNotes
     roles = Role.allCases.filter { files[$0] != nil }
     lineEnding =
       [Role.b, .a, .base].lazy.compactMap { files[$0]?.file.utf8 }.compactMap(Self.lineEnding(in:))
@@ -89,12 +95,28 @@ struct SegmentTexts: Sendable {
     }
   }
 
-  /// The preview of a conflict: A's lines, then B's lines, each ending with a line ending.
+  /// The preview of a conflict: A's lines, then B's lines, each ending with a line ending; a side
+  /// that removed the lines of the base shows its removal note in their place, if it has one.
   ///
   /// The preview is never written, so it always ends with a line ending, regardless of what
   /// follows it.
   func previewText(for block: Block) -> String {
+    joined([Role.a, .b].map { previewPart(of: $0, in: block) }, followedByText: true)
+  }
+
+  /// The texts of a conflict as a preview shows them, A's lines then B's, without removal
+  /// notes: what resolving the conflict by hand starts from.
+  func sideTexts(of block: Block) -> String {
     joined([text(of: .a, in: block), text(of: .b, in: block)], followedByText: true)
+  }
+
+  /// What the preview of a conflict shows for `role`: its lines, or its removal note if it
+  /// removed the lines of the base and has a note.
+  func previewPart(of role: Role, in block: Block) -> String {
+    let text = text(of: role, in: block)
+    guard text.isEmpty, !self.text(of: .base, in: block).isEmpty, let note = removalNotes[role]
+    else { return text }
+    return note
   }
 
   /// The text of a segment that is not edited.

@@ -29,10 +29,17 @@ public struct ResultDocument: Sendable {
   /// takes for it: the side that changed it, or B where B's text counts as equal to another
   /// side's.
   ///
-  /// - Precondition: The session is a merge.
-  public init(session: Session) {
+  /// - Parameter removalNotes: The line that the preview of a conflict shows in place of the
+  ///   lines of a side that removed them, such as “A removed these lines”, by side. The note is
+  ///   part of the preview, so it is never written. Without a note, the side shows nothing.
+  /// - Precondition: The session is a merge, and no note holds a line break.
+  public init(session: Session, removalNotes: [Role: String] = [:]) {
     precondition(session.kind == .merge, "Only a merge has a result")
-    let texts = SegmentTexts(files: session.files, blocks: session.blocks)
+    precondition(
+      removalNotes.values.allSatisfy { !$0.contains(where: \.isNewline) },
+      "A removal note is a single line")
+    let texts = SegmentTexts(
+      files: session.files, blocks: session.blocks, removalNotes: removalNotes)
     var segments = session.blocks.map(texts.initialSegment(for:))
     let initialTexts = texts.texts(of: segments, in: session.blocks, editedTexts: [:])
     for (index, text) in initialTexts.enumerated() {
@@ -78,7 +85,8 @@ public struct ResultDocument: Sendable {
     texts.toggles(in: session.blocks[index(of: block)])
   }
 
-  /// The preview of a conflict: A's lines, then B's lines, each ending with a line ending.
+  /// The preview of a conflict: A's lines, then B's lines, each ending with a line ending; a side
+  /// that removed the lines shows its removal note instead.
   ///
   /// The preview is what the segment of an open conflict holds. It is not part of the file and is
   /// never written; conflict markers take its place.
@@ -87,6 +95,17 @@ public struct ResultDocument: Sendable {
   public func previewText(for block: Block) -> String {
     precondition(block.kind == .conflict, "Block \(block.id) is not a conflict")
     return texts.previewText(for: session.blocks[index(of: block)])
+  }
+
+  /// The number of lines that the preview of a conflict shows for `role`, A or B: its lines, or
+  /// one for its removal note.
+  ///
+  /// - Precondition: `block` is a conflict of the session.
+  public func previewLineCount(of role: Role, in block: Block) -> Int {
+    precondition(block.kind == .conflict, "Block \(block.id) is not a conflict")
+    let block = session.blocks[index(of: block)]
+    let lineCount = block.lines(in: role).count
+    return lineCount == 0 && !texts.previewPart(of: role, in: block).isEmpty ? 1 : lineCount
   }
 
   /// The number of conflicts that await a decision.

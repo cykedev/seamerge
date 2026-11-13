@@ -58,16 +58,25 @@ extension ResultDocument {
 
   /// Turns a block's segment into text to edit by hand, with the cursor at its start.
   ///
-  /// The preview of an open conflict becomes text as it stands, A then B. An empty segment gets
-  /// an empty line, which belongs to the block. Either way the segment becomes edited. Any other
-  /// segment is already text to edit and stays as it is; only the cursor moves.
+  /// The preview of an open conflict becomes text, A then B; a removal note gives way to the
+  /// nothing it stands for. An empty segment gets an empty line, which belongs to the block.
+  /// Either way the segment becomes edited. Any other segment is already text to edit and stays
+  /// as it is; only the cursor moves.
   ///
   /// - Precondition: `block` belongs to the session.
   public func planResolvingByHand(_ block: Block) -> ManualResolution {
     let index = index(of: block)
-    let start = range(of: block).lowerBound
+    let range = self.range(of: block)
+    let start = range.lowerBound
     var after = segments[index]
     var replacements: [TextReplacement] = []
+    if after.state == .open {
+      let sides = texts.sideTexts(of: session.blocks[index])
+      if sides != texts.previewText(for: session.blocks[index]) {
+        replacements = [TextReplacement(range: range, text: sides)]
+        after.length = sides.utf16.count
+      }
+    }
     if after.length == 0 {
       replacements = [TextReplacement(range: start..<start, text: texts.lineEnding)]
       after.length = texts.lineEnding.utf16.count

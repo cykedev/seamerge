@@ -24,7 +24,7 @@ extension ResultDocument {
   ///   - session: A merge of the files of this document's session.
   ///   - text: The result text, as long as the segments together.
   public func planSwitching(to session: Session, text: String) -> ModeSwitch {
-    let fresh = ResultDocument(session: session)
+    let fresh = ResultDocument(session: session, removalNotes: texts.removalNotes)
     var decisionsByLines: [[Range<Int>]: Int] = [:]
     for index in segments.indices where !segments[index].hasSameDecision(as: initialSegments[index])
     {

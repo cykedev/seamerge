@@ -21,9 +21,9 @@ struct ResultBuffer {
   /// cursor.
   private var continuesTyping = false
 
-  /// A buffer with the result of `session` as loaded.
-  init(_ session: Session) {
-    document = ResultDocument(session: session)
+  /// A buffer with the result of `session` as loaded, whose previews show `removalNotes`.
+  init(_ session: Session, removalNotes: [Role: String] = [:]) {
+    document = ResultDocument(session: session, removalNotes: removalNotes)
     text = document.initialText
   }
 
