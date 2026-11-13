@@ -170,6 +170,17 @@ struct AppDelegateTests {
     withExtendedLifetime(otherCopy) {}
   }
 
+  @Test func reasonsTheAppCannotListenNameNoGit() {
+    let errors: [ListeningError] = [
+      .anotherCopyIsRunning, .socketPathTooLong, .socketFolderNotPrivate(path: "/tmp/x"),
+      .socketUnavailable,
+    ]
+    for error in errors {
+      let texts = [error.errorDescription, error.recoverySuggestion].compactMap(\.self)
+      #expect(texts.count == 2 && texts.allSatisfy { !$0.contains("Git") }, "\(error)")
+    }
+  }
+
   @Test func clearMenuEmptiesTheRecentComparisons() throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])

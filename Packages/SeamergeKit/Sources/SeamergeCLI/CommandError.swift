@@ -58,6 +58,12 @@ enum CommandError: Error {
   /// The socket could not be used; the associated value says why.
   case connectionNotPossible(reason: String)
 
+  /// The path of the socket is longer than the system allows.
+  case socketPathTooLong(path: String)
+
+  /// The folder of the socket belongs to another user or is no folder.
+  case socketFolderNotPrivate(path: String)
+
   /// The connection ended before the window was closed.
   case connectionLost
 
@@ -70,7 +76,8 @@ enum CommandError: Error {
       .unexpectedArgument, .missingFiles, .emptyFileName, .fileNotFound, .folderInsteadOfFile,
       .fileNotReadable, .outputFolderNotFound:
       2
-    case .appNotOpened, .appNotAnswering, .appRefusedRequest, .connectionNotPossible:
+    case .appNotOpened, .appNotAnswering, .appRefusedRequest, .connectionNotPossible,
+      .socketPathTooLong, .socketFolderNotPrivate:
       3
     }
   }
@@ -108,6 +115,12 @@ enum CommandError: Error {
       "This version of Seamerge cannot open this merge. Use another merge tool for now."
     case .connectionNotPossible(let reason):
       "Cannot connect to Seamerge (\(reason)). Quit Seamerge, then try again."
+    case .socketPathTooLong(let path):
+      "Cannot connect to Seamerge: the path of its socket, '\(path)', is longer than macOS "
+        + "allows. This is a bug in Seamerge; please report it."
+    case .socketFolderNotPrivate(let path):
+      "Cannot connect to Seamerge: '\(path)' is not a folder of yours alone. "
+        + "Remove it, then open Seamerge again."
     case .connectionLost:
       "Lost the connection to Seamerge before the window was closed. Run the command again."
     }
@@ -129,7 +142,9 @@ enum CommandError: Error {
     case .disconnected, .cancelled, .malformedMessage, .messageTooLong:
       self = .connectionLost
     case .socketPathTooLong(let path):
-      self = .connectionNotPossible(reason: "the socket path \(path) is too long")
+      self = .socketPathTooLong(path: path)
+    case .socketDirectoryNotPrivate(let path):
+      self = .socketFolderNotPrivate(path: path)
     case .socketCallFailed(let call, let code):
       self = .connectionNotPossible(reason: "\(call): \(String(cString: strerror(code)))")
     case .socketDirectoryUnavailable(let path, let reason):

@@ -83,6 +83,26 @@ struct ExitStatusTests {
     }
   }
 
+  @Test func socketPathTooLongIsToldAsABugInsteadOfAdvice() async throws {
+    try await withSandbox { sandbox in
+      try sandbox.makeFile("a.txt")
+      let socket = URL(filePath: "/tmp/" + String(repeating: "s", count: 100))
+      let command = SeamergeCommand(
+        version: "1.2.3", appLauncher: AppAlreadyRunning(),
+        client: SessionClient(socketURL: socket))
+
+      let result = await sandbox.run(Self.merge, command: command)
+
+      #expect(
+        result
+          == CommandResult(
+            exitStatus: 3,
+            errorOutput: "seamerge: Cannot connect to Seamerge: the path of its socket, "
+              + "'\(socket.path)', is longer than macOS allows. "
+              + "This is a bug in Seamerge; please report it.\n"))
+    }
+  }
+
   @Test func appThatGoesAwayBeforeTheWindowClosesEndsWithOne() async throws {
     try await withSandbox { sandbox in
       try sandbox.makeFile("a.txt")

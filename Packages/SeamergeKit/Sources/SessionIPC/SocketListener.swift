@@ -20,10 +20,12 @@ final class SocketListener: Sendable {
   /// Binds a socket at `url` and starts accepting connections.
   ///
   /// A socket file that no server listens on any more is replaced: it is left behind by a server
-  /// that ended without removing it. A missing directory for the socket is created.
+  /// that ended without removing it. A missing directory for the socket is created; the directory
+  /// must belong to the user, who alone may enter it.
   ///
   /// - Throws: ``SessionError/socketInUse(path:)`` if a server listens on the socket,
-  ///   ``SessionError/socketPathOccupied(path:)`` if another kind of file is at `url`, and
+  ///   ``SessionError/socketPathOccupied(path:)`` if another kind of file is at `url`,
+  ///   ``SessionError/socketDirectoryNotPrivate(path:)`` if its directory is not the user's, and
   ///   other ``SessionError`` cases if the socket cannot be set up.
   init(url: URL) throws(SessionError) {
     let address = try SocketAddress(path: url.path(percentEncoded: false))
@@ -100,13 +102,31 @@ final class SocketListener: Sendable {
     return socketFile
   }
 
+  /// Creates the directory of the socket at `url` for the user alone, or makes sure that the one
+  /// there is a folder of the user, which only the user may enter.
   private static func createDirectory(for url: URL) throws(SessionError) {
     let directory = url.deletingLastPathComponent()
+    // Without its final slash, so that a link in the place of the folder is not followed.
+    var path = directory.path(percentEncoded: false)
+    while path.count > 1 && path.hasSuffix("/") {
+      path.removeLast()
+    }
     do {
-      try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+      try FileManager.default.createDirectory(
+        at: directory, withIntermediateDirectories: true,
+        attributes: [.posixPermissions: S_IRWXU])
     } catch {
-      throw .socketDirectoryUnavailable(
-        path: directory.path(percentEncoded: false), reason: error.localizedDescription)
+      throw .socketDirectoryUnavailable(path: path, reason: error.localizedDescription)
+    }
+    var status = stat()
+    guard lstat(path, &status) == 0 else { throw .socketCallFailed(call: "lstat", code: errno) }
+    guard status.st_mode & S_IFMT == S_IFDIR, status.st_uid == getuid() else {
+      throw .socketDirectoryNotPrivate(path: path)
+    }
+    // A folder of the user that others may enter is closed to them, so that no one else can
+    // reach the socket or put a file in its place.
+    if status.st_mode & (S_IRWXG | S_IRWXO) != 0, chmod(path, S_IRWXU) != 0 {
+      throw .socketCallFailed(call: "chmod", code: errno)
     }
   }
 

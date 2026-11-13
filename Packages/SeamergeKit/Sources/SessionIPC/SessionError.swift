@@ -6,6 +6,10 @@ public enum SessionError: Error, Sendable, Hashable {
   /// The directory for the socket could not be created.
   case socketDirectoryUnavailable(path: String, reason: String)
 
+  /// The directory for the socket is not a folder of the user alone: it belongs to another user,
+  /// or it is a link or another kind of file.
+  case socketDirectoryNotPrivate(path: String)
+
   /// Another server listens on the socket.
   case socketInUse(path: String)
 

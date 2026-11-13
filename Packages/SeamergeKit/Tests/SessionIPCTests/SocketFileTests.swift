@@ -129,9 +129,70 @@ struct SocketFileTests {
     }
   }
 
-  @Test func defaultSocketIsInTheFolderOfTheAppInApplicationSupport() {
-    #expect(
-      SessionSocket.defaultURL.path(percentEncoded: false).hasSuffix(
-        "/Library/Application Support/Seamerge/seamerge.sock"))
+  @Test func defaultSocketLiesInTheTemporaryFolderOfTheUserWhateverTheHomeIsCalled() throws {
+    let longHome = "/Users/" + String(repeating: "h", count: 120)
+    let folder = try temporaryFolderOfTheUser(home: nil)
+
+    let path = SessionSocket.defaultURL.path(percentEncoded: false)
+
+    #expect(path == folder + "Seamerge/seamerge.sock")
+    #expect(try temporaryFolderOfTheUser(home: longHome) == folder)
+    #expect(!path.contains(NSHomeDirectory()))
+    #expect(path.utf8.count < 104)
+    // The former place below the home folder would not fit with a home folder this long.
+    let former = URL(filePath: longHome).appending(
+      path: "Library/Application Support/Seamerge/seamerge.sock")
+    #expect(throws: SessionError.socketPathTooLong(path: former.path)) {
+      try SessionServer(socketURL: former)
+    }
+  }
+
+  @Test func folderOfTheSocketIsMadeForTheUserAlone() async throws {
+    try await withSocketURL { url in
+      let folder = url.deletingLastPathComponent()
+      try FileManager.default.createDirectory(
+        at: folder, withIntermediateDirectories: true,
+        attributes: [.posixPermissions: 0o755])
+
+      let server = try RunningServer(at: url)
+
+      let attributes = try FileManager.default.attributesOfItem(atPath: folder.path)
+      #expect((attributes[.posixPermissions] as? Int) == 0o700)
+      await server.stop()
+    }
+  }
+
+  @Test func linkInThePlaceOfTheFolderOfTheSocketIsRefused() async throws {
+    try await withSocketURL { url in
+      let folder = url.deletingLastPathComponent()
+      let target = folder.deletingLastPathComponent().appending(
+        path: "seamerge-target-\(UUID().uuidString.prefix(8))", directoryHint: .isDirectory)
+      try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+      defer { #expect(throws: Never.self) { try FileManager.default.removeItem(at: target) } }
+      try FileManager.default.createSymbolicLink(at: folder, withDestinationURL: target)
+      let path = String(folder.path(percentEncoded: false).dropLast())
+
+      #expect(throws: SessionError.socketDirectoryNotPrivate(path: path)) {
+        try SessionServer(socketURL: url)
+      }
+    }
+  }
+
+  /// The temporary folder of the user as `getconf` names it, with `home` as the home folder if
+  /// one is given.
+  private func temporaryFolderOfTheUser(home: String?) throws -> String {
+    let process = Process()
+    process.executableURL = URL(filePath: "/usr/bin/getconf")
+    process.arguments = ["DARWIN_USER_TEMP_DIR"]
+    var environment = ProcessInfo.processInfo.environment
+    environment["HOME"] = home ?? environment["HOME"]
+    process.environment = environment
+    let pipe = Pipe()
+    process.standardOutput = pipe
+    try process.run()
+    let output = pipe.fileHandleForReading.readDataToEndOfFile()
+    process.waitUntilExit()
+    try #require(process.terminationStatus == 0)
+    return String(decoding: output, as: UTF8.self).trimmingCharacters(in: .newlines)
   }
 }

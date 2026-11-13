@@ -5,7 +5,7 @@
       "comment": "App menu."
     },
     "Another copy of Seamerge is already running.": {
-      "comment": "Alert at launch: a second copy of the app cannot take merges from Git."
+      "comment": "Alert at launch: a second copy of the app cannot take merges from the command line."
     },
     "Bring All to Front": {
       "comment": "Window menu."
@@ -22,8 +22,8 @@
     "Compare Files…": {
       "comment": "File menu: open the window Compare Files."
     },
-    "Comparing files still works. Quit Seamerge and open it again to use it with Git.": {
-      "comment": "Alert at launch: what to do when the app cannot listen for Git."
+    "Comparing files still works. Quit Seamerge and open it again to merge from the command line.": {
+      "comment": "Alert at launch: what to do when the app cannot listen for the command line."
     },
     "Copy": {
       "comment": "Edit menu."
@@ -55,9 +55,6 @@
     "Find…": {
       "comment": "Edit > Find."
     },
-    "Git opens merges in the other copy. Quit it, then open this one again.": {
-      "comment": "Alert at launch: what to do when another copy runs."
-    },
     "Go": {
       "comment": "Menu bar."
     },
@@ -81,6 +78,9 @@
     },
     "Merge": {
       "comment": "Menu bar: the decisions of a merge."
+    },
+    "Merges from the command line open in the other copy. Quit it, then open this one again.": {
+      "comment": "Alert at launch: what to do when another copy runs."
     },
     "Minimize": {
       "comment": "Window menu."
@@ -112,7 +112,7 @@
     "Seamerge Help": {
       "comment": "Help menu."
     },
-    "Seamerge can’t take merges from Git.": {
+    "Seamerge can’t take merges from the command line.": {
       "comment": "Alert at launch: the app cannot listen for the command-line helper."
     },
     "Select All": {
@@ -139,6 +139,9 @@
     "Syntax Highlighting": {
       "comment": "View menu: color the code by its syntax."
     },
+    "The path of its connection to the command line is longer than macOS allows. Comparing files still works. This is a bug in Seamerge; please report it.": {
+      "comment": "Alert at launch: the path of the socket is too long; what still works."
+    },
     "Undo": {
       "comment": "Edit menu."
     },
@@ -153,6 +156,9 @@
     },
     "Zoom": {
       "comment": "Window menu."
+    },
+    "“%@” isn’t a folder of yours alone. Remove it, then open Seamerge again. Comparing files still works.": {
+      "comment": "Alert at launch: the folder of the socket belongs to someone else; what to do."
     }
   },
   "version": "1.0"
