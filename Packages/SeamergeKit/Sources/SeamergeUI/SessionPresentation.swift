@@ -160,6 +160,7 @@ final class SessionPresentation {
     guard let resultPane = layout.resultPane, let result,
       resultPane.documentView.window?.firstResponder === resultPane.documentView
     else { return }
+    delegate?.presentation(self, didMoveInsertionPointTo: resultPane.documentView.selectedRange())
     let caret = resultPane.documentView.selectedRange().location
     guard caret <= result.resultText.paneLength else { return }
     let row = result.row(ofPaneOffset: caret)

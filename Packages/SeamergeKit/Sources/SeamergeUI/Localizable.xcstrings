@@ -592,6 +592,9 @@
     "Try again. If it fails again, use another tool for these files.": {
       "comment": "Alert: what to do when the comparison of the files failed."
     },
+    "Typing": {
+      "comment": "Undo menu: text typed in the result."
+    },
     "UTF-16 BE": {
       "comment": "Encoding: UTF-16 big-endian."
     },

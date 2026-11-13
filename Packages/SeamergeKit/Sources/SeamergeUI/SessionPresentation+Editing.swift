@@ -60,7 +60,7 @@ extension SessionPresentation: PaneEditingDelegate {
   }
 
   /// Takes over the edits that the pane carried out for the user into the document and shows
-  /// the outcome.
+  /// the outcome; the delegate learns of the step that takes them back.
   func pane(_ pane: PaneView, didCarryOut edits: [PaneEdit], replacing replacedTexts: [String]) {
     guard let result else { return }
     guard let pending = pendingTyping, pending.edits == edits else {
@@ -75,8 +75,13 @@ extension SessionPresentation: PaneEditingDelegate {
     var text = result.resultText
     let replaced = pending.plan.replacements.map { text.carryOut($0).replacedText }
     var document = result.document
-    document.apply(pending.plan, replacedTexts: replaced)
+    let step = document.apply(pending.plan, replacedTexts: replaced)
     show(ResultState(document: document, resultText: text))
+    if let first = edits.first, let last = edits.last {
+      delegate?.presentation(
+        self, didType: step, at: first.range,
+        caret: last.range.lowerBound + last.text.utf16.count)
+    }
     // The selection moved while the edit was under way, which followed nothing.
     followInsertionPoint()
   }

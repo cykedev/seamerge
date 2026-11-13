@@ -136,4 +136,10 @@ extension SessionWindowController {
     }
     #expect(shown == previewed, comment, sourceLocation: sourceLocation)
   }
+
+  /// Ends the current event, as the run loop does after each, which closes the group of undo
+  /// that the event opened.
+  func endEvent() {
+    RunLoop.current.run(mode: .default, before: .distantPast)
+  }
 }

@@ -66,6 +66,12 @@ public final class SessionWindowController: NSWindowController {
   /// The pane above the result that had the focus last, which gets it back when text mode ends.
   private(set) weak var lastSourcePane: PaneView?
 
+  /// The typing that the last step of undo takes back, as long as further typing joins it.
+  var typingRun: TypingRun?
+
+  /// The time now, which tells when typing paused.
+  let now: () -> ContinuousClock.Instant
+
   /// The accessibility settings the window draws with.
   var displayOptions: DisplayOptions {
     didSet {
@@ -133,12 +139,14 @@ public final class SessionWindowController: NSWindowController {
   /// Opens a window for `session` that draws with `displayOptions`, whatever the system's
   /// settings are, copies to `pasteboard`, opens files with `workspace`, asks with `prompts`,
   /// shows the button that saves and closes of a merge in `doneStyle`, and lays itself out in
-  /// `window`; for an `unavailable` comparison, it says why in place of the lines.
+  /// `window`; for an `unavailable` comparison, it says why in place of the lines. `now` tells
+  /// the time, which ends a run of typing after a pause.
   init(
     session: Session, context: SessionContext, undoManager: UndoManager,
     displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace,
     prompts: any ComparisonPrompts, doneStyle: SessionToolbar.DoneStyle, window: SessionWindow,
-    unavailable: UnavailableComparison? = nil
+    unavailable: UnavailableComparison? = nil,
+    now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
   ) {
     let theme = displayOptions.theme(fontSize: Self.standardFontSize)
     let arrangement = PaneArrangement(session: session)
@@ -156,6 +164,7 @@ public final class SessionWindowController: NSWindowController {
     self.pasteboard = pasteboard
     self.workspace = workspace
     self.prompts = prompts
+    self.now = now
     toolbar = SessionToolbar(kind: session.kind, doneStyle: doneStyle)
     sessionUndoManager = undoManager
     self.displayOptions = displayOptions
@@ -195,6 +204,7 @@ public final class SessionWindowController: NSWindowController {
       window.initialFirstResponder = first
       window.makeFirstResponder(first)
     }
+    observeStepsOfUndo()
     stateDidChange()
   }
 
@@ -420,8 +430,21 @@ extension SessionWindowController: SessionPresentationDelegate {
     stateDidChange()
   }
 
+  func presentation(
+    _ presentation: SessionPresentation, didMoveInsertionPointTo selection: NSRange
+  ) {
+    endTypingRun(unlessContinuedAt: selection)
+  }
+
   func presentationDidTakeOverUnannouncedChange(_ presentation: SessionPresentation) {
+    typingRun = nil
     sessionUndoManager.removeAllActions()
+  }
+
+  func presentation(
+    _ presentation: SessionPresentation, didType step: UndoStep, at range: Range<Int>, caret: Int
+  ) {
+    recordTyping(step, at: range, caret: caret)
   }
 
   func presentation(
