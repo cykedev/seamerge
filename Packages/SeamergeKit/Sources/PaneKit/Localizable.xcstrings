@@ -4,8 +4,8 @@
     "%@ and %@": {
       "comment": "VoiceOver: the inputs that share a toggle, such as Base and B."
     },
-    "%@, deletion": {
-      "comment": "VoiceOver: a toggle that follows the inputs named in removing lines, such as A."
+    "%@, removes these lines": {
+      "comment": "VoiceOver: a toggle that follows the inputs named in removing the lines, such as A."
     },
     "%lld Unchanged Lines": {
       "comment": "The bar that stands for unchanged lines that are hidden.",
@@ -151,7 +151,7 @@
       "comment": "VoiceOver: a block whose text the user typed or changed."
     },
     "Holds lines that you typed or changed": {
-      "comment": "Help tag of the pencil: a block whose text the user typed or changed."
+      "comment": "Help tag of a block whose text the user typed or changed."
     },
     "Ignored difference": {
       "comment": "VoiceOver: a line that differs only in what the comparison ignores."
@@ -193,13 +193,13 @@
       "comment": "VoiceOver: a block whose sources the merge took, such as A."
     },
     "Takes no lines, as you chose": {
-      "comment": "Help tag of the trash can: a block that takes no lines from any input."
+      "comment": "Help tag of a block that takes no lines from any input."
     },
     "Takes the lines of %@, as the merge decided": {
-      "comment": "Help tag of the sign of a block whose sources the merge took, such as A and B."
+      "comment": "Help tag of a block whose sources the merge took, such as A and B."
     },
     "Takes the lines of %@, in the order you chose": {
-      "comment": "Help tag of the sign of a block whose sources the user chose, such as B and A."
+      "comment": "Help tag of a block whose sources the user chose, such as B and A."
     }
   },
   "version": "1.0"

@@ -3,82 +3,106 @@ import Testing
 
 @testable import PaneKit
 
-/// Checks that the labels of the toggles look centered: their capitals, and the trash can of a
-/// toggle that follows a deletion, leave as much room above as below, on and off alike; and that
-/// the trash can is about as high as the capitals.
+/// Checks that the signs of the bar of toggles look centered in it: the letters, the ring of the
+/// base and the trash can of a side that removed the lines leave as much room above as below,
+/// off, taken by the merge and chosen alike, and stand in the middle of their segments; and that
+/// the trash can is as high as the capitals beside it.
 @MainActor
 @Suite struct DecisionToggleCenteringTests {
-  @Test(
-    arguments: [
-      ([ColorRole.a], true, false), ([.b], true, false), ([.a, .b], true, false),
-      ([.b], true, true), ([.base], false, false), ([.base, .a], false, false),
-      ([.b], false, true),
-    ])
-  func capitalsAndTrashCanSitInTheMiddleOfTheToggle(
-    roles: [ColorRole], isOn: Bool, isDeletion: Bool
-  ) throws {
-    let toggle = DecisionToggle(roles: roles, isOn: isOn, isDeletion: isDeletion, help: "")
-    let button = DecisionToggleButton(block: 0, index: 0, toggle: toggle, theme: Theme())
-    let size = CGSize(
-      width: DecisionToggleButton.width(of: toggle), height: Theme.decisionControlSize)
-    let window = Rendering.host(button, size: size, appearance: NSAppearance(named: .aqua))
-    defer { window.close() }
-    let bitmap = try Rendering.bitmap(of: button)
-    let label = NSAttributedString(
-      string: DecisionToggleButton.label(of: toggle),
-      attributes: [.font: DecisionToggleButton.font])
-    let symbolWidth =
-      isDeletion ? size.width - label.size().width - 2 * Theme.toggleLabelPadding : 0
-    let labelStart = ((size.width - label.size().width - symbolWidth) / 2).rounded()
-    let labelEnd = labelStart + label.size().width
-    // The first letter is always a capital; lowercase letters overshoot the baseline.
-    let capital = NSAttributedString(
-      string: String(DecisionToggleButton.label(of: toggle).prefix(1)),
-      attributes: [.font: DecisionToggleButton.font])
-    let parts =
-      [("capital", labelStart..<labelStart + capital.size().width)]
-      + (isDeletion ? [("trash can", labelEnd + 1..<size.width - Theme.toggleLabelPadding)] : [])
-    var heights: [CGFloat] = []
-    for (name, xs) in parts {
-      let ink = try Self.ink(in: bitmap, xs: xs, height: size.height)
-      let above = ink.lowerBound
-      let below = size.height - ink.upperBound
-      #expect(abs(above - below) <= 0.5, "\(name) of \(roles): \(above) above, \(below) below")
-      heights.append(ink.upperBound - ink.lowerBound)
+  /// Where the parts of a row stand for the rows of the standard theme.
+  static var layout: DecisionColumnLayout {
+    DecisionColumnLayout(theme: Theme())
+  }
+
+  @Test(arguments: [
+    BlockDecision.State.automatic([.a]), .chosen([.a, .base, .b]), .open, .chosen([.b]),
+  ])
+  func signsSitInTheMiddleOfTheirSegments(state: BlockDecision.State) throws {
+    let removesLines = state == .chosen([.b])
+    let toggles = [ColorRole.a, .base, .b].map { role in
+      DecisionToggle(
+        roles: [role], isOn: Self.isOn(role, in: state), isDeletion: removesLines && role == .b,
+        help: "")
     }
-    // The trash can is no more than a point higher than the capital beside it.
-    if heights.count == 2 {
-      #expect(heights[1] <= heights[0] + 1, "trash can \(heights[1]), capital \(heights[0])")
+    let row = DecisionRow(
+      block: 0, theme: Theme(), toggleAction: (NSObject(), #selector(NSObject.description)),
+      resetAction: (NSObject(), #selector(NSObject.description)))
+    row.show(BlockDecision(state: state, toggles: toggles), place: "")
+    let size = CGSize(width: Self.layout.rowWidth, height: Self.layout.height)
+    let window = Rendering.host(row, size: size, appearance: NSAppearance(named: .aqua))
+    defer { window.close() }
+    let bitmap = try Rendering.bitmap(of: row)
+    let bar = Self.layout.barRect
+    var inks: [DecisionColumnLayout.Slot: Range<CGFloat>] = [:]
+    for slot in [DecisionColumnLayout.Slot.a, .base, .b] {
+      let frame = Self.layout.frame(of: slot)
+      let ink = try Self.ink(in: bitmap, within: frame, bar: bar)
+      inks[slot] = ink.rows
+      let above = ink.rows.lowerBound - bar.minY
+      let below = bar.maxY - ink.rows.upperBound
+      #expect(abs(above - below) <= 0.5, "\(slot) in \(state): \(above) above, \(below) below")
+      let left = ink.columns.lowerBound - frame.minX
+      let right = frame.maxX - ink.columns.upperBound
+      #expect(abs(left - right) <= 1, "\(slot) in \(state): \(left) left, \(right) right")
+    }
+    // The trash can of B stands as high as the capital A beside it, and on the same middle.
+    if removesLines, let trash = inks[.b], let letter = inks[.a] {
+      let trashHeight = trash.upperBound - trash.lowerBound
+      let letterHeight = letter.upperBound - letter.lowerBound
+      #expect(abs(trashHeight - letterHeight) <= 0.5, "trash \(trashHeight), A \(letterHeight)")
+      let middles = (
+        (trash.lowerBound + trash.upperBound) / 2, (letter.lowerBound + letter.upperBound) / 2
+      )
+      #expect(abs(middles.0 - middles.1) <= 0.5, "trash at \(middles.0), A at \(middles.1)")
     }
   }
 
-  /// The rows of `bitmap` within `xs` whose color differs from the face of the toggle, from the
-  /// top of the first to the bottom of the last.
-  private static func ink(in bitmap: NSBitmapImageRep, xs: Range<CGFloat>, height: CGFloat)
-    throws -> Range<CGFloat>
-  {
+  private static func isOn(_ role: ColorRole, in state: BlockDecision.State) -> Bool {
+    switch state {
+    case .automatic(let roles), .chosen(let roles): roles.contains(role)
+    default: false
+    }
+  }
+
+  /// The rows and columns of `bitmap` within the segment `frame` of `bar` whose color differs
+  /// from the face of the segment, away from the outline of the bar and the hairlines between
+  /// the segments.
+  private static func ink(
+    in bitmap: NSBitmapImageRep, within frame: CGRect, bar: CGRect
+  ) throws -> (rows: Range<CGFloat>, columns: Range<CGFloat>) {
     let scale = CGFloat(bitmap.pixelsWide) / bitmap.size.width
-    // A toggle that is off draws no face; the column behind it is the text background.
     func color(at point: CGPoint) throws -> NSColor {
       Contrast.over(try Rendering.color(in: bitmap, at: point), .white)
     }
-    let face = try color(at: CGPoint(x: xs.lowerBound, y: 2))
+    let margin = Theme.openConflictOutlineWidth + 2 / scale
+    let face = try color(at: CGPoint(x: frame.midX, y: bar.minY + margin))
     var rows: [CGFloat] = []
-    for y in stride(from: 0, to: height, by: 1 / scale) {
-      for x in stride(from: xs.lowerBound, to: xs.upperBound, by: 1 / scale) {
+    var columns: [CGFloat] = []
+    // The rows of the sign in a strip down the middle of the segment, and its columns in a strip
+    // across the middle of the bar, where neither meets the outline of the bar.
+    let middleColumns = (frame.midX - 3)...(frame.midX + 3)
+    let middleRows = (bar.midY - 2)...(bar.midY + 2)
+    for y in stride(from: bar.minY + margin, to: bar.maxY - margin, by: 1 / scale) {
+      for x in stride(from: frame.minX + margin, to: frame.maxX - margin, by: 1 / scale) {
         let color = try color(at: CGPoint(x: x, y: y))
         let distance =
           abs(color.redComponent - face.redComponent)
           + abs(color.greenComponent - face.greenComponent)
           + abs(color.blueComponent - face.blueComponent)
-        if distance > 0.9 {
+        // The sign of a toggle that is off is quiet, and thin lines are fainter where smoothed.
+        guard distance > 0.4 else { continue }
+        if middleColumns ~= x {
           rows.append(y)
-          break
+        }
+        if middleRows ~= y {
+          columns.append(x)
         }
       }
     }
-    let top = try #require(rows.first)
-    let bottom = try #require(rows.last)
-    return top..<bottom + 1 / scale
+    let top = try #require(rows.min())
+    let bottom = try #require(rows.max())
+    let leading = try #require(columns.min())
+    let trailing = try #require(columns.max())
+    return (top..<bottom + 1 / scale, leading..<trailing + 1 / scale)
   }
 }

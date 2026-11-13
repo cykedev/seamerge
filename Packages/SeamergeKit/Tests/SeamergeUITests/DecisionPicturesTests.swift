@@ -10,19 +10,26 @@ import Testing
 /// switched in order, and the note of a removal in a preview, in every look.
 @MainActor
 @Suite(.serialized) struct DecisionPicturesTests {
-  @Test(arguments: [false, true])
-  func helloWorldIsPicturedOpenAndResolvedForTheComparisonWithP4Merge(resolved: Bool)
-    async throws
-  {
+  @Test(arguments: Look.all, [false, true])
+  func helloWorldIsPicturedOpenAndResolvedForTheComparisonWithP4Merge(
+    look: Look, resolved: Bool
+  ) async throws {
     let session = try await SampleMerges.helloWorld()
     try Windows.picture(
-      session, context: SampleMerges.helloWorldContext, look: .light,
-      options: DisplayOptions(reducesMotion: true),
-      named: "p4merge-comparison-\(resolved ? "resolved" : "open")-light"
+      session, context: SampleMerges.helloWorldContext, look: look,
+      options: DisplayOptions(increasesContrast: look.increasesContrast, reducesMotion: true),
+      named: "p4merge-comparison-\(resolved ? "resolved" : "open")-\(look.name)"
     ) { controller in
       guard resolved else { return }
       controller.perform(.useAThenB)
     }
+  }
+
+  @Test func openConflictIsPicturedWithoutColor() async throws {
+    try Windows.picture(
+      try await SampleMerges.helloWorld(), context: SampleMerges.helloWorldContext, look: .light,
+      options: DisplayOptions(differentiatesWithoutColor: true, reducesMotion: true),
+      named: "p4merge-comparison-open-without-color-light")
   }
 
   @Test(arguments: Look.all)

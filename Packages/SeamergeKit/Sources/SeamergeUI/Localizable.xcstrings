@@ -470,6 +470,9 @@
     "Remove File": {
       "comment": "Compare Files: the button that empties a field."
     },
+    "Remove these lines, as %@ did.": {
+      "comment": "Help tag of a toggle that removes the lines, such as Remove these lines, as main did."
+    },
     "Remove this file from the field": {
       "comment": "Help tag of the button that empties a field of Compare Files."
     },
@@ -571,9 +574,6 @@
     },
     "Synchronize Scrolling": {
       "comment": "View menu command."
-    },
-    "Take the deletion of %@.": {
-      "comment": "Help tag of a toggle that removes the lines, such as Take the deletion of main."
     },
     "Take the version of %@.": {
       "comment": "Help tag of a toggle, such as Take the version of feature/login."

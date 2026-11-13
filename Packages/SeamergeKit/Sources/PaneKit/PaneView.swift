@@ -96,6 +96,9 @@ public final class PaneView: NSView {
     set { textView.highlightProvider = newValue }
   }
 
+  /// A number that changes whenever the pane gets other content.
+  private(set) var contentGeneration = 0
+
   /// Learns about clicks and supplies the context menu; the pane does not retain it.
   public weak var delegate: (any PaneViewDelegate)?
 
@@ -174,7 +177,7 @@ public final class PaneView: NSView {
   public var minimumWidth: CGFloat {
     let text = CGFloat(Theme.minimumTextColumns) * theme.characterWidth + 2 * Theme.textInset
     let bar = overviewBar == nil ? 0 : Theme.overviewBarWidth
-    let column = decisionColumn == nil ? 0 : DecisionColumnView.width
+    let column = decisionColumn?.width ?? 0
     let width = gutterView.fittingWidth + text + column + bar
     return (width / Theme.layoutGrid).rounded(.up) * Theme.layoutGrid
   }
@@ -290,7 +293,7 @@ public final class PaneView: NSView {
     super.layout()
     let gutterWidth = gutterView.fittingWidth
     let barWidth = overviewBar == nil ? 0 : Theme.overviewBarWidth
-    let columnWidth = decisionColumn == nil ? 0 : DecisionColumnView.width
+    let columnWidth = decisionColumn?.width ?? 0
     gutterView.frame = CGRect(x: 0, y: 0, width: gutterWidth, height: bounds.height)
     scrollView.frame = CGRect(
       x: gutterWidth, y: 0, width: max(bounds.width - gutterWidth - columnWidth - barWidth, 0),
@@ -323,6 +326,7 @@ public final class PaneView: NSView {
   }
 
   private func show(_ content: PaneContent, collapsedRuns: [CollapsedRun]) {
+    contentGeneration += 1
     // The runs, and with them the indices of the bars, may change; the text reports its new
     // selection while it changes.
     removeRunBars()
@@ -433,7 +437,16 @@ extension PaneView: RowInteraction {
 }
 
 extension PaneView: DecisionColumnHost {
-  func signCenter(ofBlock block: Int) -> CGFloat? {
+  func top(ofBlock block: Int) -> CGFloat? {
+    guard content.blocks.indices.contains(block) else { return nil }
+    let row = content.blocks[block].rows.lowerBound
+    guard row >= displayRows.rowCount || !displayRows.isHidden(row: row) else { return nil }
+    let displayRow =
+      row < displayRows.rowCount ? displayRows.displayRow(ofRow: row) : displayRows.count
+    return CGFloat(displayRow) * rowHeight - clipView.bounds.minY
+  }
+
+  func rowCenter(ofBlock block: Int) -> CGFloat? {
     guard content.blocks.indices.contains(block) else { return nil }
     let rows = content.blocks[block].rows
     let scrollOffset = clipView.bounds.minY

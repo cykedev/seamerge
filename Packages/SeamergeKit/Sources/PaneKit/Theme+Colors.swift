@@ -115,18 +115,50 @@ extension Theme {
     }
   }
 
-  /// The color of a toggle or a letter of a state sign that stands for `roles`: the color of the
-  /// side, of both sides blended where they share it, or of the base alone.
-  public func decisionColor(for roles: [ColorRole]) -> NSColor {
-    let sides = roles.filter { $0 == .a || $0 == .b }
-    switch sides.count {
-    case 0: return symbolColor(for: .base)
-    case 1: return symbolColor(for: sides[0])
-    default: return overviewMarkColor(for: .combined)
+  /// The color of the outline of the bar of toggles, as strong as the edges of the blocks
+  /// beside it.
+  public var toggleOutlineColor: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.toggleOutlineOpacity[appearance])
     }
   }
 
-  /// The color of the label on a filled toggle or letter: white in light appearances, black in
+  /// The color of the hairlines between the segments of the bar of toggles, a step quieter
+  /// than its outline.
+  public var toggleSeparatorColor: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.toggleSeparatorOpacity[appearance])
+    }
+  }
+
+  /// The color of the sign of a toggle that is off: secondary, so that a column of many blocks
+  /// stays quiet and the inputs that are taken stand out, yet legible as a sign.
+  public var offToggleLabelColor: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.offToggleLabelOpacity[appearance])
+    }
+  }
+
+  /// The fill of a chosen segment of `role` in the bar of toggles: the symbol value of its side,
+  /// for the base a clear yellow (``Palette/chosenBaseFill``).
+  ///
+  /// The badge of the base in its header keeps the symbol value.
+  public func chosenFill(for role: ColorRole) -> NSColor {
+    guard role == .base else { return symbolColor(for: role) }
+    let values = Palette.chosenBaseFill
+    return color { appearance, _ in NSColor(rgb: values[appearance]) }
+  }
+
+  /// The color of the sign on a chosen segment of `role`: the color of the label on a fill, and
+  /// black on the yellow of the base, which carries only a dark sign.
+  public func chosenSignColor(for role: ColorRole) -> NSColor {
+    role == .base ? .black : filledLabelColor
+  }
+
+  /// The color of the sign on a chosen toggle: white in light appearances, black in
   /// dark ones, where the fills are light.
   public var filledLabelColor: NSColor {
     color { appearance, _ in

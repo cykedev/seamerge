@@ -153,60 +153,46 @@ public struct Theme {
   /// of each: the smallest target that a click needs.
   static let decisionControlSize: CGFloat = 20
 
-  /// The distance between the toggles of a block, and between them and the reset arrow.
-  static let decisionControlSpacing: CGFloat = 2
-
   /// The distance between the edges of the decision column and what it shows.
   static let decisionColumnInset: CGFloat = 4
 
-  /// The distance between the edges of a toggle and its label.
-  static let toggleLabelPadding: CGFloat = 6
+  /// How much lower the bar of toggles is than a row of the text, so that the bars of blocks on
+  /// lines one after the other keep this gap.
+  static let toggleBarGap: CGFloat = 2
 
-  /// The radius of the corners of a toggle.
-  static let toggleCornerRadius: CGFloat = 5
+  /// How high the bar of toggles is at least and at most, whatever the rows of the text.
+  static let toggleBarHeights: ClosedRange<CGFloat> = 14...20
 
-  /// The distance between the label of a toggle that follows a deletion and its trash can.
-  static let toggleSymbolSpacing: CGFloat = 2
+  /// How much wider each segment of the bar of toggles is than the bar is high.
+  static let toggleSegmentPadding: CGFloat = 2
 
-  /// How much smaller the trash can of a toggle is than its label, so that the can stands about
-  /// as high as the capitals beside it.
-  static let toggleSymbolSizeReduction: CGFloat = 1
+  /// The size of the letters of the bar of toggles to its height: 11 points on a bar of 18.
+  static let toggleLetterRatio: CGFloat = 11 / 18
 
-  /// The text style of the labels of the toggles.
-  static let toggleTextStyle: NSFont.TextStyle = .subheadline
+  /// The distance between the bar of toggles and the place for the reset arrow beside it.
+  static let decisionPlaceGap: CGFloat = 4
 
-  /// The height of the small sign of a block's state in the decision column.
-  static let stateSignHeight: CGFloat = 14
+  /// The radius of the corners of the reset arrow while it is pressed or has the focus.
+  static let resetCornerRadius: CGFloat = 5
 
-  /// The distance between the edges of a letter of the state sign and its outline.
-  static let stateSignPadding: CGFloat = 3
+  /// How much smaller the trash can of a side that removes the lines is than the letters, at
+  /// the small scale of symbols, so that the can stands as high as their capitals.
+  static let trashSymbolSizeReduction: CGFloat = 2
 
-  /// The radius of the corners of a letter of the state sign.
-  static let stateSignCornerRadius: CGFloat = 3
+  /// How much smaller the ring that stands for the base is than the letters, so that it looks
+  /// as large as the capitals beside it.
+  static let baseSymbolSizeReduction: CGFloat = 2
 
-  /// The distance between the letters of a state sign.
-  static let stateSignSpacing: CGFloat = 2
+  /// The width of the red outline of the bar of an open conflict.
+  static let openConflictOutlineWidth: CGFloat = 1.5
 
-  /// How much larger the symbols of the state signs are than their letters, so that they fill
-  /// the height of the sign like the outlined letters.
-  static let stateSignSymbolSizeIncrease: CGFloat = 2
-
-  /// The width of the outline of a letter that the merge took.
-  static let stateSignOutlineWidth: CGFloat = 1
-
-  /// The text style of the letters of the state signs.
-  static let stateSignTextStyle: NSFont.TextStyle = .caption1
-
-  /// How long the pointer rests on a block in the decision column before its toggles show, so
-  /// that the column does not flicker while the pointer passes along it.
-  static let toggleHoverDelay: TimeInterval = 0.1
-
-  /// How long the sign of a block and its controls take to cross-fade in the decision column.
-  static let decisionFadeDuration: TimeInterval = 0.12
+  /// The dashes of the outline of an open conflict where marks also differ in shape: dash and
+  /// gap, in points.
+  static let openConflictOutlineDash: [CGFloat] = [3, 2]
 
   /// How long a preview takes to turn into text, or text into a preview.
   static let previewFadeDuration: CFTimeInterval = 0.15
 
   /// The smallest font size of the interface.
-  private static let smallestFontSize: CGFloat = 10
+  static let smallestFontSize: CGFloat = 10
 }

@@ -1,18 +1,18 @@
-/// What the decision column shows for one block of the result: the sign of its state and, while
-/// the block is current or under the pointer, its toggles.
+/// What the decision column shows for one block of the result: its bar of toggles, which also
+/// shows its state, and beside it the arrow that resets it.
 public struct BlockDecision: Sendable, Hashable {
-  /// How the block came by its text, which the column shows as a small sign at its first row.
+  /// How the block came by its text, which its toggles show.
   public enum State: Sendable, Hashable {
-    /// The block has the text it was loaded with and needs no sign.
+    /// The block has the text it was loaded with; the toggles that are on show tinted.
     case unchanged
-    /// The merge took the sources given, which show as outlined letters.
+    /// The merge took the sources given; their toggles show tinted.
     case automatic([ColorRole])
-    /// The user chose the sources given, in the order chosen, which show as filled letters; a
-    /// trash can if the block takes nothing.
+    /// The user chose the sources given, in the order chosen; their toggles show filled, and
+    /// none if the block takes nothing.
     case chosen([ColorRole])
-    /// The user edited the block by hand; shown as a pencil.
+    /// The user edited the block by hand; the toggles of the sources it had show filled.
     case edited
-    /// The block is a conflict that awaits a decision; shown as a warning sign.
+    /// The block is a conflict that awaits a decision; every toggle is off, and the bar is red.
     case open
   }
 
@@ -38,8 +38,7 @@ public struct BlockDecision: Sendable, Hashable {
 }
 
 extension BlockDecision.State {
-  /// What VoiceOver says for the state, as the sign of the decision column says it, or `nil`
-  /// for an unchanged block, which has no sign.
+  /// What VoiceOver says for the state of a block, or `nil` for an unchanged block.
   @MainActor public var spokenName: String? {
     func names(_ roles: [ColorRole]) -> String {
       roles.map(DecisionToggleButton.name(of:)).joined(separator: ", ")
@@ -69,19 +68,48 @@ extension BlockDecision.State {
         comment: "VoiceOver: a conflict that still needs a decision.")
     }
   }
+
+  /// What the state means, as the help tag of the block's row and the help that VoiceOver
+  /// reads, or `nil` for an unchanged block.
+  @MainActor var help: String? {
+    switch self {
+    case .unchanged:
+      return nil
+    case .automatic(let roles):
+      let names = DecisionToggleButton.spokenNames(of: roles)
+      return String(
+        localized: "Takes the lines of \(names), as the merge decided", bundle: .module,
+        comment: "Help tag of a block whose sources the merge took, such as A and B.")
+    case .chosen(let roles) where roles.isEmpty:
+      return String(
+        localized: "Takes no lines, as you chose", bundle: .module,
+        comment: "Help tag of a block that takes no lines from any input.")
+    case .chosen(let roles):
+      let names = DecisionToggleButton.spokenNames(of: roles)
+      return String(
+        localized: "Takes the lines of \(names), in the order you chose", bundle: .module,
+        comment: "Help tag of a block whose sources the user chose, such as B and A.")
+    case .edited:
+      return String(
+        localized: "Holds lines that you typed or changed", bundle: .module,
+        comment: "Help tag of a block whose text the user typed or changed.")
+    case .open:
+      return MarkHelp.conflict(.open)
+    }
+  }
 }
 
 /// A switch that adds the text of one or more inputs to a block of the result, or takes it out.
 public struct DecisionToggle: Sendable, Hashable {
   /// The inputs that share the toggle because they have the same text in the block, in the order
-  /// base, A, B; its label names them, such as `Base · B`.
+  /// base, A, B; each shows in a segment of its own, and the segments switch together.
   public var roles: [ColorRole]
 
   /// Whether the toggle is switched on.
   public var isOn: Bool
 
-  /// Whether switching the toggle on follows its inputs in removing the block's lines; it shows a
-  /// trash can after its label.
+  /// Whether switching the toggle on follows its inputs in removing the block's lines; its
+  /// segments show a trash can in place of their letters.
   public var isDeletion: Bool
 
   /// What switching the toggle does, in a whole sentence with the real names, such as "Take the
@@ -90,10 +118,12 @@ public struct DecisionToggle: Sendable, Hashable {
 
   /// Creates a toggle.
   ///
-  /// - Precondition: `roles` names at least one of A, base and B, and not the conflict.
+  /// - Precondition: `roles` names at least one of A, base and B, and not the conflict; a toggle
+  ///   that follows a deletion does not include the base, whose lines a deletion removes.
   public init(roles: [ColorRole], isOn: Bool, isDeletion: Bool = false, help: String) {
     precondition(
       !roles.isEmpty && !roles.contains(.conflict), "A toggle stands for one or more inputs")
+    precondition(!(isDeletion && roles.contains(.base)), "The base never follows a deletion")
     self.roles = roles
     self.isOn = isOn
     self.isDeletion = isDeletion

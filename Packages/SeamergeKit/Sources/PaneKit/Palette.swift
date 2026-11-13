@@ -78,6 +78,15 @@ enum Palette {
     }
   }
 
+  /// The fill of a chosen segment of the base in the bar of toggles, as 0xRRGGBB in sRGB: in
+  /// light appearances the clear yellow of the system colors, which the olive symbol value
+  /// would outweigh beside the fills of A and B; in dark ones the symbol value, as for A and B.
+  ///
+  /// Yellow carries only a dark sign, so the sign on it is black in every appearance.
+  static let chosenBaseFill = AppearanceValues<UInt32>(
+    light: 0xFFCC00, dark: symbol(of: .base).dark, lightHighContrast: 0xFFCC00,
+    darkHighContrast: symbol(of: .base).darkHighContrast)
+
   private static func lightSurface(of role: ColorRole) -> UInt32 {
     switch role {
     case .a: 0x1464D2
@@ -143,6 +152,20 @@ enum Palette {
   /// The opacity of the label color for the line numbers.
   static let lineNumberOpacity = AppearanceValues<CGFloat>(
     light: 0.66, dark: 0.66, lightHighContrast: 0.80, darkHighContrast: 0.80)
+
+  /// The opacity of the label color for the outline of the bar of toggles: as strong beside
+  /// the edges of the blocks as they are, which are a darker tone of their tint.
+  static let toggleOutlineOpacity = AppearanceValues<CGFloat>(
+    light: 0.36, dark: 0.42, lightHighContrast: 0.5, darkHighContrast: 0.55)
+
+  /// The opacity of the label color for the hairlines between the segments of the bar of
+  /// toggles: a step quieter than its outline.
+  static let toggleSeparatorOpacity = AppearanceValues<CGFloat>(
+    light: 0.24, dark: 0.3, lightHighContrast: 0.36, darkHighContrast: 0.42)
+
+  /// The opacity of the label color for the letter of a toggle that is off.
+  static let offToggleLabelOpacity = AppearanceValues<CGFloat>(
+    light: 0.5, dark: 0.5, lightHighContrast: 0.65, darkHighContrast: 0.65)
 
   /// The opacity of the label color for the invisible characters.
   static let invisibleCharacterOpacity = AppearanceValues<CGFloat>(

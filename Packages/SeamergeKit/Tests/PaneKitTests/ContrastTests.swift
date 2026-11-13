@@ -103,37 +103,57 @@ import Testing
       + decisionPairs(theme: theme, ground: ground, resolve: resolve)
   }
 
-  /// The pairs in the decision column: the labels of toggles on and off, also while pressed, the
-  /// letters of the state signs, and the symbols, all on the plain column.
+  /// The pairs in the decision column: the signs of the toggles, off, taken by the merge and
+  /// chosen, also while pressed and on the red bar of an open conflict, and the outline of that
+  /// bar, all on the plain column.
+  ///
+  /// The signs of toggles that are off or taken by the merge, and the red outline, are marks
+  /// with a meaning and need 3:1; the sign on a chosen toggle is as legible as text.
   private func decisionPairs(
     theme: Theme, ground: NSColor, resolve: (NSColor?) -> NSColor?
   ) -> [Pair] {
     let pressed = Contrast.over(resolve(theme.pressedDecisionControlFill), ground)
-    var pairs: [Pair] = []
-    let toggles: [[ColorRole]] = [[.a], [.base], [.b], [.a, .b], [.base, .a], [.base, .b]]
-    for roles in toggles {
-      let color = theme.decisionColor(for: roles)
-      let fill = Contrast.over(resolve(color), ground)
+    let openBar = Contrast.over(
+      resolve(theme.rowFill(for: .tinted(.conflict), isFiller: false, isCurrent: false)), ground)
+    let off = resolve(theme.offToggleLabelColor)
+    var pairs: [Pair] = [
+      Pair(
+        description: "sign of a toggle that is off", foreground: Contrast.over(off, ground),
+        surface: ground, minimum: Self.sign),
+      Pair(
+        description: "sign of a toggle that is off on the bar of an open conflict",
+        foreground: Contrast.over(off, openBar), surface: openBar, minimum: Self.sign),
+      Pair(
+        description: "sign of a pressed toggle that is off",
+        foreground: Contrast.over(
+          resolve(theme.pressedDecisionControlFill), Contrast.over(off, ground)),
+        surface: pressed, minimum: Self.sign),
+      Pair(
+        description: "outline of the bar of an open conflict",
+        foreground: Contrast.over(resolve(theme.symbolColor(for: .conflict)), openBar),
+        surface: openBar, minimum: Self.sign),
+    ]
+    for role in [ColorRole.a, .base, .b] {
+      let color = theme.symbolColor(for: role)
+      let fill = Contrast.over(resolve(theme.chosenFill(for: role)), ground)
       let pressedFill = Contrast.over(resolve(theme.pressedDecisionControlFill), fill)
       for (name, surface) in [("", fill), ("pressed ", pressedFill)] {
         pairs.append(
           Pair(
-            description: "label on \(name)toggle \(roles) that is on",
-            foreground: Contrast.over(resolve(theme.filledLabelColor), surface),
+            description: "sign on \(name)chosen toggle \(role)",
+            foreground: Contrast.over(resolve(theme.chosenSignColor(for: role)), surface),
             surface: surface, minimum: Self.text))
       }
+      let style: BlockStyle = role == .base ? .original : .tinted(role)
+      let tint = Contrast.over(
+        resolve(theme.rowFill(for: style, isFiller: false, isCurrent: true)), ground)
       pairs.append(
         Pair(
-          description: "label of toggle \(roles) that is off and outlined letter",
-          foreground: Contrast.over(resolve(color), ground), surface: ground, minimum: Self.text))
-      pairs.append(
-        Pair(
-          description: "label of pressed toggle \(roles) that is off",
-          foreground: Contrast.over(resolve(Theme.textColor), pressed), surface: pressed,
-          minimum: Self.text))
+          description: "sign of toggle \(role) that the merge took",
+          foreground: Contrast.over(resolve(color), tint), surface: tint, minimum: Self.sign))
     }
     let symbols: [(String, NSColor)] = [
-      ("trash can, pencil and reset arrow", Theme.secondaryMarkColor),
+      ("reset arrow", Theme.secondaryMarkColor),
       ("warning sign", theme.symbolColor(for: .conflict)),
     ]
     for (name, color) in symbols {

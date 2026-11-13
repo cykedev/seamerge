@@ -175,8 +175,9 @@ struct ResultPaneContent {
         comment: "Help tag of a toggle, such as Take the version of feature/login.")
     case .deletion:
       return String(
-        localized: "Take the deletion of \(names).", bundle: .module,
-        comment: "Help tag of a toggle that removes the lines, such as Take the deletion of main.")
+        localized: "Remove these lines, as \(names) did.", bundle: .module,
+        comment:
+          "Help tag of a toggle that removes the lines, such as Remove these lines, as main did.")
     }
   }
 

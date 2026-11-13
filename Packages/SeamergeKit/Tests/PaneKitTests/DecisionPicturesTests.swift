@@ -3,19 +3,49 @@ import Testing
 
 @testable import PaneKit
 
-/// Draws the pictures of the decision column and the preview for the visual review: every state
-/// sign, the toggles of every kind of current block, and a conflict's preview before and after a
+/// Draws the pictures of the decision column and the preview for the visual review: the toggles
+/// of every state, many blocks close together, and a conflict's preview before and after a
 /// decision, in every look.
 @MainActor
 @Suite struct DecisionPicturesTests {
   @Test(arguments: Look.all)
   func everyStateOfTheDecisionColumnIsPictured(look: Look) throws {
     let theme = Theme(increasesContrast: look.increasesContrast)
-    let (pane, column, window, _) = DecisionColumnTests.resultPane(
+    let (pane, _, window, _) = DecisionColumnTests.resultPane(
       theme: theme, appearance: look.appearance)
     defer { window.close() }
-    Self.hover(SampleResult.Block.chosenB, in: pane, column: column)
-    try Rendering.write(Rendering.bitmap(of: pane), named: "decisions-\(look.name)")
+    pane.currentBlock = SampleResult.Block.chosenB.rawValue
+    try Rendering.write(Rendering.bitmap(of: pane), named: "column-\(look.name)")
+  }
+
+  @Test(arguments: Look.all)
+  func manyBlocksCloseTogetherArePictured(look: Look) throws {
+    let (pane, _, window) = DecisionColumnTests.densePane(height: 520)
+    defer { window.close() }
+    window.appearance = look.appearance
+    pane.theme = Theme(increasesContrast: look.increasesContrast)
+    pane.decisionColumn?.theme = pane.theme
+    try Rendering.write(Rendering.bitmap(of: pane), named: "dense-\(look.name)")
+  }
+
+  /// The sizes of the code that the View menu steps through, from the smallest to the largest.
+  private static let fontSizes: [CGFloat] = [10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32]
+
+  @Test(arguments: [Look.all[0], Look.all[1]])
+  func blocksOnLinesOneAfterTheOtherArePicturedAtEverySize(look: Look) throws {
+    for size in Self.fontSizes {
+      let theme = Theme(
+        font: .monospacedSystemFont(ofSize: size, weight: .regular),
+        increasesContrast: look.increasesContrast)
+      let (pane, _, window) = DecisionColumnTests.consecutivePane(theme: theme)
+      defer { window.close() }
+      window.appearance = look.appearance
+      let height = 11 * theme.rowHeight
+      window.setContentSize(CGSize(width: 520, height: height))
+      pane.frame = CGRect(x: 0, y: 0, width: 520, height: height)
+      try Rendering.write(
+        Rendering.bitmap(of: pane), named: "sizes-\(Int(size))pt-\(look.name)")
+    }
   }
 
   @Test(arguments: Look.all)
@@ -31,10 +61,11 @@ import Testing
     for (pane, block) in zip(snippets.panes, blocks) {
       snippets.show(block, in: pane)
     }
-    // A toggle while the mouse holds it down. A drawing without a screen shows no focus ring.
+    // A toggle while the mouse holds it down, and a shared one, whose cells press together. A
+    // drawing without a screen shows no focus ring.
     let pressed = snippets.panes[blocks.count]
-    snippets.show(.chosenA, in: pressed)
-    Self.toggles(of: pressed)[1].isHighlighted = true
+    snippets.show(.automaticB, in: pressed)
+    Self.toggles(of: pressed, block: .automaticB)[1].isHighlighted = true
     try Rendering.write(Rendering.bitmap(of: snippets), named: "toggles-\(look.name)")
   }
 
@@ -74,32 +105,25 @@ import Testing
   @Test func decisionColumnWithoutColorAndAtItsSmallestIsPictured() throws {
     let look = Look.all[0]
     let colorless = Theme(differentiatesWithoutColor: true)
-    let (pane, column, window, _) = DecisionColumnTests.resultPane(
+    let (pane, _, window, _) = DecisionColumnTests.resultPane(
       theme: colorless, appearance: look.appearance)
-    Self.hover(SampleResult.Block.chosenB, in: pane, column: column)
-    try Rendering.write(Rendering.bitmap(of: pane), named: "decisions-without-color-light")
+    try Rendering.write(Rendering.bitmap(of: pane), named: "column-without-color-light")
     window.close()
 
     let (smallest, _, smallWindow, _) = DecisionColumnTests.resultPane(appearance: look.appearance)
     defer { smallWindow.close() }
     smallWindow.setContentSize(CGSize(width: smallest.minimumWidth, height: 640))
     smallest.frame = CGRect(x: 0, y: 0, width: smallest.minimumWidth, height: 640)
-    try Rendering.write(Rendering.bitmap(of: smallest), named: "decisions-smallest-light")
+    try Rendering.write(Rendering.bitmap(of: smallest), named: "column-smallest-light")
   }
 
-  /// Rests the pointer on the first row of `block` until its toggles show.
-  private static func hover(
-    _ block: SampleResult.Block, in pane: PaneView, column: DecisionColumnView
-  ) {
-    let row = pane.content.blocks[block.rawValue].rows.lowerBound
-    column.pointerMoved(to: CGPoint(x: 10, y: (CGFloat(row) + 0.5) * pane.theme.rowHeight))
-    column.hoverTimer?.fire()
-  }
-
-  private static func toggles(of pane: PaneView) -> [DecisionToggleButton] {
-    pane.decisionColumn.map(DecisionColumnTests.controls(of:))?.compactMap {
-      $0 as? DecisionToggleButton
-    } ?? []
+  private static func toggles(
+    of pane: PaneView, block: SampleResult.Block
+  ) -> [DecisionToggleButton] {
+    pane.decisionColumn.map {
+      DecisionColumnTests.cells(of: DecisionColumnTests.row(block, in: $0))
+    }
+      ?? []
   }
 }
 

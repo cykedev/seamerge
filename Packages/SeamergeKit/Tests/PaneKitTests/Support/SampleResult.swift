@@ -73,7 +73,7 @@ struct SampleResult {
       ],
       style: .tinted(.b),
       decision: decision(.automatic([.b]), toggles: [([.base, .a], false), ([.b], true)])),
-    // B removed the documentation of `decode`, and the user followed it.
+    // B removed the documentation of `decode`, and the user took nothing.
     .same([""]),
     .block(
       [], style: .unchanged,
@@ -82,7 +82,7 @@ struct SampleResult {
         toggles: [
           toggle([.base, .a], isOn: false),
           DecisionToggle(
-            roles: [.b], isOn: true, isDeletion: true, help: "Take the deletion of main."),
+            roles: [.b], isOn: false, isDeletion: true, help: "Remove these lines, as main did."),
         ], canReset: true)),
     .same([
       "  static func decode(_ bytes: Data, from encoding: TextEncoding) -> String? {",

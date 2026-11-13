@@ -17,8 +17,11 @@ extension PaneView {
       self.needsLayout = true
       self.layoutSubtreeIfNeeded()
       let y = CGFloat(self.displayRows.displayPosition(ofRow: topRow)) * self.rowHeight
+      // Where the runs above stay as they were, the text stays to the fraction of a point, so
+      // that nothing in view moves, not even by rounding.
+      let target = abs(y - visible.minY) < 0.01 ? visible.minY : y.rounded()
       self.scroll(
-        to: CGPoint(x: visible.minX, y: min(max(y.rounded(), 0), self.verticalScrollRange)))
+        to: CGPoint(x: visible.minX, y: min(max(target, 0), self.verticalScrollRange)))
       self.placeRunBars()
     }
     if let scrollSync {

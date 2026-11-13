@@ -51,9 +51,7 @@ final class SessionPresentation {
   }
 
   /// The accessibility settings, of which the presentation reads whether movement is reduced.
-  var displayOptions: DisplayOptions {
-    didSet { decisionColumn?.reducesMotion = displayOptions.reducesMotion }
-  }
+  var displayOptions: DisplayOptions
 
   /// The observer of the selection of the result, which makes the block of the insertion point
   /// current.
@@ -115,7 +113,6 @@ final class SessionPresentation {
     layout.sourcePanes.last?.pane.overviewBar = sourcesOverviewBar
     layout.resultPane?.overviewBar = resultOverviewBar
     decisionColumn?.theme = theme
-    decisionColumn?.reducesMotion = displayOptions.reducesMotion
     decisionColumn?.delegate = self
     layout.resultPane?.decisionColumn = decisionColumn
     for pane in allPanes {
