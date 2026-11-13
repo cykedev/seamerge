@@ -24,19 +24,20 @@ import Testing
       ])
   }
 
-  @Test func menuOfAChangedBlockOfTheResultShowsItsToggles() async throws {
+  @Test func menuOfAChangedBlockOfTheResultShowsTheChoicesOfTheMergeMenu() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
     let result = try controller.mergeResult
     let conflict = try #require(controller.presentation.navigation.firstOpenConflict)
     #expect(
       entries(of: try menu(of: result, inBlock: conflict)) == [
-        "A · a.txt", "Base", "B · b.txt", "Use None", "Resolve Manually", "—", "Next Conflict",
-        "Next Change", "—", "Cut (disabled)", "Copy (disabled)", "Paste",
+        "Use A", "Use B", "Use A Then B", "Use B Then A", "Use Base", "Use None",
+        "Resolve Manually", "—", "Next Conflict", "Next Change", "—", "Cut (disabled)",
+        "Copy (disabled)", "Paste",
       ])
 
     controller.perform(.toggleSourceB)
     let decided = entries(of: try menu(of: result, inBlock: conflict))
-    #expect(decided.prefix(3) == ["A · a.txt", "Base", "B · b.txt ✓"])
+    #expect(decided.prefix(3) == ["Use A", "Use B ✓", "Use A Then B"])
   }
 
   @Test func resetOffersItsReachesInASubmenuWhereMoreThanTheBlockCanBeReset() async throws {
@@ -89,11 +90,12 @@ import Testing
       controller.presentation.changes.blocks.indices.first {
         controller.presentation.changes.blocks[$0].kind == .changedInA
       })
-    // A, the only source of the block, cannot go off; the base and B share a toggle.
+    // The block takes A already; the base and B share a toggle, so Use Base would do what
+    // Use B does.
     #expect(
       entries(of: try menu(of: result, inBlock: block)) == [
-        "B · b.txt", "Use None", "Resolve Manually", "—", "Next Conflict", "Next Change", "—",
-        "Cut (disabled)", "Copy", "Paste",
+        "Use A ✓", "Use B", "Use A Then B", "Use B Then A", "Use None", "Resolve Manually", "—",
+        "Next Conflict", "Next Change", "—", "Cut (disabled)", "Copy", "Paste",
       ])
     #expect(
       entries(of: try menu(of: result, at: 0)) == [

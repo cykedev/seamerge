@@ -114,6 +114,35 @@ extension SessionWindowController {
     return toggle.map { Set(segment.sources).isSuperset(of: $0.roles) } ?? false
   }
 
+  /// The commands that choose sources for the current block and differ in what they give it,
+  /// in the order of ``SessionCommand/choices``.
+  ///
+  /// Commands can give the same sources, as when A and B share a toggle or one side removed the
+  /// lines; of those, only the simplest is listed.
+  var distinctChoices: [SessionCommand] {
+    guard let block = currentResultBlock, let document = presentation.result?.document else {
+      return []
+    }
+    var givenSources: [[Role]] = []
+    var distinct: Set<SessionCommand> = []
+    for command in SessionCommand.choicesBySimplicity {
+      guard let roles = command.chosenRoles,
+        roles.allSatisfy({ takesPart($0, in: block, of: document) })
+      else { continue }
+      let sources = document.sourcesChoosing(roles, in: block)
+      guard !givenSources.contains(sources) else { continue }
+      givenSources.append(sources)
+      distinct.insert(command)
+    }
+    return SessionCommand.choices.filter(distinct.contains)
+  }
+
+  /// The command among ``distinctChoices`` whose outcome the current block holds, if any: none
+  /// for an open conflict and none once the block was edited by hand.
+  var currentChoice: SessionCommand? {
+    distinctChoices.first { decisionPlan(choosing: $0.chosenRoles ?? [])?.isEmpty == true }
+  }
+
   /// Whether `role` takes part in `block`, which it does unless it is the base of a merge
   /// without one.
   private func takesPart(_ role: Role, in block: Block, of document: ResultDocument) -> Bool {

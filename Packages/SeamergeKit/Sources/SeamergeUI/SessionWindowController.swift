@@ -373,6 +373,9 @@ extension SessionWindowController: NSUserInterfaceValidations {
       if let role = command.toggledRole {
         menuItem.state = isSourceOn(role) ? .on : .off
       }
+      if command.chosenRoles != nil {
+        menuItem.state = command == currentChoice ? .on : .off
+      }
     }
     return canPerform(command)
   }

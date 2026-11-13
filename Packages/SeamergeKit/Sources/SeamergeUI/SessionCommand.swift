@@ -282,6 +282,18 @@ public enum SessionCommand: CaseIterable, Sendable {
     }
   }
 
+  /// The commands that choose the sources of the current block, in the order the context menu
+  /// of the result lists them: one source, two in either order, the base, none.
+  static let choices: [SessionCommand] = [
+    .useA, .useB, .useAThenB, .useBThenA, .useBase, .useNone,
+  ]
+
+  /// The commands that choose sources, simplest first: of commands with the same effect, the
+  /// one that comes first here stands for all of them.
+  static let choicesBySimplicity: [SessionCommand] = [
+    .useA, .useB, .useBase, .useNone, .useAThenB, .useBThenA,
+  ]
+
   /// The role whose toggle the command switches, if it switches one.
   var toggledRole: Role? {
     switch self {

@@ -74,36 +74,25 @@ extension SessionWindowController {
     return items
   }
 
-  /// The decisions that the result offers for the current block: its toggles with a checkmark
-  /// while on, each with the letter and the real name of its sides, taking nothing, and
-  /// resolving it by hand.
+  /// The decisions that the result offers for the current block: the commands of the Merge menu
+  /// that choose its sources, each with an effect of its own, with a checkmark at the one whose
+  /// outcome the block holds; then resolving it by hand.
+  ///
+  /// A command with no effect stands only while it carries the checkmark, so that the menu shows
+  /// what the block takes and in which order.
   private func resultDecisionItems() -> [NSMenuItem] {
-    guard let block = currentResultBlock, let document = presentation.result?.document else {
-      return []
-    }
+    let current = currentChoice
     var items: [NSMenuItem] = []
-    // In the order of the panes: A, the base, B.
-    let order: [Role] = [.a, .base, .b]
-    let toggles = document.toggles(in: block).sorted { first, second in
-      let firstRole = first.roles.first { $0 != .base } ?? .base
-      let secondRole = second.roles.first { $0 != .base } ?? .base
-      return order.firstIndex(of: firstRole) ?? 0 < order.firstIndex(of: secondRole) ?? 0
+    for command in distinctChoices where command == current || canPerform(command) {
+      let choice = item(command.title, action: command.action, target: self)
+      choice.state = command == current ? .on : .off
+      items.append(choice)
     }
-    for toggle in toggles {
-      let sides = toggle.roles.filter { $0 != .base }
-      let role = sides.first ?? .base
-      guard canPerform(.toggle(role)) else { continue }
-      let title =
-        sides.isEmpty
-        ? SessionCommand.toggleSourceBase.title
-        : sides.map { "\($0.letter) · \(presentation.headers[$0]?.name ?? $0.letter)" }
-          .joined(separator: ", ")
-      let toggleItem = item(title, action: SessionCommand.toggle(role).action, target: self)
-      toggleItem.state = isSourceOn(role) ? .on : .off
-      items.append(toggleItem)
-    }
-    for command in [SessionCommand.useNone, .resolveManually] where canPerform(command) {
-      items.append(item(command.title, action: command.action, target: self))
+    if canPerform(.resolveManually) {
+      items.append(
+        item(
+          SessionCommand.resolveManually.title, action: SessionCommand.resolveManually.action,
+          target: self))
     }
     return items
   }
