@@ -9,12 +9,47 @@ import Testing
 /// the place, none of the text view's own, and Copy for the selection or else the block.
 @MainActor
 @Suite struct ContextMenuTests {
-  @Test func menuOfAChangedBlockAboveJumpsAndCopies() async throws {
+  @Test func menuOfAChangedBlockAboveDecidesJumpsAndCopies() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
     let a = try #require(controller.layout.sourcePane(.a))
+    let b = try #require(controller.layout.sourcePane(.b))
+    // Block 4 takes A's version already; A offers only what changes it.
     let menu = try menu(of: a, inBlock: 4)
-    #expect(entries(of: menu) == ["Next Conflict", "Next Change", "—", "Copy"])
+    #expect(entries(of: menu) == ["Use None", "—", "Next Conflict", "Next Change", "—", "Copy"])
     #expect(menu.items.allSatisfy { $0.keyEquivalent.isEmpty })
+    #expect(
+      entries(of: try self.menu(of: b, inBlock: 4)) == [
+        "Use Version of b.txt", "Also Use b.txt", "Use None", "—", "Next Conflict",
+        "Next Change", "—", "Copy",
+      ])
+  }
+
+  @Test func menuOfAChangedBlockOfTheResultShowsItsToggles() async throws {
+    let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
+    let result = try controller.mergeResult
+    let conflict = try #require(controller.presentation.navigation.firstOpenConflict)
+    #expect(
+      entries(of: try menu(of: result, inBlock: conflict)) == [
+        "A · a.txt", "Base", "B · b.txt", "Use None", "Resolve Manually", "—", "Next Conflict",
+        "Next Change", "—", "Cut (disabled)", "Copy (disabled)", "Paste",
+      ])
+
+    controller.perform(.toggleSourceB)
+    let decided = entries(of: try menu(of: result, inBlock: conflict))
+    #expect(decided.prefix(3) == ["A · a.txt", "Base", "B · b.txt ✓"])
+  }
+
+  @Test func decisionOfAContextMenuActsOnTheBlockUnderThePointer() async throws {
+    let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
+    let b = try #require(controller.layout.sourcePane(.b))
+    let conflict = try #require(controller.presentation.navigation.firstOpenConflict)
+    let menu = try menu(of: b, inBlock: conflict)
+    let use = try #require(menu.items.first { $0.title == "Use Version of b.txt" })
+
+    try perform(use)
+
+    let document = try controller.presentation.mergeResult.document
+    #expect(document.segment(for: controller.presentation.changes.blocks[conflict]).sources == [.b])
   }
 
   @Test func menuOfUnchangedTextAboveJumpsAndSelects() async throws {
@@ -31,14 +66,15 @@ import Testing
       controller.presentation.changes.blocks.indices.first {
         controller.presentation.changes.blocks[$0].kind == .changedInA
       })
+    // A, the only source of the block, cannot go off; the base and B share a toggle.
     #expect(
       entries(of: try menu(of: result, inBlock: block)) == [
-        "Next Conflict", "Next Change", "—", "Cut (disabled)", "Copy", "Paste",
+        "B · b.txt", "Use None", "Resolve Manually", "—", "Next Conflict", "Next Change", "—",
+        "Cut (disabled)", "Copy", "Paste",
       ])
     #expect(
       entries(of: try menu(of: result, at: 0)) == [
-        "Next Conflict", "—", "Cut (disabled)", "Copy (disabled)", "Paste",
-        "Select All",
+        "Next Conflict", "—", "Cut (disabled)", "Copy (disabled)", "Paste", "Select All",
       ])
   }
 
@@ -46,10 +82,8 @@ import Testing
     let controller = try Windows.controller(for: try await SampleMerges.helloWorld())
     let result = try controller.mergeResult
     let conflict = try #require(controller.presentation.navigation.firstOpenConflict)
-    #expect(
-      entries(of: try menu(of: result, inBlock: conflict)) == [
-        "Next Change", "—", "Cut (disabled)", "Copy (disabled)", "Paste",
-      ])
+    let entries = entries(of: try menu(of: result, inBlock: conflict))
+    #expect(entries.suffix(3) == ["Cut (disabled)", "Copy (disabled)", "Paste"])
   }
 
   @Test func menuLeavesOutJumpsThatGoNowhere() async throws {
@@ -57,7 +91,8 @@ import Testing
     let a = try #require(controller.layout.sourcePane(.a))
     let last = a.content.blocks.count - 1
     controller.presentation.jump(to: last)
-    #expect(entries(of: try menu(of: a, inBlock: last)) == ["Copy"])
+    let entries = entries(of: try menu(of: a, inBlock: last))
+    #expect(!entries.contains("Next Conflict") && !entries.contains("Next Change"))
   }
 
   @Test func secondaryClickMakesTheBlockUnderThePointerCurrent() async throws {
@@ -173,12 +208,20 @@ import Testing
     try #require(menu.items.first { $0.title == "Copy" })
   }
 
-  /// The titles of the items of `menu`, a dash for a separator, and disabled items marked; Paste
-  /// goes without, since whether it has an effect depends on the general pasteboard.
+  /// The titles of the items of `menu`, a dash for a separator, a checkmark for an item that is
+  /// on, the items of a submenu after an arrow, and disabled items marked; Paste goes without,
+  /// since whether it has an effect depends on the general pasteboard.
   private func entries(of menu: NSMenu) -> [String] {
     menu.items.map { item in
       guard !item.isSeparatorItem else { return "—" }
-      return item.title + (item.isEnabled || item.title == "Paste" ? "" : " (disabled)")
+      var entry = item.title + (item.state == .on ? " ✓" : "")
+      if let submenu = item.submenu {
+        entry += " ▸ " + entries(of: submenu).joined(separator: ", ")
+      }
+      if !item.isEnabled && item.title != "Paste" {
+        entry += " (disabled)"
+      }
+      return entry
     }
   }
 }

@@ -9,8 +9,9 @@ extension SessionWindowController: SessionKeyHandling {
   /// key goes to the view with the focus.
   ///
   /// In block mode, a key without Command or Control that is no command does nothing, so that it
-  /// neither types nor beeps; only the page keys scroll as they do elsewhere. Return and Escape
-  /// change the mode rather than carry out a command.
+  /// neither types nor beeps; only the page keys scroll as they do elsewhere. Return resolves the
+  /// current block by hand, which moves into text mode, and moves into text mode where there is
+  /// no block to resolve; Escape leaves text mode.
   func handleKeyDown(_ event: NSEvent) -> Bool {
     let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
       .subtracting([.function, .numericPad, .capsLock])
@@ -24,9 +25,11 @@ extension SessionWindowController: SessionKeyHandling {
     }
     guard isInBlockMode, modifiers.isDisjoint(with: [.command, .control]) else { return false }
     if let command = SessionCommand(blockModeKey: Keystroke(key, modifiers)) {
-      perform(command)
-    } else if Self.returnKeys.contains(key) && modifiers.isEmpty {
-      enterTextMode()
+      if command == .resolveManually && !canPerform(command) {
+        enterTextMode()
+      } else {
+        perform(command)
+      }
     } else if Self.pageKeys.contains(key) {
       return false
     }
@@ -105,7 +108,6 @@ extension SessionWindowController: SessionKeyHandling {
   }
 
   private static let escape = "\u{1B}"
-  private static let returnKeys: Set<String> = ["\r", "\u{3}"]
   private static let pageKeys: Set<String> = ["\u{F72C}", "\u{F72D}"]
 }
 

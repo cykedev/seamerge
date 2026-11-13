@@ -1,20 +1,11 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "A": {
-      "comment": "Merge > Toggle Source."
-    },
     "About Seamerge": {
       "comment": "App menu."
     },
     "Another copy of Seamerge is already running.": {
       "comment": "Alert at launch: a second copy of the app cannot take merges from Git."
-    },
-    "B": {
-      "comment": "Merge > Toggle Source."
-    },
-    "Base": {
-      "comment": "Merge > Toggle Source."
     },
     "Bring All to Front": {
       "comment": "Window menu."
@@ -106,24 +97,6 @@
     "Redo": {
       "comment": "Edit menu."
     },
-    "Reopen All Conflicts": {
-      "comment": "Merge menu."
-    },
-    "Reset All Decisions…": {
-      "comment": "Merge menu."
-    },
-    "Reset This Change": {
-      "comment": "Merge menu."
-    },
-    "Resolve All Open Conflicts with A": {
-      "comment": "Merge menu."
-    },
-    "Resolve All Open Conflicts with B": {
-      "comment": "Merge menu."
-    },
-    "Resolve Manually": {
-      "comment": "Merge menu."
-    },
     "Save": {
       "comment": "File menu."
     },
@@ -166,29 +139,8 @@
     "Syntax Highlighting": {
       "comment": "View menu: color the code by its syntax."
     },
-    "Toggle Source": {
-      "comment": "Merge menu: the submenu that adds or removes a side."
-    },
     "Undo": {
       "comment": "Edit menu."
-    },
-    "Use A": {
-      "comment": "Merge menu."
-    },
-    "Use A Then B": {
-      "comment": "Merge menu."
-    },
-    "Use B": {
-      "comment": "Merge menu."
-    },
-    "Use B Then A": {
-      "comment": "Merge menu."
-    },
-    "Use Base": {
-      "comment": "Merge menu."
-    },
-    "Use None": {
-      "comment": "Merge menu."
     },
     "Use Selection for Find": {
       "comment": "Edit > Find."

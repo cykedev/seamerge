@@ -1,3 +1,5 @@
+import MergeModel
+
 extension SessionCommand {
   /// What must hold for a command to have an effect, which the window checks to validate it.
   enum Requirement {
@@ -44,6 +46,20 @@ extension SessionCommand {
     /// one, as far as Git tells.
     case remainingFiles
 
+    /// Choosing sources needs a current block in a merge, in which the roles take part and that
+    /// does not have their texts already.
+    case choice([Role])
+
+    /// Switching a toggle needs a current block in a merge, in which the role takes part, and a
+    /// toggle that may switch.
+    case toggle(Role)
+
+    /// Resolving by hand needs a current block in a merge whose result is in view.
+    case currentResultBlock
+
+    /// Resolving the open conflicts needs one.
+    case openConflicts
+
     /// The command always has an effect.
     case nothing
   }
@@ -72,6 +88,12 @@ extension SessionCommand {
     case .swapSides: .swappableSides
     case .skipRemainingFiles: .remainingFiles
     case .toggleScrollSynchronization, .toggleInvisibles, .goToLine: .nothing
+    case .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone: .choice(chosenRoles ?? [])
+    case .toggleSourceA: .toggle(.a)
+    case .toggleSourceBase: .toggle(.base)
+    case .toggleSourceB: .toggle(.b)
+    case .resolveManually: .currentResultBlock
+    case .resolveAllWithA, .resolveAllWithB: .openConflicts
     }
   }
 }

@@ -1,0 +1,143 @@
+import AppKit
+import MergeModel
+import PaneKit
+
+/// The decisions of a merge: choosing sources for the current block, switching its toggles,
+/// resolving it by hand, and resolving every open conflict at once.
+extension SessionWindowController {
+  /// Takes only A's text for the current block.
+  @objc func useA(_ sender: Any?) {
+    choose(.useA)
+  }
+
+  /// Takes only the base's text for the current block.
+  @objc func useBase(_ sender: Any?) {
+    choose(.useBase)
+  }
+
+  /// Takes only B's text for the current block.
+  @objc func useB(_ sender: Any?) {
+    choose(.useB)
+  }
+
+  /// Takes A's text, then B's, for the current block.
+  @objc func useAThenB(_ sender: Any?) {
+    choose(.useAThenB)
+  }
+
+  /// Takes B's text, then A's, for the current block.
+  @objc func useBThenA(_ sender: Any?) {
+    choose(.useBThenA)
+  }
+
+  /// Takes nothing for the current block.
+  @objc func useNone(_ sender: Any?) {
+    choose(.useNone)
+  }
+
+  /// Switches A on or off for the current block.
+  @objc func toggleSourceA(_ sender: Any?) {
+    toggle(.toggleSourceA)
+  }
+
+  /// Switches the base on or off for the current block.
+  @objc func toggleSourceBase(_ sender: Any?) {
+    toggle(.toggleSourceBase)
+  }
+
+  /// Switches B on or off for the current block.
+  @objc func toggleSourceB(_ sender: Any?) {
+    toggle(.toggleSourceB)
+  }
+
+  /// Turns the current block into text to edit by hand: the preview of an open conflict becomes
+  /// text, an empty block gets an empty line; then the insertion point goes to its start, in text
+  /// mode.
+  @objc func resolveManually(_ sender: Any?) {
+    guard canPerform(.resolveManually), let block = currentResultBlock,
+      let result = presentation.result, let resultPane = layout.resultPane, let window
+    else { return }
+    let resolution = result.document.planResolvingByHand(block)
+    carryOut(resolution.plan, named: SessionCommand.resolveManually.undoName ?? "")
+    window.makeFirstResponder(resultPane.documentView)
+    let caret = presentation.paneOffset(ofResultOffset: resolution.cursorPosition)
+    resultPane.documentView.setSelectedRange(NSRange(location: caret, length: 0))
+    resultPane.documentView.scrollRangeToVisible(resultPane.documentView.selectedRange())
+  }
+
+  /// Resolves every open conflict with A's text.
+  @objc func resolveAllWithA(_ sender: Any?) {
+    resolveOpenConflicts(with: .a, command: .resolveAllWithA)
+  }
+
+  /// Resolves every open conflict with B's text.
+  @objc func resolveAllWithB(_ sender: Any?) {
+    resolveOpenConflicts(with: .b, command: .resolveAllWithB)
+  }
+
+  /// The block that block commands act on: the current block of a merge.
+  var currentResultBlock: Block? {
+    guard presentation.result != nil, let current = presentation.currentBlock else { return nil }
+    return presentation.changes.blocks[current]
+  }
+
+  /// The plan that takes the texts of `roles` for the current block, or `nil` if there is no
+  /// current block of a merge or one of the roles takes no part in it.
+  func decisionPlan(choosing roles: [Role]) -> EditPlan? {
+    guard let block = currentResultBlock, let document = presentation.result?.document,
+      roles.allSatisfy({ takesPart($0, in: block, of: document) })
+    else { return nil }
+    return document.planChoosing(roles, in: block)
+  }
+
+  /// The plan that switches the toggle of `role` for the current block, or `nil` if there is no
+  /// current block of a merge or the role takes no part in it.
+  func decisionPlan(toggling role: Role) -> EditPlan? {
+    guard let block = currentResultBlock, let document = presentation.result?.document,
+      takesPart(role, in: block, of: document)
+    else { return nil }
+    return document.planToggling(role, in: block)
+  }
+
+  /// Whether the toggle of `role` is on for the current block: its text is taken there, and the
+  /// block is no open conflict.
+  func isSourceOn(_ role: Role) -> Bool {
+    guard let block = currentResultBlock, let document = presentation.result?.document else {
+      return false
+    }
+    let segment = document.segment(for: block)
+    guard segment.state != .open, takesPart(role, in: block, of: document) else { return false }
+    let toggle = document.toggles(in: block).first { $0.roles.contains(role) }
+    return toggle.map { Set(segment.sources).isSuperset(of: $0.roles) } ?? false
+  }
+
+  /// Whether `role` takes part in `block`, which it does unless it is the base of a merge
+  /// without one.
+  private func takesPart(_ role: Role, in block: Block, of document: ResultDocument) -> Bool {
+    document.toggles(in: block).contains { $0.roles.contains(role) }
+  }
+
+  /// Carries out `command`, which chooses the sources of the current block.
+  private func choose(_ command: SessionCommand) {
+    guard canPerform(command), let plan = decisionPlan(choosing: command.chosenRoles ?? []) else {
+      return
+    }
+    carryOut(plan, named: command.undoName ?? command.title)
+  }
+
+  /// Carries out `command`, which switches a toggle of the current block; the selection stays,
+  /// so that further toggles add to the block in the order they are switched on.
+  private func toggle(_ command: SessionCommand) {
+    guard canPerform(command), let role = command.toggledRole,
+      let plan = decisionPlan(toggling: role)
+    else { return }
+    carryOut(plan, named: command.undoName ?? command.title)
+  }
+
+  /// Resolves every open conflict with the text of `role`, as `command` does.
+  private func resolveOpenConflicts(with role: Role, command: SessionCommand) {
+    guard canPerform(command), let document = presentation.result?.document else { return }
+    carryOut(
+      document.planResolvingOpenConflicts(with: [role]), named: command.undoName ?? command.title)
+  }
+}

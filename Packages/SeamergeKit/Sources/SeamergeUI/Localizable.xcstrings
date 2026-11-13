@@ -141,6 +141,9 @@
     "All whitespace ignored": {
       "comment": "Subtitle: the comparison ignores spaces and tabs entirely."
     },
+    "Also Use %@": {
+      "comment": "Context menu of a changed block of a side: add its lines after those taken."
+    },
     "Author": {
       "comment": "Details of a side: the author of the commit."
     },
@@ -467,6 +470,15 @@
     "Remove this file from the field": {
       "comment": "Help tag of the button that empties a field of Compare Files."
     },
+    "Resolve All Open Conflicts with A": {
+      "comment": "Merge menu command."
+    },
+    "Resolve All Open Conflicts with B": {
+      "comment": "Merge menu command."
+    },
+    "Resolve Manually": {
+      "comment": "Merge menu command."
+    },
     "Resolved conflict, line %lld": {
       "comment": "VoiceOver: the mark of a decided conflict in the overview bar."
     },
@@ -580,6 +592,18 @@
     "The window still shows the previous comparison.": {
       "comment": "Sheet after switching the comparison failed: what happens next."
     },
+    "Toggle A": {
+      "comment": "Undo menu: A was switched on or off for a block."
+    },
+    "Toggle B": {
+      "comment": "Undo menu: B was switched on or off for a block."
+    },
+    "Toggle Base": {
+      "comment": "Undo menu: the base was switched on or off for a block."
+    },
+    "Toggle Source": {
+      "comment": "Merge menu: the submenu that adds or removes a side."
+    },
     "Treat LF, CRLF and CR as equal": {
       "comment": "Help tag of Compare > Ignore Line Endings."
     },
@@ -609,6 +633,27 @@
     },
     "UTF-8": {
       "comment": "Encoding."
+    },
+    "Use A": {
+      "comment": "Merge menu command."
+    },
+    "Use A Then B": {
+      "comment": "Merge menu command."
+    },
+    "Use B": {
+      "comment": "Merge menu command."
+    },
+    "Use B Then A": {
+      "comment": "Merge menu command."
+    },
+    "Use Base": {
+      "comment": "Merge menu command."
+    },
+    "Use None": {
+      "comment": "Merge menu command."
+    },
+    "Use Version of %@": {
+      "comment": "Context menu of a changed block of a side, such as Use Version of main."
     },
     "Whitespace changes ignored": {
       "comment": "Subtitle: the comparison ignores how much whitespace there is."

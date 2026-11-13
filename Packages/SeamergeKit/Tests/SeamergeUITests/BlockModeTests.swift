@@ -76,7 +76,9 @@ import Testing
     #expect(SessionCommand(blockModeKey: Keystroke("N", .shift)) == .previousConflict)
     #expect(SessionCommand(blockModeKey: Keystroke("\u{19}", .shift)) == .previousPane)
     #expect(SessionCommand(blockModeKey: Keystroke("j")) == nil)
-    #expect(SessionCommand(blockModeKey: Keystroke("1")) == nil)
+    #expect(SessionCommand(blockModeKey: Keystroke("1")) == .useA)
+    #expect(SessionCommand(blockModeKey: Keystroke("1", .option)) == .toggleSourceA)
+    #expect(SessionCommand(blockModeKey: Keystroke("7")) == nil)
     let keys = SessionCommand.allCases.flatMap(\.blockModeKeys)
     for (index, key) in keys.enumerated() {
       #expect(!keys[(index + 1)...].contains(key), "\(key.key) belongs to one command")
@@ -128,24 +130,5 @@ import Testing
     controller.enterTextMode()
     #expect(!controller.handleKeyDown(try event("n", in: window)))
     #expect(!controller.handleKeyDown(try event("\r", in: window)))
-  }
-
-  /// Sends a key down with `characters` to the window of `controller`.
-  private func press(
-    _ characters: String, modifiers: NSEvent.ModifierFlags = [],
-    in controller: SessionWindowController
-  ) throws {
-    let window = try #require(controller.window)
-    window.sendEvent(try event(characters, modifiers: modifiers, in: window))
-  }
-
-  private func event(
-    _ characters: String, modifiers: NSEvent.ModifierFlags = [], in window: NSWindow
-  ) throws -> NSEvent {
-    try #require(
-      NSEvent.keyEvent(
-        with: .keyDown, location: .zero, modifierFlags: modifiers, timestamp: 0,
-        windowNumber: window.windowNumber, context: nil, characters: characters,
-        charactersIgnoringModifiers: characters, isARepeat: false, keyCode: 0))
   }
 }

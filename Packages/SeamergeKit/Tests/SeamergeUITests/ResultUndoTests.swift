@@ -28,6 +28,32 @@ import Testing
     }
   }
 
+  @Test(arguments: [
+    SessionCommand.useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone, .toggleSourceA,
+    .toggleSourceB, .resolveManually, .resolveAllWithA, .resolveAllWithB,
+  ])
+  func undoAfterACommandRestoresTextStatesAndSignsAndRedoDoesItAgain(
+    command: SessionCommand
+  ) async throws {
+    let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
+    let undoManager = controller.sessionUndoManager
+    controller.presentation.setCurrentBlock(1)
+    let before = try Snapshot(controller)
+
+    controller.perform(command)
+    controller.endEvent()
+    let after = try Snapshot(controller)
+    #expect(after != before)
+    #expect(undoManager.undoActionName == command.undoName)
+
+    undoManager.undo()
+    #expect(try Snapshot(controller) == before)
+    try controller.checkResultIsShownAsModelled()
+    undoManager.redo()
+    #expect(try Snapshot(controller) == after)
+    try controller.checkResultIsShownAsModelled()
+  }
+
   @Test func runOfTypingIsOneStep() async throws {
     let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
     let undoManager = controller.sessionUndoManager

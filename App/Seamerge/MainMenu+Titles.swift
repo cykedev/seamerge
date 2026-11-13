@@ -56,27 +56,6 @@ extension MainMenu {
     static let compare = String(localized: "Compare", comment: "Menu bar: the comparison modes.")
 
     static let merge = String(localized: "Merge", comment: "Menu bar: the decisions of a merge.")
-    static let useA = String(localized: "Use A", comment: "Merge menu.")
-    static let useBase = String(localized: "Use Base", comment: "Merge menu.")
-    static let useB = String(localized: "Use B", comment: "Merge menu.")
-    static let useAThenB = String(localized: "Use A Then B", comment: "Merge menu.")
-    static let useBThenA = String(localized: "Use B Then A", comment: "Merge menu.")
-    static let useNone = String(localized: "Use None", comment: "Merge menu.")
-    static let toggleSource = String(
-      localized: "Toggle Source", comment: "Merge menu: the submenu that adds or removes a side.")
-    static let sourceA = String(localized: "A", comment: "Merge > Toggle Source.")
-    static let sourceBase = String(localized: "Base", comment: "Merge > Toggle Source.")
-    static let sourceB = String(localized: "B", comment: "Merge > Toggle Source.")
-    static let resolveManually = String(localized: "Resolve Manually", comment: "Merge menu.")
-    static let resetThisChange = String(localized: "Reset This Change", comment: "Merge menu.")
-    static let reopenAllConflicts = String(
-      localized: "Reopen All Conflicts", comment: "Merge menu.")
-    static let resetAllDecisions = String(
-      localized: "Reset All Decisions…", comment: "Merge menu.")
-    static let resolveAllWithA = String(
-      localized: "Resolve All Open Conflicts with A", comment: "Merge menu.")
-    static let resolveAllWithB = String(
-      localized: "Resolve All Open Conflicts with B", comment: "Merge menu.")
 
     static let window = String(localized: "Window", comment: "Menu bar.")
     static let minimize = String(localized: "Minimize", comment: "Window menu.")

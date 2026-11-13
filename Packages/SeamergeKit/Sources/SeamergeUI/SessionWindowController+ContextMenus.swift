@@ -3,37 +3,130 @@ import MergeModel
 import PaneKit
 
 extension SessionWindowController {
-  /// The context menu for `hit` in `pane`: jumps first, then text commands, each only where it
-  /// has an effect, except that Cut, Copy and Paste stay and are disabled where they have none.
+  /// The context menu for `hit` in `pane`, in up to three groups: deciding the block under the
+  /// pointer, jumping, and the text commands.
   ///
-  /// The menu holds no key equivalents, and none of the text view's standard commands.
+  /// Each entry stands only where it has an effect, except that Cut, Copy and Paste stay and are
+  /// disabled where they have none. The menu holds no key equivalents, and none of the text
+  /// view's standard commands; every entry carries out a command of the main menu.
   func contextMenu(for hit: PaneHit, in pane: PaneView) -> NSMenu {
     let menu = NSMenu()
     menu.autoenablesItems = false
     // An editable text view would get the services and the writing tools of the system added.
     menu.allowsContextMenuPlugIns = false
     menu.automaticallyInsertsWritingToolsItems = false
-    for command in SessionCommand.contextMenuJumps(onChangedBlock: hit.block != nil)
-    where canPerform(command) {
-      menu.addItem(item(command.title, action: command.action, target: self))
-    }
-    if !menu.items.isEmpty {
-      menu.addItem(.separator())
-    }
-    let textView = pane.documentView
     let isResult = pane === layout.resultPane
-    if isResult {
-      menu.addItem(textItem(Self.cutTitle, action: #selector(NSText.cut(_:)), in: textView))
+    var groups: [[NSMenuItem]] = []
+    if hit.block != nil {
+      if isResult {
+        groups.append(resultDecisionItems())
+      } else if let role = layout.sourcePanes.first(where: { $0.pane === pane })?.role {
+        groups.append(sourceDecisionItems(for: role))
+      }
     }
-    menu.addItem(copyItem(at: CopiedPlace(pane: pane, block: hit.block)))
-    if isResult {
-      menu.addItem(textItem(Self.pasteTitle, action: #selector(NSText.paste(_:)), in: textView))
-    }
-    if hit.block == nil {
-      menu.addItem(
-        textItem(Self.selectAllTitle, action: #selector(NSText.selectAll(_:)), in: textView))
+    groups.append(jumpItems(onChangedBlock: hit.block != nil))
+    groups.append(textItems(for: hit, in: pane, isResult: isResult))
+    for group in groups where !group.isEmpty {
+      if !menu.items.isEmpty {
+        menu.addItem(.separator())
+      }
+      for item in group {
+        menu.addItem(item)
+      }
     }
     return menu
+  }
+
+  /// The decisions that the pane of `role` offers for the current block: taking its version,
+  /// adding it to the sources already taken, and taking nothing.
+  private func sourceDecisionItems(for role: Role) -> [NSMenuItem] {
+    let name = presentation.headers[role]?.name ?? role.letter
+    var items: [NSMenuItem] = []
+    if canPerform(.use(role)) {
+      items.append(
+        item(
+          String(
+            localized: "Use Version of \(name)", bundle: .module,
+            comment: "Context menu of a changed block of a side, such as Use Version of main."),
+          action: SessionCommand.use(role).action, target: self))
+    }
+    let takesOthers = currentResultBlock.map { block in
+      presentation.result?.document.segment(for: block).sources.isEmpty == false
+        && presentation.result?.document.segment(for: block).state != .open
+    }
+    if takesOthers == true && !isSourceOn(role) && canPerform(.toggle(role)) {
+      items.append(
+        item(
+          String(
+            localized: "Also Use \(name)", bundle: .module,
+            comment: "Context menu of a changed block of a side: add its lines after those taken."),
+          action: SessionCommand.toggle(role).action, target: self))
+    }
+    if canPerform(.useNone) {
+      items.append(
+        item(SessionCommand.useNone.title, action: SessionCommand.useNone.action, target: self))
+    }
+    return items
+  }
+
+  /// The decisions that the result offers for the current block: its toggles with a checkmark
+  /// while on, each with the letter and the real name of its sides, taking nothing, and
+  /// resolving it by hand.
+  private func resultDecisionItems() -> [NSMenuItem] {
+    guard let block = currentResultBlock, let document = presentation.result?.document else {
+      return []
+    }
+    var items: [NSMenuItem] = []
+    // In the order of the panes: A, the base, B.
+    let order: [Role] = [.a, .base, .b]
+    let toggles = document.toggles(in: block).sorted { first, second in
+      let firstRole = first.roles.first { $0 != .base } ?? .base
+      let secondRole = second.roles.first { $0 != .base } ?? .base
+      return order.firstIndex(of: firstRole) ?? 0 < order.firstIndex(of: secondRole) ?? 0
+    }
+    for toggle in toggles {
+      let sides = toggle.roles.filter { $0 != .base }
+      let role = sides.first ?? .base
+      guard canPerform(.toggle(role)) else { continue }
+      let title =
+        sides.isEmpty
+        ? SessionCommand.toggleSourceBase.title
+        : sides.map { "\($0.letter) · \(presentation.headers[$0]?.name ?? $0.letter)" }
+          .joined(separator: ", ")
+      let toggleItem = item(title, action: SessionCommand.toggle(role).action, target: self)
+      toggleItem.state = isSourceOn(role) ? .on : .off
+      items.append(toggleItem)
+    }
+    for command in [SessionCommand.useNone, .resolveManually] where canPerform(command) {
+      items.append(item(command.title, action: command.action, target: self))
+    }
+    return items
+  }
+
+  /// The jumps that have an effect from the block under the pointer, or from unchanged text.
+  private func jumpItems(onChangedBlock: Bool) -> [NSMenuItem] {
+    SessionCommand.contextMenuJumps(onChangedBlock: onChangedBlock).filter(canPerform).map {
+      item($0.title, action: $0.action, target: self)
+    }
+  }
+
+  /// The text commands at `hit` in `pane`: Cut and Paste in the result, Copy, and Select All on
+  /// unchanged text.
+  private func textItems(for hit: PaneHit, in pane: PaneView, isResult: Bool) -> [NSMenuItem] {
+    let textView = pane.documentView
+    var items: [NSMenuItem] = []
+    if isResult {
+      items.append(textItem(Self.cutTitle, action: #selector(NSText.cut(_:)), in: textView))
+    }
+    items.append(copyItem(at: CopiedPlace(pane: pane, block: hit.block)))
+    if isResult {
+      items.append(textItem(Self.pasteTitle, action: #selector(NSText.paste(_:)), in: textView))
+    }
+    if hit.block == nil {
+      items.append(
+        textItem(Self.selectAllTitle, action: #selector(NSText.selectAll(_:)), in: textView))
+    }
+    return items
   }
 
   /// The context menu of the header of the pane of `role`, or of the result for `nil`: copying

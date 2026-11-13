@@ -23,10 +23,11 @@ import Testing
     mainMenu.update(for: .diff)
     let menus: [(SessionCommand.Menu, String)] = [
       (.file, "File"), (.edit, "Edit"), (.view, "View"), (.go, "Go"), (.compare, "Compare"),
+      (.merge, "Merge"),
     ]
 
     for (sessionMenu, title) in menus {
-      let items = try #require(mainMenu.menu.item(withTitle: title)?.submenu).items
+      let items = Self.allItems(of: try #require(mainMenu.menu.item(withTitle: title)?.submenu))
       let commands = SessionCommand.groups(in: sessionMenu).flatMap(\.self)
       let positions = try commands.map { command in
         let item = try #require(mainMenu.commandItems[command], "\(command)")
@@ -204,24 +205,20 @@ import Testing
       ---
       Swap Sides ⌥⌘S
     Merge ▸
-      Use A ⌘1 (deactivated)
-      Use Base ⌘2 (deactivated)
-      Use B ⌘3 (deactivated)
-      Use A Then B ⌘4 (deactivated)
-      Use B Then A ⌘5 (deactivated)
-      Use None ⌘6 (deactivated)
+      Use A ⌘1
+      Use Base ⌘2
+      Use B ⌘3
+      Use A Then B ⌘4
+      Use B Then A ⌘5
+      Use None ⌘6
       Toggle Source ▸
-        A ⌥⌘1 (deactivated)
-        Base ⌥⌘2 (deactivated)
-        B ⌥⌘3 (deactivated)
-      Resolve Manually (deactivated)
+        A ⌥⌘1
+        Base ⌥⌘2
+        B ⌥⌘3
+      Resolve Manually
       ---
-      Reset This Change ⌥⌘⌫ (deactivated)
-      Reopen All Conflicts (deactivated)
-      Reset All Decisions… ⌥⇧⌘⌫ (deactivated)
-      ---
-      Resolve All Open Conflicts with A (deactivated)
-      Resolve All Open Conflicts with B (deactivated)
+      Resolve All Open Conflicts with A
+      Resolve All Open Conflicts with B
     Window ▸
       Minimize ⌘M
       Zoom

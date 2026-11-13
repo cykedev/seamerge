@@ -180,34 +180,30 @@ final class MainMenu {
     Self.menu(Titles.compare, SessionCommand.groups(in: .compare).map { commands($0) })
   }
 
+  /// The Merge menu, whose commands that switch a source stand in a submenu of their own.
   private func mergeMenu() -> NSMenu {
-    let toggleSource = NSMenuItem(title: Titles.toggleSource, action: nil, keyEquivalent: "")
-    toggleSource.submenu = Self.menu(
-      Titles.toggleSource,
-      [
-        [
-          Self.item(Titles.sourceA, key: "1", modifiers: [.option, .command]),
-          Self.item(Titles.sourceBase, key: "2", modifiers: [.option, .command]),
-          Self.item(Titles.sourceB, key: "3", modifiers: [.option, .command]),
-        ]
-      ])
-    return Self.menu(
-      Titles.merge,
-      [
-        [
-          Self.item(Titles.useA, key: "1"), Self.item(Titles.useBase, key: "2"),
-          Self.item(Titles.useB, key: "3"), Self.item(Titles.useAThenB, key: "4"),
-          Self.item(Titles.useBThenA, key: "5"), Self.item(Titles.useNone, key: "6"),
-          toggleSource, Self.item(Titles.resolveManually),
-        ],
-        [
-          Self.item(Titles.resetThisChange, key: Self.backspace, modifiers: [.option, .command]),
-          Self.item(Titles.reopenAllConflicts),
-          Self.item(
-            Titles.resetAllDecisions, key: Self.backspace, modifiers: [.shift, .option, .command]),
-        ],
-        [Self.item(Titles.resolveAllWithA), Self.item(Titles.resolveAllWithB)],
-      ])
+    Self.menu(Titles.merge, SessionCommand.groups(in: .merge).map(itemsGatheringSubmenus))
+  }
+
+  /// The items of `commands`, with each run of commands that share a submenu gathered into an
+  /// item of that submenu.
+  private func itemsGatheringSubmenus(_ commands: [SessionCommand]) -> [NSMenuItem] {
+    var items: [NSMenuItem] = []
+    for (command, item) in zip(commands, self.commands(commands)) {
+      guard let title = command.submenuTitle else {
+        items.append(item)
+        continue
+      }
+      if let last = items.last, let submenu = last.submenu, submenu.title == title {
+        submenu.addItem(item)
+      } else {
+        let submenuItem = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        submenuItem.submenu = NSMenu(title: title)
+        submenuItem.submenu?.addItem(item)
+        items.append(submenuItem)
+      }
+    }
+    return items
   }
 
   private func windowMenu() -> NSMenu {
@@ -273,8 +269,6 @@ final class MainMenu {
     return item
   }
 
-  /// The character AppKit gives the Delete key.
-  private static let backspace = "\u{8}"
 }
 
 /// The actions of Undo and Redo, which the window and the text views carry out for their undo

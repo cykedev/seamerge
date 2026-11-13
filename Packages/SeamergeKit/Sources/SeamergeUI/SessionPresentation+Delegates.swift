@@ -50,10 +50,12 @@ extension SessionPresentation: OverviewBarDelegate {
 }
 
 extension SessionPresentation: DecisionColumnDelegate {
-  /// A toggle shows how a block came by its text; switching it changes nothing.
+  /// A toggle switches the source of its block on or off, as its command does.
   func decisionColumn(
     _ column: DecisionColumnView, didSwitchToggle toggle: Int, ofBlock block: Int
-  ) {}
+  ) {
+    delegate?.presentation(self, didAskToSwitchToggle: toggle, ofBlock: block)
+  }
 
   /// No block offers to be reset, so the arrow beside the toggles never shows.
   func decisionColumn(_ column: DecisionColumnView, didAskToResetBlock block: Int) {}

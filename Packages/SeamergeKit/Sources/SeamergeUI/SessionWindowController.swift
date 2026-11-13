@@ -350,9 +350,9 @@ extension SessionWindowController {
 extension SessionWindowController: NSUserInterfaceValidations {
   /// Whether the command of `item` can have an effect now.
   ///
-  /// A menu item of a comparison mode, and Synchronize Scrolling, show a checkmark while they
-  /// are in effect; a command that switches something on and off takes the name that says what
-  /// it does now, such as Show Base while the base is hidden.
+  /// A menu item of a comparison mode, Synchronize Scrolling and a source toggle show a
+  /// checkmark while they are in effect; a command that switches something on and off takes the
+  /// name that says what it does now, such as Show Base while the base is hidden.
   public func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
     guard let command = SessionCommand(action: item.action) else { return false }
     if let menuItem = item as? NSMenuItem {
@@ -363,6 +363,9 @@ extension SessionWindowController: NSUserInterfaceValidations {
       }
       if let alternateTitle = command.alternateTitle {
         menuItem.title = isSwitchedOn(command) ? alternateTitle : command.title
+      }
+      if let role = command.toggledRole {
+        menuItem.state = isSourceOn(role) ? .on : .off
       }
     }
     return canPerform(command)
@@ -415,6 +418,14 @@ extension SessionWindowController: NSUserInterfaceValidations {
       presentation.arrangement.canSwapSides
     case .remainingFiles:
       context.difftool?.hasFilesAfterThisOne ?? false
+    case .choice(let roles):
+      decisionPlan(choosing: roles).map { !$0.isEmpty } ?? false
+    case .toggle(let role):
+      decisionPlan(toggling: role).map { !$0.isEmpty } ?? false
+    case .currentResultBlock:
+      currentResultBlock != nil && layout.resultPane?.isShown == true
+    case .openConflicts:
+      (presentation.result?.document.openConflictCount ?? 0) > 0
     case .nothing:
       true
     }
@@ -445,6 +456,17 @@ extension SessionWindowController: SessionPresentationDelegate {
     _ presentation: SessionPresentation, didType step: UndoStep, at range: Range<Int>, caret: Int
   ) {
     recordTyping(step, at: range, caret: caret)
+  }
+
+  func presentation(
+    _ presentation: SessionPresentation, didAskToSwitchToggle toggle: Int, ofBlock block: Int
+  ) {
+    guard let result = presentation.result else { return }
+    let changedBlock = presentation.changes.blocks[block]
+    let toggles = result.document.toggles(in: changedBlock)
+    guard toggles.indices.contains(toggle), let role = toggles[toggle].roles.first else { return }
+    presentation.setCurrentBlock(block)
+    perform(.toggle(role))
   }
 
   func presentation(

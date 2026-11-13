@@ -17,6 +17,9 @@ extension SessionCommand {
 
     /// The Compare menu.
     case compare
+
+    /// The Merge menu.
+    case merge
   }
 
   /// The commands of a session window in `menu`, in order, each group between separators.
@@ -46,6 +49,14 @@ extension SessionCommand {
         [.compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace],
         [.swapSides],
       ]
+    case .merge:
+      [
+        [
+          .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone, .toggleSourceA,
+          .toggleSourceBase, .toggleSourceB, .resolveManually,
+        ],
+        [.resolveAllWithA, .resolveAllWithB],
+      ]
     }
   }
 
@@ -65,6 +76,9 @@ extension SessionCommand {
     switch self {
     case .swapSides, .skipRemainingFiles: kind == .diff
     case .nextConflict, .previousConflict, .toggleBase, .toggleResultMaximized: kind == .merge
+    case .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone, .toggleSourceA,
+      .toggleSourceBase, .toggleSourceB, .resolveManually, .resolveAllWithA, .resolveAllWithB:
+      kind == .merge
     default: true
     }
   }

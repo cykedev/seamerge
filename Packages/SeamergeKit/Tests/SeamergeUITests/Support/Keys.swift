@@ -1,5 +1,6 @@
 import AppKit
 import MergeModel
+import Testing
 
 @testable import SeamergeUI
 
@@ -21,4 +22,27 @@ struct Keys: Equatable, CustomStringConvertible {
   var description: String {
     "\(key.unicodeScalars.map { String($0.value, radix: 16) }) \(modifiers.rawValue)"
   }
+}
+
+/// Sends a key press of `characters` with `modifiers` to the window of `controller`, as the
+/// keyboard does.
+@MainActor
+func press(
+  _ characters: String, modifiers: NSEvent.ModifierFlags = [],
+  in controller: SessionWindowController
+) throws {
+  let window = try #require(controller.window)
+  window.sendEvent(try event(characters, modifiers: modifiers, in: window))
+}
+
+/// A key down of `characters` with `modifiers` for `window`.
+@MainActor
+func event(
+  _ characters: String, modifiers: NSEvent.ModifierFlags = [], in window: NSWindow
+) throws -> NSEvent {
+  try #require(
+    NSEvent.keyEvent(
+      with: .keyDown, location: .zero, modifierFlags: modifiers, timestamp: 0,
+      windowNumber: window.windowNumber, context: nil, characters: characters,
+      charactersIgnoringModifiers: characters, isARepeat: false, keyCode: 0))
 }

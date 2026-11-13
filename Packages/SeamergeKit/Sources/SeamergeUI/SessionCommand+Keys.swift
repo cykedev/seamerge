@@ -34,6 +34,16 @@ extension SessionCommand {
     case .openInEditor: return ("o", [.option, .command])
     case .nextPane: return (Self.tab, [.control])
     case .previousPane: return (Self.tab, [.shift, .control])
+    case .useA: return ("1", [.command])
+    case .useBase: return ("2", [.command])
+    case .useB: return ("3", [.command])
+    case .useAThenB: return ("4", [.command])
+    case .useBThenA: return ("5", [.command])
+    case .useNone: return ("6", [.command])
+    case .toggleSourceA: return ("1", [.option, .command])
+    case .toggleSourceBase: return ("2", [.option, .command])
+    case .toggleSourceB: return ("3", [.option, .command])
+    case .resolveManually, .resolveAllWithA, .resolveAllWithB: return nil
     }
   }
 
@@ -49,6 +59,16 @@ extension SessionCommand {
     case .lastChange: [Keystroke(Self.end)]
     case .nextPane: [Keystroke(Self.tab)]
     case .previousPane: [Keystroke(Self.tab, .shift), Keystroke(Self.backTab, .shift)]
+    case .useA: [Keystroke("1"), Keystroke(Self.leftArrow)]
+    case .useBase: [Keystroke("2")]
+    case .useB: [Keystroke("3"), Keystroke(Self.rightArrow)]
+    case .useAThenB: [Keystroke("4")]
+    case .useBThenA: [Keystroke("5")]
+    case .useNone: [Keystroke("6")]
+    case .toggleSourceA: [Keystroke("1", .option)]
+    case .toggleSourceBase: [Keystroke("2", .option)]
+    case .toggleSourceB: [Keystroke("3", .option)]
+    case .resolveManually: [Keystroke("\r"), Keystroke("\u{3}")]
     default: []
     }
   }
@@ -63,6 +83,8 @@ extension SessionCommand {
   /// The characters AppKit gives the keys of commands.
   static let upArrow = "\u{F700}"
   static let downArrow = "\u{F701}"
+  static let leftArrow = "\u{F702}"
+  static let rightArrow = "\u{F703}"
   static let home = "\u{F729}"
   static let end = "\u{F72B}"
   static let tab = "\t"

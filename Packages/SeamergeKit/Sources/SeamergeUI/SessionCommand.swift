@@ -89,6 +89,42 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Closes a comparison that `git difftool` started and tells Git to compare no further files.
   case skipRemainingFiles
 
+  /// Takes only A's text for the current block.
+  case useA
+
+  /// Takes only the base's text for the current block.
+  case useBase
+
+  /// Takes only B's text for the current block.
+  case useB
+
+  /// Takes A's text, then B's, for the current block.
+  case useAThenB
+
+  /// Takes B's text, then A's, for the current block.
+  case useBThenA
+
+  /// Takes nothing for the current block, which leaves it empty.
+  case useNone
+
+  /// Adds A's text to the current block after the texts already taken, or takes it out.
+  case toggleSourceA
+
+  /// Adds the base's text to the current block after the texts already taken, or takes it out.
+  case toggleSourceBase
+
+  /// Adds B's text to the current block after the texts already taken, or takes it out.
+  case toggleSourceB
+
+  /// Turns the current block into text to edit by hand and puts the insertion point into it.
+  case resolveManually
+
+  /// Resolves every open conflict with A's text.
+  case resolveAllWithA
+
+  /// Resolves every open conflict with B's text.
+  case resolveAllWithB
+
   /// The name of the command in a menu.
   public var title: String {
     switch self {
@@ -149,6 +185,106 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Skip Remaining Files", bundle: .module,
         comment: "File menu of a comparison: end the comparisons that Git has left.")
+    case .useA: String(localized: "Use A", bundle: .module, comment: "Merge menu command.")
+    case .useBase: String(localized: "Use Base", bundle: .module, comment: "Merge menu command.")
+    case .useB: String(localized: "Use B", bundle: .module, comment: "Merge menu command.")
+    case .useAThenB:
+      String(localized: "Use A Then B", bundle: .module, comment: "Merge menu command.")
+    case .useBThenA:
+      String(localized: "Use B Then A", bundle: .module, comment: "Merge menu command.")
+    case .useNone: String(localized: "Use None", bundle: .module, comment: "Merge menu command.")
+    case .toggleSourceA: Role.a.letter
+    case .toggleSourceBase: Role.base.letter
+    case .toggleSourceB: Role.b.letter
+    case .resolveManually:
+      String(localized: "Resolve Manually", bundle: .module, comment: "Merge menu command.")
+    case .resolveAllWithA:
+      String(
+        localized: "Resolve All Open Conflicts with A", bundle: .module,
+        comment: "Merge menu command.")
+    case .resolveAllWithB:
+      String(
+        localized: "Resolve All Open Conflicts with B", bundle: .module,
+        comment: "Merge menu command.")
+    }
+  }
+
+  /// The title of the submenu that the command stands in, for the commands that switch a source
+  /// on or off, or `nil` for a command in the menu itself.
+  public var submenuTitle: String? {
+    switch self {
+    case .toggleSourceA, .toggleSourceBase, .toggleSourceB:
+      String(
+        localized: "Toggle Source", bundle: .module,
+        comment: "Merge menu: the submenu that adds or removes a side.")
+    default:
+      nil
+    }
+  }
+
+  /// What the Undo and Redo commands call the step that the command makes, or `nil` for a
+  /// command that makes no step.
+  var undoName: String? {
+    switch self {
+    case .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone, .resolveManually,
+      .resolveAllWithA, .resolveAllWithB:
+      title
+    case .toggleSourceA:
+      String(
+        localized: "Toggle A", bundle: .module,
+        comment: "Undo menu: A was switched on or off for a block.")
+    case .toggleSourceBase:
+      String(
+        localized: "Toggle Base", bundle: .module,
+        comment: "Undo menu: the base was switched on or off for a block.")
+    case .toggleSourceB:
+      String(
+        localized: "Toggle B", bundle: .module,
+        comment: "Undo menu: B was switched on or off for a block.")
+    default:
+      nil
+    }
+  }
+
+  /// The roles whose texts the command takes for the current block, in order, if it is one of
+  /// the commands that choose them: none for Use None.
+  var chosenRoles: [Role]? {
+    switch self {
+    case .useA: [.a]
+    case .useBase: [.base]
+    case .useB: [.b]
+    case .useAThenB: [.a, .b]
+    case .useBThenA: [.b, .a]
+    case .useNone: []
+    default: nil
+    }
+  }
+
+  /// The role whose toggle the command switches, if it switches one.
+  var toggledRole: Role? {
+    switch self {
+    case .toggleSourceA: .a
+    case .toggleSourceBase: .base
+    case .toggleSourceB: .b
+    default: nil
+    }
+  }
+
+  /// The command that switches the toggle of `role`.
+  static func toggle(_ role: Role) -> SessionCommand {
+    switch role {
+    case .a: .toggleSourceA
+    case .base: .toggleSourceBase
+    case .b: .toggleSourceB
+    }
+  }
+
+  /// The command that takes only the text of `role`.
+  static func use(_ role: Role) -> SessionCommand {
+    switch role {
+    case .a: .useA
+    case .base: .useBase
+    case .b: .useB
     }
   }
 
@@ -256,6 +392,18 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .openInEditor: #selector(SessionWindowController.openInEditor(_:))
     case .copyBlock: #selector(SessionWindowController.copyBlock(_:))
     case .skipRemainingFiles: #selector(SessionWindowController.skipRemainingFiles(_:))
+    case .useA: #selector(SessionWindowController.useA(_:))
+    case .useBase: #selector(SessionWindowController.useBase(_:))
+    case .useB: #selector(SessionWindowController.useB(_:))
+    case .useAThenB: #selector(SessionWindowController.useAThenB(_:))
+    case .useBThenA: #selector(SessionWindowController.useBThenA(_:))
+    case .useNone: #selector(SessionWindowController.useNone(_:))
+    case .toggleSourceA: #selector(SessionWindowController.toggleSourceA(_:))
+    case .toggleSourceBase: #selector(SessionWindowController.toggleSourceBase(_:))
+    case .toggleSourceB: #selector(SessionWindowController.toggleSourceB(_:))
+    case .resolveManually: #selector(SessionWindowController.resolveManually(_:))
+    case .resolveAllWithA: #selector(SessionWindowController.resolveAllWithA(_:))
+    case .resolveAllWithB: #selector(SessionWindowController.resolveAllWithB(_:))
     }
   }
 
