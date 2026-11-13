@@ -1,6 +1,6 @@
 extension LanguageDescription {
   /// Every language SyntaxKit describes, apart from plain text.
-  static let all: [LanguageDescription] = [
+  public static let all: [LanguageDescription] = [
     .swift, .objectiveC, .c, .cPlusPlus, .java, .kotlin, .cSharp, .javaScript, .typeScript,
     .python, .ruby, .go, .rust, .php, .shell, .sql, .html, .xml, .css, .scss, .json, .yaml,
     .toml, .markdown,

@@ -186,6 +186,35 @@ import Testing
       ---
       Synchronize Scrolling ⌥⌘Y
       Highlight Syntax
+      Syntax ▸
+        Automatic
+        ---
+        C
+        C#
+        C++
+        CSS
+        Go
+        HTML
+        Java
+        JavaScript
+        JSON
+        Kotlin
+        Markdown
+        Objective-C
+        PHP
+        Python
+        Ruby
+        Rust
+        SCSS
+        Shell
+        SQL
+        Swift
+        TOML
+        TypeScript
+        XML
+        YAML
+        ---
+        Plain Text
       Show Invisibles
       Show Ignored Changes (deactivated)
       Show All Lines ⇧⌘L

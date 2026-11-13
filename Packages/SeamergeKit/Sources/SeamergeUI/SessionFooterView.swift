@@ -1,8 +1,9 @@
 import AppKit
 import PaneKit
 
-/// The footer of a session window: on the leading side the comparison mode in a pop-up button,
-/// beside it the toggles of how the panes show the files.
+/// The footer of a session window: on the leading side the comparison mode and the language the
+/// code is colored as, each in a pop-up button, beside them the toggles of how the panes show
+/// the files.
 ///
 /// It answers how the files are compared and shown now, and changes that quickly. Every entry
 /// sends the action of a command of the window, which the main menu offers with its key
@@ -24,6 +25,18 @@ final class SessionFooterView: NSView {
     /// The state of each toggle of the footer, and whether it can act now.
     var toggles: [FooterToggle: Toggle]
 
+    /// The choice of the language in effect.
+    var syntaxChoice: SyntaxChoice
+
+    /// The language the code is colored as, which the pop-up button shows as its title.
+    var language: String
+
+    /// The title of Automatic, with the language the window recognized.
+    var automaticTitle: String
+
+    /// Whether a language can be chosen now.
+    var canChooseSyntax: Bool
+
     /// The state of a toggle.
     struct Toggle: Equatable {
       /// On, off, or mixed for the collapsed lines while some runs are expanded.
@@ -40,6 +53,15 @@ final class SessionFooterView: NSView {
   ]
 
   private let comparisonButton = NSPopUpButton(frame: .zero, pullsDown: false)
+  private let syntaxButton = NSPopUpButton(frame: .zero, pullsDown: false)
+
+  /// The width of the pop-up button of the language: room for the longest name of a language,
+  /// so that its width does not change with the language.
+  private var syntaxButtonWidth: CGFloat = 0
+
+  /// The item whose title the pop-up button of the language shows: the language in effect, also
+  /// while Automatic is chosen, whose own title is longer.
+  private let syntaxTitleItem = NSMenuItem()
   private let toggleButtons: [(toggle: FooterToggle, button: FooterToggleButton)]
 
   /// The theme of the panes, whose outline of the toggles the mixed state takes.
@@ -66,6 +88,8 @@ final class SessionFooterView: NSView {
       comparisonButton.menu?.addItem(item)
     }
     addSubview(comparisonButton)
+    setUpSyntaxButton()
+    addSubview(syntaxButton)
     for (_, button) in toggleButtons {
       addSubview(button)
     }
@@ -75,6 +99,32 @@ final class SessionFooterView: NSView {
       String(
         localized: "Footer", bundle: .module,
         comment: "VoiceOver: the footer with the comparison mode and the view toggles."))
+  }
+
+  /// Gives the pop-up button of the language the choices of the Syntax menu.
+  private func setUpSyntaxButton() {
+    syntaxButton.controlSize = .small
+    syntaxButton.font = comparisonButton.font
+    syntaxButton.setAccessibilityLabel(SyntaxChoice.menuTitle)
+    guard let cell = syntaxButton.cell as? NSPopUpButtonCell, let menu = syntaxButton.menu else {
+      return
+    }
+    cell.lineBreakMode = .byTruncatingTail
+    for (index, group) in SyntaxChoice.groups.enumerated() {
+      if index > 0 {
+        menu.addItem(.separator())
+      }
+      for choice in group {
+        menu.addItem(choice.menuItem())
+      }
+    }
+    cell.usesItemFromMenu = false
+    cell.menuItem = syntaxTitleItem
+    for choice in SyntaxChoice.groups.joined() {
+      syntaxTitleItem.title = choice.languageTitle(of: choice.language(detected: .plainText))
+      syntaxButtonWidth = max(syntaxButtonWidth, cell.cellSize.width.rounded(.up))
+    }
+    syntaxTitleItem.title = ""
   }
 
   /// Footers are never archived.
@@ -97,6 +147,11 @@ final class SessionFooterView: NSView {
     comparisonButton
   }
 
+  /// The pop-up button of the language.
+  var syntaxChoiceButton: NSPopUpButton {
+    syntaxButton
+  }
+
   /// Shows `state`: the comparison mode, and each toggle with the command a click sends now.
   func show(_ state: State) {
     if let index = Self.modeCommands.firstIndex(of: state.mode),
@@ -105,6 +160,19 @@ final class SessionFooterView: NSView {
       comparisonButton.selectItem(at: index)
     }
     comparisonButton.isEnabled = state.canChangeMode
+    for item in syntaxButton.itemArray {
+      guard let choice = SyntaxChoice(item: item) else { continue }
+      item.state = choice == state.syntaxChoice ? .on : .off
+      if choice == .automatic {
+        item.title = state.automaticTitle
+      }
+    }
+    if syntaxTitleItem.title != state.language {
+      syntaxTitleItem.title = state.language
+      syntaxButton.synchronizeTitleAndSelectedItem()
+    }
+    syntaxButton.isEnabled = state.canChooseSyntax
+    syntaxButton.toolTip = state.canChooseSyntax ? SyntaxChoice.help : SyntaxChoice.disabledHelp
     for (toggle, button) in toggleButtons {
       let toggleState = state.toggles[toggle] ?? State.Toggle(state: .off, isEnabled: false)
       button.state = toggleState.state
@@ -119,22 +187,31 @@ final class SessionFooterView: NSView {
     needsLayout = true
   }
 
-  /// The narrowest the footer gets with everything in view: the pop-up button at the width of
-  /// its longest title and the toggles beside it.
+  /// The narrowest the footer gets with everything in view: the pop-up buttons at the width of
+  /// their longest titles and the toggles beside them.
   var minimumWidth: CGFloat {
     WindowMetrics.footerInset * 2 + comparisonButton.intrinsicContentSize.width
-      + WindowMetrics.footerGroupSpacing + togglesWidth
+      + WindowMetrics.footerPopUpSpacing + syntaxButtonWidth + WindowMetrics.footerGroupSpacing
+      + togglesWidth
   }
 
   override func layout() {
     super.layout()
-    let room =
-      bounds.width - WindowMetrics.footerInset * 2 - WindowMetrics.footerGroupSpacing
-      - togglesWidth
+    var room =
+      bounds.width - WindowMetrics.footerInset * 2 - WindowMetrics.footerPopUpSpacing
+      - WindowMetrics.footerGroupSpacing - togglesWidth
     var x = WindowMetrics.footerInset
+    // The comparison mode shortens its title first; the language keeps the width of the
+    // longest name as long as it can, so that the toggles stay where they are.
+    let syntaxWidth = min(
+      syntaxButtonWidth, max(room - Self.shortestPopUpWidth, Self.shortestPopUpWidth))
+    room -= syntaxWidth
     let popUpWidth = min(comparisonButton.intrinsicContentSize.width, max(room, 0))
     place(comparisonButton, x: x, width: popUpWidth)
-    x += popUpWidth + WindowMetrics.footerGroupSpacing
+    x += popUpWidth + WindowMetrics.footerPopUpSpacing
+    place(
+      syntaxButton, x: x, width: syntaxWidth, height: comparisonButton.intrinsicContentSize.height)
+    x += syntaxWidth + WindowMetrics.footerGroupSpacing
     // The toggles take the height of the pop-up button, so that all controls share one middle
     // and one height.
     let height = comparisonButton.intrinsicContentSize.height
@@ -152,6 +229,10 @@ final class SessionFooterView: NSView {
       CGRect(x: x, y: ((bounds.height - height) / 2).rounded(), width: width, height: height),
       options: .alignAllEdgesNearest)
   }
+
+  /// The least width of a pop-up button of the footer before it gives way: room for a few
+  /// letters of its title and its arrows.
+  private static let shortestPopUpWidth: CGFloat = 60
 
   /// The width of the toggles side by side.
   private var togglesWidth: CGFloat {

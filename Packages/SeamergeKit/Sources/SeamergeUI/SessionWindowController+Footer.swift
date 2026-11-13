@@ -33,9 +33,13 @@ extension SessionWindowController {
       toggles[toggle] = SessionFooterView.State.Toggle(
         state: state, isEnabled: canPerform(toggle.command(in: state)))
     }
+    let language = syntaxChoice.language(detected: detectedLanguage)
     footer.show(
       SessionFooterView.State(
-        mode: mode, canChangeMode: canPerform(.compareExactly), toggles: toggles))
+        mode: mode, canChangeMode: canPerform(.compareExactly), toggles: toggles,
+        syntaxChoice: syntaxChoice, language: syntaxChoice.languageTitle(of: language),
+        automaticTitle: SyntaxChoice.automatic.title(detected: detectedLanguage),
+        canChooseSyntax: canChooseSyntax))
   }
 
   /// The state of `toggle`, as the main menu shows it with a checkmark or a title.

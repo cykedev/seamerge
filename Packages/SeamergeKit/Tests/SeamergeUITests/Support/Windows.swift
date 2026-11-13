@@ -11,17 +11,20 @@ enum Windows {
   /// The controller of a window for `session`, laid out, with movement reduced unless
   /// `options` say otherwise, so that every jump lands at once; for an `unavailable`
   /// comparison, `session` is its empty session.
+  ///
+  /// Windows that share `syntaxChoices` find the languages chosen in each other.
   static func controller(
     for session: Session, context: SessionContext = SessionContext(),
     options: DisplayOptions = DisplayOptions(reducesMotion: true),
     workspace: WorkspaceRecorder = WorkspaceRecorder(), prompts: PromptRecorder = PromptRecorder(),
     undoManager: UndoManager = UndoManager(), unavailable: UnavailableComparison? = nil,
-    defaults: UserDefaults = .privateSuite()
+    defaults: UserDefaults = .privateSuite(), syntaxChoices: SyntaxChoices = SyntaxChoices()
   ) throws -> SessionWindowController {
     let controller = SessionWindowController(
       session: session, context: context, undoManager: undoManager, displayOptions: options,
       pasteboard: .withUniqueName(), workspace: workspace, prompts: prompts, doneStyle: .standard,
-      defaults: defaults, window: SessionWindow(), unavailable: unavailable)
+      defaults: defaults, syntaxChoices: syntaxChoices, window: SessionWindow(),
+      unavailable: unavailable)
     let window = try #require(controller.window)
     window.contentView?.layoutSubtreeIfNeeded()
     return controller

@@ -210,6 +210,12 @@
     "Author": {
       "comment": "Details of a side: the author of the commit."
     },
+    "Automatic": {
+      "comment": "Syntax menu: color the code as the language recognized from the file."
+    },
+    "Automatic (%@)": {
+      "comment": "Syntax menu: color the code as the language recognized from the file, which is named in parentheses, such as Automatic (Swift)."
+    },
     "B": {
       "comment": "The badge of the own side."
     },
@@ -298,6 +304,9 @@
     },
     "Choose the file for %@.": {
       "comment": "Open panel of a field of Compare Files, such as Choose the file for Left."
+    },
+    "Choose the language the code is colored as": {
+      "comment": "Help tag of the syntax pop-up button in the footer."
     },
     "Choose…": {
       "comment": "Compare Files: the button in an empty field that opens the open panel."
@@ -636,6 +645,9 @@
     "Paste": {
       "comment": "Context menu: paste text."
     },
+    "Plain Text": {
+      "comment": "Syntax menu: color nothing; also the name of a file of no known language."
+    },
     "Previous Change": {
       "comment": "Go menu command."
     },
@@ -825,6 +837,9 @@
     "Synchronize scrolling (no lines to scroll)": {
       "comment": "Help tag of the footer toggle of synchronized scrolling in a window without lines."
     },
+    "Syntax": {
+      "comment": "View menu: the submenu of the languages the code can be colored as."
+    },
     "Take the version of %@.": {
       "comment": "Help tag of a toggle, such as Take the version of feature/login."
     },
@@ -935,6 +950,9 @@
     },
     "Try again. If it fails again, use another tool for these files.": {
       "comment": "Alert: what to do when the comparison of the files failed."
+    },
+    "Turn on Highlight Syntax in the View menu to color the code": {
+      "comment": "Help tag of the syntax pop-up button in the footer while highlighting is off."
     },
     "Typing": {
       "comment": "Undo menu: text typed in the result."

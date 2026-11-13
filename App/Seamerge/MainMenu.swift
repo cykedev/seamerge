@@ -152,7 +152,7 @@ final class MainMenu {
       Titles.view,
       [
         commands(.toggleBase, .toggleResultMaximized),
-        commands(.toggleScrollSynchronization, .toggleSyntaxHighlighting) + []
+        commands(.toggleScrollSynchronization, .toggleSyntaxHighlighting) + [Self.syntaxSubmenu()]
           + commands(.toggleInvisibles) + [Self.item(Titles.showIgnoredChanges)]
           + commands(.showAllLines, .collapseUnchangedLines),
         commands(.zoomIn, .zoomOut, .actualSize),
@@ -255,6 +255,14 @@ final class MainMenu {
       submenu.addItem(choice.menuItem())
     }
     item.submenu = submenu
+    return item
+  }
+
+  /// The submenu Syntax of the choices of the language the code is colored as.
+  private static func syntaxSubmenu() -> NSMenuItem {
+    let item = NSMenuItem(title: SyntaxChoice.menuTitle, action: nil, keyEquivalent: "")
+    item.submenu = menu(
+      SyntaxChoice.menuTitle, SyntaxChoice.groups.map { $0.map { $0.menuItem() } })
     return item
   }
 

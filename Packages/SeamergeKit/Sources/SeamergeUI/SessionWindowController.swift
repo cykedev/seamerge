@@ -44,6 +44,13 @@ public final class SessionWindowController: NSWindowController {
   /// The language of the files as the window recognized it.
   let detectedLanguage: LanguageDescription
 
+  /// The languages chosen for files, by their paths, while the app runs.
+  let syntaxChoices: SyntaxChoices
+
+  /// The path of the file whose language the window recognized, under which it keeps the
+  /// language chosen for it.
+  let syntaxPath: String
+
   /// Where the result goes, what Git is doing, and who waits for the session.
   public let context: SessionContext
 
@@ -152,7 +159,7 @@ public final class SessionWindowController: NSWindowController {
     self.init(
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
-      prompts: SessionSheets(), doneStyle: .standard, defaults: .standard,
+      prompts: SessionSheets(), doneStyle: .standard, defaults: .standard, syntaxChoices: .shared,
       window: SessionWindow())
     observeDisplayOptions()
   }
@@ -172,7 +179,7 @@ public final class SessionWindowController: NSWindowController {
     self.init(
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
-      prompts: SessionSheets(), doneStyle: .standard, defaults: .standard,
+      prompts: SessionSheets(), doneStyle: .standard, defaults: .standard, syntaxChoices: .shared,
       window: SessionWindow(), unavailable: comparison)
     observeDisplayOptions()
   }
@@ -189,7 +196,7 @@ public final class SessionWindowController: NSWindowController {
     self.init(
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
-      prompts: SessionSheets(), doneStyle: .standard, defaults: .standard,
+      prompts: SessionSheets(), doneStyle: .standard, defaults: .standard, syntaxChoices: .shared,
       window: SessionWindow(), binaryMerge: merge)
     observeDisplayOptions()
   }
@@ -204,13 +211,15 @@ public final class SessionWindowController: NSWindowController {
   /// Opens a window for `session` that draws with `displayOptions`, whatever the system's
   /// settings are, copies to `pasteboard`, opens files with `workspace`, asks with `prompts`,
   /// shows the button that saves and closes of a merge in `doneStyle`, keeps whether the footer
-  /// shows in `defaults`, and lays itself out in `window`; for an `unavailable` comparison, it
+  /// shows in `defaults`, keeps the languages chosen for files in `syntaxChoices`, and lays
+  /// itself out in `window`; for an `unavailable` comparison, it
   /// says why in place of the lines. `now` tells the time, which ends a run of typing after a
   /// pause.
   init(
     session: Session, context: SessionContext, undoManager: UndoManager,
     displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace,
     prompts: any SessionPrompts, doneStyle: SessionToolbar.DoneStyle, defaults: UserDefaults,
+    syntaxChoices: SyntaxChoices = SyntaxChoices(),
     window: SessionWindow, unavailable: UnavailableComparison? = nil,
     binaryMerge: BinaryMerge? = nil,
     now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
@@ -236,8 +245,10 @@ public final class SessionWindowController: NSWindowController {
     content.footer.theme = theme
     footerVisibility = FooterVisibility(defaults: defaults)
     syntaxHighlighting = SyntaxHighlighting(defaults: defaults)
+    self.syntaxChoices = syntaxChoices
     let detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
     self.detectedLanguage = detectedLanguage
+    syntaxPath = SessionSyntax.path(of: session, resultURL: context.resultURL)
     self.context = context
     self.pasteboard = pasteboard
     self.workspace = workspace
@@ -249,7 +260,8 @@ public final class SessionWindowController: NSWindowController {
     presentation = SessionPresentation(
       session: session, arrangement: arrangement, layout: layout, headers: headers,
       resultHeader: resultHeader, displayOptions: displayOptions,
-      language: syntaxHighlighting.isOn ? detectedLanguage : nil)
+      language: syntaxHighlighting.isOn
+        ? syntaxChoices[syntaxPath].language(detected: detectedLanguage) : nil)
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: arrangement)
     saving = presentation.result.map {
@@ -466,6 +478,9 @@ extension SessionWindowController: NSUserInterfaceValidations {
   /// name that says what it does now, such as Show Base while the base is hidden.
   public func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
     if let menuItem = item as? NSMenuItem, let choice = ResultFormatChoice(item: menuItem) {
+      return validate(choice, item: menuItem)
+    }
+    if let menuItem = item as? NSMenuItem, let choice = SyntaxChoice(item: menuItem) {
       return validate(choice, item: menuItem)
     }
     guard let command = SessionCommand(action: item.action) else { return false }

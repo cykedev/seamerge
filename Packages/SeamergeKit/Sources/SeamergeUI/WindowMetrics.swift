@@ -12,6 +12,9 @@ enum WindowMetrics {
   /// content of a header from the edges of its pane.
   static let footerInset: CGFloat = 12
 
+  /// The distance between the two pop-up buttons of the footer.
+  static let footerPopUpSpacing: CGFloat = 8
+
   /// The distance between the comparison mode and the toggles in the footer.
   static let footerGroupSpacing: CGFloat = 16
 
