@@ -10,6 +10,9 @@ extension SessionWindowController {
       let document = presentation.result?.document
     else { return }
     carryOut(document.planResetting(block), named: SessionCommand.resetChange.undoName ?? "")
+    if let current = presentation.currentBlock {
+      announceState(ofBlock: current)
+    }
   }
 
   /// Opens every conflict again and leaves the other blocks as they are.
@@ -17,8 +20,9 @@ extension SessionWindowController {
     guard canPerform(.reopenAllConflicts), let document = presentation.result?.document else {
       return
     }
-    carryOut(
-      document.planResettingConflicts(), named: SessionCommand.reopenAllConflicts.undoName ?? "")
+    let name = SessionCommand.reopenAllConflicts.undoName ?? ""
+    carryOut(document.planResettingConflicts(), named: name)
+    announceOutcome(name)
   }
 
   /// Returns every block to how it was after loading, so that the window shows the merge as it
@@ -40,7 +44,8 @@ extension SessionWindowController {
     }
     // The document may have changed while the sheet was up.
     guard let current = presentation.result?.document else { return }
-    carryOut(
-      current.planResettingAll(), named: SessionCommand.resetAllDecisions.undoName ?? "")
+    let name = SessionCommand.resetAllDecisions.undoName ?? ""
+    carryOut(current.planResettingAll(), named: name)
+    announceOutcome(name)
   }
 }

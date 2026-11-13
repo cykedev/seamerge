@@ -29,33 +29,7 @@ struct StateSign {
 
   /// What VoiceOver says for the sign.
   var accessibilityLabel: String? {
-    func names(_ roles: [ColorRole]) -> String {
-      roles.map(DecisionToggleButton.name(of:)).joined(separator: ", ")
-    }
-    switch state {
-    case .unchanged:
-      return nil
-    case .automatic(let roles):
-      return String(
-        localized: "Taken automatically: \(names(roles))", bundle: .module,
-        comment: "VoiceOver: a block whose sources the merge took, such as A.")
-    case .chosen(let roles) where roles.isEmpty:
-      return String(
-        localized: "Nothing taken", bundle: .module,
-        comment: "VoiceOver: a block that takes no lines from any input.")
-    case .chosen(let roles):
-      return String(
-        localized: "Chosen: \(names(roles))", bundle: .module,
-        comment: "VoiceOver: a block whose sources the user chose, in order, such as B, A.")
-    case .edited:
-      return String(
-        localized: "Edited by hand", bundle: .module,
-        comment: "VoiceOver: a block whose text the user typed or changed.")
-    case .open:
-      return String(
-        localized: "Open conflict", bundle: .module,
-        comment: "VoiceOver: a conflict that still needs a decision.")
-    }
+    state.spokenName
   }
 
   /// What the sign means, as its help tag and the help that VoiceOver reads.

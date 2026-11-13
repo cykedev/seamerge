@@ -34,6 +34,9 @@
     "%@, line %lld": {
       "comment": "VoiceOver: a mark in the overview bar of the result, such as From A, line 12."
     },
+    "%@. %@": {
+      "comment": "VoiceOver after a decision, such as Chosen: B. 2 Conflicts Left."
+    },
     "%lld Changes": {
       "comment": "Toolbar: the changes of a comparison while none is current, such as 12 Changes.",
       "localizations": {

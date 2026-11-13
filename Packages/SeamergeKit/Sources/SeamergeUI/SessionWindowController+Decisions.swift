@@ -59,6 +59,9 @@ extension SessionWindowController {
     else { return }
     let resolution = result.document.planResolvingByHand(block)
     carryOut(resolution.plan, named: SessionCommand.resolveManually.undoName ?? "")
+    if let current = presentation.currentBlock {
+      announceState(ofBlock: current)
+    }
     window.makeFirstResponder(resultPane.documentView)
     let caret = presentation.paneOffset(ofResultOffset: resolution.cursorPosition)
     resultPane.documentView.setSelectedRange(NSRange(location: caret, length: 0))
@@ -128,6 +131,7 @@ extension SessionWindowController {
     else { return }
     let wasOpen = presentation.navigation.isOpenConflict[block]
     carryOut(plan, named: command.undoName ?? command.title)
+    announceState(ofBlock: block)
     if wasOpen, let next = presentation.navigation.target(of: .nextOpenConflict) {
       presentation.jump(to: next)
     }
@@ -137,9 +141,11 @@ extension SessionWindowController {
   /// so that further toggles add to the block in the order they are switched on.
   private func toggle(_ command: SessionCommand) {
     guard canPerform(command), let role = command.toggledRole,
+      let block = presentation.currentBlock,
       let plan = decisionPlan(toggling: role)
     else { return }
     carryOut(plan, named: command.undoName ?? command.title)
+    announceState(ofBlock: block)
   }
 
   /// Resolves every open conflict with the text of `role`, as `command` does.
@@ -147,5 +153,6 @@ extension SessionWindowController {
     guard canPerform(command), let document = presentation.result?.document else { return }
     carryOut(
       document.planResolvingOpenConflicts(with: [role]), named: command.undoName ?? command.title)
+    announceOutcome(command.undoName ?? command.title)
   }
 }

@@ -226,3 +226,32 @@ import Testing
     try controller.checkResultIsShownAsModelled()
   }
 }
+
+/// What VoiceOver hears after decisions, resets and undo.
+@MainActor
+@Suite struct DecisionAnnouncementTests {
+  @Test func everyDecisionSaysHowTheBlockStandsAndWhatIsLeft() async throws {
+    let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
+    var announcements: [String] = []
+    controller.presentation.announce = { announcements.append($0) }
+    controller.presentation.setCurrentBlock(1)
+
+    controller.perform(.useB)
+    controller.endEvent()
+    controller.presentation.setCurrentBlock(3)
+    for command in [SessionCommand.toggleSourceB, .resetChange, .reopenAllConflicts] {
+      controller.perform(command)
+      controller.endEvent()
+    }
+    controller.sessionUndoManager.undo()
+    controller.perform(.resolveAllWithA)
+
+    #expect(
+      announcements == [
+        "Chosen: B. 1 Conflict Left", "Chosen: B. All Conflicts Resolved",
+        "Open conflict. 1 Conflict Left", "Reopen All Conflicts. 2 Conflicts Left",
+        "Undo Reopen All Conflicts. 1 Conflict Left",
+        "Resolve All Open Conflicts with A. All Conflicts Resolved",
+      ])
+  }
+}

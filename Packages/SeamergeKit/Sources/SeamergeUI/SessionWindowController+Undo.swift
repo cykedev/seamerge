@@ -99,10 +99,38 @@ extension SessionWindowController {
     sessionUndoManager.setActionName(name)
   }
 
-  /// Takes `step` back, which registers the step that does it again.
+  /// Takes `step` back, which registers the step that does it again, and tells VoiceOver what
+  /// was undone or redone.
   private func takeBack(_ step: UndoStep, named name: String) {
     typingRun = nil
+    let isUndoing = sessionUndoManager.isUndoing
     registerUndo(of: presentation.carryOut(step.undoPlan), named: name)
+    announceOutcome(
+      isUndoing
+        ? sessionUndoManager.undoMenuTitle(forUndoActionName: name)
+        : sessionUndoManager.redoMenuTitle(forUndoActionName: name))
+  }
+
+  /// Tells VoiceOver `outcome`, what a command or undo did, with the open conflicts that are
+  /// left, in the words of the toolbar.
+  func announceOutcome(_ outcome: String) {
+    guard let document = presentation.result?.document else { return }
+    let count = SessionToolbar.countText(
+      openConflictCount: document.openConflictCount,
+      hasConflicts: presentation.changes.blocks.contains { $0.kind == .conflict })
+    presentation.announce(
+      String(
+        localized: "\(outcome). \(count)", bundle: .module,
+        comment: "VoiceOver after a decision, such as Chosen: B. 2 Conflicts Left."))
+  }
+
+  /// Tells VoiceOver how changed block `block` stands after a command, with the open
+  /// conflicts that are left.
+  func announceState(ofBlock block: Int) {
+    guard let state = presentation.decisionColumn?.decisions[block]?.state.spokenName else {
+      return
+    }
+    announceOutcome(state)
   }
 
   /// The pause after which typing starts a new step of undo.

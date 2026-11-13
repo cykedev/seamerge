@@ -37,6 +37,40 @@ public struct BlockDecision: Sendable, Hashable {
   }
 }
 
+extension BlockDecision.State {
+  /// What VoiceOver says for the state, as the sign of the decision column says it, or `nil`
+  /// for an unchanged block, which has no sign.
+  @MainActor public var spokenName: String? {
+    func names(_ roles: [ColorRole]) -> String {
+      roles.map(DecisionToggleButton.name(of:)).joined(separator: ", ")
+    }
+    switch self {
+    case .unchanged:
+      return nil
+    case .automatic(let roles):
+      return String(
+        localized: "Taken automatically: \(names(roles))", bundle: .module,
+        comment: "VoiceOver: a block whose sources the merge took, such as A.")
+    case .chosen(let roles) where roles.isEmpty:
+      return String(
+        localized: "Nothing taken", bundle: .module,
+        comment: "VoiceOver: a block that takes no lines from any input.")
+    case .chosen(let roles):
+      return String(
+        localized: "Chosen: \(names(roles))", bundle: .module,
+        comment: "VoiceOver: a block whose sources the user chose, in order, such as B, A.")
+    case .edited:
+      return String(
+        localized: "Edited by hand", bundle: .module,
+        comment: "VoiceOver: a block whose text the user typed or changed.")
+    case .open:
+      return String(
+        localized: "Open conflict", bundle: .module,
+        comment: "VoiceOver: a conflict that still needs a decision.")
+    }
+  }
+}
+
 /// A switch that adds the text of one or more inputs to a block of the result, or takes it out.
 public struct DecisionToggle: Sendable, Hashable {
   /// The inputs that share the toggle because they have the same text in the block, in the order
