@@ -96,7 +96,7 @@ extension SessionCommand {
     case .toggleResultMaximized: .resultPane
     case .swapSides: .swappableSides
     case .skipRemainingFiles: .remainingFiles
-    case .toggleScrollSynchronization, .toggleInvisibles, .goToLine: .nothing
+    case .toggleScrollSynchronization, .toggleInvisibles, .toggleFooter, .goToLine: .nothing
     case .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone: .choice(chosenRoles ?? [])
     case .toggleSourceA: .toggle(.a)
     case .toggleSourceBase: .toggle(.base)

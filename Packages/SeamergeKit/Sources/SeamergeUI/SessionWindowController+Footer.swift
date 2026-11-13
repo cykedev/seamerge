@@ -1,6 +1,25 @@
 import AppKit
 
 extension SessionWindowController {
+  /// Hides the footer of every session window, or shows it again.
+  @objc func toggleFooter(_ sender: Any?) {
+    footerVisibility.isVisible.toggle()
+  }
+
+  /// Shows or hides the footer as the user last chose, in whichever window.
+  func observeFooterVisibility() {
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(footerVisibilityDidChange(_:)),
+      name: FooterVisibility.didChangeNotification, object: footerVisibility.defaults)
+  }
+
+  @objc private func footerVisibilityDidChange(_ notification: Notification) {
+    guard content.showsFooter != footerVisibility.isVisible else { return }
+    content.showsFooter = footerVisibility.isVisible
+    window?.contentMinSize = minimumContentSize
+    updateFooter()
+  }
+
   /// Shows in the footer the comparison mode and the state of each toggle as they are now.
   func updateFooter() {
     let footer = content.footer

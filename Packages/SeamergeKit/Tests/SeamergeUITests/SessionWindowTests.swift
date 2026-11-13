@@ -204,6 +204,7 @@ import Testing
       session: session, context: context, undoManager: UndoManager(),
       displayOptions: DisplayOptions(), pasteboard: .withUniqueName(),
       workspace: WorkspaceRecorder(),
-      prompts: PromptRecorder(), doneStyle: .standard, window: SessionWindow())
+      prompts: PromptRecorder(), doneStyle: .standard, defaults: .privateSuite(),
+      window: SessionWindow())
   }
 }

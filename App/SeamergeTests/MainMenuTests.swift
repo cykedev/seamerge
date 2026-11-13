@@ -180,6 +180,8 @@ import Testing
       Zoom Out ⌘-
       Actual Size ⌘0
       ---
+      Hide Footer ⌘/
+      ---
       Show Toolbar ⌥⌘T
       Customize Toolbar…
       ---

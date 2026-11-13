@@ -368,6 +368,9 @@
     "Hide Base": {
       "comment": "View menu command."
     },
+    "Hide Footer": {
+      "comment": "View menu command."
+    },
     "Hide Invisibles": {
       "comment": "View menu command."
     },
@@ -573,6 +576,9 @@
       "comment": "View menu command."
     },
     "Show Base": {
+      "comment": "View menu command."
+    },
+    "Show Footer": {
       "comment": "View menu command."
     },
     "Show Invisibles": {

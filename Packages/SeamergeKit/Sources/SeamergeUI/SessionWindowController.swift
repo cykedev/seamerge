@@ -34,6 +34,9 @@ public final class SessionWindowController: NSWindowController {
   /// The panes and the footer below them.
   let content: SessionContentController
 
+  /// Whether the windows show their footer.
+  let footerVisibility: FooterVisibility
+
   /// Where the result goes and what Git is doing.
   let context: SessionContext
 
@@ -108,7 +111,7 @@ public final class SessionWindowController: NSWindowController {
     self.init(
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
-      prompts: SessionSheets(), doneStyle: .standard,
+      prompts: SessionSheets(), doneStyle: .standard, defaults: .standard,
       window: SessionWindow())
     observeDisplayOptions()
   }
@@ -128,7 +131,7 @@ public final class SessionWindowController: NSWindowController {
     self.init(
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
-      prompts: SessionSheets(), doneStyle: .standard,
+      prompts: SessionSheets(), doneStyle: .standard, defaults: .standard,
       window: SessionWindow(), unavailable: comparison)
     observeDisplayOptions()
   }
@@ -142,14 +145,15 @@ public final class SessionWindowController: NSWindowController {
 
   /// Opens a window for `session` that draws with `displayOptions`, whatever the system's
   /// settings are, copies to `pasteboard`, opens files with `workspace`, asks with `prompts`,
-  /// shows the button that saves and closes of a merge in `doneStyle`, and lays itself out in
-  /// `window`; for an `unavailable` comparison, it says why in place of the lines. `now` tells
-  /// the time, which ends a run of typing after a pause.
+  /// shows the button that saves and closes of a merge in `doneStyle`, keeps whether the footer
+  /// shows in `defaults`, and lays itself out in `window`; for an `unavailable` comparison, it
+  /// says why in place of the lines. `now` tells the time, which ends a run of typing after a
+  /// pause.
   init(
     session: Session, context: SessionContext, undoManager: UndoManager,
     displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace,
-    prompts: any SessionPrompts, doneStyle: SessionToolbar.DoneStyle, window: SessionWindow,
-    unavailable: UnavailableComparison? = nil,
+    prompts: any SessionPrompts, doneStyle: SessionToolbar.DoneStyle, defaults: UserDefaults,
+    window: SessionWindow, unavailable: UnavailableComparison? = nil,
     now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
   ) {
     let theme = displayOptions.theme(fontSize: Self.standardFontSize)
@@ -171,6 +175,7 @@ public final class SessionWindowController: NSWindowController {
           $0 != .base || arrangement.sourceRoles.contains(.base)
         }))
     content.footer.theme = theme
+    footerVisibility = FooterVisibility(defaults: defaults)
     self.context = context
     self.pasteboard = pasteboard
     self.workspace = workspace
@@ -199,7 +204,7 @@ public final class SessionWindowController: NSWindowController {
     // answer.
     window.delegate = self
     window.contentViewController = content
-    content.showsFooter = true
+    content.showsFooter = footerVisibility.isVisible
     window.toolbar = toolbar.toolbar
     window.setContentSize(WindowMetrics.defaultContentSize)
     window.contentMinSize = minimumContentSize
@@ -217,6 +222,7 @@ public final class SessionWindowController: NSWindowController {
       window.makeFirstResponder(first)
     }
     observeStepsOfUndo()
+    observeFooterVisibility()
     stateDidChange()
   }
 
@@ -395,9 +401,10 @@ extension SessionWindowController: NSUserInterfaceValidations {
   }
 
   /// Whether what `command` switches is on: the base hidden, the result maximized, the
-  /// invisible characters shown.
+  /// invisible characters shown, the footer hidden.
   func isSwitchedOn(_ command: SessionCommand) -> Bool {
     switch command {
+    case .toggleFooter: !footerVisibility.isVisible
     case .toggleBase: !layout.showsBase
     case .toggleResultMaximized: layout.maximizesResult
     case .toggleInvisibles: presentation.allPanes.contains(where: \.showsInvisibles)
@@ -409,7 +416,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
   /// Whether `command` can have an effect now; while the window cannot show the lines of its
   /// files, only skipping the remaining files can.
   func canPerform(_ command: SessionCommand) -> Bool {
-    if unavailable != nil && command != .skipRemainingFiles {
+    if unavailable != nil && command != .skipRemainingFiles && command != .toggleFooter {
       return false
     }
     return switch command.requirement {

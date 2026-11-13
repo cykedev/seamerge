@@ -27,6 +27,7 @@ extension SessionCommand {
     case .toggleScrollSynchronization: return ("y", [.option, .command])
     case .showAllLines: return ("l", [.shift, .command])
     case .collapseUnchangedLines: return ("l", [.option, .shift, .command])
+    case .toggleFooter: return ("/", [.command])
     case .zoomIn: return ("+", [.command])
     case .zoomOut: return ("-", [.command])
     case .actualSize: return ("0", [.command])

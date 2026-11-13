@@ -67,6 +67,9 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Collapses long runs of unchanged lines again, except where the result is worked on.
   case collapseUnchangedLines
 
+  /// Hides the footer of every session window, or shows it again.
+  case toggleFooter
+
   /// Makes the text larger.
   case zoomIn
 
@@ -179,6 +182,8 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "Show All Lines", bundle: .module, comment: "View menu command.")
     case .collapseUnchangedLines:
       String(localized: "Collapse Unchanged Lines", bundle: .module, comment: "View menu command.")
+    case .toggleFooter:
+      String(localized: "Hide Footer", bundle: .module, comment: "View menu command.")
     case .zoomIn: String(localized: "Zoom In", bundle: .module, comment: "View menu command.")
     case .zoomOut: String(localized: "Zoom Out", bundle: .module, comment: "View menu command.")
     case .actualSize:
@@ -332,6 +337,8 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "Restore Layout", bundle: .module, comment: "View menu command.")
     case .toggleInvisibles:
       String(localized: "Hide Invisibles", bundle: .module, comment: "View menu command.")
+    case .toggleFooter:
+      String(localized: "Show Footer", bundle: .module, comment: "View menu command.")
     default:
       nil
     }
@@ -419,6 +426,7 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .toggleInvisibles: #selector(SessionWindowController.toggleInvisibles(_:))
     case .showAllLines: #selector(SessionWindowController.showAllLines(_:))
     case .collapseUnchangedLines: #selector(SessionWindowController.collapseUnchangedLines(_:))
+    case .toggleFooter: #selector(SessionWindowController.toggleFooter(_:))
     case .zoomIn: #selector(SessionWindowController.zoomIn(_:))
     case .zoomOut: #selector(SessionWindowController.zoomOut(_:))
     case .actualSize: #selector(SessionWindowController.actualSize(_:))

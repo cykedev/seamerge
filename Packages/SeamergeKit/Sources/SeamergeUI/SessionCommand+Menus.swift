@@ -35,6 +35,7 @@ extension SessionCommand {
           .toggleScrollSynchronization, .toggleInvisibles, .showAllLines, .collapseUnchangedLines,
         ],
         [.zoomIn, .zoomOut, .actualSize],
+        [.toggleFooter],
       ]
     case .go:
       [

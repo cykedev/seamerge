@@ -155,6 +155,7 @@ final class MainMenu {
           + commands(.toggleInvisibles) + [Self.item(Titles.showIgnoredChanges)]
           + commands(.showAllLines, .collapseUnchangedLines),
         commands(.zoomIn, .zoomOut, .actualSize),
+        commands(.toggleFooter),
         [
           Self.item(
             Titles.showToolbar, #selector(NSWindow.toggleToolbarShown(_:)), key: "t",

@@ -349,8 +349,10 @@ import Testing
     #expect(controller.layout.sourcePanes.allSatisfy { $0.pane.isHidden })
     let labels = controller.layout.sourcePanes.map { $0.pane.accessibilityLabel() }
     #expect(labels == ["A, Assets/logo.png, before", "B, Assets/logo.png, working copy"])
+    // Hide Footer holds for every window, this one too.
     for command in SessionCommand.allCases {
-      #expect(controller.canPerform(command) == (command == .skipRemainingFiles), "\(command)")
+      let acts = command == .skipRemainingFiles || command == .toggleFooter
+      #expect(controller.canPerform(command) == acts, "\(command)")
     }
     #expect(countLabel(of: controller) == "")
     #expect(try toolbarItems(of: controller)[.changeNavigation]?.isHidden == true)

@@ -286,7 +286,7 @@ import Testing
       session: session, context: SessionContext(), undoManager: UndoManager(),
       displayOptions: DisplayOptions(reducesMotion: true), pasteboard: .withUniqueName(),
       workspace: WorkspaceRecorder(), prompts: prompts, doneStyle: .standard,
-      window: SessionWindow(), now: now)
+      defaults: .privateSuite(), window: SessionWindow(), now: now)
     try #require(controller.window).contentView?.layoutSubtreeIfNeeded()
     return controller
   }

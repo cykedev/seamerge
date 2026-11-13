@@ -15,12 +15,13 @@ enum Windows {
     for session: Session, context: SessionContext = SessionContext(),
     options: DisplayOptions = DisplayOptions(reducesMotion: true),
     workspace: WorkspaceRecorder = WorkspaceRecorder(), prompts: PromptRecorder = PromptRecorder(),
-    undoManager: UndoManager = UndoManager(), unavailable: UnavailableComparison? = nil
+    undoManager: UndoManager = UndoManager(), unavailable: UnavailableComparison? = nil,
+    defaults: UserDefaults = .privateSuite()
   ) throws -> SessionWindowController {
     let controller = SessionWindowController(
       session: session, context: context, undoManager: undoManager, displayOptions: options,
       pasteboard: .withUniqueName(), workspace: workspace, prompts: prompts, doneStyle: .standard,
-      window: SessionWindow(), unavailable: unavailable)
+      defaults: defaults, window: SessionWindow(), unavailable: unavailable)
     let window = try #require(controller.window)
     window.contentView?.layoutSubtreeIfNeeded()
     return controller
@@ -34,14 +35,15 @@ enum Windows {
   static func picture(
     _ session: Session, context: SessionContext, look: Look,
     options: DisplayOptions = DisplayOptions(), doneStyle: SessionToolbar.DoneStyle = .standard,
-    actsAsKey: Bool = false, size: CGSize? = WindowMetrics.defaultContentSize, named name: String,
+    defaults: UserDefaults = .privateSuite(), actsAsKey: Bool = false,
+    size: CGSize? = WindowMetrics.defaultContentSize, named name: String,
     unavailable: UnavailableComparison? = nil,
     prepare: (SessionWindowController) -> Void = { _ in }
   ) throws {
     let controller = SessionWindowController(
       session: session, context: context, undoManager: UndoManager(), displayOptions: options,
       pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(), prompts: PromptRecorder(),
-      doneStyle: doneStyle,
+      doneStyle: doneStyle, defaults: defaults,
       window: actsAsKey ? KeySessionWindow() : SessionWindow(), unavailable: unavailable)
     let window = try #require(controller.window)
     defer { window.close() }
@@ -72,6 +74,19 @@ enum Windows {
   /// The top of the visible part of the text of `pane`.
   static func scrollOffset(of pane: PaneView) -> CGFloat {
     pane.documentView.visibleRect.minY
+  }
+}
+
+extension UserDefaults {
+  /// User defaults of their own named `name`, which no other test and no setting of the user
+  /// sees; a test that writes to them removes them with `removePersistentDomain(forName:)`.
+  static func privateSuite(
+    named name: String = "SeamergeUITests.\(UUID().uuidString)"
+  ) -> UserDefaults {
+    guard let defaults = UserDefaults(suiteName: name) else {
+      preconditionFailure("The user defaults named \(name) cannot be made")
+    }
+    return defaults
   }
 }
 

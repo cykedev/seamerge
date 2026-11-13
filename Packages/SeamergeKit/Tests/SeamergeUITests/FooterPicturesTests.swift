@@ -43,6 +43,16 @@ import Testing
       named: "footer-merge-reduced-transparency-\(look.name)")
   }
 
+  @Test func windowWithTheFooterHiddenIsPictured() async throws {
+    let name = "SeamergeUITests.\(UUID().uuidString)"
+    let defaults = UserDefaults.privateSuite(named: name)
+    defer { defaults.removePersistentDomain(forName: name) }
+    FooterVisibility(defaults: defaults).isVisible = false
+    try Windows.picture(
+      try await SampleMerges.helloWorld(), context: SampleMerges.helloWorldContext, look: .light,
+      defaults: defaults, named: "footer-hidden-light")
+  }
+
   @Test func togglesArePicturedInEveryState() async throws {
     let session = try await SampleMerges.manyBlocks(lineCount: 600, spacing: 30)
     try Windows.picture(

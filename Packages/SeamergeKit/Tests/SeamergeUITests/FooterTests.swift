@@ -6,7 +6,8 @@ import Testing
 @testable import SeamergeUI
 
 /// The footer: the comparison mode and the toggles of the view, each sending the command of the
-/// main menu and showing the state the window is in, whichever way it changed.
+/// main menu and showing the state the window is in, whichever way it changed; and Hide Footer,
+/// which holds for every window and across launches.
 @MainActor
 @Suite struct FooterTests {
   @Test func mergeHasEveryToggleAndAComparisonHasNoBase() async throws {
@@ -149,13 +150,57 @@ import Testing
     }
   }
 
+  @Test func hideFooterHidesItInEveryWindowAndTheChoiceOutlastsALaunch() async throws {
+    let name = "SeamergeUITests.\(UUID().uuidString)"
+    let defaults = UserDefaults.privateSuite(named: name)
+    defer { defaults.removePersistentDomain(forName: name) }
+    let first = try Windows.controller(for: try await SampleMerges.helloWorld(), defaults: defaults)
+    let second = try Windows.controller(for: try await SampleDiffs.greeting(), defaults: defaults)
+    let item = NSMenuItem(
+      title: SessionCommand.toggleFooter.title, action: SessionCommand.toggleFooter.action,
+      keyEquivalent: "")
+    #expect(first.validateUserInterfaceItem(item))
+    #expect(item.title == "Hide Footer")
+    let paneBottom = { (controller: SessionWindowController) in
+      controller.layout.view.frame.minY
+    }
+    #expect(paneBottom(first) == WindowMetrics.footerHeight)
+
+    first.toggleFooter(nil)
+
+    for controller in [first, second] {
+      controller.content.view.layoutSubtreeIfNeeded()
+      #expect(!controller.content.showsFooter)
+      #expect(controller.window?.contentBorderThickness(for: .minY) == 0)
+      #expect(paneBottom(controller) == 0)
+    }
+    #expect(second.validateUserInterfaceItem(item))
+    #expect(item.title == "Show Footer")
+
+    let relaunched = try Windows.controller(
+      for: try await SampleMerges.helloWorld(), defaults: defaults)
+    #expect(!relaunched.content.showsFooter)
+
+    relaunched.toggleFooter(nil)
+    for controller in [first, second, relaunched] {
+      #expect(controller.content.showsFooter)
+      #expect(controller.window?.contentBorderThickness(for: .minY) == WindowMetrics.footerHeight)
+    }
+  }
+
+  @Test func footerIsShownUntilTheUserHidesIt() async throws {
+    let controller = try Windows.controller(for: try await SampleMerges.helloWorld())
+    #expect(controller.content.showsFooter)
+    #expect(controller.window?.contentBorderThickness(for: .minY) == WindowMetrics.footerHeight)
+  }
+
   @Test func smallestWindowCutsNothingOff() async throws {
     for session in [try await SampleMerges.helloWorld(), try await SampleDiffs.greeting()] {
       let controller = SessionWindowController(
         session: session, context: SessionContext(), undoManager: UndoManager(),
         displayOptions: DisplayOptions(), pasteboard: .withUniqueName(),
         workspace: WorkspaceRecorder(), prompts: PromptRecorder(), doneStyle: .standard,
-        window: SessionWindow())
+        defaults: .privateSuite(), window: SessionWindow())
       let window = try #require(controller.window)
       defer { window.close() }
       Rendering.prepare(window, size: window.contentMinSize, appearance: Look.light.appearance)
