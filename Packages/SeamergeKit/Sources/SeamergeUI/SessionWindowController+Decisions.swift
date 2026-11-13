@@ -117,12 +117,20 @@ extension SessionWindowController {
     document.toggles(in: block).contains { $0.roles.contains(role) }
   }
 
-  /// Carries out `command`, which chooses the sources of the current block.
+  /// Carries out `command`, which chooses the sources of the current block, and goes on to the
+  /// next open conflict if the block was an open conflict before.
+  ///
+  /// From any other block, above all one edited by hand, the selection stays, so that the user
+  /// sees what the command did.
   private func choose(_ command: SessionCommand) {
-    guard canPerform(command), let plan = decisionPlan(choosing: command.chosenRoles ?? []) else {
-      return
-    }
+    guard canPerform(command), let block = presentation.currentBlock,
+      let plan = decisionPlan(choosing: command.chosenRoles ?? [])
+    else { return }
+    let wasOpen = presentation.navigation.isOpenConflict[block]
     carryOut(plan, named: command.undoName ?? command.title)
+    if wasOpen, let next = presentation.navigation.target(of: .nextOpenConflict) {
+      presentation.jump(to: next)
+    }
   }
 
   /// Carries out `command`, which switches a toggle of the current block; the selection stays,

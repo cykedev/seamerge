@@ -119,6 +119,35 @@ import Testing
     try controller.checkResultIsShownAsModelled()
   }
 
+  @Test func decisionOnAnOpenConflictGoesOnToTheNextOpenConflict() async throws {
+    let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
+    controller.presentation.setCurrentBlock(1)
+
+    controller.perform(.useB)
+
+    #expect(controller.presentation.currentBlock == 3)
+  }
+
+  @Test func decisionOnAnyOtherBlockStaysThere() async throws {
+    let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
+    // A block taken automatically.
+    controller.presentation.setCurrentBlock(0)
+    controller.perform(.useB)
+    #expect(controller.presentation.currentBlock == 0)
+
+    // A conflict edited by hand is no open conflict any more.
+    controller.presentation.setCurrentBlock(1)
+    controller.perform(.resolveManually)
+    controller.leaveTextMode()
+    controller.perform(.useA)
+    #expect(controller.presentation.currentBlock == 1)
+
+    // The last open conflict has none after it.
+    controller.presentation.setCurrentBlock(3)
+    controller.perform(.useB)
+    #expect(controller.presentation.currentBlock == 3)
+  }
+
   @Test func commandsAreValidOnlyWhereTheyHaveAnEffect() async throws {
     let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
     // Block 1 is taken from A as loaded.
@@ -181,7 +210,7 @@ import Testing
     try press(SessionCommand.rightArrow, in: controller)
 
     #expect(try controller.segmentTexts[3] == "B3\n")
-    controller.presentation.setCurrentBlock(3)
+    #expect(controller.presentation.currentBlock == 3)
     try press("1", modifiers: .option, in: controller)
     #expect(try controller.segmentTexts[7] == "")
   }
