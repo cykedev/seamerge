@@ -62,6 +62,8 @@ extension PaneTextView {
   /// Reports the edits that the user's change carried out, once the text view has finished it.
   override func didChangeText() {
     super.didChangeText()
+    // Discarding waits while the input method marks text, which ends with a change.
+    resumeDiscardingParagraphs()
     let carriedOut = completedEdits
     completedEdits.removeAll()
     // An edit that the text view announced but did not make is not expected any longer.

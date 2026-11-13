@@ -259,6 +259,12 @@ public final class PaneView: NSView {
       self, selector: #selector(clipViewBoundsDidChange(_:)),
       name: NSView.boundsDidChangeNotification,
       object: scrollView.contentView)
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(liveScrollDidStart(_:)),
+      name: NSScrollView.willStartLiveScrollNotification, object: scrollView)
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(liveScrollDidEnd(_:)),
+      name: NSScrollView.didEndLiveScrollNotification, object: scrollView)
     gutterView.removalRows = { [weak textView] rows in textView?.removalRows(in: rows) ?? [] }
     gutterView.hasFocus = { [weak textView] in textView?.isSelectionEmphasized ?? false }
     textView.interaction = self
@@ -339,6 +345,15 @@ public final class PaneView: NSView {
 
   @objc private func clipViewBoundsDidChange(_ notification: Notification) {
     textDidScroll()
+    textView.visibleTextDidMove()
+  }
+
+  @objc private func liveScrollDidStart(_ notification: Notification) {
+    textView.liveScrollDidStart()
+  }
+
+  @objc private func liveScrollDidEnd(_ notification: Notification) {
+    textView.liveScrollDidEnd()
   }
 
   /// Moves the gutter, the bars of collapsed runs and the overview bar along with the text.

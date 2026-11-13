@@ -98,6 +98,40 @@ final class PaneContentStorage: NSTextContentStorage {
     }
   }
 
+  /// Lets go of the paragraph elements that the storage holds for the shown paragraphs in
+  /// `range`, which it would otherwise move along, one by one, with every edit before them; does
+  /// nothing while the text storage is being edited.
+  ///
+  /// The storage keeps an element for every paragraph that TextKit has laid out. It drops them
+  /// only where the text storage reports an edit, and an edit of attributes is the only one that
+  /// changes no text: the text storage reports one for each shown part of `range` without
+  /// changing any attribute, so text, attributes and the rendering attributes of the layout
+  /// managers stay as they are. TextKit makes the elements anew once it lays out their paragraphs
+  /// again. Hidden paragraphs have no elements, as the storage steps over them, and are left
+  /// alone, so that TextKit never handles them.
+  func discardElements(in range: Range<Int>) {
+    guard let textStorage, !range.isEmpty, textStorage.editedMask.isEmpty else { return }
+    var shownParts: [Range<Int>] = []
+    var start = range.lowerBound
+    var index = hiddenRanges.partitioningIndex { $0.upperBound > start }
+    while start < range.upperBound {
+      let hidden = index < hiddenRanges.count ? hiddenRanges[index] : nil
+      let end = min(hidden.map { max($0.lowerBound, start) } ?? range.upperBound, range.upperBound)
+      if start < end {
+        shownParts.append(start..<end)
+      }
+      guard let hidden else { break }
+      start = max(start, hidden.upperBound)
+      index += 1
+    }
+    guard !shownParts.isEmpty else { return }
+    textStorage.beginEditing()
+    for part in shownParts {
+      textStorage.edited(.editedAttributes, range: NSRange(part), changeInLength: 0)
+    }
+    textStorage.endEditing()
+  }
+
   private var textLength: Int {
     offset(from: documentRange.location, to: documentRange.endLocation)
   }

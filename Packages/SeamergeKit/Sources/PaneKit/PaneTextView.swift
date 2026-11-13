@@ -19,6 +19,23 @@ final class PaneTextView: NSTextView {
   /// The content storage, which the text view holds only weakly.
   let contentStorage = PaneContentStorage()
 
+  /// The rows below the visible text whose paragraph elements are still to be discarded, once
+  /// scrolling is at rest and the run loop is idle.
+  var rowsToDiscard: Range<Int>?
+
+  /// The farthest row that has been in view since discarding last finished: TextKit holds no
+  /// elements far below it.
+  var farthestRowShown = 0
+
+  /// Whether the user is scrolling by hand, with the scroller or a gesture.
+  var isLiveScrolling = false
+
+  /// Fires once the visible text has stayed where it is for the rest interval.
+  var scrollRestTimer: Timer?
+
+  /// Whether a pass of discarding waits for the run loop to be idle.
+  var isDiscardPassPending = false
+
   /// Learns about clicks on rows and supplies the context menu.
   weak var interaction: (any RowInteraction)?
 
@@ -130,6 +147,9 @@ final class PaneTextView: NSTextView {
     NotificationCenter.default.addObserver(
       self, selector: #selector(selectionDidChange(_:)),
       name: NSTextView.didChangeSelectionNotification, object: self)
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(discardNextParagraphsWhenIdle(_:)),
+      name: Self.idleToDiscardNotification, object: self)
     self.theme = theme
   }
 
@@ -183,6 +203,8 @@ final class PaneTextView: NSTextView {
     } else {
       textStorage.setAttributedString(
         NSAttributedString(string: content.text, attributes: attributes))
+      rowsToDiscard = nil
+      farthestRowShown = 0
     }
   }
 
