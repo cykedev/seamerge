@@ -227,6 +227,7 @@ public final class SessionWindowController: NSWindowController {
     presentation.showCurrentBlock()
     presentation.delegate = self
     layout.delegate = self
+    layout.chooseResultFormat = { [weak self] choice in self?.choose(choice) }
     window.keyHandler = self
     if unavailable == nil, let first = layout.sourcePanes.first?.pane.documentView {
       window.initialFirstResponder = first
@@ -397,6 +398,9 @@ extension SessionWindowController: NSUserInterfaceValidations {
   /// checkmark while they are in effect; a command that switches something on and off takes the
   /// name that says what it does now, such as Show Base while the base is hidden.
   public func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
+    if let menuItem = item as? NSMenuItem, let choice = ResultFormatChoice(item: menuItem) {
+      return validate(choice, item: menuItem)
+    }
     guard let command = SessionCommand(action: item.action) else { return false }
     if let menuItem = item as? NSMenuItem {
       if let mode = command.comparisonMode {

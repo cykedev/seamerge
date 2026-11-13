@@ -147,6 +147,20 @@ import Testing
       Save As…
       Save and Close ⌘↩
       ---
+      Result Encoding ▸
+        UTF-8
+        UTF-16 LE
+        UTF-16 BE
+        UTF-32 LE
+        UTF-32 BE
+        Windows 1252
+        ISO 8859-1
+        Mac Roman
+      Line Endings ▸
+        LF
+        CRLF
+        CR
+      ---
       Leave Unresolved ⌘.
     Edit ▸
       Undo ⌘Z

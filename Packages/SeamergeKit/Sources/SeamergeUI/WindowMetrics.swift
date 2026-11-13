@@ -35,6 +35,9 @@ enum WindowMetrics {
   /// The height of the line below the result header that says Git no longer waits.
   static let noticeHeight: CGFloat = 24
 
+  /// The distance between the title of a pop-up menu in a header and its chevron.
+  static let menuIndicatorSpacing: CGFloat = 2
+
   /// The distance of a header's content from the edges of its pane.
   static let headerInset: CGFloat = 12
 

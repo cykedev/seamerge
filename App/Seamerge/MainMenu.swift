@@ -97,6 +97,10 @@ final class MainMenu {
         commands(.openInEditor),
         [Self.item(Titles.close, #selector(NSWindow.performClose(_:)), key: "w")]
           + commands(.save, .saveAs, .saveAndClose),
+        [
+          Self.submenu(ResultFormatChoice.encodingMenuTitle, of: ResultFormatChoice.encodings),
+          Self.submenu(ResultFormatChoice.lineEndingMenuTitle, of: ResultFormatChoice.lineEndings),
+        ],
         [leaveUnresolvedItem],
       ])
   }
@@ -241,6 +245,17 @@ final class MainMenu {
       commandItems[command] = item
       return item
     }
+  }
+
+  /// An item of a submenu titled `title` of the items of `choices`.
+  private static func submenu(_ title: String, of choices: [ResultFormatChoice]) -> NSMenuItem {
+    let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+    let submenu = NSMenu(title: title)
+    for choice in choices {
+      submenu.addItem(choice.menuItem())
+    }
+    item.submenu = submenu
+    return item
   }
 
   /// A menu titled `title` of `groups` of items, with a separator between groups.

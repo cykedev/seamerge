@@ -10,6 +10,17 @@
     "%@ and %@": {
       "comment": "Two sides that share a toggle, such as feature/login and main."
     },
+    "%@ mixes line endings. The result is written with %@ throughout.": {
+      "comment": "Notice below the result header: B ends its lines in more than one way, such as main mixes line endings. The result is written with LF throughout.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ mixes line endings. The result is written with %2$@ throughout."
+          }
+        }
+      }
+    },
     "%@ removed from %@": {
       "comment": "VoiceOver: a field was emptied, such as LoginView.swift removed from Left."
     },
@@ -203,6 +214,12 @@
     "Change Comparison": {
       "comment": "Undo menu: the switch to another comparison mode or merge strategy."
     },
+    "Change Encoding": {
+      "comment": "Undo menu: the encoding of the result was changed."
+    },
+    "Change Line Endings": {
+      "comment": "Undo menu: the line endings of the result were changed."
+    },
     "Change in %@, line %lld": {
       "comment": "VoiceOver: a mark in the overview bar, such as Change in A, line 12."
     },
@@ -220,6 +237,12 @@
     },
     "Choose how lines are compared": {
       "comment": "Help tag of the choice of the comparison mode in the toolbar and the footer."
+    },
+    "Choose how the lines of the result end": {
+      "comment": "Help tag of the line endings in the result header."
+    },
+    "Choose the encoding the result is saved in": {
+      "comment": "Help tag of the encoding in the result header."
     },
     "Choose the file for %@.": {
       "comment": "Open panel of a field of Compare Files, such as Choose the file for Left."
@@ -351,9 +374,6 @@
     },
     "Encoding": {
       "comment": "Details of a side: UTF-8 and the like."
-    },
-    "Encoding: %@": {
-      "comment": "VoiceOver: the encoding of the result, such as Encoding: UTF-8."
     },
     "Every line shown": {
       "comment": "VoiceOver: the footer toggle of collapsed lines while no run is collapsed."
@@ -490,16 +510,13 @@
       "comment": "Help tag of the footer toggle of synchronized scrolling while it is on."
     },
     "Line Endings": {
-      "comment": "Details of a side: LF, CRLF or CR."
+      "comment": "Line endings: the label in the details of a side, LF, CRLF or CR, and the submenu of the File menu that chooses those of the result."
     },
     "Line Number": {
       "comment": "Placeholder of the field of Go to Line."
     },
     "Line endings ignored": {
       "comment": "Subtitle: the comparison treats LF, CRLF and CR as equal."
-    },
-    "Line endings: %@": {
-      "comment": "VoiceOver: the line endings of the result, such as Line endings: LF."
     },
     "Mac Roman": {
       "comment": "Encoding."
@@ -626,6 +643,9 @@
     },
     "Result": {
       "comment": "The name of the result pane."
+    },
+    "Result Encoding": {
+      "comment": "File menu: the submenu of the encodings the result can be saved in."
     },
     "Result, %@": {
       "comment": "VoiceOver: the result pane and the file it is written to."

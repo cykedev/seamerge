@@ -43,7 +43,11 @@ struct SideDetailsView: View {
         }
         if let lineEndings = header.details.lineEndings {
           row(
-            Text("Line Endings", bundle: .module, comment: "Details of a side: LF, CRLF or CR."),
+            Text(
+              "Line Endings", bundle: .module,
+              comment:
+                "Line endings: the label in the details of a side, LF, CRLF or CR, and the submenu of the File menu that chooses those of the result."
+            ),
             value: lineEndings.name)
         }
       }

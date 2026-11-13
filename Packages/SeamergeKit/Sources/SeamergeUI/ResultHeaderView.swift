@@ -1,14 +1,18 @@
 import MergeModel
 import SwiftUI
 
-/// What the header above the result says: where the result goes, and the encoding and line
-/// endings it is written with.
+/// What the header above the result says: where the result goes, the encoding and line endings
+/// it is written with, and whether B mixes line endings, which the result does not.
 struct ResultHeader: Equatable {
   /// Where the result is written, with the home folder as a tilde, if it goes to a file.
   var path: String?
 
   /// How the result is written.
   var format: ResultFormat
+
+  /// The name of B if it ends its lines in more than one way, so that writing the result
+  /// unifies them; `nil` otherwise.
+  var bWithMixedLineEndings: String?
 
   /// Whether Git waits for the merge, so that the line after it stopped waiting names Git.
   let callerIsGit: Bool
@@ -17,6 +21,9 @@ struct ResultHeader: Equatable {
   init(session: Session, context: SessionContext) {
     path = context.resultURL.map(Self.path(of:))
     format = ResultFormat(resultOf: session)
+    bWithMixedLineEndings =
+      session.file(for: .b)?.lineEndings == .mixed
+      ? SideHeader(role: .b, session: session, context: context).distinctName : nil
     callerIsGit = context.waitingCaller == .git
   }
 
@@ -36,11 +43,15 @@ struct ResultHeader: Equatable {
   }
 }
 
-/// The header above the result, and below it, while Git no longer waits for the merge, a line
-/// that says so.
+/// The header above the result, with the pop-up menus of the encoding and the line endings; below
+/// it, while B mixes line endings, a line that says the result unifies them, and while Git no
+/// longer waits for the merge, a line that says so.
 struct ResultHeaderView: View {
   let header: ResultHeader
   let callerIsGone: Bool
+
+  /// Carries out a choice of the pop-up menus, as the items of the File menu do.
+  let choose: (ResultFormatChoice) -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -54,24 +65,25 @@ struct ResultHeaderView: View {
             .truncationMode(.middle)
         }
         Spacer(minLength: 0)
-        Text(header.format.encoding.name)
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
-          .accessibilityLabel(
-            Text(
-              "Encoding: \(header.format.encoding.name)", bundle: .module,
-              comment: "VoiceOver: the encoding of the result, such as Encoding: UTF-8."))
-        Text(header.format.lineEnding.name)
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
-          .accessibilityLabel(
-            Text(
-              "Line endings: \(header.format.lineEnding.name)", bundle: .module,
-              comment: "VoiceOver: the line endings of the result, such as Line endings: LF."))
+        menu(
+          of: ResultFormatChoice.encodings, current: .encoding(header.format.encoding),
+          label: ResultFormatChoice.encodingMenuTitle, help: ResultFormatChoice.encodingHelp)
+        menu(
+          of: ResultFormatChoice.lineEndings, current: .lineEnding(header.format.lineEnding),
+          label: ResultFormatChoice.lineEndingMenuTitle, help: ResultFormatChoice.lineEndingHelp)
       }
       .frame(height: WindowMetrics.headerHeight)
+      if let b = header.bWithMixedLineEndings {
+        notice(
+          Text(
+            "\(b) mixes line endings. The result is written with \(ResultFormatChoice.lineEnding(header.format.lineEnding).title) throughout.",
+            bundle: .module,
+            comment:
+              "Notice below the result header: B ends its lines in more than one way, such as main mixes line endings. The result is written with LF throughout."
+          ))
+      }
       if callerIsGone {
-        Label {
+        notice(
           header.callerIsGit
             ? Text(
               "Git is no longer waiting for this merge.", bundle: .module,
@@ -80,13 +92,7 @@ struct ResultHeaderView: View {
               "The command that opened this merge is no longer waiting.", bundle: .module,
               comment:
                 "Notice below the result header after a command other than Git that asked has ended."
-            )
-        } icon: {
-          Image(systemName: "exclamationmark.triangle")
-        }
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
-        .frame(height: WindowMetrics.noticeHeight)
+            ))
       }
     }
     .lineLimit(1)
@@ -94,15 +100,47 @@ struct ResultHeaderView: View {
     .accessibilityElement(children: .contain)
     .accessibilityLabel(Text(header.spokenName))
   }
-}
 
-extension ResultFormat.LineEnding {
-  /// The short name of the line ending, as editors show it.
-  fileprivate var name: String {
-    switch self {
-    case .lf: LineEndings.lf.name
-    case .crlf: LineEndings.crlf.name
-    case .cr: LineEndings.cr.name
+  /// A quiet pop-up menu of `choices`, titled with the current one, which has a checkmark.
+  private func menu(
+    of choices: [ResultFormatChoice], current: ResultFormatChoice, label: String, help: String
+  ) -> some View {
+    Menu {
+      ForEach(choices, id: \.self) { choice in
+        Toggle(
+          isOn: Binding(get: { choice == current }, set: { _ in choose(choice) })
+        ) {
+          Text(choice.title)
+        }
+      }
+    } label: {
+      HStack(spacing: WindowMetrics.menuIndicatorSpacing) {
+        Text(current.title)
+        Image(systemName: "chevron.down")
+          .imageScale(.small)
+          .fontWeight(.semibold)
+      }
+      .foregroundStyle(.secondary)
+      .contentShape(Rectangle())
     }
+    .menuStyle(.button)
+    .buttonStyle(.plain)
+    .menuIndicator(.hidden)
+    .fixedSize()
+    .font(.subheadline)
+    .help(help)
+    .accessibilityLabel(Text(label))
+    .accessibilityValue(Text(current.title))
+  }
+
+  private func notice(_ text: Text) -> some View {
+    Label {
+      text
+    } icon: {
+      Image(systemName: "exclamationmark.triangle")
+    }
+    .font(.subheadline)
+    .foregroundStyle(.secondary)
+    .frame(height: WindowMetrics.noticeHeight)
   }
 }

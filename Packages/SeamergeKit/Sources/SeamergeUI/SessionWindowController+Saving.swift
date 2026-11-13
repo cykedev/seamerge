@@ -182,12 +182,75 @@ extension SessionWindowController {
       b: headers[.b]?.name ?? Role.b.letter)
   }
 
+  /// Writes the result as `choice` says, as a step of undo.
+  @objc func chooseResultFormat(_ sender: Any?) {
+    guard let choice = ResultFormatChoice(item: sender) else { return }
+    choose(choice)
+  }
+
+  /// Writes the result as `choice` says from now on, as a step of undo that brings back the
+  /// format before.
+  func choose(_ choice: ResultFormatChoice) {
+    guard let saving else { return }
+    let format =
+      switch choice {
+      case .encoding(let encoding): saving.format.with(encoding: encoding)
+      case .lineEnding(let lineEnding):
+        ResultFormat(
+          encoding: saving.format.encoding, writesByteOrderMark: saving.format.writesByteOrderMark,
+          lineEnding: lineEnding)
+      }
+    let name =
+      switch choice {
+      case .encoding:
+        String(
+          localized: "Change Encoding", bundle: .module,
+          comment: "Undo menu: the encoding of the result was changed.")
+      case .lineEnding:
+        String(
+          localized: "Change Line Endings", bundle: .module,
+          comment: "Undo menu: the line endings of the result were changed.")
+      }
+    setResultFormat(format, named: name)
+  }
+
+  /// Writes the result in `format` from now on, as a step of undo named `name`.
+  private func setResultFormat(_ format: ResultFormat, named name: String) {
+    guard var saving, format != saving.format else { return }
+    let previous = saving.format
+    saving.format = format
+    self.saving = saving
+    typingRun = nil
+    sessionUndoManager.registerUndo(withTarget: self) { controller in
+      MainActor.assumeIsolated { controller.setResultFormat(previous, named: name) }
+    }
+    sessionUndoManager.setActionName(name)
+    showResultFormat()
+    stateDidChange()
+  }
+
   /// Shows in the result header how the result is written.
   func showResultFormat() {
     guard let saving, var header = layout.resultHeader else { return }
     header.format = saving.format
     header.path = saving.url.map(ResultHeader.path(of:))
+    header.bWithMixedLineEndings =
+      presentation.changes.session.file(for: .b)?.lineEndings == .mixed
+      ? presentation.headers[.b]?.distinctName : nil
     layout.show(header)
   }
 
+  /// Whether the menu item of `choice` can act, with a checkmark at the format in effect.
+  func validate(_ choice: ResultFormatChoice, item: NSMenuItem) -> Bool {
+    guard let format = saving?.format, unavailable == nil else {
+      item.state = .off
+      return false
+    }
+    item.state =
+      switch choice {
+      case .encoding(let encoding): encoding == format.encoding ? .on : .off
+      case .lineEnding(let lineEnding): lineEnding == format.lineEnding ? .on : .off
+      }
+    return !isAskingToClose
+  }
 }

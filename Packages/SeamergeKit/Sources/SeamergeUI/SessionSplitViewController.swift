@@ -26,6 +26,9 @@ final class SessionSplitViewController: NSSplitViewController {
   /// Supplies the context menus of the headers; the controller does not retain it.
   weak var delegate: (any SessionLayoutDelegate)?
 
+  /// Carries out a choice of the pop-up menus of the result header.
+  var chooseResultFormat: (ResultFormatChoice) -> Void = { _ in }
+
   private let sourcesController = NSSplitViewController()
   private let sourceHeaderViews: [HeaderHostingView<SideHeaderView>]
   private let resultHeaderView: HeaderHostingView<ResultHeaderView>?
@@ -39,9 +42,14 @@ final class SessionSplitViewController: NSSplitViewController {
       HeaderHostingView(rootView: SideHeaderView(header: $0, theme: theme), role: $0.role)
     }
     resultHeaderView = resultHeader.map {
-      HeaderHostingView(rootView: ResultHeaderView(header: $0, callerIsGone: false), role: nil)
+      HeaderHostingView(
+        rootView: ResultHeaderView(header: $0, callerIsGone: false) { _ in }, role: nil)
     }
     super.init(nibName: nil, bundle: nil)
+    if let resultHeaderView {
+      resultHeaderView.rootView = makeResultHeaderView(
+        header: resultHeaderView.rootView.header, callerIsGone: false)
+    }
     for headerView in sourceHeaderViews {
       headerView.menuProvider = { [weak self] role in self?.headerMenu(for: role) }
     }
@@ -179,7 +187,7 @@ final class SessionSplitViewController: NSSplitViewController {
   /// has nothing to save, does not say so.
   func showCallerIsGone() {
     guard let resultHeaderView else { return }
-    resultHeaderView.rootView = ResultHeaderView(
+    resultHeaderView.rootView = makeResultHeaderView(
       header: resultHeaderView.rootView.header, callerIsGone: true)
   }
 
@@ -191,8 +199,14 @@ final class SessionSplitViewController: NSSplitViewController {
   /// Shows `header` above the result.
   func show(_ header: ResultHeader) {
     guard let resultHeaderView, resultHeaderView.rootView.header != header else { return }
-    resultHeaderView.rootView = ResultHeaderView(
+    resultHeaderView.rootView = makeResultHeaderView(
       header: header, callerIsGone: resultHeaderView.rootView.callerIsGone)
+  }
+
+  private func makeResultHeaderView(header: ResultHeader, callerIsGone: Bool) -> ResultHeaderView {
+    ResultHeaderView(header: header, callerIsGone: callerIsGone) { [weak self] choice in
+      self?.chooseResultFormat(choice)
+    }
   }
 
   /// Places the dividers as a new window has them: the source panes equally wide, and above

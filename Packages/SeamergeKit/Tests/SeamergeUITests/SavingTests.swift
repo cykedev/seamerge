@@ -307,6 +307,36 @@ struct SavingTests {
     #expect(FileManager.default.fileExists(atPath: folder.appending(path: "Merged.java").path))
   }
 
+  @Test func encodingThatCannotHoldTheResultOffersUTF8() async throws {
+    let session = try await Session.merge(
+      base: SourceFile(bytes: Data("price\n".utf8), label: "prices.txt"),
+      a: SourceFile(bytes: Data("price 5 €\n".utf8), label: "prices.txt"),
+      b: SourceFile(bytes: Data("price\n".utf8), label: "prices.txt"))
+    let folder = FileManager.default.temporaryDirectory.appending(
+      path: "SavingTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { #expect(throws: Never.self) { try FileManager.default.removeItem(at: folder) } }
+    let url = folder.appending(path: "prices.txt")
+    let prompts = PromptRecorder()
+    let controller = try Windows.controller(
+      for: session, context: SessionContext(resultURL: url), prompts: prompts)
+    controller.choose(.encoding(.isoLatin1))
+
+    #expect(await !controller.save())
+    #expect(!FileManager.default.fileExists(atPath: url.path))
+    prompts.savesAsUTF8 = true
+    #expect(await controller.save())
+
+    #expect(try Data(contentsOf: url) == Data("price 5 €\n".utf8))
+    #expect(controller.saving?.format.encoding == .utf8)
+    #expect(controller.layout.resultHeader?.format.encoding == .utf8)
+    #expect(
+      prompts.questions == [
+        "save prices.txt as UTF-8 instead of ISO 8859-1",
+        "save prices.txt as UTF-8 instead of ISO 8859-1",
+      ])
+  }
+
   @Test func failureToWriteKeepsTheWindowAndItsWorkAndSaysSo() async throws {
     let fixture = try await Fixture("merge")
     fixture.controller.resolveOpenConflicts(with: [.b])
@@ -321,6 +351,27 @@ struct SavingTests {
     #expect(fixture.outcomeNames.isEmpty)
     #expect(fixture.controller.window?.isDocumentEdited == true)
     #expect(fixture.controller.presentation.navigation.openConflictCount == 0)
+  }
+
+  @Test func chosenLineEndingIsWrittenAndUndoBringsBackTheFormerOne() async throws {
+    let fixture = try await Fixture("merge")
+    let controller = fixture.controller
+    controller.resolveOpenConflicts(with: [.b])
+    let item = ResultFormatChoice.lineEnding(.crlf).menuItem()
+    let lf = ResultFormatChoice.lineEnding(.lf).menuItem()
+    #expect(controller.validateUserInterfaceItem(lf) && lf.state == .on)
+
+    controller.chooseResultFormat(item)
+    controller.endEvent()
+    #expect(controller.validateUserInterfaceItem(item) && item.state == .on)
+    #expect(controller.layout.resultHeader?.format.lineEnding == .crlf)
+    #expect(await controller.save())
+    let crlf = Self.lines("line 5 from main").replacingOccurrences(of: "\n", with: "\r\n")
+    #expect(try fixture.written == Data(crlf.utf8))
+
+    controller.sessionUndoManager.undo()
+    #expect(controller.saving?.format.lineEnding == .lf)
+    #expect(controller.layout.resultHeader?.format.lineEnding == .lf)
   }
 
   @Test func namesInTheMarkersStandOnOneLine() async throws {
@@ -339,4 +390,16 @@ struct SavingTests {
     #expect(text.split(separator: "\n").count == 7)
   }
 
+  @Test func mixedLineEndingsOfBAreUnifiedAndTheHeaderSaysSo() async throws {
+    let session = try await Session.merge(
+      base: SourceFile(bytes: Data("1\n2\n3\n".utf8), label: "base"),
+      a: SourceFile(bytes: Data("1\n2\n3\n".utf8), label: "a"),
+      b: SourceFile(bytes: Data("1\r\n2\r\n3\n".utf8), label: "b"))
+    let controller = try Windows.controller(for: session)
+
+    let header = try #require(controller.layout.resultHeader)
+
+    #expect(header.bWithMixedLineEndings == "b")
+    #expect(header.format.lineEnding == .crlf)
+  }
 }
