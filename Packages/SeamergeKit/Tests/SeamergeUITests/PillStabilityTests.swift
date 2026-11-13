@@ -5,10 +5,67 @@ import Testing
 @testable import PaneKit
 @testable import SeamergeUI
 
-/// A click on the bar of toggles of a block leaves the bar where it was, to the pixel, whatever
-/// the block becomes; the top of the block stays in place too.
+/// A click on the bar of toggles of a block leaves the result in block mode, and the bar where
+/// it was, to the pixel, whatever the block becomes; the top of the block stays in place too.
 @MainActor
 @Suite struct PillStabilityTests {
+  @Test func clickOnAToggleLeavesSingleKeysToTheCommandsAndAClickInTheTextTypes() async throws {
+    let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
+    let result = try controller.mergeResult
+    let column = try controller.presentation.mergeDecisionColumn
+    try click(try segment(.b, ofBlock: 1, in: column))
+    #expect(controller.window?.firstResponder === column)
+    #expect(controller.isInBlockMode && !controller.isInTextMode)
+    #expect(controller.presentation.currentBlock == 1)
+    let text = result.documentView.string
+    // 1 takes only A: a command, which types nothing.
+    try press("1", in: controller)
+    #expect(try controller.segmentTexts[3] == "A3\n")
+    #expect(result.documentView.string.count { $0 == "1" } == text.count { $0 == "1" })
+    #expect(result.documentView.string != text)
+
+    // A click in the text puts the insertion point there, in text mode, and keys type.
+    controller.window?.makeFirstResponder(result.documentView)
+    result.documentView.setSelectedRange(NSRange(location: 0, length: 0))
+    #expect(controller.isInTextMode)
+    try press("x", in: controller)
+    #expect(result.documentView.string.hasPrefix("x"))
+    // In text mode, a click on a toggle keeps text mode.
+    try click(try segment(.a, ofBlock: 1, in: column))
+    #expect(controller.isInTextMode)
+  }
+
+  @Test func keyboardNavigationReachesTheTogglesOfTheCurrentBlockWithTab() async throws {
+    let options = DisplayOptions(reducesMotion: true, navigatesWithKeyboard: true)
+    let controller = try Windows.controller(
+      for: try await EditingFixture.nineBlocks(), options: options)
+    let window = try #require(controller.window)
+    let b = try #require(controller.layout.sourcePane(.b))
+    controller.presentation.setCurrentBlock(1)
+    window.makeFirstResponder(b.documentView)
+    try press("\t", in: controller)
+    let first = try #require(window.firstResponder as? DecisionToggleButton)
+    #expect(first.block == 1 && first.role == .a)
+    #expect(controller.isInBlockMode && !controller.isInTextMode)
+    // The side arrows move within the bar, Space switches the toggle with the focus.
+    try press(SessionCommand.rightArrow, in: controller)
+    try press(SessionCommand.rightArrow, in: controller)
+    #expect((window.firstResponder as? DecisionToggleButton)?.role == .b)
+    try press(" ", in: controller)
+    #expect(try controller.segmentTexts[3] == "B3\n")
+    // Tab goes on to the first pane.
+    try press("\t", in: controller)
+    #expect(window.firstResponder === controller.layout.sourcePane(.a)?.documentView)
+  }
+
+  @Test func withoutKeyboardNavigationTabFromTheLastPaneEntersTheTextOfTheResult() async throws {
+    let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
+    let window = try #require(controller.window)
+    window.makeFirstResponder(try #require(controller.layout.sourcePane(.b)).documentView)
+    try press("\t", in: controller)
+    #expect(controller.isInTextMode)
+  }
+
   /// A step that clicks a control of the bar of block `block`, or undoes or redoes.
   enum Step: Sendable, CustomTestStringConvertible {
     case toggle(ColorRole, ofBlock: Int)
@@ -136,8 +193,10 @@ import Testing
     }
   }
 
-  /// Clicks `control`, which presses it.
+  /// Clicks `control` as the mouse does: its pane takes the focus, then the control presses.
   private func click(_ control: DecisionControl) throws {
+    let column = try #require(control.enclosingColumn)
+    column.focusPane()
     control.performClick(nil)
   }
 

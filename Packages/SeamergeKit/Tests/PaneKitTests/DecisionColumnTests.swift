@@ -227,6 +227,8 @@ import Testing
     #expect(cells.map(\.index) == [0, 0, 1])
     #expect(cells.map(\.isPrimary) == [true, false, true])
     #expect(cells.map { $0.isAccessibilityElement() } == [true, false, true])
+    #expect(cells.allSatisfy { !$0.acceptsFirstResponder })
+    column.navigatesWithKeyboard = true
     #expect(cells.map(\.acceptsFirstResponder) == [true, false, true])
     #expect(row.accessibilityChildren()?.count == 2)
     #expect(cells[0].accessibilityLabel() == "A and Base")
@@ -240,6 +242,37 @@ import Testing
     #expect(cells[0].looksPressed && !cells[2].looksPressed)
     cells[1].isHighlighted = false
     #expect(!cells[0].looksPressed)
+  }
+
+  @Test func underKeyboardNavigationTheBarWorksLikeASegmentedControl() throws {
+    let (_, column, window, recorder) = Self.resultPane()
+    defer { window.close() }
+    let block = SampleResult.Block.chosenA.rawValue
+    #expect(!column.focusToggles(ofBlock: block))
+    column.navigatesWithKeyboard = true
+    #expect(column.focusToggles(ofBlock: block))
+    let controls = Self.row(.chosenA, in: column).controls
+    #expect(window.firstResponder === controls[0])
+    func press(_ key: Int) throws {
+      let characters = String(Character(try #require(UnicodeScalar(key))))
+      let event = try #require(
+        NSEvent.keyEvent(
+          with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+          windowNumber: window.windowNumber, context: nil, characters: characters,
+          charactersIgnoringModifiers: characters, isARepeat: false, keyCode: 0))
+      (window.firstResponder as? NSView)?.keyDown(with: event)
+    }
+    try press(NSLeftArrowFunctionKey)
+    #expect(window.firstResponder === controls[0], "stays at the start")
+    try press(NSRightArrowFunctionKey)
+    try press(NSRightArrowFunctionKey)
+    #expect(window.firstResponder === controls[2])
+    try press(0x20)
+    #expect(recorder.switched == [Switch(toggle: 2, block: block)])
+    try press(NSRightArrowFunctionKey)
+    #expect(window.firstResponder is ResetBlockButton)
+    try press(NSRightArrowFunctionKey)
+    #expect(window.firstResponder is ResetBlockButton, "stays at the end")
   }
 
   @Test func togglesSpeakAsToggleButtonsOnOrOff() throws {
@@ -293,17 +326,30 @@ import Testing
     #expect(window.firstResponder === shown[2])
   }
 
-  @Test func clickBesideABlockNamesItAndClickBesideUnchangedRowsNamesNone() throws {
+  @Test func clickBesideABlockNamesItAndGivesThePaneTheFocusWithoutTextMode() throws {
     let (pane, column, window, recorder) = Self.resultPane()
     defer { window.close() }
+    window.makeFirstResponder(nil)
     let block = SampleResult.Block.chosenB.rawValue
     let rowHeight = pane.theme.rowHeight
     let row = try #require(pane.content.blocks[block].rows.first)
     let width = column.bounds.width
+    // The column takes the focus, which leaves single keys to the commands, ...
     try Clicking.click(column, at: CGPoint(x: width - 1, y: (CGFloat(row) + 0.5) * rowHeight))
+    #expect(window.firstResponder === column)
+    #expect(pane.holdsFocus)
+    // ... unless the text has it already, which keeps its insertion point for typing.
+    window.makeFirstResponder(pane.documentView)
+    let caret = pane.documentView.selectedRange()
     try Clicking.click(column, at: CGPoint(x: width - 1, y: 0.5 * rowHeight))
+    #expect(window.firstResponder === pane.documentView)
+    #expect(pane.documentView.selectedRange() == caret)
     #expect(pane.content.blockIndex(atRow: 0) == nil)
     #expect(recorder.clicked == [block])
+    // A control gives the pane the focus through its column as its click starts.
+    for control in column.rows.flatMap(\.controls) {
+      #expect(control.enclosingColumn === column)
+    }
   }
 
   @Test func rowsAtTheStartAndTheEndOfTheTextGiveWayInwards() throws {

@@ -1,6 +1,7 @@
 import AppKit
-import PaneKit
 import Testing
+
+@testable import PaneKit
 
 /// Checks what a pane reports about clicks and which context menu it shows.
 @MainActor
@@ -47,17 +48,56 @@ import Testing
     #expect(pane.hit(at: CGPoint(x: 100, y: 1_000)) == PaneHit(row: 5, block: nil))
   }
 
+  @Test func clickAnywhereInAPaneGivesItTheFocus() throws {
+    let (pane, window, delegate) = try Self.paneWithDelegate(height: 200)
+    defer { window.close() }
+    let rowHeight = pane.theme.rowHeight
+    let text = pane.documentView
+    // The text reaches to the bottom of the view and to its right edge, so that a click below
+    // the last line or beside a short one reaches the text, which takes the focus and places the
+    // insertion point as any text view does.
+    let belowTheLastLine = CGPoint(x: 40, y: 8 * rowHeight)
+    for point in [belowTheLastLine, CGPoint(x: text.bounds.width - 4, y: 0.5 * rowHeight)] {
+      #expect(pane.hitTest(pane.convert(point, from: text)) === text, "\(point)")
+    }
+    let clipView = try #require(text.enclosingScrollView).contentView
+    #expect(text.frame.height >= clipView.bounds.height)
+    // The gutter, beside the rows and below them, gives the text the focus and names the row.
+    let gutter = try Self.gutter(of: pane)
+    for point in [CGPoint(x: 4, y: 2.5 * rowHeight), CGPoint(x: 4, y: 8 * rowHeight)] {
+      window.makeFirstResponder(nil)
+      try Clicking.click(gutter, at: point)
+      #expect(window.firstResponder === text, "\(point)")
+    }
+    #expect(delegate.clicks == [PaneHit(row: 2, block: 0), PaneHit(row: 5, block: nil)])
+  }
+
+  @Test func barOfACollapsedRunGivesThePaneTheFocusAsItsClickStarts() throws {
+    let (pane, window, _) = try Self.paneWithDelegate(height: 200)
+    defer { window.close() }
+    pane.collapsedRuns = [CollapsedRun(rows: 0..<2)]
+    window.makeFirstResponder(nil)
+    let bar = try #require(
+      pane.subviews.flatMap(\.subviews).compactMap { $0 as? CollapsedRunBar }.first)
+    // A click tracks the mouse until the button goes up, which a test cannot wait for; the bar
+    // calls this as its click starts, before it presses as a button does.
+    bar.focusPane()
+    #expect(window.firstResponder === pane.documentView)
+  }
+
   /// Six rows; rows 2 to 4 form block 0.
   private static let content = PaneContent(
     text: "zero\none\ntwo\nthree\nfour\nfive", lineNumbers: [0, 1, 2, 3, 4, 5],
     blocks: [PaneBlock(rows: 2..<5, style: .tinted(.a), marker: .changed)])
 
-  private static func paneWithDelegate() throws -> (PaneView, NSWindow, Recorder) {
+  private static func paneWithDelegate(height: CGFloat = 80) throws -> (
+    PaneView, NSWindow, Recorder
+  ) {
     let pane = PaneView()
     pane.content = content
     let recorder = Recorder()
     pane.delegate = recorder
-    let window = Rendering.host(pane, size: CGSize(width: 300, height: 80))
+    let window = Rendering.host(pane, size: CGSize(width: 300, height: height))
     // The pane holds its delegate weakly; the test keeps it.
     return (pane, window, recorder)
   }

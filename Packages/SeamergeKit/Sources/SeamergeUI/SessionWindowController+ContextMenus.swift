@@ -227,7 +227,7 @@ extension SessionWindowController {
   /// The pane that Copy Block and Go to Line act in: the one with the focus, or else the pane
   /// above the result that had it last.
   var focusedPane: PaneView {
-    presentation.allPanes.first { window?.firstResponder === $0.documentView }
+    presentation.allPanes.first(where: \.holdsFocus)
       ?? lastSourcePane ?? layout.sourcePanes[0].pane
   }
 

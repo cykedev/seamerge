@@ -169,7 +169,10 @@ final class GutterView: NSView {
     }
   }
 
+  /// Gives the pane the focus, then collapses the run whose sign is clicked, or else tells which
+  /// row the click is beside.
   override func mouseDown(with event: NSEvent) {
+    interaction?.takeFocus()
     let point = convert(event.locationInWindow, from: nil)
     if let index = expandedRuns.indices.first(where: {
       isShowingCollapseSign(ofRun: $0) && collapseSignRect(ofRun: $0).contains(point)

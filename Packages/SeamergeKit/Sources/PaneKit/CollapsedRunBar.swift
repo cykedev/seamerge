@@ -34,6 +34,9 @@ final class CollapsedRunBar: NSButton {
   /// The name of the pane for VoiceOver, such as "Base", or `nil` if it has none.
   var paneName: () -> String? = { nil }
 
+  /// Gives the pane of the bar the focus, as a click anywhere in a pane does.
+  var focusPane: () -> Void = {}
+
   /// Creates the bar of the run at `runIndex`, which hides `rowCount` rows.
   init(runIndex: Int, rowCount: Int, theme: Theme) {
     self.runIndex = runIndex
@@ -120,6 +123,12 @@ final class CollapsedRunBar: NSButton {
       string: label, attributes: [.font: font, .foregroundColor: color])
     let height = font.ascender - font.descender
     text.draw(at: CGPoint(x: x, y: ((bounds.height - height) / 2).rounded()))
+  }
+
+  /// Gives the pane the focus, then tracks the click as a button does.
+  override func mouseDown(with event: NSEvent) {
+    focusPane()
+    super.mouseDown(with: event)
   }
 
   override func drawFocusRingMask() {

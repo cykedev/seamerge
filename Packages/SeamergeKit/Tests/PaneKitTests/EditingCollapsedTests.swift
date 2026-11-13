@@ -74,7 +74,7 @@ import Testing
     #expect(recorder.carriedOut.count == 2)
     #expect(pane.collapsedRuns == [CollapsedRun(rows: 12..<32)])
     pane.layoutSubtreeIfNeeded()
-    #expect(textView.frame.height == 23 * pane.theme.rowHeight)
+    #expect(textView.frame.height == CodeRows.textHeight(ofRows: 23, in: pane))
   }
 
   /// Forty lines, `line 0` to `line 39`.

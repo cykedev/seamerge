@@ -1,7 +1,16 @@
+import AppKit
 import PaneKit
 
 /// Rows of code-like text for panes that have to scroll.
 enum CodeRows {
+  /// The height of the text of `pane` when it shows `rows` rows: their height, but at least the
+  /// height of the view, which the text always fills.
+  @MainActor
+  static func textHeight(ofRows rows: Int, in pane: PaneView) -> CGFloat {
+    let visible = pane.documentView.enclosingScrollView?.contentView.bounds.height ?? 0
+    return max(CGFloat(rows) * pane.theme.rowHeight, visible)
+  }
+
   /// `count` rows, each a line of `length` characters that names its row, with `blocks`.
   static func content(count: Int, length: Int = 60, blocks: [PaneBlock] = []) -> PaneContent {
     PaneContent(

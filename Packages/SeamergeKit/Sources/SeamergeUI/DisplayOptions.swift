@@ -1,11 +1,12 @@
 import AppKit
 import PaneKit
 
-/// The four accessibility settings of the system that change how the window draws and moves.
+/// The accessibility settings of the system that change how the window draws, moves and takes
+/// the keyboard.
 ///
 /// The window reads them in one place and passes them on, so that each can be set on its own,
-/// as the pictures for review do. The surfaces of the window come from the system, which reduces
-/// their transparency itself.
+/// as the pictures for review and the tests do. The surfaces of the window come from the system,
+/// which reduces their transparency itself.
 struct DisplayOptions: Hashable {
   /// Whether colors take their values for increased contrast.
   var increasesContrast = false
@@ -19,6 +20,10 @@ struct DisplayOptions: Hashable {
   /// Whether movement gives way to cross-fades and cuts.
   var reducesMotion = false
 
+  /// Whether Tab and the arrow keys reach every control, as Keyboard Navigation in the
+  /// settings of the system asks: the toggles of the result take the focus then.
+  var navigatesWithKeyboard = false
+
   /// The settings of the system as `workspace` reports them now.
   @MainActor
   static func current(in workspace: NSWorkspace) -> DisplayOptions {
@@ -26,7 +31,8 @@ struct DisplayOptions: Hashable {
       increasesContrast: workspace.accessibilityDisplayShouldIncreaseContrast,
       differentiatesWithoutColor: workspace.accessibilityDisplayShouldDifferentiateWithoutColor,
       reducesTransparency: workspace.accessibilityDisplayShouldReduceTransparency,
-      reducesMotion: workspace.accessibilityDisplayShouldReduceMotion)
+      reducesMotion: workspace.accessibilityDisplayShouldReduceMotion,
+      navigatesWithKeyboard: NSApplication.shared.isFullKeyboardAccessEnabled)
   }
 
   /// The theme of the panes with these settings, with code at its standard size.

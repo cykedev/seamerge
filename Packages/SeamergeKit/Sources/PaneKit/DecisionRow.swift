@@ -68,6 +68,15 @@ final class DecisionRow: NSView {
       + [resetButton].compactMap(\.self)
   }
 
+  /// Moves the keyboard focus from `control` to the control `offset` places on that takes it,
+  /// staying at the ends.
+  func moveFocus(from control: DecisionControl, by offset: Int) {
+    let focusable = controls.filter(\.acceptsFirstResponder)
+    guard let index = focusable.firstIndex(where: { $0 === control }) else { return }
+    let target = focusable[min(max(index + offset, 0), focusable.count - 1)]
+    window?.makeFirstResponder(target)
+  }
+
   /// Shows `decision` for the block, which stands at `place`, such as "Line 12".
   ///
   /// The segments that the block keeps stay, and with them the keyboard focus.

@@ -50,8 +50,11 @@ final class SessionPresentation {
       userInfo: [.announcement: text, .priority: NSAccessibilityPriorityLevel.high.rawValue])
   }
 
-  /// The accessibility settings, of which the presentation reads whether movement is reduced.
-  var displayOptions: DisplayOptions
+  /// The accessibility settings, of which the presentation reads whether movement is reduced
+  /// and whether the toggles take the keyboard focus.
+  var displayOptions: DisplayOptions {
+    didSet { decisionColumn?.navigatesWithKeyboard = displayOptions.navigatesWithKeyboard }
+  }
 
   /// The observer of the selection of the result, which makes the block of the insertion point
   /// current.
@@ -113,6 +116,7 @@ final class SessionPresentation {
     layout.sourcePanes.last?.pane.overviewBar = sourcesOverviewBar
     layout.resultPane?.overviewBar = resultOverviewBar
     decisionColumn?.theme = theme
+    decisionColumn?.navigatesWithKeyboard = displayOptions.navigatesWithKeyboard
     decisionColumn?.delegate = self
     layout.resultPane?.decisionColumn = decisionColumn
     for pane in allPanes {

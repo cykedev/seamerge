@@ -44,6 +44,11 @@ public final class DecisionColumnView: NSView {
     }
   }
 
+  /// Whether the toggles and the reset arrows take the keyboard focus, so that Tab reaches them,
+  /// the side arrow keys move between them and Space presses them, as Keyboard Navigation in the
+  /// settings of the system asks.
+  public var navigatesWithKeyboard = false
+
   /// Learns what the user presses; the column does not retain it.
   public weak var delegate: (any DecisionColumnDelegate)?
 
@@ -228,14 +233,65 @@ public final class DecisionColumnView: NSView {
     update()
   }
 
+  /// Gives the keyboard focus to the first toggle of `block`, under Keyboard Navigation.
+  ///
+  /// - Returns: Whether a toggle took the focus; not if the block shows no row.
+  public func focusToggles(ofBlock block: Int) -> Bool {
+    guard navigatesWithKeyboard, let window,
+      let control = rowsByBlock[block]?.controls.first(where: \.acceptsFirstResponder)
+    else { return false }
+    return window.makeFirstResponder(control)
+  }
+
+  /// Gives the pane that the column stands in the focus, as a click anywhere in it does.
+  func focusPane() {
+    host?.takeFocus()
+  }
+
+  /// The column takes the focus of a result in block mode, after a click beside its text, so
+  /// that single keys decide blocks rather than type; Tab passes it by for its controls.
+  public override var acceptsFirstResponder: Bool { true }
+
+  public override var canBecomeKeyView: Bool { false }
+
+  public override func becomeFirstResponder() -> Bool {
+    defer { host?.focusDidChange() }
+    return super.becomeFirstResponder()
+  }
+
+  public override func resignFirstResponder() -> Bool {
+    defer { host?.focusDidChange() }
+    return super.resignFirstResponder()
+  }
+
+  /// Scrolls the text for the page keys while the column has the focus; other keys that reach
+  /// the column do nothing, as in block mode.
+  public override func keyDown(with event: NSEvent) {
+    interpretKeyEvents([event])
+  }
+
+  public override func doCommand(by selector: Selector) {
+    if Self.scrollingCommands.contains(selector) {
+      host?.scrollText(selector)
+    }
+  }
+
+  /// The commands of keys that scroll the text without moving its insertion point.
+  private static let scrollingCommands: Set<Selector> = [
+    #selector(NSResponder.scrollPageUp(_:)), #selector(NSResponder.scrollPageDown(_:)),
+    #selector(NSResponder.scrollToBeginningOfDocument(_:)),
+    #selector(NSResponder.scrollToEndOfDocument(_:)),
+  ]
+
   public override func draw(_ dirtyRect: NSRect) {
     Theme.backgroundColor.setFill()
     dirtyRect.fill()
   }
 
-  /// Tells the delegate which block the click is beside; a click on a control reaches the
-  /// control instead.
+  /// Gives the pane the focus and tells the delegate which block the click is beside; a click on
+  /// a control reaches the control instead.
   public override func mouseDown(with event: NSEvent) {
+    focusPane()
     guard let block = block(atY: convert(event.locationInWindow, from: nil).y) else { return }
     delegate?.decisionColumn(self, didClickBlock: block)
   }
@@ -331,4 +387,13 @@ protocol DecisionColumnHost: AnyObject {
 
   /// Where `block` is, in words, such as "Line 12".
   func placeDescription(ofBlock block: Int) -> String
+
+  /// Gives the pane the keyboard focus, as a click beside its text does.
+  func takeFocus()
+
+  /// Tells the pane that the column took the focus or gave it up.
+  func focusDidChange()
+
+  /// Scrolls the text of the pane as `command` asks, such as `scrollPageDown(_:)`.
+  func scrollText(_ command: Selector)
 }

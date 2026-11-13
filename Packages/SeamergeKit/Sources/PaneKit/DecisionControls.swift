@@ -66,6 +66,38 @@ class DecisionControl: NSButton {
 
   override var focusRingMaskBounds: NSRect { bounds }
 
+  /// Gives the pane of the column the focus, as a click anywhere in a pane does, then tracks the
+  /// click as a button does.
+  override func mouseDown(with event: NSEvent) {
+    enclosingColumn?.focusPane()
+    super.mouseDown(with: event)
+  }
+
+  /// Takes the keyboard focus only under Keyboard Navigation, which the column passes on, as a
+  /// control of the system does.
+  override var acceptsFirstResponder: Bool {
+    enclosingColumn?.navigatesWithKeyboard == true && !refusesFirstResponder
+  }
+
+  override var canBecomeKeyView: Bool {
+    acceptsFirstResponder
+  }
+
+  /// Moves the focus to the control beside it for the side arrow keys, as within a segmented
+  /// control; Space presses the control, as for any button.
+  override func keyDown(with event: NSEvent) {
+    switch event.charactersIgnoringModifiers?.unicodeScalars.first.map({ Int($0.value) }) {
+    case NSLeftArrowFunctionKey:
+      (superview as? DecisionRow)?.moveFocus(from: self, by: -1)
+    case NSRightArrowFunctionKey:
+      (superview as? DecisionRow)?.moveFocus(from: self, by: 1)
+    case 0x20:
+      performClick(self)
+    default:
+      super.keyDown(with: event)
+    }
+  }
+
   override func accessibilityPerformPress() -> Bool {
     performClick(self)
     return true
@@ -74,6 +106,13 @@ class DecisionControl: NSButton {
   /// Passes scrolling on to the pane, which scrolls its text.
   override func scrollWheel(with event: NSEvent) {
     nextResponder?.scrollWheel(with: event)
+  }
+
+  /// The decision column that the control stands in.
+  var enclosingColumn: DecisionColumnView? {
+    sequence(first: superview, next: { $0?.superview }).lazy.compactMap {
+      $0 as? DecisionColumnView
+    }.first
   }
 }
 

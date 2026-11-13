@@ -10,6 +10,9 @@ protocol RowInteraction: AnyObject {
   /// Tells that the user clicked `row`, after the click has been handled.
   func rowWasClicked(_ row: Int)
 
+  /// Gives the pane the keyboard focus, for a click in a part of it other than the text.
+  func takeFocus()
+
   /// The context menu for a secondary click on `row`, or `nil` for no menu.
   func menu(forRow row: Int) -> NSMenu?
 

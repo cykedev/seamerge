@@ -16,6 +16,13 @@ extension SessionWindowController: SessionKeyHandling {
     let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
       .subtracting([.function, .numericPad, .capsLock])
     let key = event.charactersIgnoringModifiers ?? ""
+    // A toggle with the focus, under Keyboard Navigation, takes Space and the side arrows, as a
+    // segmented control does.
+    if window?.firstResponder is NSControl, modifiers.isEmpty,
+      [" ", SessionCommand.leftArrow, SessionCommand.rightArrow].contains(key)
+    {
+      return false
+    }
     if isInTextMode {
       guard key == Self.escape, modifiers.isEmpty,
         layout.resultPane?.documentView.hasMarkedText() == false
@@ -46,11 +53,15 @@ extension SessionWindowController: SessionKeyHandling {
     focusPane(offset: -1)
   }
 
-  /// Whether the focus is in a pane above the result that is in view.
+  /// Whether the focus is in a pane above the result that is in view, or in the result beside
+  /// its text, as after a click on a toggle.
   var isInBlockMode: Bool {
-    layout.sourcePanes.contains {
+    let isInSource = layout.sourcePanes.contains {
       $0.pane.isShown && window?.firstResponder === $0.pane.documentView
     }
+    let isBesideResult =
+      layout.resultPane.map { $0.isShown && $0.holdsFocus } == true && !isInTextMode
+    return isInSource || isBesideResult
   }
 
   /// Whether the focus is in the text of the result.
@@ -89,12 +100,21 @@ extension SessionWindowController: SessionKeyHandling {
 
   /// Moves the focus `offset` panes on from the pane that has it, around the ends; the result
   /// keeps its insertion point and selection.
+  ///
+  /// Under Keyboard Navigation, the focus reaches the result at the toggles of its current block,
+  /// in block mode; Return then moves into its text.
   private func focusPane(offset: Int) {
     let panes = focusablePanes
     guard !panes.isEmpty, let window else { return }
-    let current = panes.firstIndex { window.firstResponder === $0.documentView }
-    let index = current.map { ($0 + offset + panes.count) % panes.count } ?? 0
-    window.makeFirstResponder(panes[index].documentView)
+    let current = panes.firstIndex(where: \.holdsFocus)
+    let pane = panes[current.map { ($0 + offset + panes.count) % panes.count } ?? 0]
+    if pane === layout.resultPane, displayOptions.navigatesWithKeyboard,
+      let block = presentation.currentBlock,
+      presentation.decisionColumn?.focusToggles(ofBlock: block) == true
+    {
+      return
+    }
+    window.makeFirstResponder(pane.documentView)
   }
 
   /// Puts the insertion point at the first row of the current block in the result, and brings

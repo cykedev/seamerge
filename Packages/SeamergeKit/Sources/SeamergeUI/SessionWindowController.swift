@@ -308,6 +308,12 @@ public final class SessionWindowController: NSWindowController {
 }
 
 extension SessionWindowController: NSWindowDelegate {
+  /// Reads the settings of the system again, among them Keyboard Navigation, which tells no
+  /// one when it changes; the user changes it in another window.
+  public func windowDidBecomeKey(_ notification: Notification) {
+    displayOptions = .current(in: .shared)
+  }
+
   /// The undo manager of the session, which no other window shares.
   public func windowWillReturnUndoManager(_ window: NSWindow) -> UndoManager? {
     sessionUndoManager

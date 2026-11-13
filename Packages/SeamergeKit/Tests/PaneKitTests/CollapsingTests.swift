@@ -12,7 +12,7 @@ import Testing
     let rowHeight = pane.theme.rowHeight
     let textView = pane.documentView
 
-    #expect(textView.frame.height == 21 * rowHeight)
+    #expect(textView.frame.height == CodeRows.textHeight(ofRows: 21, in: pane))
     let bars = Self.bars(of: pane)
     try #require(bars.count == 1)
     #expect(bars[0].frame.minY == 10 * rowHeight)
@@ -55,7 +55,7 @@ import Testing
 
     pane.collapsedRuns = []
 
-    #expect(pane.documentView.frame.height == 40 * rowHeight)
+    #expect(pane.documentView.frame.height == CodeRows.textHeight(ofRows: 40, in: pane))
     #expect(Self.bars(of: pane).isEmpty)
     let index = pane.documentView.characterIndexForInsertion(
       at: CGPoint(x: 100, y: 20.5 * rowHeight))
@@ -138,18 +138,18 @@ import Testing
     pane.content = CodeRows.content(count: 20)
     pane.layoutSubtreeIfNeeded()
     #expect(pane.collapsedRuns.isEmpty)
-    #expect(pane.documentView.frame.height == 20 * rowHeight)
+    #expect(pane.documentView.frame.height == CodeRows.textHeight(ofRows: 20, in: pane))
 
     pane.setContent(CodeRows.content(count: 25), collapsedRuns: [CollapsedRun(rows: 10..<20)])
     pane.layoutSubtreeIfNeeded()
     #expect(pane.collapsedRuns == [CollapsedRun(rows: 10..<20)])
-    #expect(pane.documentView.frame.height == 16 * rowHeight)
+    #expect(pane.documentView.frame.height == CodeRows.textHeight(ofRows: 16, in: pane))
     let bars = Self.bars(of: pane)
     #expect(bars.map(\.frame.minY) == [10 * rowHeight])
 
     pane.setContent(CodeRows.content(count: 12), collapsedRuns: [CollapsedRun(rows: 0..<12)])
     pane.layoutSubtreeIfNeeded()
-    #expect(pane.documentView.frame.height == rowHeight)
+    #expect(pane.documentView.frame.height == CodeRows.textHeight(ofRows: 1, in: pane))
     #expect(Self.bars(of: pane).count == 1)
   }
 

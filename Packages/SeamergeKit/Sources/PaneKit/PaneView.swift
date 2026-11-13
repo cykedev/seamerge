@@ -96,6 +96,12 @@ public final class PaneView: NSView {
     set { textView.highlightProvider = newValue }
   }
 
+  /// Whether the keyboard focus lies in the pane: in its text, or beside it, such as in the
+  /// decision column of the result or on the bar of a collapsed run.
+  public var holdsFocus: Bool {
+    (window?.firstResponder as? NSView)?.isDescendant(of: self) == true
+  }
+
   /// A number that changes whenever the pane gets other content.
   private(set) var contentGeneration = 0
 
@@ -269,7 +275,9 @@ public final class PaneView: NSView {
       self, selector: #selector(liveScrollDidEnd(_:)),
       name: NSScrollView.didEndLiveScrollNotification, object: scrollView)
     gutterView.removalRows = { [weak textView] rows in textView?.removalRows(in: rows) ?? [] }
-    gutterView.hasFocus = { [weak textView] in textView?.isSelectionEmphasized ?? false }
+    gutterView.hasFocus = { [weak self] in
+      self.map { $0.window?.isKeyWindow == true && $0.holdsFocus } ?? false
+    }
     textView.interaction = self
     gutterView.interaction = self
     addSubview(gutterView)
@@ -315,8 +323,12 @@ public final class PaneView: NSView {
       scrollView.hasHorizontalScroller = hasHorizontalScroller
       scrollView.tile()
     }
+    // At least as high as the view, so that a click below the last line reaches the text and
+    // puts the insertion point at its end, as in any editor.
     textView.setFrameSize(
-      CGSize(width: visibleWidth + range, height: CGFloat(displayRows.count) * rowHeight))
+      CGSize(
+        width: visibleWidth + range,
+        height: max(CGFloat(displayRows.count) * rowHeight, clipView.bounds.height)))
     textDidScroll()
   }
 
@@ -388,6 +400,20 @@ public final class PaneView: NSView {
 
 extension PaneView: RowInteraction {
   var suppliesMenus: Bool { delegate != nil }
+
+  /// Gives the pane the keyboard focus, as a click beside its text does: to the text of a pane
+  /// without a decision column; to the decision column of the result, which leaves single keys
+  /// to the commands that decide blocks, unless its text has the focus already and keeps it.
+  func takeFocus() {
+    guard let window else { return }
+    guard let decisionColumn else {
+      window.makeFirstResponder(textView)
+      return
+    }
+    if window.firstResponder !== textView {
+      window.makeFirstResponder(decisionColumn)
+    }
+  }
 
   func rowWasClicked(_ row: Int) {
     delegate?.pane(self, didClick: hit(atRow: row))
@@ -478,6 +504,14 @@ extension PaneView: DecisionColumnHost {
       displayRows.runIndex(atDisplayRow: displayRow) == nil
     else { return nil }
     return content.blockIndex(atRow: displayRows.row(atDisplayRow: displayRow))
+  }
+
+  func focusDidChange() {
+    gutterView.needsDisplay = true
+  }
+
+  func scrollText(_ command: Selector) {
+    textView.doCommand(by: command)
   }
 
   func placeDescription(ofBlock block: Int) -> String {

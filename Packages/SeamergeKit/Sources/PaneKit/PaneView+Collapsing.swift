@@ -106,6 +106,7 @@ extension PaneView {
     bar.action = #selector(runBarWasPressed(_:))
     bar.selectionFill = { [weak textView] in textView?.selectionFill }
     bar.paneName = { [weak self] in self?.accessibilityLabel() }
+    bar.focusPane = { [weak self] in self?.takeFocus() }
     runBarLayer.addSubview(bar)
     runBars[index] = bar
     markSelectedRunBars()
