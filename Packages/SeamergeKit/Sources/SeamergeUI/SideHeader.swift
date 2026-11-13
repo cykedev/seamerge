@@ -39,6 +39,14 @@ struct SideHeader: Equatable {
   /// that the name fits wherever it is shown or written, such as in the preview of a conflict.
   let name: String
 
+  /// The name that tells the side apart in a sentence, such as "main removed these lines":
+  /// the name that Git or the command line gives the side, else the name of its file if the
+  /// other side's file is named otherwise, else its letter.
+  ///
+  /// The sides of a merge that Git started often show the same file name, which tells them
+  /// apart no more than nothing does.
+  let distinctName: String
+
   /// The role of the side in the operation in words, such as "incoming", if it has one.
   let roleText: String?
 
@@ -75,6 +83,8 @@ struct SideHeader: Equatable {
     self.role = role
     name = Self.singleLine(
       side?.name.map(Self.text(of:)) ?? (file.label.isEmpty ? role.letter : file.label))
+    distinctName =
+      side?.name == nil ? Self.distinctLabel(of: role, in: session) : name
     let diffRole = context.difftool.flatMap { difftool in
       switch role {
       case .a: difftool.leftRole
@@ -111,6 +121,20 @@ struct SideHeader: Equatable {
       comment:
         "VoiceOver: a pane with its name and role in the order the header shows them, such as A, feature/login, incoming or A, your commit, 1a2b3c4 Fix typo."
     )
+  }
+
+  /// The label of the file of `role` on one line, if no other side that a sentence sets it
+  /// against has a file of the same label: B for A, A for B, both for the base; else the letter.
+  private static func distinctLabel(of role: Role, in session: Session) -> String {
+    let label = session.file(for: role)?.label ?? ""
+    let others: [Role] =
+      switch role {
+      case .a: [.b]
+      case .b: [.a]
+      case .base: [.a, .b]
+      }
+    let isShared = others.contains { session.file(for: $0)?.label == label }
+    return label.isEmpty || isShared ? role.letter : singleLine(label)
   }
 
   /// `text` with a space for every line break and every other control character.

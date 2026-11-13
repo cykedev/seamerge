@@ -45,7 +45,7 @@ extension SessionWindowController {
   /// The decisions that the pane of `role` offers for the current block: taking its version,
   /// adding it to the sources already taken, and taking nothing.
   private func sourceDecisionItems(for role: Role) -> [NSMenuItem] {
-    let name = presentation.headers[role]?.name ?? role.letter
+    let name = presentation.headers[role]?.distinctName ?? role.letter
     var items: [NSMenuItem] = []
     if canPerform(.use(role)) {
       items.append(

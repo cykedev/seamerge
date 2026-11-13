@@ -155,7 +155,7 @@ struct ResultPaneContent {
 
   /// What switching `toggle` on does, with the real names of its inputs.
   private static func help(for toggle: Toggle, headers: [Role: SideHeader]) -> String {
-    let sides = toggle.roles.filter { $0 != .base }.compactMap { headers[$0]?.name }
+    let sides = toggle.roles.filter { $0 != .base }.compactMap { headers[$0]?.distinctName }
     let names: String =
       switch sides.count {
       case 0:

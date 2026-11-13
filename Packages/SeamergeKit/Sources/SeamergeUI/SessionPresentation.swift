@@ -176,7 +176,7 @@ final class SessionPresentation {
   private static func removalNotes(headers: [Role: SideHeader]) -> [Role: String] {
     var notes: [Role: String] = [:]
     for role in [Role.a, .b] {
-      guard let name = headers[role]?.name else { continue }
+      guard let name = headers[role]?.distinctName else { continue }
       notes[role] = String(
         localized: "\(name) removed these lines", bundle: .module,
         comment: "Preview of a conflict in place of the lines a side removed, such as main.")
