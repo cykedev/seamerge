@@ -1,6 +1,7 @@
 import AppKit
 import MergeModel
 import PaneKit
+import SyntaxKit
 import os
 
 /// Shows a session in the panes of a window: what each pane shows, the marks of the overview
@@ -88,6 +89,9 @@ final class SessionPresentation {
   }
   private var highlights: [BlockHighlights] = []
 
+  /// The tokens of the files, by which the panes color their code.
+  let syntax: SessionSyntax
+
   /// Shows `session` in the panes of `layout`, arranged as `arrangement` says: a merge as
   /// loaded, every conflict open and every other change taken as the merge takes it, with the
   /// first open conflict current, or the first change if no conflict is open.
@@ -95,9 +99,11 @@ final class SessionPresentation {
   /// - Parameters:
   ///   - headers: The headers of the inputs, whose names the panes take for VoiceOver.
   ///   - resultHeader: The header of the result, if there is one.
+  ///   - language: The language the code is colored as, or `nil` if it is not colored.
   init(
     session: Session, arrangement: PaneArrangement, layout: SessionSplitViewController,
-    headers: [Role: SideHeader], resultHeader: ResultHeader?, displayOptions: DisplayOptions
+    headers: [Role: SideHeader], resultHeader: ResultHeader?, displayOptions: DisplayOptions,
+    language: LanguageDescription?
   ) {
     let result =
       arrangement.showsResult
@@ -111,6 +117,7 @@ final class SessionPresentation {
     collapsed = CollapsedRows(session: session, document: result?.document)
     resultOverviewBar = layout.resultPane.map { _ in OverviewBar() }
     decisionColumn = layout.resultPane.map { _ in DecisionColumnView() }
+    syntax = SessionSyntax(language: language)
 
     nameSourcePanes()
     layout.resultPane?.setAccessibilityLabel(resultHeader?.spokenName)
@@ -137,6 +144,7 @@ final class SessionPresentation {
           backward: { [weak self] row in self?.result?.scrollMap.resultLine(atRow: row) ?? row })
       }
     }
+    syntax.onLexed = { [weak self] in self?.showSyntax() }
     showSession()
     if let resultPane = layout.resultPane {
       resultPane.editingDelegate = self
@@ -257,6 +265,8 @@ final class SessionPresentation {
     }
     sourcesOverviewBar.marks = OverviewMarks.sources(
       of: changes, document: result?.document, arrangement: arrangement)
+    syntax.lexInputs(of: changes.session)
+    showSyntax()
     guard let result, let resultPane = layout.resultPane else { return }
     let content = ResultPaneContent(result: result, changes: changes, headers: headers)
     resultPane.setContent(content.content, collapsedRuns: resultRuns)
@@ -264,6 +274,17 @@ final class SessionPresentation {
     resultOverviewBar?.marks = OverviewMarks.result(
       of: changes, document: result.document, result: content.content)
     decisionColumn?.decisions = content.decisions
+  }
+
+  /// Gives each pane the tokens of its file as far as they are known, and takes away those that
+  /// are gone.
+  private func showSyntax() {
+    for (role, pane) in layout.sourcePanes {
+      let tokens = syntax.tokens(of: role)
+      if pane.syntaxProvider !== tokens {
+        pane.syntaxProvider = tokens
+      }
+    }
   }
 
   /// Shows `result`, the result after an edit that the result pane has carried out already, or

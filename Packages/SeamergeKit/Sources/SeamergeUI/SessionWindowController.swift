@@ -238,7 +238,8 @@ public final class SessionWindowController: NSWindowController {
     self.displayOptions = displayOptions
     presentation = SessionPresentation(
       session: session, arrangement: arrangement, layout: layout, headers: headers,
-      resultHeader: resultHeader, displayOptions: displayOptions)
+      resultHeader: resultHeader, displayOptions: displayOptions,
+      language: SessionSyntax.language(of: session, resultURL: context.resultURL))
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: arrangement)
     saving = presentation.result.map {
