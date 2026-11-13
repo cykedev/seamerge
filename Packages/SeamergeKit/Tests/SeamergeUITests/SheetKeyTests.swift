@@ -160,6 +160,8 @@ struct SheetKeyTests {
     },
     { await $0.confirmDiscarding(3, in: $1) },
     { await $0.confirmResettingAll(discardingHandwritingIn: 2, in: $1) },
+    { await $0.confirmReloading("main", discarding: 1, in: $1) },
+    { await $0.confirmChangingFiles(discarding: 1, in: $1) },
   ]
 
   @Test(arguments: [Key.carriageReturn, .escape, .commandPeriod])

@@ -59,6 +59,16 @@ protocol SessionPrompts: AnyObject {
   /// Asks where to save the result, suggesting `name`, and returns the place or `nil`.
   func chooseDestination(suggesting name: String, in window: NSWindow) async -> URL?
 
+  /// Tells that another app changed the result file `name` and asks whether to reload it.
+  func confirmReloadingChangedResult(_ name: String, in window: NSWindow) async -> Bool
+
+  /// Asks whether to reload the files that changed on disk although `count` decisions would be
+  /// lost; `name` names the one that changed, or is `nil` if more than one did.
+  func confirmReloading(_ name: String?, discarding count: Int, in window: NSWindow) async -> Bool
+
+  /// Asks whether to change the files although `count` decisions would be lost.
+  func confirmChangingFiles(discarding count: Int, in window: NSWindow) async -> Bool
+
   /// Asks whether to switch although `count` decisions would be lost, and tells whether to.
   func confirmDiscarding(_ count: Int, in window: NSWindow) async -> Bool
 
@@ -241,6 +251,55 @@ final class SessionSheets: SessionPrompts {
     return panel.url
   }
 
+  func confirmReloadingChangedResult(_ name: String, in window: NSWindow) async -> Bool {
+    let alert = NSAlert()
+    alert.messageText = String(
+      localized: "“\(name)” was changed by another app.", bundle: .module,
+      comment: "Sheet: another app changed the file the result is saved to.")
+    alert.informativeText = String(
+      localized:
+        "Keep your version to save over it later, or reload the file as it is now. You can undo reloading.",
+      bundle: .module, comment: "Sheet: another app changed the result file; the choices.")
+    alert.addButton(
+      withTitle: String(
+        localized: "Keep My Version", bundle: .module,
+        comment: "Button: keep the result of the window and ignore the change on disk."))
+    alert.addButton(withTitle: Self.reloadTitle)
+    return await Self.present(alert, in: window) == .alertSecondButtonReturn
+  }
+
+  func confirmReloading(_ name: String?, discarding count: Int, in window: NSWindow) async -> Bool {
+    let alert = NSAlert()
+    alert.messageText =
+      name.map {
+        String(
+          localized: "\($0) changed on disk. Reloading discards \(count) decisions.",
+          bundle: .module,
+          comment:
+            "Sheet before reloading a changed file, with the name of its side, such as main changed on disk. Reloading discards 3 decisions."
+        )
+      }
+      ?? String(
+        localized: "The files changed on disk. Reloading discards \(count) decisions.",
+        bundle: .module, comment: "Sheet before reloading more than one changed file.")
+    Self.addDefaultCancelButton(to: alert)
+    alert.addButton(withTitle: Self.reloadTitle)
+    return await Self.confirm(alert, in: window)
+  }
+
+  func confirmChangingFiles(discarding count: Int, in window: NSWindow) async -> Bool {
+    let alert = NSAlert()
+    alert.messageText = String(
+      localized: "Changing the files discards \(count) decisions.", bundle: .module,
+      comment: "Sheet before showing other files in a window, such as discards 3 decisions.")
+    Self.addDefaultCancelButton(to: alert)
+    alert.addButton(
+      withTitle: String(
+        localized: "Change", bundle: .module,
+        comment: "Sheet Change Files: the default button, which shows the files in the window."))
+    return await Self.confirm(alert, in: window)
+  }
+
   /// Adds Cancel as the first button, which keeps what would be lost and is the default one.
   ///
   /// An alert gives a button named Cancel the Escape key and no button Return, so Cancel gets
@@ -290,6 +349,10 @@ final class SessionSheets: SessionPrompts {
 
   private static var cancelTitle: String {
     String(localized: "Cancel", bundle: .module, comment: "Button: close the sheet and do nothing.")
+  }
+
+  private static var reloadTitle: String {
+    SessionWindowController.reloadName
   }
 
   func reportFailedComparison(in window: NSWindow) async {

@@ -241,6 +241,66 @@ struct SavingTests {
     #expect(fixture.outcomeNames == ["cancelled"])
   }
 
+  @Test func otherAppThatWritesTheResultWhileASheetOfSavingIsOpenIsAskedAbout() async throws {
+    let fixture = try await Fixture("merge")
+    fixture.prompts.openConflictsChoice = .saveWithMarkers
+    fixture.prompts.whileAskingToSaveWithOpenConflicts = {
+      do {
+        try Data("edited elsewhere\n".utf8).write(to: fixture.resultURL)
+      } catch {
+        Issue.record(error)
+      }
+    }
+
+    #expect(await fixture.controller.save())
+
+    #expect(fixture.prompts.questions.contains("reload changed story.txt"))
+    #expect(try fixture.written != Data("edited elsewhere\n".utf8))
+    #expect(fixture.controller.window?.isDocumentEdited == false)
+  }
+
+  @Test func reloadingWhatAnotherAppWroteBeforeDoneKeepsTheWindowOpenToShowIt() async throws {
+    let fixture = try await Fixture("merge")
+    let controller = fixture.controller
+    controller.resolveOpenConflicts(with: [.b])
+    let markers = "<<<<<<< ours\nmine\n=======\ntheirs\n>>>>>>> theirs\n"
+    try Data(markers.utf8).write(to: fixture.resultURL)
+    fixture.prompts.reloadsChangedResult = true
+
+    #expect(await !controller.saveAndCloseWindow())
+
+    #expect(fixture.prompts.questions == ["reload changed story.txt"])
+    #expect(fixture.outcomeNames.isEmpty)
+    #expect(!controller.hasFinished)
+    #expect(controller.presentation.result?.text == markers)
+    #expect(try fixture.written == Data(markers.utf8))
+    #expect(controller.window?.isDocumentEdited == false)
+  }
+
+  @Test func otherAppThatWritesTheResultWhileUTF8IsOfferedIsAskedAbout() async throws {
+    let fixture = try await Fixture("merge")
+    let controller = fixture.controller
+    controller.resolveOpenConflicts(with: [.b])
+    controller.choose(.encoding(.isoLatin1))
+    try controller.type("€ ", over: 0..<0, with: .insertText)
+    fixture.prompts.savesAsUTF8 = true
+    fixture.prompts.whileOfferingUTF8 = {
+      do {
+        try Data("edited elsewhere\n".utf8).write(to: fixture.resultURL)
+      } catch {
+        Issue.record(error)
+      }
+    }
+
+    #expect(await controller.save())
+
+    #expect(
+      fixture.prompts.questions == [
+        "save story.txt as UTF-8 instead of ISO 8859-1", "reload changed story.txt",
+      ])
+    #expect(String(decoding: try fixture.written, as: UTF8.self).hasPrefix("€ "))
+  }
+
   @Test func leavingUnresolvedNeedsSomeoneWhoWaits() async throws {
     let fixture = try await Fixture("merge", waitingCaller: nil)
 
@@ -304,6 +364,7 @@ struct SavingTests {
 
     #expect(prompts.questions.filter { $0.hasPrefix("where") }.count == 1)
     #expect(controller.window?.representedURL == prompts.destination)
+    #expect(controller.fileWatchers.map(\.url) == [prompts.destination].compactMap(\.self))
     #expect(FileManager.default.fileExists(atPath: folder.appending(path: "Merged.java").path))
   }
 

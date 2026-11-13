@@ -14,12 +14,17 @@ struct ResultSaving {
   /// counts as unsaved from the start, since its file holds conflict markers.
   var saved: SavedResult?
 
+  /// The bytes of the file at ``url`` as the window knows them: as it found, wrote or accepted
+  /// them last, which tells a change by another app from its own writing.
+  var diskBytes: Data?
+
   /// The saving of the result of `session`, which goes to `url` if there is one; a result
   /// without one counts as saved as it was loaded, like a new document.
   init(result: ResultState, session: Session, url: URL?) {
     format = ResultFormat(resultOf: session)
     self.url = url
     saved = url == nil ? SavedResult(result, session: session, format: format) : nil
+    diskBytes = url.flatMap { FileManager.default.contents(atPath: $0.path(percentEncoded: false)) }
   }
 
   /// Whether `result` of `session` differs from what was saved last.

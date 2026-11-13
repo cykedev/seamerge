@@ -31,6 +31,7 @@ extension SessionWindowController {
       isSwitchingComparison = false
       showsComparisonProgress = false
       stateDidChange()
+      lookAtFilesAgainIfAsked()
     }
     let session = presentation.changes.session
     let switched: Session
@@ -41,7 +42,7 @@ extension SessionWindowController {
       return
     }
     guard let result = presentation.result else {
-      show(switched, result: nil)
+      show(switched, result: nil, named: Self.switchName)
       return
     }
     let modeSwitch = result.document.planSwitching(to: switched, text: result.text)
@@ -55,7 +56,8 @@ extension SessionWindowController {
     show(
       document.session,
       result: ResultState(
-        document: document, text: modeSwitch.plan.replacements.map(\.text).joined()))
+        document: document, text: modeSwitch.plan.replacements.map(\.text).joined()),
+      named: Self.switchName)
   }
 
   /// Compares lines byte for byte.
@@ -96,18 +98,31 @@ extension SessionWindowController {
   }
 
   /// Shows `session` with `result`, the result of a merge, in place of what the window shows
-  /// now, as a step of undo that shows that again.
-  private func show(_ session: Session, result: ResultState?) {
+  /// now, with the headers of its files, as a step of undo named `name` that shows that again.
+  func show(_ session: Session, result: ResultState?, named name: String) {
     let previous = (presentation.changes.session, presentation.result)
+    typingRun = nil
     presentation.show(session, result: result)
+    presentation.show(
+      Dictionary(
+        uniqueKeysWithValues: session.roles.map { role in
+          (role, SideHeader(role: role, session: session, context: context))
+        }))
     sessionDidChange()
     sessionUndoManager.registerUndo(withTarget: self) { controller in
-      MainActor.assumeIsolated { controller.show(previous.0, result: previous.1) }
+      MainActor.assumeIsolated { controller.show(previous.0, result: previous.1, named: name) }
     }
-    sessionUndoManager.setActionName(
-      String(
-        localized: "Change Comparison", bundle: .module,
-        comment: "Undo menu: the switch to another comparison mode or merge strategy."))
+    sessionUndoManager.setActionName(name)
+    showResultFormat()
+    watchFiles()
+    stateDidChange()
+  }
+
+  /// What Undo calls the switch to another comparison mode.
+  private static var switchName: String {
+    String(
+      localized: "Change Comparison", bundle: .module,
+      comment: "Undo menu: the switch to another comparison mode or merge strategy.")
   }
 
   /// Tells that the files could not be compared anew, and keeps the comparison shown now.

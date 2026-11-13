@@ -93,7 +93,7 @@ final class MainMenu {
         [
           Self.item(Titles.compareFiles, #selector(AppDelegate.showCompareFiles(_:)), key: "o"),
           openRecent,
-        ],
+        ] + commands(.changeFiles),
         commands(.openInEditor),
         [Self.item(Titles.close, #selector(NSWindow.performClose(_:)), key: "w")]
           + commands(.save, .saveAs, .saveAndClose),

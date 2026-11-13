@@ -63,6 +63,29 @@ public final class SessionWindowController: NSWindowController {
   /// Whether the window is asking whether to save before it closes.
   var isAskingToClose = false
 
+  /// The watchers of the files of the session and of the result.
+  var fileWatchers: [FileWatcher] = []
+
+  /// Whether the window will look at its files soon, because one of them may have changed.
+  var isReloadPending = false
+
+  /// Whether the window is looking at its files or reloading them.
+  var isReloading = false
+
+  /// Whether the files may have changed while the window was busy, so that it looks at them
+  /// again afterwards.
+  var looksAtFilesAgain = false
+
+  /// The bytes of each file on disk that the window has seen, reloaded or not, which it does not
+  /// reload or ask about again.
+  var seenOnDisk: [URL: Data] = [:]
+
+  /// Whether the window is saving its result, which a reload waits for.
+  var isSaving = false
+
+  /// The sheet of Change Files while it is open.
+  var changeFilesSheet: CompareFilesWindowController?
+
   /// The comparison whose files cannot be compared, which the window names and explains in
   /// place of their lines, or `nil` if the window shows the lines.
   let unavailable: UnavailableComparison?
@@ -236,6 +259,7 @@ public final class SessionWindowController: NSWindowController {
     observeStepsOfUndo()
     observeFooterVisibility()
     stateDidChange()
+    watchFiles()
   }
 
   /// Shows in the toolbar what changed: the open conflicts or the current change, the arrows
@@ -348,6 +372,7 @@ extension SessionWindowController: NSWindowDelegate {
   /// written to its file, and closing a comparison means it was seen, so that Git goes on to the
   /// next file.
   public func windowWillClose(_ notification: Notification) {
+    fileWatchers = []
     let isSaved = saving.map { $0.url != nil && $0.saved != nil && !isResultEdited } ?? true
     finish(isSaved ? .saved : .cancelled)
   }
@@ -487,6 +512,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
       saving != nil && !isSwitchingComparison && !isAskingToClose
     case .waitingCaller:
       saving != nil && context.waitingCaller != nil && !isAskingToClose
+    case .ownFiles:
+      context.waitingCaller == nil && context.difftool == nil && !isSwitchingComparison
     case .nothing:
       true
     }

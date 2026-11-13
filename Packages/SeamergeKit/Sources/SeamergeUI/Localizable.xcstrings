@@ -10,6 +10,29 @@
     "%@ and %@": {
       "comment": "Two sides that share a toggle, such as feature/login and main."
     },
+    "%@ changed on disk. Reloading discards %lld decisions.": {
+      "comment": "Sheet before reloading a changed file, with the name of its side, such as main changed on disk. Reloading discards 3 decisions.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%@ changed on disk. Reloading discards %lld decision."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%@ changed on disk. Reloading discards %lld decisions."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%@ mixes line endings. The result is written with %@ throughout.": {
       "comment": "Notice below the result header: B ends its lines in more than one way, such as main mixes line endings. The result is written with LF throughout.",
       "localizations": {
@@ -208,6 +231,9 @@
     "Cancel": {
       "comment": "Button: close the sheet and do nothing."
     },
+    "Change": {
+      "comment": "Sheet Change Files: the default button, which shows the files in the window."
+    },
     "Change %lld of %lld": {
       "comment": "Toolbar: the current change of a comparison, such as Change 4 of 12."
     },
@@ -217,6 +243,9 @@
     "Change Encoding": {
       "comment": "Undo menu: the encoding of the result was changed."
     },
+    "Change Files…": {
+      "comment": "File menu: choose other files for the roles of the window."
+    },
     "Change Line Endings": {
       "comment": "Undo menu: the line endings of the result were changed."
     },
@@ -225,6 +254,29 @@
     },
     "Changes": {
       "comment": "Toolbar items: the current change and the buttons that go through the changes."
+    },
+    "Changing the files discards %lld decisions.": {
+      "comment": "Sheet before showing other files in a window, such as discards 3 decisions.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Changing the files discards %lld decision."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Changing the files discards %lld decisions."
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Check that the file exists and that you may read it, then try again.": {
       "comment": "Alert: what to do when a file cannot be read."
@@ -491,6 +543,12 @@
     "Invisibles": {
       "comment": "VoiceOver: the footer toggle that shows spaces, tabs and line endings."
     },
+    "Keep My Version": {
+      "comment": "Button: keep the result of the window and ignore the change on disk."
+    },
+    "Keep your version to save over it later, or reload the file as it is now. You can undo reloading.": {
+      "comment": "Sheet: another app changed the result file; the choices."
+    },
     "LF": {
       "comment": "Line endings: line feed."
     },
@@ -598,6 +656,9 @@
     },
     "Recent": {
       "comment": "Compare Files: the heading of the comparisons opened last."
+    },
+    "Reload": {
+      "comment": "Files that changed on disk: the button of a sheet that offers to show them as they are now, and the step of the Undo menu that did."
     },
     "Remove File": {
       "comment": "Compare Files: the button that empties a field."
@@ -772,6 +833,29 @@
     },
     "The files are too large to compare. Quit other apps to free memory.": {
       "comment": "Comparison window: the files do not fit in memory."
+    },
+    "The files changed on disk. Reloading discards %lld decisions.": {
+      "comment": "Sheet before reloading more than one changed file.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "The files changed on disk. Reloading discards %lld decision."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "The files changed on disk. Reloading discards %lld decisions."
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "The switch discards %lld decisions.": {
       "comment": "Sheet before switching the comparison, such as The switch discards 3 decisions.",
@@ -972,6 +1056,9 @@
     },
     "“%@” isn’t a text file. Open it in the app that made it.": {
       "comment": "Comparison window: a file is binary, and what to do."
+    },
+    "“%@” was changed by another app.": {
+      "comment": "Sheet: another app changed the file the result is saved to."
     }
   },
   "version": "1.0"

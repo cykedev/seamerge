@@ -76,7 +76,7 @@ final class SessionPresentation {
   let layout: SessionSplitViewController
 
   /// The headers of the inputs, whose names the panes, the toggles and the previews use.
-  let headers: [Role: SideHeader]
+  private(set) var headers: [Role: SideHeader]
 
   /// The runs of unchanged rows, which ones are collapsed and which the user expanded.
   var collapsed: CollapsedRows {
@@ -219,6 +219,15 @@ final class SessionPresentation {
     sourcesOverviewBar.currentBlock = block
     resultOverviewBar?.currentBlock = block
     delegate?.presentationDidChangeCurrentBlock(self)
+  }
+
+  /// Shows `headers` above the panes of the inputs, as the files of a session shown anew have
+  /// them.
+  func show(_ headers: [Role: SideHeader]) {
+    guard headers != self.headers else { return }
+    self.headers = headers
+    layout.show(arrangement.sourceRoles.compactMap { headers[$0] })
+    nameSourcePanes()
   }
 
   /// Gives each pane side by side the name of the input it shows, for VoiceOver.

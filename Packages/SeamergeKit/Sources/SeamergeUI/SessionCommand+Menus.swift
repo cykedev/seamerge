@@ -27,7 +27,10 @@ extension SessionCommand {
   public static func groups(in menu: Menu) -> [[SessionCommand]] {
     switch menu {
     case .file:
-      [[.openInEditor], [.save, .saveAs, .saveAndClose], [.leaveUnresolved, .skipRemainingFiles]]
+      [
+        [.changeFiles], [.openInEditor], [.save, .saveAs, .saveAndClose],
+        [.leaveUnresolved, .skipRemainingFiles],
+      ]
     case .edit: [[.copyBlock]]
     case .view:
       [

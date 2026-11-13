@@ -75,6 +75,10 @@ extension SessionCommand {
     /// Leaving a merge unresolved needs someone who waits for it.
     case waitingCaller
 
+    /// Choosing other files needs a session that the user put together, not one that Git
+    /// started, whose files the window shows.
+    case ownFiles
+
     /// The command always has an effect.
     case nothing
   }
@@ -104,6 +108,7 @@ extension SessionCommand {
     case .skipRemainingFiles: .remainingFiles
     case .save, .saveAs, .saveAndClose: .result
     case .leaveUnresolved: .waitingCaller
+    case .changeFiles: .ownFiles
     case .toggleScrollSynchronization, .toggleInvisibles, .toggleFooter, .goToLine: .nothing
     case .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone: .choice(chosenRoles ?? [])
     case .toggleSourceA: .toggle(.a)

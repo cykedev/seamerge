@@ -139,6 +139,7 @@ import Testing
     File ▸
       Compare Files… ⌘O
       Open Recent ▸
+      Change Files…
       ---
       Open in Editor ⌥⌘O
       ---

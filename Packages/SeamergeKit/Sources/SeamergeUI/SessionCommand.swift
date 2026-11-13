@@ -92,6 +92,9 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Closes a comparison that `git difftool` started and tells Git to compare no further files.
   case skipRemainingFiles
 
+  /// Asks for other files in the roles of the window and compares those in its place.
+  case changeFiles
+
   /// Writes the result to its file, after asking where the first time if it has none.
   case save
 
@@ -212,6 +215,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Skip Remaining Files", bundle: .module,
         comment: "File menu of a comparison: end the comparisons that are left of the run.")
+    case .changeFiles:
+      String(
+        localized: "Change Files…", bundle: .module,
+        comment: "File menu: choose other files for the roles of the window.")
     case .save: String(localized: "Save", bundle: .module, comment: "File menu command.")
     case .saveAs: String(localized: "Save As…", bundle: .module, comment: "File menu command.")
     case .saveAndClose:
@@ -462,6 +469,7 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .openInEditor: #selector(SessionWindowController.openInEditor(_:))
     case .copyBlock: #selector(SessionWindowController.copyBlock(_:))
     case .skipRemainingFiles: #selector(SessionWindowController.skipRemainingFiles(_:))
+    case .changeFiles: #selector(SessionWindowController.changeFiles(_:))
     case .save: #selector(SessionWindowController.saveResult(_:))
     case .saveAs: #selector(SessionWindowController.saveResultAs(_:))
     case .saveAndClose: #selector(SessionWindowController.saveAndClose(_:))

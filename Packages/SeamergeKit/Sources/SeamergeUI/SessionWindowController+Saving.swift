@@ -111,10 +111,17 @@ extension SessionWindowController {
   ///
   /// With open conflicts, a sheet asks first and can go to the next one instead. The file is
   /// replaced atomically: a failure leaves it as it was and the window as it is, and a sheet
-  /// says why. If the encoding cannot hold the result, a sheet offers UTF-8.
+  /// says why. If the encoding cannot hold the result, a sheet offers UTF-8. Files that change
+  /// on disk meanwhile are reloaded only afterwards, so that what is written is what the window
+  /// shows.
   @discardableResult
   func save(choosingPlace: Bool = false) async -> Bool {
     guard let window, saving != nil, let shown = presentation.result else { return false }
+    isSaving = true
+    defer {
+      isSaving = false
+      lookAtFilesAgainIfAsked()
+    }
     typingRun = nil
     let openCount = shown.document.openConflictCount
     if openCount > 0 {
@@ -143,9 +150,15 @@ extension SessionWindowController {
     // What the window shows now, after the sheets.
     guard var saving, let result = presentation.result else { return false }
     let content = result.document.exportText(of: result.text, labels: conflictLabels)
+    let bytes: Data
     while true {
+      // Right before writing, after every sheet: a change by another app is asked about rather
+      // than overwritten, and after reloading it the window stays open to show it.
+      if url == saving.url, await resultFileChangedAndReloaded(url, in: window) {
+        return false
+      }
       do {
-        try saving.format.write(content, to: url)
+        bytes = try saving.format.write(content, to: url)
         break
       } catch .unrepresentableText(let encoding) {
         guard await prompts.offerUTF8(saving: url.lastPathComponent, in: encoding, in: window)
@@ -162,15 +175,37 @@ extension SessionWindowController {
       saving.url = url
       saving.saved = SavedResult(
         result, session: presentation.changes.session, format: saving.format)
+      saving.diskBytes = bytes
       window.representedURL = url
     }
     self.saving = saving
+    watchFiles()
     showResultFormat()
     stateDidChange()
     presentation.announce(
       String(
         localized: "Saved \(url.lastPathComponent)", bundle: .module,
         comment: "VoiceOver after saving, such as Saved story.txt."))
+    return true
+  }
+
+  /// Asks, as a document does, whether to keep the window's version or to reload the result file
+  /// at `url` if another app changed it since the window saw it last, and tells whether it
+  /// reloaded it; then there is nothing left to write, and saving has not happened.
+  ///
+  /// The window watches the file, but while it saves, it looks at changes only afterwards; this
+  /// look before writing keeps a change of another app from being overwritten unseen.
+  private func resultFileChangedAndReloaded(_ url: URL, in window: NSWindow) async -> Bool {
+    guard var saving,
+      let bytes = FileManager.default.contents(atPath: url.path(percentEncoded: false)),
+      bytes != saving.diskBytes
+    else { return false }
+    saving.diskBytes = bytes
+    self.saving = saving
+    guard await prompts.confirmReloadingChangedResult(url.lastPathComponent, in: window),
+      let text = SourceFile(bytes: bytes, label: url.lastPathComponent).text
+    else { return false }
+    takeOverResult(text)
     return true
   }
 

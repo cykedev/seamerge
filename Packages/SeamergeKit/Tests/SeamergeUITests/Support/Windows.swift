@@ -143,6 +143,12 @@ final class PromptRecorder: SessionPrompts {
   /// Where to save when asked, or `nil` to cancel.
   var destination: URL?
 
+  /// Whether to reload a result file that another app changed.
+  var reloadsChangedResult = false
+
+  /// Whether to reload changed files although decisions would be lost.
+  var reloadsAnyway = false
+
   /// What the window asked, in order, in short words.
   private(set) var questions: [String] = []
 
@@ -199,6 +205,24 @@ final class PromptRecorder: SessionPrompts {
     questions.append("where to save \(name)")
     await whileAskingWhereToSave()
     return destination
+  }
+
+  func confirmReloadingChangedResult(_ name: String, in window: NSWindow) async -> Bool {
+    questions.append("reload changed \(name)")
+    return reloadsChangedResult
+  }
+
+  func confirmReloading(_ name: String?, discarding count: Int, in window: NSWindow) async -> Bool {
+    questions.append("reload \(name ?? "files"), \(count) decisions")
+    return reloadsAnyway
+  }
+
+  /// Whether to change the files although decisions would be lost.
+  var changesAnyway = false
+
+  func confirmChangingFiles(discarding count: Int, in window: NSWindow) async -> Bool {
+    questions.append("change files, \(count) decisions")
+    return changesAnyway
   }
 
 }
