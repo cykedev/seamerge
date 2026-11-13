@@ -78,9 +78,10 @@ enum Palette {
     }
   }
 
-  /// The fill of a chosen segment of the base in the bar of toggles, as 0xRRGGBB in sRGB: in
-  /// light appearances the clear yellow of the system colors, which the olive symbol value
-  /// would outweigh beside the fills of A and B; in dark ones the symbol value, as for A and B.
+  /// The fill of a chosen segment of the base in the bar of toggles and of the badge of the
+  /// base, as 0xRRGGBB in sRGB: in light appearances the clear yellow of the system colors,
+  /// which the olive symbol value would outweigh beside the fills of A and B; in dark ones the
+  /// symbol value, as for A and B.
   ///
   /// Yellow carries only a dark sign, so the sign on it is black in every appearance.
   static let chosenBaseFill = AppearanceValues<UInt32>(

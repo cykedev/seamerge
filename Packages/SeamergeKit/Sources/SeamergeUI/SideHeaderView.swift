@@ -78,7 +78,8 @@ struct SideHeaderView: View {
   }
 }
 
-/// The letter of a side in a badge of its color.
+/// The letter of a side in a badge of its color, the color that a chosen toggle of the side
+/// has: a clear yellow with a dark letter for the base.
 struct SideBadge: View {
   let role: Role
   let theme: Theme
@@ -86,10 +87,10 @@ struct SideBadge: View {
   var body: some View {
     Text(role.letter)
       .font(.caption.weight(.semibold))
-      .foregroundStyle(Color(nsColor: theme.filledLabelColor))
+      .foregroundStyle(Color(nsColor: theme.chosenSignColor(for: role.colorRole)))
       .padding(.horizontal, WindowMetrics.badgePadding)
       .frame(minWidth: WindowMetrics.badgeHeight, minHeight: WindowMetrics.badgeHeight)
-      .background(Capsule().fill(Color(nsColor: theme.symbolColor(for: role.colorRole))))
+      .background(Capsule().fill(Color(nsColor: theme.chosenFill(for: role.colorRole))))
       .accessibilityHidden(true)
   }
 }

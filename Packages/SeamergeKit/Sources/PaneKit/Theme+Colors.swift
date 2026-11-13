@@ -158,18 +158,16 @@ extension Theme {
     }
   }
 
-  /// The fill of a chosen segment of `role` in the bar of toggles: the symbol value of its side,
-  /// for the base a clear yellow (``Palette/chosenBaseFill``).
-  ///
-  /// The badge of the base in its header keeps the symbol value.
+  /// The fill of a chosen segment of `role` in the bar of toggles and of the badge of the side:
+  /// the symbol value of its side, for the base a clear yellow (``Palette/chosenBaseFill``).
   public func chosenFill(for role: ColorRole) -> NSColor {
     guard role == .base else { return symbolColor(for: role) }
     let values = Palette.chosenBaseFill
     return color { appearance, _ in NSColor(rgb: values[appearance]) }
   }
 
-  /// The color of the sign on a chosen segment of `role`: the color of the label on a fill, and
-  /// black on the yellow of the base, which carries only a dark sign.
+  /// The color of the sign on a chosen segment or a badge of `role`: the color of the label on
+  /// a fill, and black on the yellow of the base, which carries only a dark sign.
   public func chosenSignColor(for role: ColorRole) -> NSColor {
     role == .base ? .black : filledLabelColor
   }
