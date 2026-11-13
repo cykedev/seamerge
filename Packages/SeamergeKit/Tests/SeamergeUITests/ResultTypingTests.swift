@@ -202,6 +202,24 @@ import Testing
     try controller.checkResultIsShownAsModelled()
   }
 
+  /// An edit that empties the last line, after earlier edits moved the line before it, keeps
+  /// TextKit from asking a paragraph beyond the end of the text for its layout.
+  @Test func emptyingTheLastLineAfterEditsThatMovedItKeepsTheLayoutIntact() async throws {
+    let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
+    let undoManager = controller.sessionUndoManager
+    try controller.type("", over: 13..<49, with: .deleteBackward)
+    controller.endEvent()
+    undoManager.undo()
+    controller.leaveTextMode()
+    try controller.type("", over: 19..<39, with: .deleteBackward)
+    controller.endEvent()
+
+    try controller.type("x", over: 0..<50, with: .insertText)
+
+    #expect(try controller.mergeResult.content.text.hasPrefix("x"))
+    try controller.checkResultIsShownAsModelled()
+  }
+
   /// Changes of the text that bypass the plans, which only a bug causes, are each attributed as
   /// typing would be, also two before the result is shown again.
   @Test func changesThatNobodyAnnouncedAreTakenOverOneAfterTheOther() async throws {

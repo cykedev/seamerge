@@ -41,6 +41,7 @@ extension PaneTextView {
         guard
           super.shouldChangeText(inRanges: affectedRanges, replacementStrings: replacementStrings)
         else { return false }
+        prepareLayout(for: edit)
         announcements.append(
           Announcement(edit: edit, replacedText: substring(edit.range), isTyped: true))
         return true
@@ -89,6 +90,7 @@ extension PaneTextView {
       let replacedText = substring(edit.range)
       announcements.append(
         Announcement(edit: edit, replacedText: replacedText, isTyped: false))
+      prepareLayout(for: edit)
       textStorage.replaceCharacters(
         in: NSRange(edit.range), with: NSAttributedString(string: edit.text, attributes: attributes)
       )
@@ -103,6 +105,27 @@ extension PaneTextView {
     let replacedTexts = carryOut(edits)
     setSelectedRange(NSRange(location: last.range.lowerBound + last.text.utf16.count, length: 0))
     interaction?.didCarryOut(edits, replacing: replacedTexts)
+  }
+
+  /// Lays out anew, before `edit`, the paragraphs from the one before its first row to the end
+  /// of the text, if the edit reaches the end.
+  ///
+  /// An edit that empties the last line makes the line before it the last, whose layout
+  /// fragment then gets the extra line fragment at the end of the text. TextKit 2 asks that
+  /// fragment's paragraph for its attachments, and where an earlier edit moved the paragraph
+  /// without TextKit updating the fragment's element, the paragraph lies beyond the text and
+  /// TextKit raises an exception. Invalidating the layout there drops the stale fragments.
+  private func prepareLayout(for edit: PaneEdit) {
+    guard let textLayoutManager, let textStorage, edit.range.upperBound == textStorage.length
+    else { return }
+    let row = max(grid.row(containingOffset: edit.range.lowerBound) - 1, 0)
+    let documentRange = textLayoutManager.documentRange
+    guard
+      let start = textLayoutManager.location(
+        documentRange.location, offsetBy: grid.offsets(ofRow: row).lowerBound),
+      let range = NSTextRange(location: start, end: documentRange.endLocation)
+    else { return }
+    textLayoutManager.invalidateLayout(for: range)
   }
 
   /// The text of `range`.
