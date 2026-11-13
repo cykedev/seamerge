@@ -72,6 +72,26 @@ struct ToggleTests {
     #expect(same.toggles(in: same.session.blocks[1]).map(\.roles) == [[.base], [.a, .b]])
   }
 
+  @Test func choicesOfSharedTogglesOrAroundADeletionGiveTheSameSources() async throws {
+    let nine = ResultDocument(session: try await MergeFixture.nineBlocks())
+    // A changed block 1; the base and B share a toggle.
+    let changedInA = nine.session.blocks[1]
+    #expect(nine.sourcesChoosing([.b], in: changedInA) == [.base, .b])
+    #expect(nine.sourcesChoosing([.base], in: changedInA) == [.base, .b])
+    #expect(nine.sourcesChoosing([.a, .b], in: changedInA) == [.a, .base, .b])
+    // A removed the lines of block 7: its toggle switches the others off.
+    let deletion = nine.session.blocks[7]
+    #expect(nine.sourcesChoosing([.a, .b], in: deletion) == [.b])
+    #expect(nine.sourcesChoosing([.b, .a], in: deletion) == [.a])
+    #expect(nine.sourcesChoosing([], in: deletion) == [])
+
+    let same = ResultDocument(session: try await MergeFixture.sameChange())
+    let both = same.session.blocks[1]
+    for roles: [Role] in [[.a], [.b], [.a, .b], [.b, .a]] {
+      #expect(same.sourcesChoosing(roles, in: both) == [.a, .b], "\(roles)")
+    }
+  }
+
   @Test func versionsThatDifferOnlyInIgnoredWhitespaceKeepSeparateToggles() async throws {
     let session = try await merge(
       base: "u0\nx1\n", a: "u0 \ny1\n", b: "u0\t\ny1\t\n", mode: .ignoreWhitespaceAmount)

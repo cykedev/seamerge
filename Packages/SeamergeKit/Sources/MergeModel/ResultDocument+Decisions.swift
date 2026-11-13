@@ -44,6 +44,19 @@ extension ResultDocument {
     return planRewriting([index: chosenSegment(roles, toggles: toggles(in: block))])
   }
 
+  /// The sources of the segment that ``planChoosing(_:in:)`` with `roles` would give a block,
+  /// in the order they would be taken.
+  ///
+  /// Two choices can give the same segment: inputs with the same text share a toggle, so taking
+  /// one takes the other too, and a toggle that follows a deletion switches the others off, so
+  /// taking it before or after another source takes only the later one. Choices that give the
+  /// same sources have the same effect.
+  ///
+  /// - Precondition: `block` belongs to the session, and `roles` take part in it.
+  public func sourcesChoosing(_ roles: [Role], in block: Block) -> [Role] {
+    chosenSegment(roles, toggles: toggles(in: block)).sources
+  }
+
   /// The plan that resolves every open conflict with the texts of `roles`, as
   /// ``planChoosing(_:in:)`` resolves one.
   ///
