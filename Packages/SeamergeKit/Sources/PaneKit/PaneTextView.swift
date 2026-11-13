@@ -59,6 +59,11 @@ final class PaneTextView: NSTextView {
 
   private var highlightsByBlock: [Int: [Range<Int>]] = [:]
 
+  /// Supplies the tokens of the lines, asked for each row as it is drawn.
+  weak var syntaxProvider: (any PaneSyntaxProvider)? {
+    didSet { syntaxDidChange(inRows: nil) }
+  }
+
   /// The selection as the fragments last drew it.
   private var drawnSelection: [NSValue] = []
 
@@ -80,8 +85,9 @@ final class PaneTextView: NSTextView {
   /// The version of the text, after whose changes fragments find their rows again.
   private let textVersion = TextVersion()
 
-  /// Whether text has been given the preview color since the pane last had no previews.
-  var hasColoredPreviews = false
+  /// Whether text has been given a color of its own since the pane last had neither previews
+  /// nor a syntax provider.
+  var hasColoredText = false
 
   /// The previews as the pane's owner gave them last, before edits moved them along with the
   /// text.
@@ -181,7 +187,7 @@ final class PaneTextView: NSTextView {
     highlightsByBlock.removeAll()
     cachedPreviewSpans = nil
     cachedPreviewRows = nil
-    validatesPreviewColor(!content.previews.isEmpty)
+    updateTextColorValidation()
     let attributes = textAttributes
     font = theme.font
     defaultParagraphStyle = attributes[.paragraphStyle] as? NSParagraphStyle
@@ -198,7 +204,9 @@ final class PaneTextView: NSTextView {
       if let textLayoutManager {
         textLayoutManager.invalidateLayout(for: textLayoutManager.documentRange)
         textLayoutManager.invalidateRenderingAttributes(for: textLayoutManager.documentRange)
-        applyPreviewColor(in: 0..<textStorage.length)
+        // Setting the attributes makes TextKit lay out every paragraph anew, which gives the
+        // tokens their colors.
+        applyTextColors(in: 0..<textStorage.length, syntaxIn: 0..<0)
       }
     } else {
       textStorage.setAttributedString(
@@ -243,7 +251,7 @@ final class PaneTextView: NSTextView {
     cachedPreviewRows = nil
     if previewsChanged {
       fadeAfterPreviewChange()
-      validatesPreviewColor(!previews.isEmpty)
+      updateTextColorValidation()
     }
     if previewsChanged || previewsMoved {
       changedRows += previewRows().map(\.rows)
@@ -445,7 +453,7 @@ final class PaneTextView: NSTextView {
     }
   }
 
-  private func redraw(rows: Range<Int>) {
+  func redraw(rows: Range<Int>) {
     guard let textLayoutManager else { return }
     let offsets = grid.paragraphOffsets(ofRows: rows)
     let documentStart = textLayoutManager.documentRange.location
@@ -456,7 +464,7 @@ final class PaneTextView: NSTextView {
     else { return }
     // Draws the fragments of the rows again, which ask for their painting as they draw.
     textLayoutManager.invalidateRenderingAttributes(for: range)
-    applyPreviewColor(in: offsets)
+    applyTextColors(in: offsets)
     let displayRows = displayRows.displayRows(ofRows: rows)
     setNeedsDisplayOfFragments(
       in: CGRect(
@@ -560,7 +568,7 @@ final class PaneTextView: NSTextView {
 
   /// The changed runs within `rows` with their fills, and the places of removed text with the
   /// colors of their marks.
-  private func changes(inRows rows: Range<Int>) -> (
+  func changes(inRows rows: Range<Int>) -> (
     runs: [RowLayoutFragment.Run], removals: [RowLayoutFragment.Removal]
   ) {
     var runs: [RowLayoutFragment.Run] = []

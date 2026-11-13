@@ -96,6 +96,22 @@ public final class PaneView: NSView {
     set { textView.highlightProvider = newValue }
   }
 
+  /// Supplies the tokens of the lines that are colored by their syntax.
+  ///
+  /// The pane does not retain it. Without one, the code keeps the color of text; setting a
+  /// provider colors every row anew.
+  public var syntaxProvider: (any PaneSyntaxProvider)? {
+    get { textView.syntaxProvider }
+    set { textView.syntaxProvider = newValue }
+  }
+
+  /// Colors the code of `rows` anew, after the syntax provider changed the tokens of their lines.
+  ///
+  /// - Parameter rows: Rows of the content; those beyond its rows are left out.
+  public func syntaxDidChange(inRows rows: Range<Int>) {
+    textView.syntaxDidChange(inRows: rows)
+  }
+
   /// Whether the keyboard focus lies in the pane: in its text, or beside it, such as in the
   /// decision column of the result or on the bar of a collapsed run.
   public var holdsFocus: Bool {

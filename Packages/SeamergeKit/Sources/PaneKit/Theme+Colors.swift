@@ -41,6 +41,21 @@ extension Theme {
     }
   }
 
+  /// The color of code of `kind`: violet for keywords, rust for strings and numbers, both apart
+  /// from the four role colors, and a quiet gray for comments; each legible as text on every
+  /// row tint.
+  public func syntaxColor(for kind: PaneToken.Kind) -> NSColor {
+    color { appearance, nsAppearance in
+      switch kind {
+      case .keyword: NSColor(rgb: Palette.keyword[appearance])
+      case .string, .number: NSColor(rgb: Palette.literal[appearance])
+      case .comment:
+        NSColor.labelColor.resolved(in: nsAppearance)
+          .withAlphaComponent(Palette.commentOpacity[appearance])
+      }
+    }
+  }
+
   /// The color of the invisible characters: quiet beside the code, yet legible on every tint and
   /// within a selection.
   public var invisibleCharacterColor: NSColor {

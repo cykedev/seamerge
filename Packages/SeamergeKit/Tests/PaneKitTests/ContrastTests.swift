@@ -91,6 +91,17 @@ import Testing
               description: "text on \(surfaceName) of \(place)",
               foreground: Contrast.over(resolve(Theme.textColor), surface), surface: surface,
               minimum: Self.text))
+          // Code keeps its syntax colors on its row, outside the changed runs, which take
+          // precedence.
+          if surfaceName == "row" {
+            for kind in PaneToken.Kind.allCases {
+              pairs.append(
+                Pair(
+                  description: "\(kind) on \(surfaceName) of \(place)",
+                  foreground: Contrast.over(resolve(theme.syntaxColor(for: kind)), surface),
+                  surface: surface, minimum: Self.text))
+            }
+          }
           // An invisible character tells which line ending a line has.
           pairs.append(
             Pair(

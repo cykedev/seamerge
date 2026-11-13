@@ -216,6 +216,19 @@ enum Palette {
   static let collapsedRunTextOpacity = AppearanceValues<CGFloat>(
     light: 0.66, dark: 0.66, lightHighContrast: 0.80, darkHighContrast: 0.80)
 
+  /// The color of keywords, as 0xRRGGBB in sRGB: a violet apart from the four role colors.
+  static let keyword = AppearanceValues<UInt32>(
+    light: 0x6A2EA8, dark: 0xD6C2FF, lightHighContrast: 0x5C2A92, darkHighContrast: 0xE2D4FF)
+
+  /// The color of strings and numbers, as 0xRRGGBB in sRGB: a rust apart from the four role
+  /// colors.
+  static let literal = AppearanceValues<UInt32>(
+    light: 0x913A14, dark: 0xF9C6A6, lightHighContrast: 0x7E3210, darkHighContrast: 0xFBD3B9)
+
+  /// The opacity of the label color for comments.
+  static let commentOpacity = AppearanceValues<CGFloat>(
+    light: 0.66, dark: 0.70, lightHighContrast: 0.72, darkHighContrast: 0.78)
+
   /// The opacity of the label color for the preview of a conflict in the result.
   static let previewTextOpacity = AppearanceValues<CGFloat>(
     light: 0.60, dark: 0.80, lightHighContrast: 0.60, darkHighContrast: 0.85)

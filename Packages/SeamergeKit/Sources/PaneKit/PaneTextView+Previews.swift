@@ -114,63 +114,6 @@ extension PaneTextView {
     grid.offsets(ofRow: grid.row(containingOffset: offset)).lowerBound == offset
   }
 
-  /// Gives the text of the previews its color as TextKit draws it, while there are previews.
-  ///
-  /// Without previews, TextKit is spared asking for the color of each paragraph it draws.
-  func validatesPreviewColor(_ validates: Bool) {
-    guard let textLayoutManager else { return }
-    guard validates else {
-      textLayoutManager.renderingAttributesValidator = nil
-      return
-    }
-    textLayoutManager.renderingAttributesValidator = { [weak self] _, fragment in
-      // AppKit lays out and draws text views on the main thread.
-      MainActor.assumeIsolated { self?.validatePreviewColor(of: fragment) }
-    }
-  }
-
-  /// Draws the text of the previews in `fragment` in the preview color, which marks it as a
-  /// preview rather than text of the file.
-  ///
-  /// The color is a rendering attribute, so that it is neither part of the text nor passed on to
-  /// text typed next to a preview.
-  private func validatePreviewColor(of fragment: NSTextLayoutFragment) {
-    guard !previewSpans.isEmpty || hasColoredPreviews, let textLayoutManager,
-      let range = fragment.textElement?.elementRange
-    else { return }
-    let documentStart = textLayoutManager.documentRange.location
-    applyPreviewColor(
-      in: textLayoutManager.offset(
-        from: documentStart, to: range.location)..<textLayoutManager
-        .offset(from: documentStart, to: range.endLocation))
-  }
-
-  /// Gives the text of the previews within `range` the preview color, and the rest of it none.
-  ///
-  /// Invalidating the rendering attributes of text, as each new drawing of its rows does, takes
-  /// the color away without asking for it again, so the pane gives it again right after.
-  func applyPreviewColor(in range: Range<Int>) {
-    // Without previews, now or before, there is no color to give or take.
-    guard let textLayoutManager, !range.isEmpty, !previewSpans.isEmpty || hasColoredPreviews
-    else { return }
-    hasColoredPreviews = !previewSpans.isEmpty
-    let documentStart = textLayoutManager.documentRange.location
-    func textRange(_ offsets: Range<Int>) -> NSTextRange? {
-      guard
-        let start = textLayoutManager.location(documentStart, offsetBy: offsets.lowerBound),
-        let end = textLayoutManager.location(documentStart, offsetBy: offsets.upperBound)
-      else { return nil }
-      return NSTextRange(location: start, end: end)
-    }
-    guard let whole = textRange(range) else { return }
-    textLayoutManager.removeRenderingAttribute(.foregroundColor, for: whole)
-    for span in previewSpans where span.overlaps(range) {
-      guard let previewRange = textRange(span.clamped(to: range)) else { continue }
-      textLayoutManager.setRenderingAttributes(
-        [.foregroundColor: theme.previewTextColor], for: previewRange)
-    }
-  }
-
   /// Cross-fades the text from how it looks now to how it looks once the change under way has
   /// been drawn: a preview turning into text, or text into a preview.
   ///
