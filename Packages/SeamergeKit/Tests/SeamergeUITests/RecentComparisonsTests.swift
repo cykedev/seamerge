@@ -6,7 +6,7 @@ import Testing
 
 /// The comparisons opened last: what the list keeps, and how the window shows and opens them.
 @MainActor
-@Suite struct RecentComparisonsTests {
+@Suite(.timeLimit(.minutes(1))) struct RecentComparisonsTests {
   @Test func listKeepsTheTenNewestFirstWithTheirRoles() throws {
     let files = try SampleFiles()
     let fixture = try CompareFilesFixture()

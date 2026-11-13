@@ -8,7 +8,7 @@ import Testing
 /// Typing in the result window: every row of the attribution of edits to segments, through the
 /// keys and Paste of the text view.
 @MainActor
-@Suite struct ResultTypingTests {
+@Suite(.timeLimit(.minutes(1))) struct ResultTypingTests {
   @Test func resultIsEditableAndShowsItsTextAsLoaded() async throws {
     let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
 

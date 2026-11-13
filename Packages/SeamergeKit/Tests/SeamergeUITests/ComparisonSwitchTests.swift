@@ -8,7 +8,7 @@ import Testing
 /// Switching to another comparison mode or merge strategy: the window compares anew, keeps the
 /// line of B where it is, names the mode in the subtitle, and undoes the switch in one step.
 @MainActor
-@Suite struct ComparisonSwitchTests {
+@Suite(.timeLimit(.minutes(1))) struct ComparisonSwitchTests {
   @Test func switchShowsTheNewComparisonAndUndoesInOneStep() async throws {
     let scenario = try #require(Scenario.merges.first { $0.name == "whitespace" })
     let (session, context) = try await scenario.load()

@@ -50,6 +50,9 @@ import Testing
       #expect(try controller.presentation.mergeResult.text == EditingFixture.loadedText, context)
       try controller.checkResultIsShownAsModelled(context)
       controller.leaveTextMode()
+      // The sequences take more than a minute on the main actor; between two of them, the tests
+      // that run beside this one take their turn rather than wait for all of them.
+      await Task.yield()
     }
   }
 

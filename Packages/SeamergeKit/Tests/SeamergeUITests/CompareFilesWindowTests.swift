@@ -7,7 +7,7 @@ import Testing
 /// The window Compare Files: how files take their places, what the default button opens, and
 /// how the fields work from the keyboard and with VoiceOver.
 @MainActor
-@Suite(.serialized) struct CompareFilesWindowTests {
+@Suite(.serialized, .timeLimit(.minutes(1))) struct CompareFilesWindowTests {
   @Test func windowIsTitledAfterWhatItDoesAndKeepsItsSize() throws {
     let fixture = try CompareFilesFixture()
     #expect(fixture.window.title == "Compare Files")
@@ -174,7 +174,14 @@ import Testing
     let urls = try (1...fileCount).map { try files.file("\($0).txt") }
     #expect(fixture.controller.fill(with: urls))
     fixture.controller.swapSides(nil)
-    let closes = NotificationCenter.default.notifications(named: NSWindow.willCloseNotification)
+    // Observed before the click, so that a window that closes while the test still checks the
+    // opening is not missed; a sequence of notifications does not promise to listen before it
+    // is iterated.
+    let (closes, closeSink) = AsyncStream.makeStream(of: Void.self)
+    let observer = NotificationCenter.default.addObserver(
+      forName: NSWindow.willCloseNotification, object: fixture.window, queue: nil
+    ) { _ in closeSink.yield() }
+    defer { NotificationCenter.default.removeObserver(observer) }
 
     fixture.controller.openButton.performClick(nil)
     #expect(!fixture.controller.openButton.isEnabled)
@@ -185,9 +192,8 @@ import Testing
     #expect(opened.base == (fileCount == 3 ? urls[1] : nil))
     #expect(opened.right == urls[0])
     #expect(opened.kind == (fileCount == 3 ? .merge : .diff))
-    for await notification in closes where notification.object as? NSWindow === fixture.window {
-      break
-    }
+    var closings = closes.makeAsyncIterator()
+    await closings.next()
     #expect(fixture.controller.selection.isEmpty)
     #expect(fixture.recentComparisons.comparisons == [opened])
   }

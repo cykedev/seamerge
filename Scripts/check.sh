@@ -156,7 +156,17 @@ for manifest in Packages/*/Package.swift; do
   name=$(basename "$package")
   if run_step "build $name" swift build --package-path "$package" --build-tests \
     --explicit-target-dependency-import-check error; then
-    if ! $quick; then
+    if $quick; then
+      :
+    elif [ "$name" = SeamergeKit ]; then
+      # The window tests share the main actor. One at a time, each of them
+      # waits for its own work only, so that its time limit stops a test that
+      # hangs rather than one that waits for its turn.
+      run_step --tests "test $name" swift test --package-path "$package" \
+        --skip-build --skip SeamergeUITests
+      run_step --tests "test $name windows" swift test --package-path "$package" \
+        --skip-build --filter SeamergeUITests --no-parallel
+    else
       run_step --tests "test $name" swift test --package-path "$package" --skip-build
     fi
   elif ! $quick; then
