@@ -27,10 +27,37 @@ import Testing
   /// The minimum contrast of signs that say something.
   private static let sign: CGFloat = 3
 
+  /// The minimum contrast of the toned-down marks of the overview bar, which repeat what the
+  /// rows beside them show and need only stay visible.
+  private static let quietOverviewMark: CGFloat = 2
+
   private static let styles: [BlockStyle] = [
     .unchanged, .tinted(.a), .tinted(.base), .tinted(.b), .tinted(.conflict), .original,
     .combined, .handwritten,
   ]
+
+  @Test func contrastOfTheOverviewBarIsWrittenDown() throws {
+    var lines: [String] = []
+    for look in Look.all {
+      let theme = Theme(increasesContrast: look.increasesContrast)
+      let resolve = { (color: NSColor?) in Contrast.resolve(color, in: look.appearance) }
+      let ground = Contrast.over(resolve(.textBackgroundColor), .white)
+      let bar = Contrast.over(resolve(theme.overviewBackgroundTone), ground)
+      let marks = Self.styles.filter { $0 != .unchanged }.map { style in
+        let mark = Contrast.over(resolve(theme.overviewMarkColor(for: style)), bar)
+        return "\(style) \(String(format: "%.2f", Contrast.ratio(mark, bar)))"
+      }
+      let outlines = [false, true].map { emphasized in
+        let outline = Contrast.over(
+          resolve(theme.visibleRegionOutline(emphasized: emphasized)), bar)
+        return String(format: "%.2f", Contrast.ratio(outline, bar))
+      }
+      lines.append(
+        "\(look.name): marks on the bar: \(marks.joined(separator: ", ")); "
+          + "outline of the visible part: \(outlines.joined(separator: ", emphasized "))")
+    }
+    try Rendering.writeText(lines.joined(separator: "\n"), named: "overview-contrast")
+  }
 
   private struct Pair {
     var description: String
@@ -196,21 +223,42 @@ import Testing
     }
   }
 
-  /// The pairs in the overview bar: every mark and the pointer at the current block, on the bar
-  /// and within the area that shows the visible part.
+  /// The pairs in the overview bar: the frame of the visible part, in its quiet and its
+  /// emphasized state, against the bar and its own fill; every mark and the pointer at the
+  /// current block, on the bar and within the frame.
+  ///
+  /// Only the marks of open conflicts keep the contrast of a sign. The other marks are toned
+  /// down on purpose, so that open conflicts alone stand out in the bar; they repeat what the
+  /// rows show beside them and need only stay visible.
   private func overviewPairs(
     theme: Theme, ground: NSColor, resolve: (NSColor?) -> NSColor?
   ) -> [Pair] {
     let bar = Contrast.over(resolve(theme.overviewBackgroundTone), ground)
-    let visible = Contrast.over(resolve(theme.visibleRegionFill), bar)
     var pairs: [Pair] = []
-    for (surfaceName, surface) in [("bar", bar), ("visible area", visible)] {
+    for emphasized in [false, true] {
+      let state = emphasized ? "emphasized " : ""
+      let fill = Contrast.over(resolve(theme.visibleRegionFill(emphasized: emphasized)), bar)
+      let outline = resolve(theme.visibleRegionOutline(emphasized: emphasized))
+      for (surfaceName, surface) in [("bar", bar), ("its fill", fill)] {
+        pairs.append(
+          Pair(
+            description: "\(state)outline of the visible part on \(surfaceName)",
+            foreground: Contrast.over(outline, surface), surface: surface, minimum: Self.sign))
+      }
+    }
+    // The frame lies above the marks: within it, its fill tones down mark and bar alike.
+    let fill = resolve(theme.visibleRegionFill(emphasized: true))
+    let within = { (color: NSColor) in Contrast.over(fill, color) }
+    let covers: [(String, (NSColor) -> NSColor)] = [("bar", { $0 }), ("visible part", within)]
+    for (surfaceName, cover) in covers {
+      let surface = cover(bar)
       for style in Self.styles where style != .unchanged {
+        let mark = Contrast.over(resolve(theme.overviewMarkColor(for: style)), bar)
         pairs.append(
           Pair(
             description: "overview mark of \(style) on \(surfaceName)",
-            foreground: Contrast.over(resolve(theme.overviewMarkColor(for: style)), surface),
-            surface: surface, minimum: Self.sign))
+            foreground: cover(mark), surface: surface,
+            minimum: style == .tinted(.conflict) ? Self.sign : Self.quietOverviewMark))
       }
       pairs.append(
         Pair(

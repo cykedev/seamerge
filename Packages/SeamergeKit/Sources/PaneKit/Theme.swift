@@ -137,6 +137,12 @@ public struct Theme {
   /// How far beyond a mark in the overview bar a click still hits it.
   static let overviewMarkHitSlop: CGFloat = 3
 
+  /// The width of the outline of the frame that shows the visible part in the overview bar.
+  static let visibleRegionOutlineWidth: CGFloat = 1
+
+  /// The radius of the corners of the frame that shows the visible part in the overview bar.
+  static let visibleRegionCornerRadius: CGFloat = 3
+
   /// The height of the triangle that points at the current block in the overview bar.
   static let currentBlockIndicatorHeight: CGFloat = 6
 

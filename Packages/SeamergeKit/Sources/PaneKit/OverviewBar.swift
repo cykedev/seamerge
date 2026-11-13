@@ -8,7 +8,8 @@ public protocol OverviewBarDelegate: AnyObject {
 }
 
 /// The vertical scroller of a pane that also shows where the text changes: a mark for each
-/// block, the visible part of the text as a light area, the current block with a small triangle.
+/// block, the visible part of the text as a frame across the bar, the current block with a small
+/// triangle.
 ///
 /// The bar is a scroller like any other, so dragging, scrolling and VoiceOver work as they do
 /// elsewhere. It keeps its width whatever scroller style the system uses, since the marks are
@@ -50,6 +51,26 @@ public final class OverviewBar: NSScroller {
   private var cachedLayout: OverviewLayout?
   private var cachedMarkElements: [MarkElement]?
 
+  /// Whether the pointer is over the bar or drags its frame, which then draws stronger.
+  private(set) var isEmphasized = false {
+    didSet {
+      if isEmphasized != oldValue {
+        invalidateVisibleRegion()
+      }
+    }
+  }
+
+  /// The area that tells when the pointer enters and leaves the bar.
+  private var pointerArea: NSTrackingArea?
+
+  private var isPointerInside = false {
+    didSet { isEmphasized = isPointerInside || isTracking }
+  }
+
+  private var isTracking = false {
+    didSet { isEmphasized = isPointerInside || isTracking }
+  }
+
   /// Creates an overview bar without marks.
   public init() {
     super.init(frame: CGRect(x: 0, y: 0, width: Theme.overviewBarWidth, height: 100))
@@ -76,6 +97,30 @@ public final class OverviewBar: NSScroller {
 
   public override var isOpaque: Bool { true }
 
+  // The frame of the visible part is drawn with the bar, which the scroller would not draw
+  // again when only its knob moves: the stripe of the frame is drawn again where it was and
+  // where it is now, and nothing else.
+  public override var doubleValue: Double {
+    willSet { invalidateVisibleRegion() }
+    didSet { invalidateVisibleRegion() }
+  }
+
+  public override var knobProportion: CGFloat {
+    willSet { invalidateVisibleRegion() }
+    didSet { invalidateVisibleRegion() }
+  }
+
+  /// Has the stripe of the bar that the frame of the visible part covers drawn again.
+  private func invalidateVisibleRegion() {
+    let knob = rect(for: .knob)
+    guard !knob.isEmpty else { return }
+    let margin = Theme.visibleRegionOutlineWidth
+    setNeedsDisplay(
+      CGRect(
+        x: bounds.minX, y: knob.minY - margin, width: bounds.width,
+        height: knob.height + 2 * margin))
+  }
+
   public override func setFrameSize(_ newSize: NSSize) {
     let changed = newSize != frame.size
     super.setFrameSize(newSize)
@@ -86,14 +131,15 @@ public final class OverviewBar: NSScroller {
 
   public override func draw(_ dirtyRect: NSRect) {
     Theme.backgroundColor.setFill()
-    bounds.fill()
+    dirtyRect.fill()
     theme.overviewBackgroundTone.setFill()
-    bounds.fill(using: .sourceOver)
+    dirtyRect.fill(using: .sourceOver)
     NSColor.separatorColor.setFill()
-    CGRect(x: 0, y: 0, width: Self.hairline(in: self), height: bounds.height).fill(
-      using: .sourceOver)
+    CGRect(x: 0, y: dirtyRect.minY, width: Self.hairline(in: self), height: dirtyRect.height)
+      .fill(using: .sourceOver)
     let layout = layout
-    for shape in layout.shapes {
+    // A scroll step draws only the stripe of the frame; the marks elsewhere stay as they are.
+    for shape in layout.shapes where shape.rect.intersects(dirtyRect) {
       drawMark(shape)
     }
     drawVisibleRegion()
@@ -108,10 +154,51 @@ public final class OverviewBar: NSScroller {
     let block = point.y < knob.minY || point.y > knob.maxY ? layout.block(at: point.y) : nil
     // The scroller tracks the mouse until the button goes up: it pages or jumps to the spot as
     // the system setting says, and drags the knob.
+    isTracking = true
     super.mouseDown(with: event)
+    endTracking(releasedAt: Self.releaseLocation(in: window))
     if let block, hitPart != .decrementPage, hitPart != .incrementPage {
       delegate?.overviewBar(self, didSelectBlock: block)
     }
+  }
+
+  public override func updateTrackingAreas() {
+    super.updateTrackingAreas()
+    guard pointerArea == nil else { return }
+    let area = NSTrackingArea(
+      rect: .zero, options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+      owner: self)
+    addTrackingArea(area)
+    pointerArea = area
+  }
+
+  /// Ends the tracking of a click or a drag whose mouse button went up at `location`, in the
+  /// coordinates of the window: the frame stays strong only if the pointer is still over the
+  /// bar.
+  ///
+  /// The bar hears of no exit while the scroller tracks the mouse, so the place of the release
+  /// tells where the pointer is.
+  func endTracking(releasedAt location: CGPoint?) {
+    isTracking = false
+    isPointerInside = location.map { bounds.contains(convert($0, from: nil)) } ?? false
+  }
+
+  /// Where the mouse button went up in `window` after tracking: the place of the event that
+  /// ended the tracking, or the place of the pointer now if it was no such event.
+  private static func releaseLocation(in window: NSWindow?) -> CGPoint? {
+    guard let window else { return nil }
+    if let event = NSApp.currentEvent, event.type == .leftMouseUp, event.window === window {
+      return event.locationInWindow
+    }
+    return window.mouseLocationOutsideOfEventStream
+  }
+
+  public override func mouseEntered(with event: NSEvent) {
+    isPointerInside = true
+  }
+
+  public override func mouseExited(with event: NSEvent) {
+    isPointerInside = false
   }
 
   public override func accessibilityChildren() -> [Any]? {
@@ -183,18 +270,22 @@ public final class OverviewBar: NSScroller {
     }
   }
 
+  /// Draws the visible part as a frame across the bar, above the marks: a light fill, so that
+  /// the marks keep their colors, and an outline that stands out on the bar and on any mark.
   private func drawVisibleRegion() {
     let knob = rect(for: .knob)
     guard isEnabled, !knob.isEmpty else { return }
     let hairline = Self.hairline(in: self)
+    let width = Theme.visibleRegionOutlineWidth
     let region = CGRect(
       x: hairline, y: knob.minY, width: bounds.width - hairline, height: knob.height
-    ).insetBy(dx: hairline / 2, dy: hairline / 2)
-    let path = NSBezierPath(roundedRect: region, xRadius: 2, yRadius: 2)
-    theme.visibleRegionFill.setFill()
+    ).insetBy(dx: width / 2, dy: width / 2)
+    let radius = Theme.visibleRegionCornerRadius
+    let path = NSBezierPath(roundedRect: region, xRadius: radius, yRadius: radius)
+    theme.visibleRegionFill(emphasized: isEmphasized).setFill()
     path.fill()
-    theme.visibleRegionOutline.setStroke()
-    path.lineWidth = hairline
+    theme.visibleRegionOutline(emphasized: isEmphasized).setStroke()
+    path.lineWidth = width
     path.stroke()
   }
 

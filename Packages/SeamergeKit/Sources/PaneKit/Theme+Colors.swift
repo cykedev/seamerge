@@ -83,25 +83,41 @@ extension Theme {
     }
   }
 
-  /// The light area of the overview bar that shows the visible part of the text.
-  public var visibleRegionFill: NSColor {
-    color { appearance, nsAppearance in
-      NSColor.labelColor.resolved(in: nsAppearance)
-        .withAlphaComponent(Palette.visibleRegionOpacity[appearance])
+  /// The fill of the frame of the overview bar that shows the visible part of the text, stronger
+  /// while it is `emphasized` under the pointer or dragged.
+  public func visibleRegionFill(emphasized: Bool) -> NSColor {
+    let values =
+      emphasized ? Palette.emphasizedVisibleRegionOpacity : Palette.visibleRegionOpacity
+    return color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance).withAlphaComponent(values[appearance])
     }
   }
 
-  /// The outline of the visible area in the overview bar.
-  public var visibleRegionOutline: NSColor {
-    color { appearance, nsAppearance in
-      NSColor.labelColor.resolved(in: nsAppearance)
-        .withAlphaComponent(Palette.visibleRegionOutlineOpacity[appearance])
+  /// The outline of the frame of the overview bar that shows the visible part of the text,
+  /// stronger while it is `emphasized` under the pointer or dragged.
+  public func visibleRegionOutline(emphasized: Bool) -> NSColor {
+    let values =
+      emphasized
+      ? Palette.emphasizedVisibleRegionOutlineOpacity : Palette.visibleRegionOutlineOpacity
+    return color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance).withAlphaComponent(values[appearance])
     }
   }
 
-  /// The color of the mark of a block of `style` in the overview bar: the symbol value of the
-  /// side whose text the rows hold, a neutral tone for text typed by hand.
+  /// The color of the mark of a block of `style` in the overview bar: the color of the side
+  /// whose text the rows hold, a neutral tone for text typed by hand, each toned down toward the
+  /// tint of the rows; only an open conflict keeps the full symbol value, so that it alone
+  /// stands out in the bar.
   public func overviewMarkColor(for style: BlockStyle) -> NSColor {
+    let full = fullOverviewMarkColor(for: style)
+    guard style != .tinted(.conflict) else { return full }
+    return color { appearance, nsAppearance in
+      full.resolved(in: nsAppearance).withAlphaComponent(
+        full.resolved(in: nsAppearance).alphaComponent * Palette.overviewMarkOpacity[appearance])
+    }
+  }
+
+  private func fullOverviewMarkColor(for style: BlockStyle) -> NSColor {
     switch style {
     case .tinted(let role): symbolColor(for: role)
     case .original: symbolColor(for: .base)

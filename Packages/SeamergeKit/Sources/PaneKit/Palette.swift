@@ -175,13 +175,33 @@ enum Palette {
   static let overviewBackgroundOpacity = AppearanceValues<CGFloat>(
     light: 0.03, dark: 0.04, lightHighContrast: 0.05, darkHighContrast: 0.06)
 
-  /// The opacity of the label color in the area of the overview bar that shows the visible part.
+  /// The opacity of the label color that fills the frame of the visible part in the overview
+  /// bar: light enough that the marks below it keep their colors.
   static let visibleRegionOpacity = AppearanceValues<CGFloat>(
-    light: 0.10, dark: 0.14, lightHighContrast: 0.12, darkHighContrast: 0.18)
+    light: 0.08, dark: 0.10, lightHighContrast: 0.10, darkHighContrast: 0.12)
 
-  /// The opacity of the label color for the outline of the visible area in the overview bar.
+  /// The opacity of the label color that fills the frame of the visible part while the pointer
+  /// is over the bar or drags it.
+  static let emphasizedVisibleRegionOpacity = AppearanceValues<CGFloat>(
+    light: 0.14, dark: 0.16, lightHighContrast: 0.16, darkHighContrast: 0.20)
+
+  /// The opacity of the label color for the outline of the frame of the visible part: at least
+  /// 3:1 against the bar.
   static let visibleRegionOutlineOpacity = AppearanceValues<CGFloat>(
-    light: 0.18, dark: 0.22, lightHighContrast: 0.50, darkHighContrast: 0.55)
+    light: 0.5, dark: 0.45, lightHighContrast: 0.65, darkHighContrast: 0.6)
+
+  /// The opacity of the label color for the outline of the frame of the visible part while the
+  /// pointer is over the bar or drags it.
+  static let emphasizedVisibleRegionOutlineOpacity = AppearanceValues<CGFloat>(
+    light: 0.65, dark: 0.6, lightHighContrast: 0.8, darkHighContrast: 0.75)
+
+  /// The opacity of the marks of the overview bar but those of open conflicts.
+  ///
+  /// It lies between the tint of the rows and the symbol value, so that only open conflicts
+  /// stand out in the bar. The marks repeat what the rows show beside them; some fall below 3:1
+  /// on the bar.
+  static let overviewMarkOpacity = AppearanceValues<CGFloat>(
+    light: 0.7, dark: 0.7, lightHighContrast: 0.85, darkHighContrast: 0.85)
 
   /// The opacity of the label color behind the bar of a collapsed run.
   static let collapsedRunOpacity = AppearanceValues<CGFloat>(

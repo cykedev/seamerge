@@ -1,6 +1,7 @@
 import AppKit
-import PaneKit
 import Testing
+
+@testable import PaneKit
 
 /// Checks what the overview bar shows beside a pane and how it scrolls the pane.
 @MainActor
@@ -26,9 +27,13 @@ import Testing
     let slot = bar.rect(for: .knobSlot)
     let y = slot.minY + 54_321.5 / 100_000 * slot.height
     let bitmap = try Rendering.bitmap(of: pane)
-    let mark = try #require(
-      Contrast.resolve(theme.overviewMarkColor(for: .tinted(.a)), in: appearance))
+    let ground = try Rendering.color(
+      in: bitmap, at: CGPoint(x: bar.frame.minX + 4, y: slot.maxY - 2))
+    let mark = Contrast.over(
+      Contrast.resolve(theme.overviewMarkColor(for: .tinted(.a)), in: appearance), ground)
     try expect(in: bitmap, at: CGPoint(x: bar.frame.minX + 4, y: y), is: mark)
+    // The frame of the visible part is tall enough to grab, however long the text.
+    #expect(bar.rect(for: .knob).height >= 20)
 
     let elements = try #require(bar.accessibilityChildren() as? [NSAccessibilityElement])
     try #require(elements.count == 1)
@@ -59,13 +64,13 @@ import Testing
     defer { window.close() }
     #expect(!bar.isEnabled)
     let bitmap = try Rendering.bitmap(of: pane)
-    let mark = try #require(
-      Contrast.resolve(theme.overviewMarkColor(for: .tinted(.a)), in: appearance))
     let x = bar.frame.minX + 4
+    let ground = try Rendering.color(in: bitmap, at: CGPoint(x: x, y: 500))
+    let mark = Contrast.over(
+      Contrast.resolve(theme.overviewMarkColor(for: .tinted(.a)), in: appearance), ground)
     let row = 3.5 * theme.rowHeight
     try expect(in: bitmap, at: CGPoint(x: x, y: row), is: mark)
     // Stretched over the whole bar, the mark would stand at a third of its height instead.
-    let ground = try Rendering.color(in: bitmap, at: CGPoint(x: x, y: 500))
     try expect(in: bitmap, at: CGPoint(x: x, y: 0.35 * 600), is: ground)
   }
 
@@ -76,13 +81,19 @@ import Testing
     let bitmap = try Rendering.bitmap(of: pane)
     let left = bar.frame.minX + 3
     let right = bar.frame.maxX - 3
-    let a = try #require(
-      Contrast.resolve(theme.overviewMarkColor(for: .tinted(.a)), in: appearance))
-    let b = try #require(
-      Contrast.resolve(theme.overviewMarkColor(for: .tinted(.b)), in: appearance))
-    let conflict = try #require(
-      Contrast.resolve(theme.overviewMarkColor(for: .tinted(.conflict)), in: appearance))
     let ground = try Rendering.color(in: bitmap, at: CGPoint(x: right, y: Self.y(of: 290, in: bar)))
+    let color = { (style: BlockStyle) in
+      Contrast.over(
+        Contrast.resolve(theme.overviewMarkColor(for: style), in: self.appearance), ground)
+    }
+    let (a, b, conflict) = (color(.tinted(.a)), color(.tinted(.b)), color(.tinted(.conflict)))
+    // Only an open conflict keeps the full symbol value; the other marks are toned down.
+    #expect(
+      Self.isClose(
+        conflict,
+        try #require(Contrast.resolve(theme.symbolColor(for: .conflict), in: appearance))))
+    #expect(
+      !Self.isClose(a, try #require(Contrast.resolve(theme.symbolColor(for: .a), in: appearance))))
     try expect(in: bitmap, at: CGPoint(x: left, y: Self.y(of: 130, in: bar)), is: a)
     try expect(in: bitmap, at: CGPoint(x: right, y: Self.y(of: 130, in: bar)), is: ground)
     try expect(in: bitmap, at: CGPoint(x: left, y: Self.y(of: 170, in: bar)), is: ground)
@@ -112,6 +123,90 @@ import Testing
     bar.currentBlock = 1
     let label = try #require(Contrast.resolve(.labelColor, in: appearance))
     try expect(in: try Rendering.bitmap(of: pane), at: pointer, is: Contrast.over(label, outside))
+  }
+
+  @Test func frameOfTheVisiblePartSpansTheBarAndGetsStrongerUnderThePointer() throws {
+    let theme = Theme()
+    let (pane, bar, window) = Self.paneWithBar(theme: theme, appearance: appearance)
+    defer { window.close() }
+    let knob = bar.convert(bar.rect(for: .knob), to: pane)
+    let ground = try Rendering.color(
+      in: Rendering.bitmap(of: pane), at: CGPoint(x: bar.frame.midX, y: Self.y(of: 290, in: bar)))
+    let resolve = { (color: NSColor) in Contrast.resolve(color, in: self.appearance) }
+    // The outline runs down both sides of the bar, outside the marks; on the leading side it
+    // lies over the fill of the frame.
+    let leading = CGPoint(x: bar.frame.minX + 1, y: knob.midY)
+    let trailing = CGPoint(x: bar.frame.maxX - 0.5, y: knob.midY)
+    func expectOutline(emphasized: Bool, sourceLocation: SourceLocation = #_sourceLocation) throws {
+      let bitmap = try Rendering.bitmap(of: pane)
+      let outline = resolve(theme.visibleRegionOutline(emphasized: emphasized))
+      let fill = Contrast.over(resolve(theme.visibleRegionFill(emphasized: emphasized)), ground)
+      try expect(
+        in: bitmap, at: leading, is: Contrast.over(outline, fill), sourceLocation: sourceLocation)
+      try expect(
+        in: bitmap, at: trailing, is: Contrast.over(outline, ground),
+        sourceLocation: sourceLocation)
+    }
+    try expectOutline(emphasized: false)
+    #expect(knob.height >= 20)
+
+    let entered = try #require(
+      NSEvent.enterExitEvent(
+        with: .mouseEntered, location: .zero, modifierFlags: [], timestamp: 0,
+        windowNumber: window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0,
+        userData: nil))
+    bar.mouseEntered(with: entered)
+    try expectOutline(emphasized: true)
+    bar.mouseExited(with: entered)
+    try expectOutline(emphasized: false)
+  }
+
+  @Test func scrollingDrawsOnlyTheStripeOfTheFrameAgain() throws {
+    let (pane, bar, window) = Self.paneWithBar(theme: Theme(), appearance: appearance)
+    defer { window.close() }
+    let before = bar.rect(for: .knob)
+    let invalid = Invalidations.recording {
+      pane.documentView.scroll(CGPoint(x: 0, y: 3 * pane.theme.rowHeight))
+    }
+    let after = bar.rect(for: .knob)
+    #expect(after.minY > before.minY)
+    let union = invalid.reduce(CGRect.null) { $0.union($1) }
+    // The stripe of the frame, where it was and where it is, across the whole width of the bar,
+    // and nothing far from it.
+    let stripes = CGRect(
+      x: 0, y: before.minY, width: bar.bounds.width, height: after.maxY - before.minY)
+    #expect(union.contains(stripes), "\(invalid)")
+    #expect(union.minY >= before.minY - 2 && union.maxY <= after.maxY + 2, "\(invalid)")
+  }
+
+  /// The tracking loop of the scroller cannot run in the test process, as it lets other tests
+  /// run on the main queue; the test takes up where the loop ends, at the release.
+  @Test func frameIsQuietAgainAfterADragThatEndsOutsideTheBar() throws {
+    let theme = Theme()
+    let (pane, bar, window) = Self.paneWithBar(theme: theme, appearance: appearance)
+    defer { window.close() }
+    let resolve = { (color: NSColor) in Contrast.resolve(color, in: self.appearance) }
+    let knob = bar.convert(bar.rect(for: .knob), to: pane)
+    let trailing = CGPoint(x: bar.frame.maxX - 0.5, y: knob.midY)
+    let ground = try Rendering.color(
+      in: Rendering.bitmap(of: pane), at: CGPoint(x: bar.frame.midX, y: Self.y(of: 290, in: bar)))
+    func outline(emphasized: Bool) -> NSColor {
+      Contrast.over(resolve(theme.visibleRegionOutline(emphasized: emphasized)), ground)
+    }
+    let entered = try #require(
+      NSEvent.enterExitEvent(
+        with: .mouseEntered, location: .zero, modifierFlags: [], timestamp: 0,
+        windowNumber: window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0,
+        userData: nil))
+    bar.mouseEntered(with: entered)
+
+    // Released over the bar: still under the pointer.
+    bar.endTracking(releasedAt: bar.convert(CGPoint(x: bar.bounds.midX, y: 40), to: nil))
+    try expect(in: try Rendering.bitmap(of: pane), at: trailing, is: outline(emphasized: true))
+
+    // Released over the text: quiet again, though no exit came.
+    bar.endTracking(releasedAt: pane.convert(CGPoint(x: 20, y: 40), to: nil))
+    try expect(in: try Rendering.bitmap(of: pane), at: trailing, is: outline(emphasized: false))
   }
 
   @Test func openConflictHasANotchWhenColorsAreNotToBeRelyOn() throws {
@@ -176,6 +271,42 @@ import Testing
   ) throws {
     let color = try Rendering.color(in: bitmap, at: point)
     #expect(Self.isClose(color, expected), "\(color) at \(point)", sourceLocation: sourceLocation)
+  }
+}
+
+/// Records the parts of overview bars that are marked to be drawn again.
+///
+/// AppKit offers no way to read the part of a view that waits to be drawn, so the method that
+/// marks it is extended for overview bars, once for the test process: it notes the part, then
+/// does what the scroller does.
+@MainActor
+private enum Invalidations {
+  private static var rects: [CGRect]?
+  private static var isInstalled = false
+
+  /// The parts of overview bars marked while `body` runs, as a whole bar or as rectangles.
+  static func recording(_ body: () -> Void) -> [CGRect] {
+    install()
+    rects = []
+    body()
+    defer { rects = nil }
+    return rects ?? []
+  }
+
+  private static func install() {
+    guard !isInstalled else { return }
+    isInstalled = true
+    let selector = #selector(NSView.setNeedsDisplay(_:))
+    guard let inherited = class_getInstanceMethod(NSScroller.self, selector) else { return }
+    typealias Mark = @convention(c) (AnyObject, Selector, CGRect) -> Void
+    let mark = unsafeBitCast(method_getImplementation(inherited), to: Mark.self)
+    let noting: @convention(block) (AnyObject, CGRect) -> Void = { bar, rect in
+      MainActor.assumeIsolated { rects?.append(rect) }
+      mark(bar, selector, rect)
+    }
+    class_addMethod(
+      OverviewBar.self, selector, imp_implementationWithBlock(noting),
+      method_getTypeEncoding(inherited))
   }
 }
 

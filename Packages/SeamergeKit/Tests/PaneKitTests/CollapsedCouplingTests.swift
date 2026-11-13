@@ -30,8 +30,9 @@ import Testing
     let shownAt = slot.minY + 11.5 * theme.rowHeight
     let wouldBeAt = slot.minY + 90.5 / 100 * slot.height
     let bitmap = try Rendering.bitmap(of: pane)
-    let mark = try #require(
-      Contrast.resolve(theme.overviewMarkColor(for: .tinted(.a)), in: appearance))
+    let ground = try Rendering.color(in: bitmap, at: CGPoint(x: bar.frame.midX, y: slot.maxY - 2))
+    let mark = Contrast.over(
+      Contrast.resolve(theme.overviewMarkColor(for: .tinted(.a)), in: appearance), ground)
 
     #expect(
       Self.isClose(
