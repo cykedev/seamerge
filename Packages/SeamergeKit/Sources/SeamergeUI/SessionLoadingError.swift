@@ -21,7 +21,7 @@ public enum SessionLoadingError: LocalizedError, Equatable {
       switch error {
       case .binaryInput(let role): files[role].map { .binaryFile($0.url) } ?? .comparisonFailed
       case .inputTooLarge, .outOfMemory: .filesTooLarge
-      case .comparisonFailed: .comparisonFailed
+      case .comparisonFailed, .unrepresentableText, .writingFailed: .comparisonFailed
       }
   }
 

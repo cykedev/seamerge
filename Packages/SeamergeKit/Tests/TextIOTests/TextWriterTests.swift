@@ -54,6 +54,22 @@ struct TextWriterTests {
     }
   }
 
+  @Test func encodedBytesAreWrittenAsTheyAreAndKeepThePermissions() throws {
+    try withTemporaryDirectory { directory in
+      let url = directory.appending(path: "script.sh")
+      try Data("old\n".utf8).write(to: url)
+      try FileManager.default.setAttributes([.posixPermissions: 0o751], ofItemAtPath: url.path)
+      let writer = TextWriter(encoding: .utf8, writesByteOrderMark: true, lineEnding: .crlf)
+      let bytes = try writer.encode("new\n")
+
+      try writer.write(bytes, to: url)
+
+      let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+      #expect(attributes[.posixPermissions] as? Int == 0o751)
+      #expect(try Data(contentsOf: url) == Data([0xEF, 0xBB, 0xBF]) + Data("new\r\n".utf8))
+    }
+  }
+
   @Test func writingKeepsExtendedAttributes() throws {
     try withTemporaryDirectory { directory in
       let url = directory.appending(path: "tagged.txt")

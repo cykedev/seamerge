@@ -40,4 +40,22 @@ public enum FileEncoding: Sendable, Hashable, CaseIterable {
       case .macRoman: .macRoman
       }
   }
+
+  /// The encoding as TextIO describes it.
+  var textEncoding: TextEncoding {
+    switch self {
+    case .utf8: .utf8
+    case .utf16LittleEndian: .utf16LittleEndian
+    case .utf16BigEndian: .utf16BigEndian
+    case .utf32LittleEndian: .utf32LittleEndian
+    case .utf32BigEndian: .utf32BigEndian
+    case .windows1252: .windows1252
+    case .isoLatin1: .isoLatin1
+    case .macRoman: .macRoman
+    }
+  }
+
+  /// Whether a file in this encoding can start with a byte order mark; only the Unicode
+  /// encodings have one.
+  public var supportsByteOrderMark: Bool { textEncoding.supportsByteOrderMark }
 }

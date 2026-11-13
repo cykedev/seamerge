@@ -52,7 +52,16 @@ public struct TextWriter: Sendable {
   /// - Throws: ``TextIOError/unrepresentableText(_:)`` before anything is written, or the error of
   ///   the file system if the file cannot be written.
   public func write(_ text: String, to url: URL) throws {
-    let bytes = try encode(text)
+    try write(encode(text), to: url)
+  }
+
+  /// Writes `bytes`, the content of a file as ``encode(_:)`` gives it, to the file at `url`.
+  ///
+  /// The file is replaced atomically and keeps its permissions and other metadata, as with
+  /// text; a symbolic link is followed.
+  ///
+  /// - Throws: The error of the file system if the file cannot be written.
+  public func write(_ bytes: Data, to url: URL) throws {
     let destination = url.resolvingSymlinksInPath()
     let fileManager = FileManager.default
     guard fileManager.fileExists(atPath: destination.path(percentEncoded: false)) else {

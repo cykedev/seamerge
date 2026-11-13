@@ -64,6 +64,18 @@ public struct SourceFile: Sendable {
     decodedText.map { FileEncoding($0.encoding) }
   }
 
+  /// Whether the file starts with the byte order mark of its encoding; `false` for a binary
+  /// file.
+  public var hasByteOrderMark: Bool { decodedText?.hasByteOrderMark ?? false }
+
+  /// The line ending that ends most lines of the text, or `nil` if the file is binary or has
+  /// no line break.
+  ///
+  /// A tie goes to LF, then to CRLF, before CR.
+  public var predominantLineEnding: ResultFormat.LineEnding? {
+    decodedText?.lineEndingStyle.map { ResultFormat.LineEnding($0.predominantLineEnding) }
+  }
+
   /// How the lines of the text end, or `nil` if the file is binary or has no line break.
   public var lineEndings: LineEndings? {
     decodedText?.lineEndingStyle.map(LineEndings.init)

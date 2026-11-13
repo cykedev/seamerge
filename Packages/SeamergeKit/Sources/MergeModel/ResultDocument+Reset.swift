@@ -16,6 +16,12 @@ extension ResultDocument {
     segments.indices.contains(where: differsFromInitial)
   }
 
+  /// The number of blocks that differ from how they were after loading: the decisions that
+  /// closing without saving would discard.
+  public var decisionCount: Int {
+    segments.indices.count(where: differsFromInitial)
+  }
+
   /// The number of blocks whose segment holds text edited by hand, which resetting every block
   /// would discard.
   public var editedBlockCount: Int {
@@ -50,7 +56,7 @@ extension ResultDocument {
   }
 
   /// Whether the segment at `index` differs in its decision from how it was after loading.
-  private func differsFromInitial(_ index: Int) -> Bool {
+  func differsFromInitial(_ index: Int) -> Bool {
     !segments[index].hasSameDecision(as: initialSegments[index])
   }
 }
