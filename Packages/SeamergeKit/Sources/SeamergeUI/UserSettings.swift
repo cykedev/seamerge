@@ -92,6 +92,12 @@ public final class UserSettings {
     didSet { defaults.set(wrapsLines, forKey: Key.wrapsLines) }
   }
 
+  /// Whether a new comparison lines up the lines of its panes side by side, rather than showing
+  /// the lines of each file as they are and connecting their changes with bands.
+  public var alignsLines: Bool {
+    didSet { defaults.set(!alignsLines, forKey: Key.connectsChanges) }
+  }
+
   /// Whether a new window shows spaces, tabs and line endings.
   public var showsInvisibles: Bool {
     didSet { defaults.set(showsInvisibles, forKey: Key.showsInvisibles) }
@@ -160,6 +166,7 @@ public final class UserSettings {
     showsBase = !defaults.bool(forKey: Key.hidesBase)
     highlightsSyntax = !defaults.bool(forKey: Key.highlightsNoSyntax)
     wrapsLines = defaults.bool(forKey: Key.wrapsLines)
+    alignsLines = !defaults.bool(forKey: Key.connectsChanges)
     showsInvisibles = defaults.bool(forKey: Key.showsInvisibles)
     goesToNextConflict = !defaults.bool(forKey: Key.staysOnDecidedConflict)
     showsFooter = !defaults.bool(forKey: Key.hidesFooter)
@@ -222,6 +229,7 @@ public final class UserSettings {
     static let hidesBase = "HidesBase"
     static let highlightsNoSyntax = "HighlightsNoSyntax"
     static let wrapsLines = "WrapsLines"
+    static let connectsChanges = "ConnectsChanges"
     static let showsInvisibles = "ShowsInvisibles"
     static let staysOnDecidedConflict = "StaysOnDecidedConflict"
     static let hidesFooter = "HidesFooter"

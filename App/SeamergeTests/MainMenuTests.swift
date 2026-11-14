@@ -185,6 +185,7 @@ import Testing
       Maximize Result ⌥⌘R
       ---
       Synchronize Scrolling ⌥⌘Y
+      Align Lines ⌥⌘A
       Highlight Syntax
       Syntax ▸
         Automatic

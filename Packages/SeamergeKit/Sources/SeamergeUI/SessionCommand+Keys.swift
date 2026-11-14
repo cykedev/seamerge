@@ -31,6 +31,7 @@ extension SessionCommand {
     case .toggleResultMaximized: return ("r", [.option, .command])
     case .toggleScrollSynchronization: return ("y", [.option, .command])
     case .toggleLineWrapping: return ("l", [.option, .command])
+    case .toggleLineAlignment: return ("a", [.option, .command])
     case .showAllLines: return ("l", [.shift, .command])
     case .collapseUnchangedLines: return ("l", [.option, .shift, .command])
     case .toggleFooter: return ("/", [.command])

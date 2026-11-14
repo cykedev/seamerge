@@ -39,6 +39,15 @@ extension SessionWindowController {
     updateFooter()
   }
 
+  /// Lines up the lines of the panes side by side, or connects their changes with bands; only
+  /// in a comparison of two files.
+  @objc func toggleLineAlignment(_ sender: Any?) {
+    guard canPerform(.toggleLineAlignment) else { return }
+    presentation.setAlignsLines(!presentation.alignsLines)
+    updateMinimumSize()
+    updateFooter()
+  }
+
   /// Shows spaces, tabs and line endings as quiet symbols, or hides them.
   @objc func toggleInvisibles(_ sender: Any?) {
     let showsInvisibles = !isSwitchedOn(.toggleInvisibles)

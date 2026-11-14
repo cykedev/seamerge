@@ -48,6 +48,7 @@ extension SessionWindowController {
     case .invisibles: isSwitchedOn(.toggleInvisibles) ? .on : .off
     case .lineWrapping: isSwitchedOn(.toggleLineWrapping) ? .on : .off
     case .scrollSynchronization: isSwitchedOn(.toggleScrollSynchronization) ? .on : .off
+    case .lineAlignment: isSwitchedOn(.toggleLineAlignment) ? .on : .off
     case .base: layout.showsBase ? .on : .off
     case .collapsedLines:
       switch (canPerform(.showAllLines), canPerform(.collapseUnchangedLines)) {

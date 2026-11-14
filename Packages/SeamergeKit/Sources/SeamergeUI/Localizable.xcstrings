@@ -1,37 +1,63 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "%@ (%@)": {
-      "comment": "Help tag of a file in the sidebar: its path and what happened, such as Sources/App.swift (Modified)."
+  "sourceLanguage" : "en",
+  "strings" : {
+    "“%@” can’t be saved in %@." : {
+      "comment" : "Sheet: the result holds characters the encoding lacks, such as in ISO 8859-1.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "“%1$@” can’t be saved in %2$@."
+          }
+        }
+      }
     },
-    "%@ The file is unchanged, and the window keeps your work.": {
-      "comment": "Sheet after saving failed: the reason, then what still holds."
+    "“%@” is a binary file." : {
+      "comment" : "Merge of a file that is not text, such as “logo.png” is a binary file."
     },
-    "%@ added as %@": {
-      "comment": "VoiceOver: a file was put in a field, such as LoginView.swift added as Base."
+    "“%@” isn’t a text file." : {
+      "comment" : "Alert: a file of a merge or comparison is binary."
     },
-    "%@ added as %@)": {
-      "comment": "VoiceOver: a file was put in a field, such as LoginView.swift added as Base."
+    "“%@” isn’t a text file. Open it in the app that made it." : {
+      "comment" : "Comparison window: a file is binary, and what to do."
     },
-    "%@ and %@": {
-      "comment": "Two sides that share a toggle, such as feature/login and main."
+    "“%@” was changed by another app." : {
+      "comment" : "Sheet: another app changed the file the result is saved to."
     },
-    "%@ changed on disk. Reloading discards %lld decisions.": {
-      "comment": "Sheet before reloading a changed file, with the name of its side, such as main changed on disk. Reloading discards 3 decisions.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%@ changed on disk. Reloading discards %lld decision."
+    "%@ · %@" : {
+      "comment" : "The name of a commit followed by its branch, such as 1a2b3c4 Fix typo · main."
+    },
+    "%@ (%@)" : {
+      "comment" : "Help tag of a file in the sidebar: its path and what happened, such as Sources/App.swift (Modified)."
+    },
+    "%@ ↔ %@" : {
+      "comment" : "The names of the left and the right file of a comparison, in a title or list."
+    },
+    "%@ ↔ %@ ↔ %@" : {
+      "comment" : "A recent merge: the names of A, the base and B."
+    },
+    "%@ added as %@" : {
+      "comment" : "VoiceOver: a file was put in a field, such as LoginView.swift added as Base."
+    },
+    "%@ and %@" : {
+      "comment" : "Two sides that share a toggle, such as feature/login and main."
+    },
+    "%@ changed on disk. Reloading discards %lld decisions." : {
+      "comment" : "Sheet before reloading a changed file, with the name of its side, such as main changed on disk. Reloading discards 3 decisions.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@ changed on disk. Reloading discards %lld decision."
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%@ changed on disk. Reloading discards %lld decisions."
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@ changed on disk. Reloading discards %lld decisions."
                 }
               }
             }
@@ -39,66 +65,60 @@
         }
       }
     },
-    "%@ for merge and %@ for diff": {
-      "comment": "Set Up Git Integration: two replaced tools, such as Kaleidoscope for merge…"
+    "%@ for merge and %@ for diff" : {
+      "comment" : "Set Up Git Integration: two replaced tools, such as Kaleidoscope for merge…"
     },
-    "%@ mixes line endings. The result is written with %@ throughout.": {
-      "comment": "Notice below the result header: B ends its lines in more than one way, such as main mixes line endings. The result is written with LF throughout.",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@ mixes line endings. The result is written with %2$@ throughout."
+    "%@ mixes line endings. The result is written with %@ throughout." : {
+      "comment" : "Notice below the result header: B ends its lines in more than one way, such as main mixes line endings. The result is written with LF throughout.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ mixes line endings. The result is written with %2$@ throughout."
           }
         }
       }
     },
-    "%@ removed from %@": {
-      "comment": "VoiceOver: a field was emptied, such as LoginView.swift removed from Left."
+    "%@ removed from %@" : {
+      "comment" : "VoiceOver: a field was emptied, such as LoginView.swift removed from Left."
     },
-    "%@ removed these lines": {
-      "comment": "Preview of a conflict in place of the lines a side removed, such as main."
+    "%@ removed these lines" : {
+      "comment" : "Preview of a conflict in place of the lines a side removed, such as main."
     },
-    "%@ · %@": {
-      "comment": "The name of a commit followed by its branch, such as 1a2b3c4 Fix typo · main."
+    "%@ The file is unchanged, and the window keeps your work." : {
+      "comment" : "Sheet after saving failed: the reason, then what still holds."
     },
-    "%@ ↔ %@": {
-      "comment": "The names of the left and the right file of a comparison, in a title or list."
+    "%@, %@" : {
+      "comment" : "VoiceOver: a pane, such as A, feature/login."
     },
-    "%@ ↔ %@ ↔ %@": {
-      "comment": "A recent merge: the names of A, the base and B."
+    "%@, %@, %@" : {
+      "comment" : "VoiceOver: a pane with its name and role in the order the header shows them, such as A, feature/login, incoming or A, your commit, 1a2b3c4 Fix typo."
     },
-    "%@, %@": {
-      "comment": "VoiceOver: a pane, such as A, feature/login."
+    "%@, in %@" : {
+      "comment" : "VoiceOver: the file in a field, such as LoginView.swift, in ~/Projects/app."
     },
-    "%@, %@, %@": {
-      "comment": "VoiceOver: a pane with its name and role in the order the header shows them, such as A, feature/login, incoming or A, your commit, 1a2b3c4 Fix typo."
+    "%@, line %lld" : {
+      "comment" : "VoiceOver: a mark in the overview bar of the result, such as From A, line 12."
     },
-    "%@, in %@": {
-      "comment": "VoiceOver: the file in a field, such as LoginView.swift, in ~/Projects/app."
+    "%@. %@" : {
+      "comment" : "VoiceOver after a decision, such as Chosen: B. 2 Conflicts Left."
     },
-    "%@, line %lld": {
-      "comment": "VoiceOver: a mark in the overview bar of the result, such as From A, line 12."
-    },
-    "%@. %@": {
-      "comment": "VoiceOver after a decision, such as Chosen: B. 2 Conflicts Left."
-    },
-    "%lld Changes": {
-      "comment": "Toolbar: the changes of a comparison while none is current, such as 12 Changes.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Change"
+    "%lld Changes" : {
+      "comment" : "Toolbar: the changes of a comparison while none is current, such as 12 Changes.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Change"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Changes"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Changes"
                 }
               }
             }
@@ -106,22 +126,22 @@
         }
       }
     },
-    "%lld Conflicts Left": {
-      "comment": "Toolbar: how many conflicts are still open, such as 2 Conflicts Left.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Conflict Left"
+    "%lld changes from A" : {
+      "comment" : "Subtitle: the changes of the incoming side, such as 3 changes from A.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld change from A"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Conflicts Left"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld changes from A"
                 }
               }
             }
@@ -129,22 +149,22 @@
         }
       }
     },
-    "%lld changes from A": {
-      "comment": "Subtitle: the changes of the incoming side, such as 3 changes from A.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld change from A"
+    "%lld conflicts are still open. %@" : {
+      "comment" : "Sheet before closing a merge that a command waits for, such as 2 conflicts are still open. If you don’t save…",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld conflict is still open. %@"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld changes from A"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld conflicts are still open. %@"
                 }
               }
             }
@@ -152,22 +172,22 @@
         }
       }
     },
-    "%lld conflicts are still open. %@": {
-      "comment": "Sheet before closing a merge that a command waits for, such as 2 conflicts are still open. If you don’t save…",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld conflict is still open. %@"
+    "%lld Conflicts Left" : {
+      "comment" : "Toolbar: how many conflicts are still open, such as 2 Conflicts Left.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Conflict Left"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld conflicts are still open. %@"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Conflicts Left"
                 }
               }
             }
@@ -175,25 +195,25 @@
         }
       }
     },
-    "%lld from B": {
-      "comment": "Subtitle: the changes of the own side after those of A, such as 5 from B."
+    "%lld from B" : {
+      "comment" : "Subtitle: the changes of the own side after those of A, such as 5 from B."
     },
-    "%lld more files with conflicts": {
-      "comment": "Subtitle: how many other files of the operation still have conflicts.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld more file with conflicts"
+    "%lld more files with conflicts" : {
+      "comment" : "Subtitle: how many other files of the operation still have conflicts.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld more file with conflicts"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld more files with conflicts"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld more files with conflicts"
                 }
               }
             }
@@ -201,112 +221,121 @@
         }
       }
     },
-    "%lld pt": {
-      "comment": "Settings: the size of the code, such as 13 pt."
+    "%lld pt" : {
+      "comment" : "Settings: the size of the code, such as 13 pt."
     },
-    "%lld spaces": {
-      "comment": "Settings: the width of a tab, such as 4 spaces."
+    "%lld spaces" : {
+      "comment" : "Settings: the width of a tab, such as 4 spaces."
     },
-    "A": {
-      "comment": "The badge of the incoming side."
+    "✓ Added to Tower" : {
+      "comment" : "Set Up Git Integration: Tower lists the app already."
     },
-    "Actual Size": {
-      "comment": "View menu command."
+    "✓ Git uses Seamerge for diff." : {
+      "comment" : "Compare Files: the line about Git when it uses the app for diffs only."
     },
-    "Add Seamerge to Tower": {
-      "comment": "Set Up Git Integration: the box that adds the app to Tower's tools."
+    "✓ Git uses Seamerge for merge and diff" : {
+      "comment" : "Compare Files: the line about Git when it uses the app for both."
     },
-    "Add to Tower": {
-      "comment": "Set Up Git Integration: the button that adds the app to Tower's tools."
+    "✓ Git uses Seamerge for merge." : {
+      "comment" : "Compare Files: the line about Git when it uses the app for merges only."
     },
-    "Adds Seamerge to the list of tools in Tower’s settings and creates a script for it. The other tools stay.": {
-      "comment": "Set Up Git Integration: what adding to Tower adds when it lists other tools."
+    "A" : {
+      "comment" : "The badge of the incoming side."
     },
-    "After Use A, Use B and the like on an open conflict.": {
-      "comment": "Settings: when the window goes on to the next conflict."
+    "Actual Size" : {
+      "comment" : "View menu command."
     },
-    "All %lld files received": {
-      "comment": "VoiceOver: every file of a run has come, such as All 40 files received."
+    "Add Seamerge to Tower" : {
+      "comment" : "Set Up Git Integration: the box that adds the app to Tower's tools."
     },
-    "All Conflicts Resolved": {
-      "comment": "Toolbar: every conflict is resolved."
+    "Add to Tower" : {
+      "comment" : "Set Up Git Integration: the button that adds the app to Tower's tools."
     },
-    "All whitespace ignored": {
-      "comment": "Subtitle: the comparison ignores spaces and tabs entirely."
+    "Adds Seamerge to the list of tools in Tower’s settings and creates a script for it. The other tools stay." : {
+      "comment" : "Set Up Git Integration: what adding to Tower adds when it lists other tools."
     },
-    "Also Use %@": {
-      "comment": "Context menu of a changed block of a side: add its lines after those taken."
+    "After Use A, Use B and the like on an open conflict." : {
+      "comment" : "Settings: when the window goes on to the next conflict."
     },
-    "Author": {
-      "comment": "Details of a side: the author of the commit."
+    "Align Lines" : {
+      "comment" : "View menu command, checked while matching lines of the panes stand side by side."
     },
-    "Automatic": {
-      "comment": "Syntax menu: color the code as the language recognized from the file."
+    "All %lld files received" : {
+      "comment" : "VoiceOver: every file of a run has come, such as All 40 files received."
     },
-    "Automatic (%@)": {
-      "comment": "Syntax menu: color the code as the language recognized from the file, which is named in parentheses, such as Automatic (Swift)."
+    "All Conflicts Resolved" : {
+      "comment" : "Toolbar: every conflict is resolved."
     },
-    "B": {
-      "comment": "The badge of the own side."
+    "All whitespace ignored" : {
+      "comment" : "Subtitle: the comparison ignores spaces and tabs entirely."
     },
-    "Base": {
-      "comment": "The badge of the common ancestor."
+    "Also Use %@" : {
+      "comment" : "Context menu of a changed block of a side: add its lines after those taken."
     },
-    "Base (Optional)": {
-      "comment": "Compare Files: the role of the middle field, which may stay empty."
+    "Author" : {
+      "comment" : "Details of a side: the author of the commit."
     },
-    "Base, optional": {
-      "comment": "VoiceOver: the role of the empty middle field of Compare Files."
+    "Automatic" : {
+      "comment" : "Syntax menu: color the code as the language recognized from the file."
     },
-    "CR": {
-      "comment": "Line endings: carriage return."
+    "Automatic (%@)" : {
+      "comment" : "Syntax menu: color the code as the language recognized from the file, which is named in parentheses, such as Automatic (Swift)."
     },
-    "CRLF": {
-      "comment": "Line endings: CR LF."
+    "B" : {
+      "comment" : "The badge of the own side."
     },
-    "Cancel": {
-      "comment": "Button: close the sheet and do nothing."
+    "Base" : {
+      "comment" : "The badge of the common ancestor."
     },
-    "Change": {
-      "comment": "Sheet Change Files: the default button, which shows the files in the window."
+    "Base (Optional)" : {
+      "comment" : "Compare Files: the role of the middle field, which may stay empty."
     },
-    "Change %lld of %lld": {
-      "comment": "Toolbar: the current change of a comparison, such as Change 4 of 12."
+    "Base, optional" : {
+      "comment" : "VoiceOver: the role of the empty middle field of Compare Files."
     },
-    "Change Comparison": {
-      "comment": "Undo menu: the switch to another comparison mode or merge strategy."
+    "Cancel" : {
+      "comment" : "Button: close the sheet and do nothing."
     },
-    "Change Encoding": {
-      "comment": "Undo menu: the encoding of the result was changed."
+    "Change" : {
+      "comment" : "Sheet Change Files: the default button, which shows the files in the window."
     },
-    "Change Files…": {
-      "comment": "File menu: choose other files for the roles of the window."
+    "Change %lld of %lld" : {
+      "comment" : "Toolbar: the current change of a comparison, such as Change 4 of 12."
     },
-    "Change Line Endings": {
-      "comment": "Undo menu: the line endings of the result were changed."
+    "Change Comparison" : {
+      "comment" : "Undo menu: the switch to another comparison mode or merge strategy."
     },
-    "Change in %@, line %lld": {
-      "comment": "VoiceOver: a mark in the overview bar, such as Change in A, line 12."
+    "Change Encoding" : {
+      "comment" : "Undo menu: the encoding of the result was changed."
     },
-    "Changes": {
-      "comment": "Toolbar items: the current change and the buttons that go through the changes."
+    "Change Files…" : {
+      "comment" : "File menu: choose other files for the roles of the window."
     },
-    "Changing the files discards %lld decisions.": {
-      "comment": "Sheet before showing other files in a window, such as discards 3 decisions.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Changing the files discards %lld decision."
+    "Change in %@, line %lld" : {
+      "comment" : "VoiceOver: a mark in the overview bar, such as Change in A, line 12."
+    },
+    "Change Line Endings" : {
+      "comment" : "Undo menu: the line endings of the result were changed."
+    },
+    "Changes" : {
+      "comment" : "Toolbar items: the current change and the buttons that go through the changes."
+    },
+    "Changing the files discards %lld decisions." : {
+      "comment" : "Sheet before showing other files in a window, such as discards 3 decisions.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Changing the files discards %lld decision."
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Changing the files discards %lld decisions."
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Changing the files discards %lld decisions."
                 }
               }
             }
@@ -314,67 +343,70 @@
         }
       }
     },
-    "Check that the file exists and that you may read it, then try again.": {
-      "comment": "Alert: what to do when a file cannot be read."
+    "Check that the file exists and that you may read it, then try again." : {
+      "comment" : "Alert: what to do when a file cannot be read."
     },
-    "Choose": {
-      "comment": "The button of the open panel of a field."
+    "cherry-picked commit" : {
+      "comment" : "Role: the commit being cherry-picked."
     },
-    "Choose a file, or drop one here": {
-      "comment": "VoiceOver hint of a field of Compare Files."
+    "Choose" : {
+      "comment" : "The button of the open panel of a field."
     },
-    "Choose how lines are compared": {
-      "comment": "Help tag of the choice of the comparison mode in the toolbar and the footer."
+    "Choose a file, or drop one here" : {
+      "comment" : "VoiceOver hint of a field of Compare Files."
     },
-    "Choose how the lines of the result end": {
-      "comment": "Help tag of the line endings in the result header."
+    "Choose how lines are compared" : {
+      "comment" : "Help tag of the choice of the comparison mode in the toolbar and the footer."
     },
-    "Choose the encoding the result is saved in": {
-      "comment": "Help tag of the encoding in the result header."
+    "Choose how the lines of the result end" : {
+      "comment" : "Help tag of the line endings in the result header."
     },
-    "Choose the file for %@.": {
-      "comment": "Open panel of a field of Compare Files, such as Choose the file for Left."
+    "Choose the encoding the result is saved in" : {
+      "comment" : "Help tag of the encoding in the result header."
     },
-    "Choose the language the code is colored as": {
-      "comment": "Help tag of the syntax pop-up button in the footer."
+    "Choose the file for %@." : {
+      "comment" : "Open panel of a field of Compare Files, such as Choose the file for Left."
     },
-    "Choose…": {
-      "comment": "Compare Files: the button in an empty field that opens the open panel."
+    "Choose the language the code is colored as" : {
+      "comment" : "Help tag of the syntax pop-up button in the footer."
     },
-    "Close and compare no more files of this run": {
-      "comment": "Help tag of File > Skip Remaining Files."
+    "Choose…" : {
+      "comment" : "Compare Files: the button in an empty field that opens the open panel."
     },
-    "Close the window to go on to the next file.": {
-      "comment": "Comparison window: closing it lets git difftool compare the next file."
+    "Close and compare no more files of this run" : {
+      "comment" : "Help tag of File > Skip Remaining Files."
     },
-    "Close without saving; the merge counts as not done": {
-      "comment": "Help tag of File > Leave Unresolved."
+    "Close the window to go on to the next file." : {
+      "comment" : "Comparison window: closing it lets git difftool compare the next file."
     },
-    "Collapse Unchanged Lines": {
-      "comment": "View menu command."
+    "Close without saving; the merge counts as not done" : {
+      "comment" : "Help tag of File > Leave Unresolved."
     },
-    "Collapse unchanged lines (none in this file)": {
-      "comment": "Help tag of the footer toggle of collapsed lines in a file without long runs."
+    "Collapse Unchanged Lines" : {
+      "comment" : "View menu command."
     },
-    "Collapsed": {
-      "comment": "VoiceOver: the footer toggle of collapsed lines while every run is collapsed."
+    "Collapse unchanged lines (none in this file)" : {
+      "comment" : "Help tag of the footer toggle of collapsed lines in a file without long runs."
     },
-    "Collapsed %lld unchanged lines": {
-      "comment": "VoiceOver: a run of unchanged lines was hidden again, such as 12.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Collapsed %lld unchanged line"
+    "Collapsed" : {
+      "comment" : "VoiceOver: the footer toggle of collapsed lines while every run is collapsed."
+    },
+    "Collapsed %lld unchanged lines" : {
+      "comment" : "VoiceOver: a run of unchanged lines was hidden again, such as 12.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Collapsed %lld unchanged line"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Collapsed %lld unchanged lines"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Collapsed %lld unchanged lines"
                 }
               }
             }
@@ -382,190 +414,199 @@
         }
       }
     },
-    "Commands": {
-      "comment": "VoiceOver: the commands of the setup in Set Up Git Integration."
+    "Commands" : {
+      "comment" : "VoiceOver: the commands of the setup in Set Up Git Integration."
     },
-    "Commit": {
-      "comment": "Details of a side: the commit."
+    "Commit" : {
+      "comment" : "Details of a side: the commit."
     },
-    "Compact": {
-      "comment": "Settings: lines close together."
+    "Compact" : {
+      "comment" : "Settings: lines close together."
     },
-    "Compare": {
-      "comment": "Compare Files: the default button with two files."
+    "Compare" : {
+      "comment" : "Compare Files: the default button with two files."
     },
-    "Compare %@ with %@": {
-      "comment": "VoiceOver: a recent comparison, with the names of the left and the right file."
+    "Compare %@ with %@" : {
+      "comment" : "VoiceOver: a recent comparison, with the names of the left and the right file."
     },
-    "Compare Files": {
-      "comment": "The title of the window that puts files together to compare or merge."
+    "Compare Files" : {
+      "comment" : "The title of the window that puts files together to compare or merge."
     },
-    "Compared exactly": {
-      "comment": "Subtitle: the comparison counts every byte, whitespace and line endings too."
+    "Compared exactly" : {
+      "comment" : "Subtitle: the comparison counts every byte, whitespace and line endings too."
     },
-    "Comparing…": {
-      "comment": "Toolbar: the files are being compared anew."
+    "Comparing…" : {
+      "comment" : "Toolbar: the files are being compared anew."
     },
-    "Comparison": {
-      "comment": "The choice of the comparison mode: a toolbar item and the pop-up button of the footer."
+    "Comparison" : {
+      "comment" : "The choice of the comparison mode: a toolbar item and the pop-up button of the footer."
     },
-    "Conflicts": {
-      "comment": "Toolbar items: the count of the open conflicts and the buttons that go through them."
+    "Conflicts" : {
+      "comment" : "Toolbar items: the count of the open conflicts and the buttons that go through them."
     },
-    "Copy": {
-      "comment": "Context menu: copy the selected text, or the block if nothing is selected."
+    "Connect changes with bands (only when comparing two files)" : {
+      "comment" : "Help tag of the footer toggle of aligned lines in a merge or a window without lines."
     },
-    "Copy Block": {
-      "comment": "Edit menu command: copy the lines of the current block."
+    "Copy" : {
+      "comment" : "Context menu: copy the selected text, or the block if nothing is selected.\nSet Up Git Integration: the button that copies the commands."
     },
-    "Copy Path": {
-      "comment": "Context menu of a header."
+    "Copy Block" : {
+      "comment" : "Edit menu command: copy the lines of the current block."
     },
-    "Copy the commands to paste them into Terminal": {
-      "comment": "Tooltip of the button Copy in Set Up Git Integration."
+    "Copy Path" : {
+      "comment" : "Context menu of a header."
     },
-    "Couldn’t Compare the Files Anew": {
-      "comment": "Sheet after switching the comparison failed."
+    "Copy the commands to paste them into Terminal" : {
+      "comment" : "Tooltip of the button Copy in Set Up Git Integration."
     },
-    "Couldn’t Save “%@”": {
-      "comment": "Sheet after saving failed."
+    "Couldn’t Compare the Files Anew" : {
+      "comment" : "Sheet after switching the comparison failed."
     },
-    "Count every difference, whitespace and line endings too": {
-      "comment": "Help tag of Compare > Exact."
+    "Couldn’t Save “%@”" : {
+      "comment" : "Sheet after saving failed."
     },
-    "Creates a list of tools and a script for Seamerge in Tower’s settings.": {
-      "comment": "Set Up Git Integration: what adding to Tower creates."
+    "Count every difference, whitespace and line endings too" : {
+      "comment" : "Help tag of Compare > Exact."
     },
-    "Cut": {
-      "comment": "Context menu: cut the selected text."
+    "CR" : {
+      "comment" : "Line endings: carriage return."
     },
-    "Date": {
-      "comment": "Details of a side: when the commit was made."
+    "Creates a list of tools and a script for Seamerge in Tower’s settings." : {
+      "comment" : "Set Up Git Integration: what adding to Tower creates."
     },
-    "Deleted": {
-      "comment": "A file in the sidebar that has no later side."
+    "CRLF" : {
+      "comment" : "Line endings: CR LF."
     },
-    "Deleted File": {
-      "comment": "Header of the missing later side of a comparison of a deleted file."
+    "Cut" : {
+      "comment" : "Context menu: cut the selected text."
     },
-    "Details about %@": {
-      "comment": "VoiceOver: the ⓘ of a header, such as Details about A, main."
+    "Date" : {
+      "comment" : "Details of a side: when the commit was made."
     },
-    "Differs from the encoding of the other files": {
-      "comment": "Help tag of the encoding in a header, shown only where it differs."
+    "Deleted" : {
+      "comment" : "A file in the sidebar that has no later side."
     },
-    "Differs from the line endings of the other files": {
-      "comment": "Help tag of the line endings in a header, shown only where they differ."
+    "Deleted File" : {
+      "comment" : "Header of the missing later side of a comparison of a deleted file."
     },
-    "Do you want to save the changes made to the document “%@”?": {
-      "comment": "Sheet before closing a merge of files with unsaved changes."
+    "Details about %@" : {
+      "comment" : "VoiceOver: the ⓘ of a header, such as Details about A, main."
     },
-    "Do you want to save the merge of “%@”?": {
-      "comment": "Sheet before closing a merge that a command waits for, with unsaved changes."
+    "Differs from the encoding of the other files" : {
+      "comment" : "Help tag of the encoding in a header, shown only where it differs."
     },
-    "Done": {
-      "comment": "Toolbar button: save and close."
+    "Differs from the line endings of the other files" : {
+      "comment" : "Help tag of the line endings in a header, shown only where they differ."
     },
-    "Don’t Save": {
-      "comment": "Button: close without saving."
+    "Do you want to save the changes made to the document “%@”?" : {
+      "comment" : "Sheet before closing a merge of files with unsaved changes."
     },
-    "Drop a File": {
-      "comment": "Compare Files: an empty field, which takes a file dragged onto it."
+    "Do you want to save the merge of “%@”?" : {
+      "comment" : "Sheet before closing a merge that a command waits for, with unsaved changes."
     },
-    "Drop to Swap": {
-      "comment": "Compare Files: below two fields while one is dragged onto the other."
+    "Don’t Save" : {
+      "comment" : "Button: close without saving."
     },
-    "Drop to Use as %@": {
-      "comment": "Compare Files: below a field that a drop would fill, such as Drop to Use as A."
+    "Done" : {
+      "comment" : "Toolbar button: save and close."
     },
-    "Each window starts like this. The switches in a window’s footer change only that window.": {
-      "comment": "Settings: note below the group of how a new window starts."
+    "Drop a File" : {
+      "comment" : "Compare Files: an empty field, which takes a file dragged onto it."
     },
-    "Earlier Version": {
-      "comment": "Role: the file before the change, shown when both sides have the same name."
+    "Drop to Swap" : {
+      "comment" : "Compare Files: below two fields while one is dragged onto the other."
     },
-    "Edited by hand": {
-      "comment": "VoiceOver: a part of the result that the user typed."
+    "Drop to Use as %@" : {
+      "comment" : "Compare Files: below a field that a drop would fill, such as Drop to Use as A."
     },
-    "Encoding": {
-      "comment": "Details of a side: UTF-8 and the like."
+    "Each window starts like this. The switches in a window’s footer change only that window." : {
+      "comment" : "Settings: note below the group of how a new window starts."
     },
-    "Every line shown": {
-      "comment": "VoiceOver: the footer toggle of collapsed lines while no run is collapsed."
+    "Earlier Version" : {
+      "comment" : "Role: the file before the change, shown when both sides have the same name."
     },
-    "Every window shows the change at once.": {
-      "comment": "Settings: note below the group of the code font."
+    "Edited by hand" : {
+      "comment" : "VoiceOver: a part of the result that the user typed."
     },
-    "Exact": {
-      "comment": "Compare menu: compare every byte."
+    "empty" : {
+      "comment" : "VoiceOver: a field without a file."
     },
-    "File": {
-      "comment": "Details of a side: where the file was read from."
+    "Encoding" : {
+      "comment" : "Details of a side: UTF-8 and the like."
     },
-    "File %lld of %lld": {
-      "comment": "Subtitle: which file of a git difftool run is compared, such as File 3 of 12."
+    "Every line shown" : {
+      "comment" : "VoiceOver: the footer toggle of collapsed lines while no run is collapsed."
     },
-    "Files": {
-      "comment": "VoiceOver: the list of the files in the sidebar of a window that compares several."
+    "Every window shows the change at once." : {
+      "comment" : "Settings: note below the group of the code font."
     },
-    "First Change": {
-      "comment": "Go menu command."
+    "Exact" : {
+      "comment" : "Compare menu: compare every byte."
     },
-    "Font": {
-      "comment": "Settings: the font of the code."
+    "File" : {
+      "comment" : "Details of a side: where the file was read from."
     },
-    "Footer": {
-      "comment": "VoiceOver: the footer with the comparison mode and the view toggles."
+    "File %lld of %lld" : {
+      "comment" : "Subtitle: which file of a git difftool run is compared, such as File 3 of 12."
     },
-    "From %@": {
-      "comment": "VoiceOver: a part of the result taken from one side, such as From A."
+    "Files" : {
+      "comment" : "VoiceOver: the list of the files in the sidebar of a window that compares several."
     },
-    "From %@ and %@": {
-      "comment": "VoiceOver: a part of the result taken from both sides, such as From A and B."
+    "First Change" : {
+      "comment" : "Go menu command."
     },
-    "From the base": {
-      "comment": "VoiceOver: a part of the result taken from the common ancestor."
+    "Font" : {
+      "comment" : "Settings: the font of the code."
     },
-    "Git Uses Seamerge for Merge and Diff": {
-      "comment": "Set Up Git Integration: the title once Git uses the app."
+    "Footer" : {
+      "comment" : "VoiceOver: the footer with the comparison mode and the view toggles."
     },
-    "Git couldn’t save the settings.": {
-      "comment": "Set Up Git Integration: writing Git's configuration failed."
+    "From %@" : {
+      "comment" : "VoiceOver: a part of the result taken from one side, such as From A."
     },
-    "Git doesn’t use Seamerge yet.": {
-      "comment": "Compare Files: the line about Git when it uses the app for neither."
+    "From %@ and %@" : {
+      "comment" : "VoiceOver: a part of the result taken from both sides, such as From A and B."
     },
-    "Git is no longer waiting for this merge.": {
-      "comment": "Notice below the result header after the Git command that asked has ended."
+    "From the base" : {
+      "comment" : "VoiceOver: a part of the result taken from the common ancestor."
     },
-    "Git isn’t installed.": {
-      "comment": "Set Up Git Integration: the reason of a failure when Git is missing."
+    "Git couldn’t save the settings." : {
+      "comment" : "Set Up Git Integration: writing Git's configuration failed."
     },
-    "Git isn’t installed. Install the Xcode Command Line Tools to use Seamerge with Git.": {
-      "comment": "Compare Files: the line about Git when Git is missing."
+    "Git doesn’t use Seamerge yet." : {
+      "comment" : "Compare Files: the line about Git when it uses the app for neither."
     },
-    "Git opens Seamerge when you run git mergetool or git difftool. This applies to all repositories that don’t set their own tool.": {
-      "comment": "Set Up Git Integration: what setting up does."
+    "Git is no longer waiting for this merge." : {
+      "comment" : "Notice below the result header after the Git command that asked has ended."
     },
-    "Git points to a copy of Seamerge that has moved.": {
-      "comment": "Compare Files: the line about Git when it uses another copy of the app."
+    "Git isn’t installed." : {
+      "comment" : "Set Up Git Integration: the reason of a failure when Git is missing."
     },
-    "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decisions in %lld blocks are lost.": {
-      "comment": "Sheet before leaving a merge unresolved: Git restores the file it had before the merge tool, such as in 3 blocks.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decision in %lld block is lost."
+    "Git isn’t installed. Install the Xcode Command Line Tools to use Seamerge with Git." : {
+      "comment" : "Compare Files: the line about Git when Git is missing."
+    },
+    "Git opens Seamerge when you run git mergetool or git difftool. This applies to all repositories that don’t set their own tool." : {
+      "comment" : "Set Up Git Integration: what setting up does."
+    },
+    "Git points to a copy of Seamerge that has moved." : {
+      "comment" : "Compare Files: the line about Git when it uses another copy of the app."
+    },
+    "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decisions in %lld blocks are lost." : {
+      "comment" : "Sheet before leaving a merge unresolved: Git restores the file it had before the merge tool, such as in 3 blocks.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decision in %lld block is lost."
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decisions in %lld blocks are lost."
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decisions in %lld blocks are lost."
                 }
               }
             }
@@ -573,514 +614,535 @@
         }
       }
     },
-    "Git runs Seamerge with a command of your own.": {
-      "comment": "Compare Files: the line about Git when the user changed the command of the app."
+    "Git runs Seamerge with a command of your own." : {
+      "comment" : "Compare Files: the line about Git when the user changed the command of the app."
     },
-    "Git uses an earlier setup of Seamerge. Set it up again to renew it.": {
-      "comment": "Compare Files: the line about Git when an earlier version set it up."
+    "Git uses an earlier setup of Seamerge. Set it up again to renew it." : {
+      "comment" : "Compare Files: the line about Git when an earlier version set it up."
     },
-    "Git will no longer ask before opening a tool or keep .orig backup files.": {
-      "comment": "Set Up Git Integration: both general switches change."
+    "Git Uses Seamerge for Merge and Diff" : {
+      "comment" : "Set Up Git Integration: the title once Git uses the app."
     },
-    "Git will no longer ask before opening a tool.": {
-      "comment": "Set Up Git Integration: Git stops asking before it opens a tool."
+    "Git will no longer ask before opening a tool or keep .orig backup files." : {
+      "comment" : "Set Up Git Integration: both general switches change."
     },
-    "Git will no longer keep .orig backup files.": {
-      "comment": "Set Up Git Integration: Git stops keeping backups of merged files."
+    "Git will no longer ask before opening a tool." : {
+      "comment" : "Set Up Git Integration: Git stops asking before it opens a tool."
     },
-    "Go": {
-      "comment": "Button: jump to the line."
+    "Git will no longer keep .orig backup files." : {
+      "comment" : "Set Up Git Integration: Git stops keeping backups of merged files."
     },
-    "Go back to the change before this one": {
-      "comment": "Help tag of Previous Change."
+    "Go" : {
+      "comment" : "Button: jump to the line."
     },
-    "Go back to the open conflict before this one": {
-      "comment": "Help tag of Previous Conflict."
+    "Go back to the change before this one" : {
+      "comment" : "Help tag of Previous Change."
     },
-    "Go on to the change after this one": {
-      "comment": "Help tag of Next Change."
+    "Go back to the open conflict before this one" : {
+      "comment" : "Help tag of Previous Conflict."
     },
-    "Go on to the open conflict after this one": {
-      "comment": "Help tag of Next Conflict."
+    "Go on to the change after this one" : {
+      "comment" : "Help tag of Next Change."
     },
-    "Go to Line": {
-      "comment": "Title of the sheet of Go to Line."
+    "Go on to the open conflict after this one" : {
+      "comment" : "Help tag of Next Conflict."
     },
-    "Go to Line…": {
-      "comment": "Go menu command."
+    "Go to Line" : {
+      "comment" : "Title of the sheet of Go to Line."
     },
-    "Go to Next Conflict": {
-      "comment": "Button of the sheet before saving with open conflicts: do not save, go on."
+    "Go to Line…" : {
+      "comment" : "Go menu command."
     },
-    "Go to Next Conflict After Choosing": {
-      "comment": "Settings: whether Use A and the like go on to the next open conflict."
+    "Go to Next Conflict" : {
+      "comment" : "Button of the sheet before saving with open conflicts: do not save, go on."
     },
-    "Hide Base": {
-      "comment": "View menu command."
+    "Go to Next Conflict After Choosing" : {
+      "comment" : "Settings: whether Use A and the like go on to the next open conflict."
     },
-    "Hide Footer": {
-      "comment": "View menu command."
+    "Hide Base" : {
+      "comment" : "View menu command."
     },
-    "Hide Invisibles": {
-      "comment": "View menu command."
+    "Hide Footer" : {
+      "comment" : "View menu command."
     },
-    "Hide long runs of unchanged lines behind a bar": {
-      "comment": "Help tag of the footer toggle of collapsed lines while runs can collapse."
+    "Hide Invisibles" : {
+      "comment" : "View menu command."
     },
-    "Hide spaces, tabs and line endings": {
-      "comment": "Help tag of the footer toggle of invisibles while they are shown."
+    "Hide long runs of unchanged lines behind a bar" : {
+      "comment" : "Help tag of the footer toggle of collapsed lines while runs can collapse."
     },
-    "Hide the base and give A and B its room": {
-      "comment": "Help tag of the footer toggle of the base while the base is shown."
+    "Hide spaces, tabs and line endings" : {
+      "comment" : "Help tag of the footer toggle of invisibles while they are shown."
     },
-    "Highlight Syntax": {
-      "comment": "View menu command."
+    "Hide the base and give A and B its room" : {
+      "comment" : "Help tag of the footer toggle of the base while the base is shown."
     },
-    "ISO 8859-1": {
-      "comment": "Encoding: ISO Latin 1."
+    "Highlight Syntax" : {
+      "comment" : "View menu command."
     },
-    "If you don’t save, your decisions are lost and Git keeps the file unresolved.": {
-      "comment": "Sheet before closing a merge that Git waits for: what follows."
+    "If you don’t save, your decisions are lost and Git keeps the file unresolved." : {
+      "comment" : "Sheet before closing a merge that Git waits for: what follows."
     },
-    "If you don’t save, your decisions are lost.": {
-      "comment": "Sheet before closing a merge that a command other than Git waits for: what follows."
+    "If you don’t save, your decisions are lost." : {
+      "comment" : "Sheet before closing a merge that a command other than Git waits for: what follows."
     },
-    "Ignore All Whitespace": {
-      "comment": "Compare menu command."
+    "Ignore All Whitespace" : {
+      "comment" : "Compare menu command."
     },
-    "Ignore Line Endings": {
-      "comment": "Compare menu command."
+    "Ignore Line Endings" : {
+      "comment" : "Compare menu command."
     },
-    "Ignore Whitespace Changes": {
-      "comment": "Compare menu command."
+    "Ignore Whitespace Changes" : {
+      "comment" : "Compare menu command."
     },
-    "Invisibles": {
-      "comment": "VoiceOver: the footer toggle that shows spaces, tabs and line endings."
+    "incoming" : {
+      "comment" : "Role: the branch being merged in."
     },
-    "Keep My Version": {
-      "comment": "Button: keep the result of the window and ignore the change on disk."
+    "Invisibles" : {
+      "comment" : "VoiceOver: the footer toggle that shows spaces, tabs and line endings."
     },
-    "Keep your version to save over it later, or reload the file as it is now. You can undo reloading.": {
-      "comment": "Sheet: another app changed the result file; the choices."
+    "ISO 8859-1" : {
+      "comment" : "Encoding: ISO Latin 1."
     },
-    "LF": {
-      "comment": "Line endings: line feed."
+    "Keep My Version" : {
+      "comment" : "Button: keep the result of the window and ignore the change on disk."
     },
-    "Last Change": {
-      "comment": "Go menu command."
+    "Keep your version to save over it later, or reload the file as it is now. You can undo reloading." : {
+      "comment" : "Sheet: another app changed the result file; the choices."
     },
-    "Later Version": {
-      "comment": "Role: the file after the change, shown when both sides have the same name."
+    "Last Change" : {
+      "comment" : "Go menu command."
     },
-    "Leave Unresolved": {
-      "comment": "File menu: close a merge without saving it and report it as not done."
+    "Later Version" : {
+      "comment" : "Role: the file after the change, shown when both sides have the same name."
     },
-    "Leave “%@” unresolved?": {
-      "comment": "Sheet before leaving a merge unresolved that has decisions."
+    "Leave “%@” unresolved?" : {
+      "comment" : "Sheet before leaving a merge unresolved that has decisions."
     },
-    "Left": {
-      "comment": "Compare Files: the role of a field."
+    "Leave Unresolved" : {
+      "comment" : "File menu: close a merge without saving it and report it as not done."
     },
-    "Let each pane scroll on its own": {
-      "comment": "Help tag of the footer toggle of synchronized scrolling while it is on."
+    "Left" : {
+      "comment" : "Compare Files: the role of a field."
     },
-    "Let long lines run on beyond the edge": {
-      "comment": "Help tag of the footer toggle of line wrapping while lines wrap."
+    "Let each pane scroll on its own" : {
+      "comment" : "Help tag of the footer toggle of synchronized scrolling while it is on."
     },
-    "Line Endings": {
-      "comment": "Line endings: the label in the details of a side, LF, CRLF or CR, and the submenu of the File menu that chooses those of the result."
+    "Let long lines run on beyond the edge" : {
+      "comment" : "Help tag of the footer toggle of line wrapping while lines wrap."
     },
-    "Line Number": {
-      "comment": "Placeholder of the field of Go to Line."
+    "LF" : {
+      "comment" : "Line endings: line feed."
     },
-    "Line Spacing": {
-      "comment": "Settings: how far apart lines are."
+    "Line Endings" : {
+      "comment" : "Line endings: the label in the details of a side, LF, CRLF or CR, and the submenu of the File menu that chooses those of the result."
     },
-    "Line endings ignored": {
-      "comment": "Subtitle: the comparison treats LF, CRLF and CR as equal."
+    "Line endings ignored" : {
+      "comment" : "Subtitle: the comparison treats LF, CRLF and CR as equal."
     },
-    "Mac Roman": {
-      "comment": "Encoding."
+    "Line Number" : {
+      "comment" : "Placeholder of the field of Go to Line."
     },
-    "Maximize Result": {
-      "comment": "View menu command."
+    "Line Spacing" : {
+      "comment" : "Settings: how far apart lines are."
     },
-    "Merge": {
-      "comment": "Compare Files: the default button with three files."
+    "Line up matching lines side by side" : {
+      "comment" : "Help tag of the footer toggle of aligned lines while bands connect the changes."
     },
-    "Merge %@ and %@ with the base %@": {
-      "comment": "VoiceOver: a recent merge, with the names of A, B and the base."
+    "Mac Roman" : {
+      "comment" : "Encoding."
     },
-    "Merging": {
-      "comment": "Settings: heading of the merge group."
+    "Maximize Result" : {
+      "comment" : "View menu command."
     },
-    "Mixed": {
-      "comment": "Line endings: more than one kind."
+    "Merge" : {
+      "comment" : "Compare Files: the default button with three files."
     },
-    "Modified": {
-      "comment": "A file in the sidebar whose two sides differ."
+    "Merge %@ and %@ with the base %@" : {
+      "comment" : "VoiceOver: a recent merge, with the names of A, B and the base."
     },
-    "Move Seamerge to the Applications folder first.": {
-      "comment": "Set Up Git Integration: the app runs from a disk image or Downloads."
+    "Merging" : {
+      "comment" : "Settings: heading of the merge group."
     },
-    "New": {
-      "comment": "A file in the sidebar that has no earlier side."
+    "Mixed" : {
+      "comment" : "Line endings: more than one kind."
     },
-    "New File": {
-      "comment": "Header of the missing earlier side of a comparison of a new file."
+    "Modified" : {
+      "comment" : "A file in the sidebar whose two sides differ."
     },
-    "New Windows": {
-      "comment": "Settings: heading of the group of how a new window starts."
+    "Move Seamerge to the Applications folder first." : {
+      "comment" : "Set Up Git Integration: the app runs from a disk image or Downloads."
     },
-    "Next Change": {
-      "comment": "Go menu command."
+    "New" : {
+      "comment" : "A file in the sidebar that has no earlier side."
     },
-    "Next Conflict": {
-      "comment": "Go menu command."
+    "New File" : {
+      "comment" : "Header of the missing earlier side of a comparison of a new file."
     },
-    "Next File": {
-      "comment": "Go menu command."
+    "New Windows" : {
+      "comment" : "Settings: heading of the group of how a new window starts."
     },
-    "Next Pane": {
-      "comment": "Go menu command."
+    "Next Change" : {
+      "comment" : "Go menu command."
     },
-    "No Changes": {
-      "comment": "Toolbar: the two files are equal under the comparison mode."
+    "Next Conflict" : {
+      "comment" : "Go menu command."
     },
-    "No Conflicts": {
-      "comment": "Toolbar: the merge had no conflict."
+    "Next File" : {
+      "comment" : "Go menu command."
     },
-    "No changes": {
-      "comment": "Subtitle: neither side changed the base."
+    "Next Pane" : {
+      "comment" : "Go menu command."
     },
-    "Nothing taken": {
-      "comment": "VoiceOver: a part of the result that takes no lines."
+    "No changes" : {
+      "comment" : "Subtitle: neither side changed the base."
     },
-    "Off": {
-      "comment": "VoiceOver: a footer toggle that is off."
+    "No Changes" : {
+      "comment" : "Toolbar: the two files are equal under the comparison mode."
     },
-    "On": {
-      "comment": "VoiceOver: a footer toggle that is on."
+    "No Conflicts" : {
+      "comment" : "Toolbar: the merge had no conflict."
     },
-    "Open conflict, line %lld": {
-      "comment": "VoiceOver: the mark of an open conflict in the overview bar."
+    "Nothing taken" : {
+      "comment" : "VoiceOver: a part of the result that takes no lines."
     },
-    "Open conflicts are written as conflict markers.": {
-      "comment": "Sheet before saving with open conflicts outside Git."
+    "Off" : {
+      "comment" : "VoiceOver: a footer toggle that is off."
     },
-    "Open conflicts are written as conflict markers. Git then treats the file as resolved.": {
-      "comment": "Sheet before saving with open conflicts that Git waits for."
+    "On" : {
+      "comment" : "VoiceOver: a footer toggle that is on."
     },
-    "Open in Editor": {
-      "comment": "File menu command."
+    "Open conflict, line %lld" : {
+      "comment" : "VoiceOver: the mark of an open conflict in the overview bar."
     },
-    "Paste": {
-      "comment": "Context menu: paste text."
+    "Open conflicts are written as conflict markers." : {
+      "comment" : "Sheet before saving with open conflicts outside Git."
     },
-    "Plain Text": {
-      "comment": "Syntax menu: color nothing; also the name of a file of no known language."
+    "Open conflicts are written as conflict markers. Git then treats the file as resolved." : {
+      "comment" : "Sheet before saving with open conflicts that Git waits for."
     },
-    "Previous Change": {
-      "comment": "Go menu command."
+    "Open in Editor" : {
+      "comment" : "File menu command."
     },
-    "Previous Conflict": {
-      "comment": "Go menu command."
+    "Paste" : {
+      "comment" : "Context menu: paste text."
     },
-    "Previous File": {
-      "comment": "Go menu command."
+    "Plain Text" : {
+      "comment" : "Syntax menu: color nothing; also the name of a file of no known language."
     },
-    "Previous Pane": {
-      "comment": "Go menu command."
+    "Previous and Next Change" : {
+      "comment" : "Toolbar item in the customization sheet."
     },
-    "Previous and Next Change": {
-      "comment": "Toolbar item in the customization sheet."
+    "Previous and Next Conflict" : {
+      "comment" : "Toolbar item in the customization sheet."
     },
-    "Previous and Next Conflict": {
-      "comment": "Toolbar item in the customization sheet."
+    "Previous Change" : {
+      "comment" : "Go menu command."
     },
-    "Quit other apps to free memory, then try again.": {
-      "comment": "Alert: what to do when the files of a session are too large."
+    "Previous Conflict" : {
+      "comment" : "Go menu command."
     },
-    "Rebase onto %@ · Commit %lld of %lld": {
-      "comment": "Subtitle: how far a rebase has come, such as Rebase onto main · Commit 3 of 7."
+    "Previous File" : {
+      "comment" : "Go menu command."
     },
-    "Receiving %lld of %lld…": {
-      "comment": "Sidebar: how many files of a run have come, such as Receiving 12 of 40…."
+    "Previous Pane" : {
+      "comment" : "Go menu command."
     },
-    "Receiving Files…": {
-      "comment": "Sidebar: files still come and it is not known how many."
+    "Quit other apps to free memory, then try again." : {
+      "comment" : "Alert: what to do when the files of a session are too large."
     },
-    "Recent": {
-      "comment": "Compare Files: the heading of the comparisons opened last."
+    "Rebase onto %@ · Commit %lld of %lld" : {
+      "comment" : "Subtitle: how far a rebase has come, such as Rebase onto main · Commit 3 of 7."
     },
-    "Reload": {
-      "comment": "Files that changed on disk: the button of a sheet that offers to show them as they are now, and the step of the Undo menu that did."
+    "rebase target" : {
+      "comment" : "Role: the commit a rebase moves the user's commits onto."
     },
-    "Remove": {
-      "comment": "Set Up Git Integration: the button that takes the setup back."
+    "Receiving %lld of %lld…" : {
+      "comment" : "Sidebar: how many files of a run have come, such as Receiving 12 of 40…."
     },
-    "Remove File": {
-      "comment": "Compare Files: the button that empties a field."
+    "Receiving Files…" : {
+      "comment" : "Sidebar: files still come and it is not known how many."
     },
-    "Remove these lines, as %@ did.": {
-      "comment": "Help tag of a toggle that removes the lines, such as Remove these lines, as main did."
+    "Recent" : {
+      "comment" : "Compare Files: the heading of the comparisons opened last."
     },
-    "Remove this file from the field": {
-      "comment": "Help tag of the button that empties a field of Compare Files."
+    "Reload" : {
+      "comment" : "Files that changed on disk: the button of a sheet that offers to show them as they are now, and the step of the Undo menu that did."
     },
-    "Removing also takes Seamerge out of Tower.": {
-      "comment": "Set Up Git Integration: removing changes Tower too."
+    "Remove" : {
+      "comment" : "Set Up Git Integration: the button that takes the setup back."
     },
-    "Removing leaves Git without a merge and diff tool.": {
-      "comment": "Set Up Git Integration: removing when Git had no tool before."
+    "Remove File" : {
+      "comment" : "Compare Files: the button that empties a field."
     },
-    "Removing restores: %@ for merge and %@ for diff.": {
-      "comment": "Set Up Git Integration: removing brings back two tools, such as Kaleidoscope."
+    "Remove these lines, as %@ did." : {
+      "comment" : "Help tag of a toggle that removes the lines, such as Remove these lines, as main did."
     },
-    "Removing takes Seamerge out of Git’s settings. Git’s general settings for tools stay as they are.": {
-      "comment": "Set Up Git Integration: what removing does after a setup by hand."
+    "Remove this file from the field" : {
+      "comment" : "Help tag of the button that empties a field of Compare Files."
     },
-    "Renews the entry and the script of Seamerge in Tower’s settings.": {
-      "comment": "Set Up Git Integration: adding to Tower renews an earlier entry."
+    "Removing also takes Seamerge out of Tower." : {
+      "comment" : "Set Up Git Integration: removing changes Tower too."
     },
-    "Reopen All Conflicts": {
-      "comment": "Merge menu command."
+    "Removing leaves Git without a merge and diff tool." : {
+      "comment" : "Set Up Git Integration: removing when Git had no tool before."
     },
-    "Replaces the entry and the script of another copy of Seamerge in Tower.": {
-      "comment": "Set Up Git Integration: adding to Tower replaces a copy."
+    "Removing restores: %@ for merge and %@ for diff." : {
+      "comment" : "Set Up Git Integration: removing brings back two tools, such as Kaleidoscope."
     },
-    "Replaces: %@.": {
-      "comment": "Set Up Git Integration: the replaced copy of the app."
+    "Removing restores: %@." : {
+      "comment" : "Set Up Git Integration: removing brings back a tool, such as Kaleidoscope."
     },
-    "Replaces: %@. Its settings stay in place, so you can switch back.": {
-      "comment": "Set Up Git Integration: the replaced tool, such as Kaleidoscope."
+    "Removing takes Seamerge out of Git’s settings. Git’s general settings for tools stay as they are." : {
+      "comment" : "Set Up Git Integration: what removing does after a setup by hand."
     },
-    "Reset": {
-      "comment": "Resetting decisions: the button of the sheet before resetting every one, and the submenu of a context menu with the ways to reset."
+    "Renews the entry and the script of Seamerge in Tower’s settings." : {
+      "comment" : "Set Up Git Integration: adding to Tower renews an earlier entry."
     },
-    "Reset All Decisions": {
-      "comment": "Undo menu: every block was returned to how it was loaded."
+    "Reopen All Conflicts" : {
+      "comment" : "Merge menu command."
     },
-    "Reset All Decisions…": {
-      "comment": "Merge menu command; a sheet asks first if text typed by hand would be lost."
+    "Replaces the entry and the script of another copy of Seamerge in Tower." : {
+      "comment" : "Set Up Git Integration: adding to Tower replaces a copy."
     },
-    "Reset Change": {
-      "comment": "Context menu: return the block to how it was loaded."
+    "Replaces: %@." : {
+      "comment" : "Set Up Git Integration: the replaced copy of the app."
     },
-    "Reset This Change": {
-      "comment": "Merge menu command."
+    "Replaces: %@. Its settings stay in place, so you can switch back." : {
+      "comment" : "Set Up Git Integration: the replaced tool, such as Kaleidoscope."
     },
-    "Resolve All Open Conflicts with A": {
-      "comment": "Merge menu command."
+    "Reset" : {
+      "comment" : "Resetting decisions: the button of the sheet before resetting every one, and the submenu of a context menu with the ways to reset."
     },
-    "Resolve All Open Conflicts with B": {
-      "comment": "Merge menu command."
+    "Reset All Decisions" : {
+      "comment" : "Undo menu: every block was returned to how it was loaded."
     },
-    "Resolve Manually": {
-      "comment": "Merge menu command."
+    "Reset All Decisions…" : {
+      "comment" : "Merge menu command; a sheet asks first if text typed by hand would be lost."
     },
-    "Resolved conflict, line %lld": {
-      "comment": "VoiceOver: the mark of a decided conflict in the overview bar."
+    "Reset Change" : {
+      "comment" : "Context menu: return the block to how it was loaded."
     },
-    "Restore Layout": {
-      "comment": "View menu command."
+    "Reset This Change" : {
+      "comment" : "Merge menu command."
     },
-    "Result": {
-      "comment": "The name of the result pane."
+    "Resolve All Open Conflicts with A" : {
+      "comment" : "Merge menu command."
     },
-    "Result Encoding": {
-      "comment": "File menu: the submenu of the encodings the result can be saved in."
+    "Resolve All Open Conflicts with B" : {
+      "comment" : "Merge menu command."
     },
-    "Result, %@": {
-      "comment": "VoiceOver: the result pane and the file it is written to."
+    "Resolve Manually" : {
+      "comment" : "Merge menu command."
     },
-    "Right": {
-      "comment": "Compare Files: the role of a field."
+    "Resolved conflict, line %lld" : {
+      "comment" : "VoiceOver: the mark of a decided conflict in the overview bar."
     },
-    "SF Mono": {
-      "comment": "Settings: the monospaced font of the system."
+    "Restore Layout" : {
+      "comment" : "View menu command."
     },
-    "Save": {
-      "comment": "File menu command."
+    "Result" : {
+      "comment" : "The name of the result pane."
     },
-    "Save As…": {
-      "comment": "File menu command."
+    "Result Encoding" : {
+      "comment" : "File menu: the submenu of the encodings the result can be saved in."
     },
-    "Save and Close": {
-      "comment": "File menu command."
+    "Result, %@" : {
+      "comment" : "VoiceOver: the result pane and the file it is written to."
     },
-    "Save and close": {
-      "comment": "Help tag of Done in the toolbar and of File > Save and Close."
+    "reverted commit" : {
+      "comment" : "Role: the commit being reverted."
     },
-    "Save as UTF-8": {
-      "comment": "Button: save in UTF-8 instead."
+    "Right" : {
+      "comment" : "Compare Files: the role of a field."
     },
-    "Save with Markers": {
-      "comment": "Button of the sheet before saving with open conflicts: save anyway."
+    "Save" : {
+      "comment" : "File menu command."
     },
-    "Saved %@": {
-      "comment": "VoiceOver after saving, such as Saved story.txt."
+    "Save and close" : {
+      "comment" : "Help tag of Done in the toolbar and of File > Save and Close."
     },
-    "Scroll the panes together": {
-      "comment": "Help tag of the footer toggle of synchronized scrolling while it is off."
+    "Save and Close" : {
+      "comment" : "File menu command."
     },
-    "Seamerge at %@)": {
-      "comment": "Set Up Git Integration: another copy of the app, such as Seamerge at /Volumes/A.app."
+    "Save as UTF-8" : {
+      "comment" : "Button: save in UTF-8 instead."
     },
-    "Seamerge can’t merge the contents of this file. Use one side as a whole, or leave it unresolved.": {
-      "comment": "Merge of a file that is not text: what can be done."
+    "Save As…" : {
+      "comment" : "File menu command."
     },
-    "Seamerge can’t read “%@”.": {
-      "comment": "Alert: a file of a merge or comparison cannot be read."
+    "Save with Markers" : {
+      "comment" : "Button of the sheet before saving with open conflicts: save anyway."
     },
-    "Seamerge can’t read “%@”. Check that it exists and that you may read it.": {
-      "comment": "Comparison window: a file cannot be read, and what to do."
+    "Saved %@" : {
+      "comment" : "VoiceOver after saving, such as Saved story.txt."
     },
-    "Seamerge can’t show the differences of “%@”": {
-      "comment": "Comparison window: the files cannot be compared, such as of “logo.png”."
+    "Scroll the panes together" : {
+      "comment" : "Help tag of the footer toggle of synchronized scrolling while it is off."
     },
-    "Seamerge couldn’t compare the files.": {
-      "comment": "Alert: the comparison of the files of a session failed."
+    "Seamerge at %@" : {
+      "comment" : "Set Up Git Integration: another copy of the app, such as Seamerge at /Volumes/A.app."
     },
-    "Seamerge works with text. Use the app that made the file instead.": {
-      "comment": "Alert: what to do with a binary file."
+    "Seamerge can’t merge the contents of this file. Use one side as a whole, or leave it unresolved." : {
+      "comment" : "Merge of a file that is not text: what can be done."
     },
-    "Select All": {
-      "comment": "Context menu: select the whole text."
+    "Seamerge can’t read “%@”." : {
+      "comment" : "Alert: a file of a merge or comparison cannot be read."
     },
-    "Set Up": {
-      "comment": "Set Up Git Integration: the button that makes Git use the app."
+    "Seamerge can’t read “%@”. Check that it exists and that you may read it." : {
+      "comment" : "Comparison window: a file cannot be read, and what to do."
     },
-    "Set Up Git Integration…": {
-      "comment": "Compare Files: the button next to the line about Git."
+    "Seamerge can’t show the differences of “%@”" : {
+      "comment" : "Comparison window: the files cannot be compared, such as of “logo.png”."
     },
-    "Settings": {
-      "comment": "Title of the window Settings."
+    "Seamerge couldn’t compare the files." : {
+      "comment" : "Alert: the comparison of the files of a session failed."
     },
-    "Show All Lines": {
-      "comment": "View menu command."
+    "Seamerge works with text. Use the app that made the file instead." : {
+      "comment" : "Alert: what to do with a binary file."
     },
-    "Show Base": {
-      "comment": "View menu command, and the setting of whether a new merge shows the base."
+    "Select All" : {
+      "comment" : "Context menu: select the whole text."
     },
-    "Show Commands": {
-      "comment": "Set Up Git Integration: the triangle that shows the commands of the setup."
+    "Set Up" : {
+      "comment" : "Set Up Git Integration: the button that makes Git use the app."
     },
-    "Show Footer": {
-      "comment": "View menu command."
+    "Set Up Git Integration…" : {
+      "comment" : "Compare Files: the button next to the line about Git."
     },
-    "Show Invisibles": {
-      "comment": "View menu command."
+    "Settings" : {
+      "comment" : "Title of the window Settings."
     },
-    "Show every line": {
-      "comment": "Help tag of the footer toggle of collapsed lines while every run is collapsed."
+    "SF Mono" : {
+      "comment" : "Settings: the monospaced font of the system."
     },
-    "Show in Finder": {
-      "comment": "Context menu of a header."
+    "Show All Lines" : {
+      "comment" : "View menu command."
     },
-    "Show invisible characters (no lines to show)": {
-      "comment": "Help tag of the footer toggle of invisibles in a window without lines."
+    "Show Base" : {
+      "comment" : "View menu command, and the setting of whether a new merge shows the base."
     },
-    "Show or hide the base (restore the layout first)": {
-      "comment": "Help tag of the footer toggle of the base while the result fills the window."
+    "Show Commands" : {
+      "comment" : "Set Up Git Integration: the triangle that shows the commands of the setup."
     },
-    "Show spaces, tabs and line endings": {
-      "comment": "Help tag of the footer toggle of invisibles while they are hidden."
+    "Show each file without gaps and connect changes with bands" : {
+      "comment" : "Help tag of the footer toggle of aligned lines while matching lines line up."
     },
-    "Show the base between A and B": {
-      "comment": "Help tag of the footer toggle of the base while the base is hidden."
+    "Show every line" : {
+      "comment" : "Help tag of the footer toggle of collapsed lines while every run is collapsed."
     },
-    "Show the file after this one": {
-      "comment": "Help tag of Go > Next File."
+    "Show Footer" : {
+      "comment" : "View menu command."
     },
-    "Show the file before this one": {
-      "comment": "Help tag of Go > Previous File."
+    "Show in Finder" : {
+      "comment" : "Context menu of a header."
     },
-    "Show the right file on the left and the left file on the right": {
-      "comment": "Help tag of Compare > Swap Sides."
+    "Show invisible characters (no lines to show)" : {
+      "comment" : "Help tag of the footer toggle of invisibles in a window without lines."
     },
-    "Show where this side comes from": {
-      "comment": "Help tag of ⓘ."
+    "Show Invisibles" : {
+      "comment" : "View menu command."
     },
-    "Size": {
-      "comment": "Settings: the size of the code."
+    "Show or hide the base (restore the layout first)" : {
+      "comment" : "Help tag of the footer toggle of the base while the result fills the window."
     },
-    "Skip Remaining Files": {
-      "comment": "File menu of a comparison: end the comparisons that are left of the run."
+    "Show spaces, tabs and line endings" : {
+      "comment" : "Help tag of the footer toggle of invisibles while they are hidden."
     },
-    "Some lines shown": {
-      "comment": "VoiceOver: the footer toggle of collapsed lines while some runs are expanded."
+    "Show the base between A and B" : {
+      "comment" : "Help tag of the footer toggle of the base while the base is hidden."
     },
-    "Some of its characters don’t exist in %@. UTF-8 holds them all.": {
-      "comment": "Sheet: the result holds characters the encoding lacks."
+    "Show the file after this one" : {
+      "comment" : "Help tag of Go > Next File."
     },
-    "Spacious": {
-      "comment": "Settings: lines far apart."
+    "Show the file before this one" : {
+      "comment" : "Help tag of Go > Previous File."
     },
-    "Standard": {
-      "comment": "Settings: lines at standard spacing."
+    "Show the right file on the left and the left file on the right" : {
+      "comment" : "Help tag of Compare > Swap Sides."
     },
-    "Stash": {
-      "comment": "The name of a stash in a header."
+    "Show where this side comes from" : {
+      "comment" : "Help tag of ⓘ."
     },
-    "Swap Sides": {
-      "comment": "Compare menu: swap the left and the right file."
+    "Size" : {
+      "comment" : "Settings: the size of the code."
     },
-    "Swapped %@ and %@": {
-      "comment": "VoiceOver: two fields swapped their files."
+    "Skip Remaining Files" : {
+      "comment" : "File menu of a comparison: end the comparisons that are left of the run."
     },
-    "Swapped %@) and %@)": {
-      "comment": "VoiceOver: two fields swapped their files."
+    "Some lines shown" : {
+      "comment" : "VoiceOver: the footer toggle of collapsed lines while some runs are expanded."
     },
-    "Switch": {
-      "comment": "Button: switch anyway."
+    "Some of its characters don’t exist in %@. UTF-8 holds them all." : {
+      "comment" : "Sheet: the result holds characters the encoding lacks."
     },
-    "Synchronize Scrolling": {
-      "comment": "View menu command."
+    "Spacious" : {
+      "comment" : "Settings: lines far apart."
     },
-    "Synchronize scrolling (no lines to scroll)": {
-      "comment": "Help tag of the footer toggle of synchronized scrolling in a window without lines."
+    "Standard" : {
+      "comment" : "Settings: lines at standard spacing."
     },
-    "Syntax": {
-      "comment": "View menu: the submenu of the languages the code can be colored as."
+    "Stash" : {
+      "comment" : "The name of a stash in a header."
     },
-    "Tab Width": {
-      "comment": "Settings: the width of a tab."
+    "Swap Sides" : {
+      "comment" : "Compare menu: swap the left and the right file."
     },
-    "Take the version of %@.": {
-      "comment": "Help tag of a toggle, such as Take the version of feature/login."
+    "Swapped %@ and %@" : {
+      "comment" : "VoiceOver: two fields swapped their files."
     },
-    "Text": {
-      "comment": "Settings: heading of the group of the code font."
+    "Switch" : {
+      "comment" : "Button: switch anyway."
     },
-    "The command that opened this merge is no longer waiting.": {
-      "comment": "Notice below the result header after a command other than Git that asked has ended."
+    "Synchronize Scrolling" : {
+      "comment" : "View menu command."
     },
-    "The comparison failed. Try again, or use another tool for this file.": {
-      "comment": "Comparison window: the comparison failed for another reason."
+    "Synchronize scrolling (no lines to scroll)" : {
+      "comment" : "Help tag of the footer toggle of synchronized scrolling in a window without lines."
     },
-    "The files are too large to compare.": {
-      "comment": "Alert: the files of a merge or comparison do not fit in memory."
+    "Syntax" : {
+      "comment" : "View menu: the submenu of the languages the code can be colored as."
     },
-    "The files are too large to compare. Quit other apps to free memory.": {
-      "comment": "Comparison window: the files do not fit in memory."
+    "Tab Width" : {
+      "comment" : "Settings: the width of a tab."
     },
-    "The files changed on disk. Reloading discards %lld decisions.": {
-      "comment": "Sheet before reloading more than one changed file.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "The files changed on disk. Reloading discards %lld decision."
+    "Take the version of %@." : {
+      "comment" : "Help tag of a toggle, such as Take the version of feature/login."
+    },
+    "Text" : {
+      "comment" : "Settings: heading of the group of the code font."
+    },
+    "the base" : {
+      "comment" : "The common ancestor in the help tag of a toggle: Take the version of the base."
+    },
+    "The command that opened this merge is no longer waiting." : {
+      "comment" : "Notice below the result header after a command other than Git that asked has ended."
+    },
+    "The comparison failed. Try again, or use another tool for this file." : {
+      "comment" : "Comparison window: the comparison failed for another reason."
+    },
+    "The files are too large to compare." : {
+      "comment" : "Alert: the files of a merge or comparison do not fit in memory."
+    },
+    "The files are too large to compare. Quit other apps to free memory." : {
+      "comment" : "Comparison window: the files do not fit in memory."
+    },
+    "The files changed on disk. Reloading discards %lld decisions." : {
+      "comment" : "Sheet before reloading more than one changed file.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "The files changed on disk. Reloading discards %lld decision."
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "The files changed on disk. Reloading discards %lld decisions."
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "The files changed on disk. Reloading discards %lld decisions."
                 }
               }
             }
@@ -1088,22 +1150,22 @@
         }
       }
     },
-    "The switch discards %lld decisions.": {
-      "comment": "Sheet before switching the comparison, such as The switch discards 3 decisions.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "The switch discards %lld decision."
+    "The switch discards %lld decisions." : {
+      "comment" : "Sheet before switching the comparison, such as The switch discards 3 decisions.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "The switch discards %lld decision."
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "The switch discards %lld decisions."
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "The switch discards %lld decisions."
                 }
               }
             }
@@ -1111,28 +1173,28 @@
         }
       }
     },
-    "The window still shows the previous comparison.": {
-      "comment": "Sheet after switching the comparison failed: what happens next."
+    "The window still shows the previous comparison." : {
+      "comment" : "Sheet after switching the comparison failed: what happens next."
     },
-    "This copy of Seamerge is incomplete. Download it again.": {
-      "comment": "Set Up Git Integration: the helper is missing from the app."
+    "This copy of Seamerge is incomplete. Download it again." : {
+      "comment" : "Set Up Git Integration: the helper is missing from the app."
     },
-    "This discards handwritten text in %lld blocks.": {
-      "comment": "Sheet before resetting every decision, such as in 3 blocks.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "This discards handwritten text in %lld block."
+    "This discards handwritten text in %lld blocks." : {
+      "comment" : "Sheet before resetting every decision, such as in 3 blocks.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "This discards handwritten text in %lld block."
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "This discards handwritten text in %lld blocks."
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "This discards handwritten text in %lld blocks."
                 }
               }
             }
@@ -1140,121 +1202,124 @@
         }
       }
     },
-    "Toggle A": {
-      "comment": "Undo menu: A was switched on or off for a block."
+    "Toggle A" : {
+      "comment" : "Undo menu: A was switched on or off for a block."
     },
-    "Toggle B": {
-      "comment": "Undo menu: B was switched on or off for a block."
+    "Toggle B" : {
+      "comment" : "Undo menu: B was switched on or off for a block."
     },
-    "Toggle Base": {
-      "comment": "Undo menu: the base was switched on or off for a block."
+    "Toggle Base" : {
+      "comment" : "Undo menu: the base was switched on or off for a block."
     },
-    "Toggle Source": {
-      "comment": "Merge menu: the submenu that adds or removes a side."
+    "Toggle Source" : {
+      "comment" : "Merge menu: the submenu that adds or removes a side."
     },
-    "Tower’s list of tools can’t be read, so Seamerge can’t add itself to it.": {
-      "comment": "Set Up Git Integration: Tower's list is damaged."
+    "Tower’s list of tools can’t be read, so Seamerge can’t add itself to it." : {
+      "comment" : "Set Up Git Integration: Tower's list is damaged."
     },
-    "Tower’s list of tools couldn’t be changed.": {
-      "comment": "Set Up Git Integration: writing Tower's list of tools failed."
+    "Tower’s list of tools couldn’t be changed." : {
+      "comment" : "Set Up Git Integration: writing Tower's list of tools failed."
     },
-    "Treat LF, CRLF and CR as equal": {
-      "comment": "Help tag of Compare > Ignore Line Endings."
+    "Treat “a  b” and “ab” as equal" : {
+      "comment" : "Help tag of Compare > Ignore All Whitespace, with an example."
     },
-    "Treat “a  b” and “ab” as equal": {
-      "comment": "Help tag of Compare > Ignore All Whitespace, with an example."
+    "Treat “a  b” as “a b”, but not as “ab”" : {
+      "comment" : "Help tag of Compare > Ignore Whitespace Changes, with an example."
     },
-    "Treat “a  b” as “a b”, but not as “ab”": {
-      "comment": "Help tag of Compare > Ignore Whitespace Changes, with an example."
+    "Treat LF, CRLF and CR as equal" : {
+      "comment" : "Help tag of Compare > Ignore Line Endings."
     },
-    "Try again. If it fails again, use another tool for these files.": {
-      "comment": "Alert: what to do when the comparison of the files failed."
+    "Try again. If it fails again, use another tool for these files." : {
+      "comment" : "Alert: what to do when the comparison of the files failed."
     },
-    "Turn on Highlight Syntax in the View menu to color the code": {
-      "comment": "Help tag of the syntax pop-up button in the footer while highlighting is off."
+    "Turn on Highlight Syntax in the View menu to color the code" : {
+      "comment" : "Help tag of the syntax pop-up button in the footer while highlighting is off."
     },
-    "Typing": {
-      "comment": "Undo menu: text typed in the result."
+    "Typing" : {
+      "comment" : "Undo menu: text typed in the result."
     },
-    "UTF-16 BE": {
-      "comment": "Encoding: UTF-16 big-endian."
+    "Use %@" : {
+      "comment" : "Button of the sheet of a binary file: take this side as a whole, such as Use main."
     },
-    "UTF-16 LE": {
-      "comment": "Encoding: UTF-16 little-endian."
+    "Use A" : {
+      "comment" : "Merge menu command."
     },
-    "UTF-32 BE": {
-      "comment": "Encoding: UTF-32 big-endian."
+    "Use A Then B" : {
+      "comment" : "Merge menu command."
     },
-    "UTF-32 LE": {
-      "comment": "Encoding: UTF-32 little-endian."
+    "Use B" : {
+      "comment" : "Merge menu command."
     },
-    "UTF-8": {
-      "comment": "Encoding."
+    "Use B Then A" : {
+      "comment" : "Merge menu command."
     },
-    "Use %@": {
-      "comment": "Button of the sheet of a binary file: take this side as a whole, such as Use main."
+    "Use Base" : {
+      "comment" : "Merge menu command."
     },
-    "Use A": {
-      "comment": "Merge menu command."
+    "Use None" : {
+      "comment" : "Merge menu command."
     },
-    "Use A Then B": {
-      "comment": "Merge menu command."
+    "Use Seamerge for Git Merges and Diffs" : {
+      "comment" : "Set Up Git Integration: the title of the offer."
     },
-    "Use B": {
-      "comment": "Merge menu command."
+    "Use Version of %@" : {
+      "comment" : "Context menu of a changed block of a side, such as Use Version of main."
     },
-    "Use B Then A": {
-      "comment": "Merge menu command."
+    "UTF-8" : {
+      "comment" : "Encoding."
     },
-    "Use Base": {
-      "comment": "Merge menu command."
+    "UTF-16 BE" : {
+      "comment" : "Encoding: UTF-16 big-endian."
     },
-    "Use None": {
-      "comment": "Merge menu command."
+    "UTF-16 LE" : {
+      "comment" : "Encoding: UTF-16 little-endian."
     },
-    "Use Seamerge for Git Merges and Diffs": {
-      "comment": "Set Up Git Integration: the title of the offer."
+    "UTF-32 BE" : {
+      "comment" : "Encoding: UTF-32 big-endian."
     },
-    "Use Version of %@": {
-      "comment": "Context menu of a changed block of a side, such as Use Version of main."
+    "UTF-32 LE" : {
+      "comment" : "Encoding: UTF-32 little-endian."
     },
-    "Whitespace changes ignored": {
-      "comment": "Subtitle: the comparison ignores how much whitespace there is."
+    "Whitespace changes ignored" : {
+      "comment" : "Subtitle: the comparison ignores how much whitespace there is."
     },
-    "Windows 1252": {
-      "comment": "Encoding: Windows code page."
+    "Windows 1252" : {
+      "comment" : "Encoding: Windows code page."
     },
-    "Working Copy": {
-      "comment": "Role: the file in the working tree, which the user can edit."
+    "Working Copy" : {
+      "comment" : "Role: the file in the working tree, which the user can edit."
     },
-    "Wrap Lines": {
-      "comment": "View menu command."
+    "Wrap Lines" : {
+      "comment" : "View menu command."
     },
-    "Wrap long lines (no lines to show)": {
-      "comment": "Help tag of the footer toggle of line wrapping in a window without lines."
+    "Wrap long lines (no lines to show)" : {
+      "comment" : "Help tag of the footer toggle of line wrapping in a window without lines."
     },
-    "Wrap long lines at the width of the panes": {
-      "comment": "Help tag of the footer toggle of line wrapping while lines run on."
+    "Wrap long lines at the width of the panes" : {
+      "comment" : "Help tag of the footer toggle of line wrapping while lines run on."
     },
-    "Your changes will be lost if you don’t save them.": {
-      "comment": "Sheet before closing a merge of files with unsaved changes: what follows."
+    "Your changes will be lost if you don’t save them." : {
+      "comment" : "Sheet before closing a merge of files with unsaved changes: what follows."
     },
-    "Your decisions in %lld blocks are lost.": {
-      "comment": "Sheet before leaving a merge unresolved that a command other than Git waits for, such as in 3 blocks.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Your decision in %lld block is lost."
+    "your commit" : {
+      "comment" : "Role: the user's own commit that a rebase moves."
+    },
+    "Your decisions in %lld blocks are lost." : {
+      "comment" : "Sheet before leaving a merge unresolved that a command other than Git waits for, such as in 3 blocks.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Your decision in %lld block is lost."
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Your decisions in %lld blocks are lost."
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Your decisions in %lld blocks are lost."
                 }
               }
             }
@@ -1262,74 +1327,18 @@
         }
       }
     },
-    "Zoom In": {
-      "comment": "View menu command."
+    "your own command for Seamerge" : {
+      "comment" : "Set Up Git Integration: a command of the app that the user changed."
     },
-    "Zoom Out": {
-      "comment": "View menu command."
+    "yours" : {
+      "comment" : "Role: the branch the user is on."
     },
-    "cherry-picked commit": {
-      "comment": "Role: the commit being cherry-picked."
+    "Zoom In" : {
+      "comment" : "View menu command."
     },
-    "empty": {
-      "comment": "VoiceOver: a field without a file."
-    },
-    "incoming": {
-      "comment": "Role: the branch being merged in."
-    },
-    "rebase target": {
-      "comment": "Role: the commit a rebase moves the user's commits onto."
-    },
-    "reverted commit": {
-      "comment": "Role: the commit being reverted."
-    },
-    "the base": {
-      "comment": "The common ancestor in the help tag of a toggle: Take the version of the base."
-    },
-    "your commit": {
-      "comment": "Role: the user's own commit that a rebase moves."
-    },
-    "your own command for Seamerge": {
-      "comment": "Set Up Git Integration: a command of the app that the user changed."
-    },
-    "yours": {
-      "comment": "Role: the branch the user is on."
-    },
-    "“%@” can’t be saved in %@.": {
-      "comment": "Sheet: the result holds characters the encoding lacks, such as in ISO 8859-1.",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "“%1$@” can’t be saved in %2$@."
-          }
-        }
-      }
-    },
-    "“%@” is a binary file.": {
-      "comment": "Merge of a file that is not text, such as “logo.png” is a binary file."
-    },
-    "“%@” isn’t a text file.": {
-      "comment": "Alert: a file of a merge or comparison is binary."
-    },
-    "“%@” isn’t a text file. Open it in the app that made it.": {
-      "comment": "Comparison window: a file is binary, and what to do."
-    },
-    "“%@” was changed by another app.": {
-      "comment": "Sheet: another app changed the file the result is saved to."
-    },
-    "✓ Added to Tower": {
-      "comment": "Set Up Git Integration: Tower lists the app already."
-    },
-    "✓ Git uses Seamerge for diff.": {
-      "comment": "Compare Files: the line about Git when it uses the app for diffs only."
-    },
-    "✓ Git uses Seamerge for merge and diff": {
-      "comment": "Compare Files: the line about Git when it uses the app for both."
-    },
-    "✓ Git uses Seamerge for merge.": {
-      "comment": "Compare Files: the line about Git when it uses the app for merges only."
+    "Zoom Out" : {
+      "comment" : "View menu command."
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

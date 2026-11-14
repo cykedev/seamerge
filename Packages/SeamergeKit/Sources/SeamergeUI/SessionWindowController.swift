@@ -303,7 +303,8 @@ public final class SessionWindowController: NSWindowController {
       session: session, arrangement: arrangement, layout: layout, headers: headers,
       resultHeader: resultHeader, displayOptions: displayOptions,
       language: settings.highlightsSyntax
-        ? syntaxChoices[syntaxPath].language(detected: detectedLanguage) : nil)
+        ? syntaxChoices[syntaxPath].language(detected: detectedLanguage) : nil,
+      alignsLines: settings.alignsLines || arrangement.showsResult)
     presentation.wrapsLines = settings.wrapsLines
     for pane in presentation.allPanes {
       pane.showsInvisibles = settings.showsInvisibles
@@ -547,9 +548,10 @@ extension SessionWindowController: NSUserInterfaceValidations {
     if let menuItem = item as? NSMenuItem {
       if let mode = command.comparisonMode {
         menuItem.state = mode == comparisonOptions.mode ? .on : .off
-      } else if [.toggleScrollSynchronization, .toggleSyntaxHighlighting, .toggleLineWrapping]
-        .contains(command)
-      {
+      } else if [
+        .toggleScrollSynchronization, .toggleLineAlignment, .toggleSyntaxHighlighting,
+        .toggleLineWrapping,
+      ].contains(command) {
         menuItem.state = isSwitchedOn(command) ? .on : .off
       }
       if let alternateTitle = command.alternateTitle {
@@ -576,6 +578,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
     case .toggleScrollSynchronization: presentation.scrollSync.isEnabled
     case .toggleSyntaxHighlighting: highlightsSyntax
     case .toggleLineWrapping: presentation.wrapsLines
+    case .toggleLineAlignment: presentation.alignsLines
     default: false
     }
   }
@@ -620,6 +623,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
       layout.resultPane != nil
     case .swappableSides:
       presentation.arrangement.canSwapSides
+    case .connectableSides:
+      !presentation.arrangement.showsResult
     case .remainingFiles:
       collection == nil && context.difftool?.hasFilesAfterThisOne ?? false
     case .choice(let roles):

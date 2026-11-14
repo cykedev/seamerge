@@ -36,8 +36,8 @@ extension SessionCommand {
       [
         [.toggleBase, .toggleResultMaximized],
         [
-          .toggleScrollSynchronization, .toggleSyntaxHighlighting, .toggleInvisibles,
-          .toggleLineWrapping, .showAllLines, .collapseUnchangedLines,
+          .toggleScrollSynchronization, .toggleLineAlignment, .toggleSyntaxHighlighting,
+          .toggleInvisibles, .toggleLineWrapping, .showAllLines, .collapseUnchangedLines,
         ],
         [.zoomIn, .zoomOut, .actualSize],
         [.toggleFooter],

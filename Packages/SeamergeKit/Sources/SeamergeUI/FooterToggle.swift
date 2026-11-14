@@ -16,6 +16,9 @@ enum FooterToggle: CaseIterable {
   /// Couples the panes while they scroll, or lets each scroll on its own.
   case scrollSynchronization
 
+  /// Lines up the lines of the panes, or connects their changes with bands.
+  case lineAlignment
+
   /// Shows the pane of the base, or hides it.
   case base
 
@@ -30,6 +33,7 @@ enum FooterToggle: CaseIterable {
     case .lineWrapping: .toggleLineWrapping
     case .collapsedLines: state == .on ? .showAllLines : .collapseUnchangedLines
     case .scrollSynchronization: .toggleScrollSynchronization
+    case .lineAlignment: .toggleLineAlignment
     case .base: .toggleBase
     }
   }
@@ -41,6 +45,7 @@ enum FooterToggle: CaseIterable {
     case .lineWrapping: "arrow.turn.down.left"
     case .collapsedLines: "rectangle.compress.vertical"
     case .scrollSynchronization: "arrow.up.arrow.down"
+    case .lineAlignment: "equal"
     case .base: "rectangle.split.3x1"
     }
   }
@@ -56,6 +61,7 @@ enum FooterToggle: CaseIterable {
     case .lineWrapping: SessionCommand.toggleLineWrapping.title
     case .collapsedLines: SessionCommand.collapseUnchangedLines.title
     case .scrollSynchronization: SessionCommand.toggleScrollSynchronization.title
+    case .lineAlignment: SessionCommand.toggleLineAlignment.title
     case .base: Role.base.letter
     }
   }
@@ -103,6 +109,11 @@ enum FooterToggle: CaseIterable {
         localized: "Synchronize scrolling (no lines to scroll)", bundle: .module,
         comment:
           "Help tag of the footer toggle of synchronized scrolling in a window without lines.")
+    case .lineAlignment:
+      String(
+        localized: "Connect changes with bands (only when comparing two files)", bundle: .module,
+        comment:
+          "Help tag of the footer toggle of aligned lines in a merge or a window without lines.")
     case .base:
       String(
         localized: "Show or hide the base (restore the layout first)", bundle: .module,
@@ -145,6 +156,14 @@ enum FooterToggle: CaseIterable {
       String(
         localized: "Let each pane scroll on its own", bundle: .module,
         comment: "Help tag of the footer toggle of synchronized scrolling while it is on.")
+    case (.lineAlignment, false):
+      String(
+        localized: "Line up matching lines side by side", bundle: .module,
+        comment: "Help tag of the footer toggle of aligned lines while bands connect the changes.")
+    case (.lineAlignment, true):
+      String(
+        localized: "Show each file without gaps and connect changes with bands", bundle: .module,
+        comment: "Help tag of the footer toggle of aligned lines while matching lines line up.")
     case (.base, false):
       String(
         localized: "Show the base between A and B", bundle: .module,

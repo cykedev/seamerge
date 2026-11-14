@@ -94,6 +94,47 @@ enum SampleDiffs {
     return try await diff(old: text(old), new: text(new), label: "Sources/Values.swift")
   }
 
+  /// A comparison whose changes repeat `repeats` times: a removal of four lines, an insertion
+  /// of three and a change of two lines to five, between runs of unchanged lines; with `longLines`
+  /// every fourth line is long enough to wrap in a narrow pane.
+  static func everyKindOfChange(repeats: Int = 12, longLines: Bool = false) async throws -> Session
+  {
+    var old: [String] = []
+    var new: [String] = []
+    func line(_ name: String) -> String {
+      let line = "let \(name) = value(\(old.count), \(new.count))"
+      guard longLines, (old.count + new.count) % 4 == 0 else { return line }
+      return line + String(repeating: " + another term of the sum", count: 6)
+    }
+    for index in 0..<repeats {
+      for number in 0..<6 {
+        let same = line("same\(index)_\(number)")
+        old.append(same)
+        new.append(same)
+      }
+      let removed = (0..<4).map { line("removed\(index)_\($0)") }
+      old += removed
+      for number in 0..<5 {
+        let same = line("kept\(index)_\(number)")
+        old.append(same)
+        new.append(same)
+      }
+      let inserted = (0..<3).map { line("inserted\(index)_\($0)") }
+      new += inserted
+      for number in 0..<4 {
+        let same = line("middle\(index)_\(number)")
+        old.append(same)
+        new.append(same)
+      }
+      let before = (0..<2).map { line("before\(index)_\($0)") }
+      old += before
+      let after = (0..<5).map { line("after\(index)_\($0)") }
+      new += after
+    }
+    func text(_ lines: [String]) -> String { lines.joined(separator: "\n") + "\n" }
+    return try await diff(old: text(old), new: text(new), label: "Sources/Kinds.swift")
+  }
+
   /// A function, which ``reformattedNew`` formats anew.
   static let reformattedOld = """
     func area(width: Int, height: Int) -> Int {

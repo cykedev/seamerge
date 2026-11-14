@@ -14,12 +14,12 @@ import Testing
     let merge = try Windows.controller(for: try await SampleMerges.helloWorld())
     #expect(
       merge.content.footer.toggles == [
-        .invisibles, .lineWrapping, .collapsedLines, .scrollSynchronization, .base,
+        .invisibles, .lineWrapping, .collapsedLines, .scrollSynchronization, .lineAlignment, .base,
       ])
     let comparison = try Windows.controller(for: try await SampleDiffs.greeting())
     #expect(
       comparison.content.footer.toggles == [
-        .invisibles, .lineWrapping, .collapsedLines, .scrollSynchronization,
+        .invisibles, .lineWrapping, .collapsedLines, .scrollSynchronization, .lineAlignment,
       ])
     #expect(comparison.content.footer.button(of: .base) == nil)
   }

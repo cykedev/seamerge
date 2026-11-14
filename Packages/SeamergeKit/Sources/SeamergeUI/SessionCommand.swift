@@ -73,6 +73,10 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Wraps long lines at the width of their panes in every session window, or lets them run on.
   case toggleLineWrapping
 
+  /// Lines up the lines of the panes side by side, or shows the lines of their files as they are
+  /// and connects their changes with bands.
+  case toggleLineAlignment
+
   /// Shows every line, the collapsed runs of unchanged lines expanded.
   case showAllLines
 
@@ -213,6 +217,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "Show Invisibles", bundle: .module, comment: "View menu command.")
     case .toggleLineWrapping:
       String(localized: "Wrap Lines", bundle: .module, comment: "View menu command.")
+    case .toggleLineAlignment:
+      String(
+        localized: "Align Lines", bundle: .module,
+        comment: "View menu command, checked while matching lines of the panes stand side by side.")
     case .showAllLines:
       String(localized: "Show All Lines", bundle: .module, comment: "View menu command.")
     case .collapseUnchangedLines:
@@ -494,6 +502,7 @@ public enum SessionCommand: CaseIterable, Sendable {
       #selector(SessionWindowController.toggleSyntaxHighlighting(_:))
     case .toggleInvisibles: #selector(SessionWindowController.toggleInvisibles(_:))
     case .toggleLineWrapping: #selector(SessionWindowController.toggleLineWrapping(_:))
+    case .toggleLineAlignment: #selector(SessionWindowController.toggleLineAlignment(_:))
     case .showAllLines: #selector(SessionWindowController.showAllLines(_:))
     case .collapseUnchangedLines: #selector(SessionWindowController.collapseUnchangedLines(_:))
     case .toggleFooter: #selector(SessionWindowController.toggleFooter(_:))

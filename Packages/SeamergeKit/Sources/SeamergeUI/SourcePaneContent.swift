@@ -41,7 +41,8 @@ extension PaneContent {
       line < 0 ? LineEnding.none : endingsByLine[Int(line)]
     }
     let blocks = Self.blocks(
-      source: role, of: changes, document: document, conflictMarkRole: conflictMarkRole)
+      source: role, of: changes, document: document, conflictMarkRole: conflictMarkRole,
+      alignsLines: true)
     let ignoredRows = IndexSet(
       ignoredDifferences.lines(in: role).map { layout.row(ofLine: $0, in: role) })
     self.init(
@@ -49,19 +50,58 @@ extension PaneContent {
       ignoredDifferenceRows: ignoredRows, lineEndings: lineEndings)
   }
 
+  /// The content of the pane of `role`, one of the inputs of the session, with its file as it
+  /// is: one row per line, without filler rows, and a block where the side has no lines marked
+  /// by a hairline on the boundary where they are missing.
+  ///
+  /// - Parameters:
+  ///   - text: The text of the input without filler rows, ``RowLayout/lineText(for:)``.
+  ///   - changes: The changed blocks of the session, which become the blocks of the content.
+  ///   - document: The result of a merge, which tells which conflicts are still open; `nil` for
+  ///     a comparison.
+  ///   - ignoredDifferences: The lines whose differences the comparison ignores, which get a ring
+  ///     in the gutter.
+  ///   - conflictMarkRole: The pane that carries the mark of a conflict.
+  /// - Precondition: `role` takes part in the session.
+  init(
+    lines role: Role, text: DisplayText, of changes: SessionChanges, document: ResultDocument?,
+    ignoredDifferences: IgnoredDifferences, conflictMarkRole: Role
+  ) {
+    let session = changes.session
+    guard let file = session.file(for: role) else {
+      preconditionFailure("The session has no input \(role)")
+    }
+    let lineCount = session.rowLayout.lineCount(in: role)
+    let blocks = Self.blocks(
+      source: role, of: changes, document: document, conflictMarkRole: conflictMarkRole,
+      alignsLines: false)
+    guard lineCount > 0 else {
+      self.init(text: "", lineNumbers: [-1], blocks: blocks, marksBlocksWithoutRows: true)
+      return
+    }
+    self.init(
+      text: text.string, lineNumbers: (0..<Int32(lineCount)).map(\.self), blocks: blocks,
+      ignoredDifferenceRows: ignoredDifferences.lines(in: role),
+      lineEndings: Self.lineEndings(of: file, lineCount: lineCount),
+      marksBlocksWithoutRows: true)
+  }
+
   /// The blocks of the pane of `role`, one of the inputs of the session: each changed block,
   /// tinted and marked as the side changed it and as far as its conflict is decided in
   /// `document`.
+  ///
+  /// - Parameter alignsLines: Whether the pane shows the rows of the grid, or else the lines of
+  ///   its file without filler rows.
   static func blocks(
     source role: Role, of changes: SessionChanges, document: ResultDocument?,
-    conflictMarkRole: Role
+    conflictMarkRole: Role, alignsLines: Bool
   ) -> [PaneBlock] {
     let layout = changes.session.rowLayout
     return changes.blocks.map { block in
       let isOpen = document?.segment(for: block).state == .open
       let carriesConflictMark = block.kind == .conflict && role == conflictMarkRole
       return PaneBlock(
-        rows: layout.rows(of: block),
+        rows: alignsLines ? layout.rows(of: block) : block.lines(in: role),
         style: changes.style(of: role, in: block, conflictIsOpen: isOpen),
         marker: changes.marker(of: role, in: block),
         conflict: carriesConflictMark ? (isOpen ? .open : .resolved) : nil)

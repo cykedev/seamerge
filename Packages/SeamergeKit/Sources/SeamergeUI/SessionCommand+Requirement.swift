@@ -45,6 +45,10 @@ extension SessionCommand {
     /// Swapping the sides needs a comparison of two files.
     case swappableSides
 
+    /// Connecting the changes of the panes with bands needs a comparison of two files; a merge
+    /// lines up its lines.
+    case connectableSides
+
     /// Skipping the remaining files needs a run of `git difftool` with files left after this
     /// one, as far as Git tells.
     case remainingFiles
@@ -110,6 +114,7 @@ extension SessionCommand {
     case .copyBlock: .blockText
     case .toggleResultMaximized: .resultPane
     case .swapSides: .swappableSides
+    case .toggleLineAlignment: .connectableSides
     case .skipRemainingFiles: .remainingFiles
     case .save, .saveAs, .saveAndClose: .result
     case .leaveUnresolved: .waitingCaller

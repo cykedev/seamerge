@@ -8,8 +8,9 @@ import SwiftUI
 /// each pane with its header.
 ///
 /// The headers are accessories at the top of the split view items, as the system lays them out,
-/// with a hard edge, since dense code would blur under a soft one. The controller only arranges;
-/// what the panes show is set from outside.
+/// with a hard edge, since dense code would blur under a soft one. Between the inputs lie
+/// hairlines, or seams while the panes connect their changes with bands. The controller only
+/// arranges; what the panes show is set from outside.
 @MainActor
 final class SessionSplitViewController: NSSplitViewController {
   /// The panes of the inputs from left to right, each with the input it shows now.
@@ -56,6 +57,7 @@ final class SessionSplitViewController: NSSplitViewController {
     }
     resultHeaderView?.menuProvider = { [weak self] role in self?.headerMenu(for: role) }
     splitView.isVertical = false
+    sourcesController.splitView = SeamSplitView()
     sourcesController.splitView.isVertical = true
     for (headerView, (_, pane)) in zip(sourceHeaderViews, sourcePanes) {
       let item = NSSplitViewItem(viewController: PaneItemController(pane: pane))
@@ -124,6 +126,35 @@ final class SessionSplitViewController: NSSplitViewController {
     selector == #selector(toggleSidebar(_:)) ? false : super.responds(to: selector)
   }
 
+  /// Whether the dividers between the panes side by side are seams that connect their changes
+  /// with bands, wide enough to show them, rather than hairlines.
+  ///
+  /// The panes keep their share of the width; each seam stays a divider that can be dragged.
+  var showsSeams: Bool {
+    get { !seamSplitView.seams.isEmpty }
+    set {
+      guard newValue != showsSeams else { return }
+      let panes = sourcePanes.map(\.pane)
+      seamSplitView.seams = newValue ? zip(panes, panes.dropFirst()).map(PaneSeam.init) : []
+      for seam in seamSplitView.seams {
+        seam.theme = panes.first?.theme ?? Theme()
+      }
+    }
+  }
+
+  /// The seams between the panes side by side, from left to right, while they show seams.
+  var seams: [PaneSeam] {
+    seamSplitView.seams
+  }
+
+  /// The split view of the panes side by side.
+  private var seamSplitView: SeamSplitView {
+    guard let splitView = sourcesController.splitView as? SeamSplitView else {
+      preconditionFailure("The panes side by side lie in a split view with seams")
+    }
+    return splitView
+  }
+
   /// Whether the pane of the base is in view; while it is hidden, A and B share its width.
   ///
   /// - Precondition: The merge has a base, if the pane is to be hidden.
@@ -169,6 +200,9 @@ final class SessionSplitViewController: NSSplitViewController {
   func apply(_ theme: Theme) {
     for (_, pane) in sourcePanes {
       pane.theme = theme
+    }
+    for seam in seams {
+      seam.theme = theme
     }
     resultPane?.theme = theme
     for headerView in sourceHeaderViews {
@@ -320,6 +354,76 @@ final class HeaderHostingView<Content: View>: NSHostingView<Content> {
 private final class PanesSplitViewController: NSSplitViewController {
   override func responds(to selector: Selector!) -> Bool {
     selector == #selector(toggleSidebar(_:)) ? false : super.responds(to: selector)
+  }
+
+  override func splitViewDidResizeSubviews(_ notification: Notification) {
+    super.splitViewDidResizeSubviews(notification)
+    (splitView as? SeamSplitView)?.placeSeams()
+  }
+}
+
+/// The split view of the panes side by side, whose dividers are hairlines, or seams that connect
+/// the changes of the panes on either side.
+///
+/// A seam lies over its divider, as wide as ``Theme/seamWidth``, and lets clicks through, so that
+/// the divider stays draggable.
+@MainActor
+private final class SeamSplitView: NSSplitView {
+  override init(frame frameRect: NSRect) {
+    super.init(frame: frameRect)
+    dividerStyle = .thin
+    // The seams lie over the dividers; only the panes are arranged.
+    arrangesAllSubviews = false
+  }
+
+  /// Split views of a window are never archived.
+  required init?(coder: NSCoder) {
+    nil
+  }
+
+  /// The seams over the dividers, from left to right, or none for dividers of hairlines.
+  var seams: [PaneSeam] = [] {
+    didSet {
+      for seam in oldValue where !seams.contains(seam) {
+        seam.removeFromSuperview()
+      }
+      for seam in seams where seam.superview !== self {
+        addSubview(seam)
+      }
+      // The split view takes the thickness of its dividers anew only when their style changes.
+      dividerStyle = .thick
+      dividerStyle = .thin
+      adjustSubviews()
+      // The panes give up the room for the seams in proportion, which may fall between points.
+      for index in arrangedSubviews.indices.dropLast() {
+        setPosition(arrangedSubviews[index].frame.maxX.rounded(), ofDividerAt: index)
+      }
+      needsLayout = true
+    }
+  }
+
+  override var dividerThickness: CGFloat {
+    seams.isEmpty ? super.dividerThickness : Theme.seamWidth
+  }
+
+  override func drawDivider(in rect: NSRect) {
+    guard seams.isEmpty else { return }
+    super.drawDivider(in: rect)
+  }
+
+  override func layout() {
+    super.layout()
+    placeSeams()
+  }
+
+  /// Lays each seam over its divider, across the full height.
+  func placeSeams() {
+    let panes = arrangedSubviews
+    for (index, seam) in seams.enumerated() where index + 1 < panes.count {
+      let left = panes[index].frame.maxX
+      let right = panes[index + 1].frame.minX
+      seam.frame = CGRect(x: left, y: bounds.minY, width: right - left, height: bounds.height)
+    }
   }
 }
 
