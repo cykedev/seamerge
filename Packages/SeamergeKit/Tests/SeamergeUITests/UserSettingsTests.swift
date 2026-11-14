@@ -48,6 +48,7 @@ struct UserSettingsTests {
     #expect(settings.showsBase && settings.highlightsSyntax && settings.goesToNextConflict)
     #expect(!settings.wrapsLines && !settings.showsInvisibles)
     #expect(settings.showsFooter && settings.showsFileList)
+    #expect(settings.sourcesFraction == nil)
   }
 
   @Test func valuesOutOfRangeOrUnknownReadAsTheStandard() {
@@ -57,6 +58,7 @@ struct UserSettingsTests {
     defaults.set("cramped", forKey: "LineSpacing")
     defaults.set(1, forKey: "TabWidth")
     defaults.set("fuzzy", forKey: "ComparisonMode")
+    defaults.set(1.5, forKey: "SourcesFraction")
 
     let settings = UserSettings(defaults: defaults)
     #expect(settings.fontFamily == nil)
@@ -64,6 +66,7 @@ struct UserSettingsTests {
     #expect(settings.lineSpacing == .standard)
     #expect(settings.tabWidth == 4)
     #expect(settings.comparisonMode == .windowDefault)
+    #expect(settings.sourcesFraction == nil)
   }
 
   @Test func sizeAndTabWidthBeyondTheirRangesAreKeptAsTheNearestWithin() {

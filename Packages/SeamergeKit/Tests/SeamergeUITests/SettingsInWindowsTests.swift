@@ -6,7 +6,8 @@ import Testing
 @testable import SeamergeUI
 
 /// The settings in the session windows: the text settings take effect in every open window at
-/// once, and the others are where a new window starts.
+/// once, the others are where a new window starts, and a window opens where the last of its kind
+/// closed.
 @MainActor
 @Suite(.timeLimit(.minutes(1))) struct SettingsInWindowsTests {
   @Test func textSettingsTakeEffectInEveryOpenWindowAtOnce() async throws {
@@ -158,5 +159,56 @@ import Testing
       for: FileCollection(files: files), settings: settings)
 
     #expect(controller.comparisonOptions.mode == .ignoreAllWhitespace)
+  }
+
+  @Test func newWindowOpensAtTheSizeAndSplitOfTheLastOfItsKind() async throws {
+    let settings = UserSettings.private()
+    let first = try Windows.controller(
+      for: try await SampleMerges.helloWorld(), settings: settings)
+    let firstWindow = try #require(first.window)
+    firstWindow.setContentSize(CGSize(width: 1_100, height: 760))
+    first.layout.view.layoutSubtreeIfNeeded()
+    let splitView = first.layout.splitView
+    splitView.setPosition((splitView.bounds.height * 0.3).rounded(), ofDividerAt: 0)
+    let fraction = try #require(first.layout.currentSourcesFraction)
+    let frame = firstWindow.frame
+
+    firstWindow.close()
+
+    let merge = try Windows.controller(
+      for: try await SampleMerges.helloWorld(), settings: settings)
+    #expect(merge.window?.frame.size == frame.size)
+    #expect(abs((merge.layout.currentSourcesFraction ?? 0) - fraction) < 0.01)
+    let diff = try Windows.controller(for: try await SampleDiffs.greeting(), settings: settings)
+    #expect(diff.window?.frame.size != frame.size, "a comparison keeps a place of its own")
+  }
+
+  @Test(arguments: [false, true])
+  func quittingTheAppRemembersWhereEachKindOfWindowWas(isMerge: Bool) async throws {
+    let settings = UserSettings.private()
+    let session = isMerge ? try await SampleMerges.helloWorld() : try await SampleDiffs.greeting()
+    let controller = try Windows.controller(for: session, settings: settings)
+    let window = try #require(controller.window)
+    window.setContentSize(CGSize(width: 1_000, height: 700))
+    let frame = window.frame
+
+    controller.closeAsTheAppQuits()
+
+    let next = try Windows.controller(for: session, settings: settings)
+    #expect(next.window?.frame.size == frame.size)
+  }
+
+  @Test func windowWithTheResultMaximizedLeavesTheSplitAsItWas() async throws {
+    let settings = UserSettings.private()
+    let first = try Windows.controller(
+      for: try await SampleMerges.helloWorld(), settings: settings)
+    first.toggleResultMaximized(nil)
+
+    first.window?.close()
+
+    #expect(settings.sourcesFraction == nil)
+    let next = try Windows.controller(for: try await SampleMerges.helloWorld(), settings: settings)
+    #expect(
+      abs((next.layout.currentSourcesFraction ?? 0) - WindowMetrics.sourcesFraction) < 0.01)
   }
 }

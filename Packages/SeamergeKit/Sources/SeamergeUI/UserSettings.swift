@@ -8,7 +8,7 @@ import Observation
 /// The settings say how the code is drawn and how each new window starts. The text settings
 /// take effect at once in every open window; the others are where a new window starts, and the
 /// controls of a window change only that window. What a window remembers for every window, its
-/// footer and sidebar, is kept here as well, without a place in Settings.
+/// footer, sidebar, size and split, is kept here as well, without a place in Settings.
 ///
 /// Values that the user defaults hold out of range, or that name what no longer exists, read as
 /// the standard.
@@ -117,6 +117,29 @@ public final class UserSettings {
     didSet { defaults.set(!showsFileList, forKey: Key.hidesFileList) }
   }
 
+  /// The share of the height that the panes above the result took in the last merge window that
+  /// closed, or `nil` before the first.
+  var sourcesFraction: CGFloat? {
+    get {
+      let fraction = CGFloat(defaults.double(forKey: Key.sourcesFraction))
+      return Self.sourcesFractions.contains(fraction) ? fraction : nil
+    }
+    set { defaults.set(newValue.map(Double.init), forKey: Key.sourcesFraction) }
+  }
+
+  /// Where the last window of `kind` that closed was and how large, as the window describes its
+  /// frame, or `nil` before the first.
+  func windowFrame(
+    of kind: SessionWindowKind
+  ) -> NSWindow.PersistableFrameDescriptor? {
+    defaults.string(forKey: kind.frameKey)
+  }
+
+  /// Remembers `frame` as where the last window of `kind` was.
+  func setWindowFrame(_ frame: NSWindow.PersistableFrameDescriptor, of kind: SessionWindowKind) {
+    defaults.set(frame, forKey: kind.frameKey)
+  }
+
   /// Reads the settings from `defaults` and keeps every change there.
   public init(defaults: UserDefaults) {
     self.defaults = defaults
@@ -173,6 +196,10 @@ public final class UserSettings {
 
   private static let standardTabWidth = 4
 
+  /// The shares of the height above the result that a new window takes over; others leave too
+  /// little of the panes above the result or of the result itself.
+  private static let sourcesFractions: ClosedRange<CGFloat> = 0.1...0.9
+
   private static let systemFontFamilyName = "SF Mono"
 
   /// The weight of a regular font in the scale of the font manager.
@@ -199,6 +226,27 @@ public final class UserSettings {
     static let staysOnDecidedConflict = "StaysOnDecidedConflict"
     static let hidesFooter = "HidesFooter"
     static let hidesFileList = "HidesFileList"
+    static let sourcesFraction = "SourcesFraction"
+  }
+}
+
+/// The kinds of session window, each of which opens where the last one of its kind closed.
+enum SessionWindowKind {
+  /// A merge, with the result below its inputs.
+  case merge
+
+  /// A comparison of two files.
+  case comparison
+
+  /// A comparison of several files, with their list in a sidebar.
+  case collection
+
+  fileprivate var frameKey: String {
+    switch self {
+    case .merge: "MergeWindowFrame"
+    case .comparison: "ComparisonWindowFrame"
+    case .collection: "CollectionWindowFrame"
+    }
   }
 }
 

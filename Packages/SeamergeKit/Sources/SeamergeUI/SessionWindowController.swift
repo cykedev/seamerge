@@ -346,6 +346,7 @@ public final class SessionWindowController: NSWindowController {
     window.title = summary.title
     window.representedURL = context.resultURL
     layout.updateMinimumWidths()
+    takeLastPlace()
     layout.placeDividers()
     if arrangement.sourceRoles.contains(.base), !settings.showsBase {
       layout.showsBase = false
@@ -478,10 +479,11 @@ extension SessionWindowController: NSWindowDelegate {
     return false
   }
 
-  /// Reports the end of the session, once: a merge counts as saved if what the window shows was
-  /// written to its file, and closing a comparison means it was seen, so that Git goes on to the
-  /// next file.
+  /// Remembers the place of the window for the next of its kind and reports the end of the
+  /// session, once: a merge counts as saved if what the window shows was written to its file,
+  /// and closing a comparison means it was seen, so that Git goes on to the next file.
   public func windowWillClose(_ notification: Notification) {
+    rememberPlace()
     fileWatchers = []
     let isSaved =
       binaryMerge == nil

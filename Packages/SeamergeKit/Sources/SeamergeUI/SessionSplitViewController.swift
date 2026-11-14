@@ -228,15 +228,27 @@ final class SessionSplitViewController: NSSplitViewController {
     }
   }
 
+  /// The share of the height that the panes above the result take in a new window.
+  var sourcesFraction = WindowMetrics.sourcesFraction
+
+  /// The share of the height that the panes above the result take now, or `nil` without a
+  /// result or while the result has the whole window.
+  var currentSourcesFraction: CGFloat? {
+    guard resultPane != nil, !maximizesResult, splitView.bounds.height > 0,
+      let sources = splitView.arrangedSubviews.first
+    else { return nil }
+    return sources.frame.height / splitView.bounds.height
+  }
+
   /// Places the dividers as a new window has them: the source panes equally wide, and above
-  /// the result their share of the height.
+  /// the result their share of the height, ``sourcesFraction``.
   ///
   /// - Precondition: The view is in its window, at the window's size.
   func placeDividers() {
     view.layoutSubtreeIfNeeded()
     if resultPane != nil {
       splitView.setPosition(
-        (splitView.bounds.height * WindowMetrics.sourcesFraction).rounded(), ofDividerAt: 0)
+        (splitView.bounds.height * sourcesFraction).rounded(), ofDividerAt: 0)
     }
     placeSourceDividers()
   }
