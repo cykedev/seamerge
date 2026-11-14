@@ -15,7 +15,7 @@ struct SessionTests {
       try await connection.send(.opened)
       try await connection.send(.closed(.saved))
 
-      #expect(try await outcome == .saved)
+      #expect(try await outcome == .closed(.saved))
       await server.stop()
     }
   }
@@ -35,8 +35,8 @@ struct SessionTests {
       }
 
       #expect(Set(connections.map(\.request)) == [.sample("first"), .sample("second")])
-      #expect(try await first == .saved)
-      #expect(try await second == .cancelled)
+      #expect(try await first == .closed(.saved))
+      #expect(try await second == .closed(.cancelled))
       await server.stop()
     }
   }
@@ -209,6 +209,6 @@ struct SessionTests {
     let connection = try await server.nextConnection()
     #expect(connection.request == .sample("well-behaved"))
     try await connection.send(.closed(.saved))
-    #expect(try await outcome == .saved)
+    #expect(try await outcome == .closed(.saved))
   }
 }

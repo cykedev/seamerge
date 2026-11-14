@@ -52,11 +52,38 @@ struct MessageTests {
   }
 
   @Test(arguments: [
-    SessionEvent.opened, .closed(.saved), .closed(.cancelled), .rejected(.unsupportedVersion),
+    SessionEvent.opened, .accepted, .closed(.saved), .closed(.cancelled),
+    .rejected(.unsupportedVersion),
     .rejected(.malformedRequest), .rejected(.unsupportedRequest),
   ])
   func eventSurvivesEncodingAndDecoding(_ event: SessionEvent) throws {
     #expect(try roundTrip(event) == event)
+  }
+
+  @Test func collectedDiffSurvivesEncodingAndDecoding() throws {
+    let request = SessionRequest.diff(
+      .init(
+        left: URL(filePath: "/tmp/git-blob-a/a.swift"), right: URL(filePath: "/repo/a.swift"),
+        displayPath: "a.swift",
+        context: .init(filePosition: .init(number: 2, count: 40)),
+        origin: .init(repository: "/repo", run: .init(processID: 4711, startTime: 1_700_000_000))))
+
+    #expect(try roundTrip(request) == request)
+  }
+
+  @Test func foldersSurviveEncodingAndDecoding() throws {
+    let request = SessionRequest.folders(
+      .init(
+        left: URL(filePath: "/tmp/git-difftool.x/left"),
+        right: URL(filePath: "/tmp/git-difftool.x/right"), repository: URL(filePath: "/repo")))
+
+    #expect(try roundTrip(request) == request)
+  }
+
+  @Test func acceptedEndsWithSuccess() throws {
+    #expect(try json(SessionEvent.accepted) == #"{"event":"accepted","version":2}"#)
+    #expect(SessionReply.accepted.exitStatus == 0)
+    #expect(SessionReply.closed(.cancelled).exitStatus == 1)
   }
 
   @Test func eventsAreWrittenAsTheProtocolDescribesThem() throws {

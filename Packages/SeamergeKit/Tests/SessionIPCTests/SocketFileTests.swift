@@ -13,7 +13,7 @@ struct SocketFileTests {
       async let outcome = SessionClient(socketURL: url).perform(.sample())
       try await server.nextConnection().send(.closed(.saved))
 
-      #expect(try await outcome == .saved)
+      #expect(try await outcome == .closed(.saved))
       await server.stop()
     }
   }
@@ -28,7 +28,7 @@ struct SocketFileTests {
 
       async let outcome = SessionClient(socketURL: url).perform(.sample())
       try await server.nextConnection().send(.closed(.cancelled))
-      #expect(try await outcome == .cancelled)
+      #expect(try await outcome == .closed(.cancelled))
       await server.stop()
     }
   }
@@ -80,7 +80,7 @@ struct SocketFileTests {
 
       async let outcome = SessionClient(socketURL: url).perform(.sample())
       try await successor.nextConnection().send(.closed(.saved))
-      #expect(try await outcome == .saved)
+      #expect(try await outcome == .closed(.saved))
       await successor.stop()
     }
   }
@@ -92,7 +92,7 @@ struct SocketFileTests {
       var server = try RunningServer(at: url)
       try await server.nextConnection().send(.closed(.saved))
 
-      #expect(try await outcome == .saved)
+      #expect(try await outcome == .closed(.saved))
       await server.stop()
     }
   }

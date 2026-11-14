@@ -136,9 +136,7 @@ final class WindowRecorder: SessionCoordinatorDelegate {
 }
 
 /// Runs `request` against the app in the test, as the helper does, in a task of its own.
-func perform(_ request: SessionRequest, at socketURL: URL) -> Task<
-  SessionIPC.SessionOutcome, any Error
-> {
+func perform(_ request: SessionRequest, at socketURL: URL) -> Task<SessionReply, any Error> {
   Task {
     try await SessionClient(socketURL: socketURL).perform(request)
   }

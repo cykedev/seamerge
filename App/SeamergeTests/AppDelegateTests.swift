@@ -230,6 +230,7 @@ struct AppDelegateTests {
   private func makeDelegate(in sandbox: AppSandbox, arguments: [String]) -> AppDelegate {
     AppDelegate(
       arguments: arguments, defaults: sandbox.defaults, socketURL: sandbox.socketURL,
-      presenter: sandbox.presenter, integrationStore: sandbox.integrationStore)
+      collectionCache: sandbox.collectionCache, presenter: sandbox.presenter,
+      integrationStore: sandbox.integrationStore)
   }
 }

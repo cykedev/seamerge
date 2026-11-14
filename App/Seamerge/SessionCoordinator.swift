@@ -129,6 +129,10 @@ final class SessionCoordinator {
         idleWaiters = []
       }
     }
+    if case .folders = connection.request {
+      await send(.rejected(.unsupportedRequest), on: connection)
+      return
+    }
     let controller: SessionWindowController
     do {
       controller = try await Self.makeWindow(for: connection.request)
@@ -246,6 +250,8 @@ final class SessionCoordinator {
           unavailable: UnavailableComparison(old: old, new: new, reason: error), context: context,
           undoManager: UndoManager())
       }
+    case .folders:
+      preconditionFailure("The folders of a directory diff are served as a collection")
     }
   }
 }
@@ -255,7 +261,7 @@ extension SessionRequest {
   fileprivate var kind: Session.Kind {
     switch self {
     case .merge: .merge
-    case .diff: .diff
+    case .diff, .folders: .diff
     }
   }
 }

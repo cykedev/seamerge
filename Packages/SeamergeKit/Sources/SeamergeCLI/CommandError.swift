@@ -132,10 +132,10 @@ enum CommandError: Error {
     case .serverUnreachable:
       self = .appNotAnswering
     case .rejected(.unsupportedRequest):
-      if case .diff = request {
-        self = .windowNotAvailable(isComparison: true)
-      } else {
+      if case .merge = request {
         self = .windowNotAvailable(isComparison: false)
+      } else {
+        self = .windowNotAvailable(isComparison: true)
       }
     case .rejected, .unsupportedVersion:
       self = .appRefusedRequest

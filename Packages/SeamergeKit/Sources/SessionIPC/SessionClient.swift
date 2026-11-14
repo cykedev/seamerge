@@ -20,10 +20,11 @@ public struct SessionClient: Sendable {
     self.connectionTimeout = connectionTimeout
   }
 
-  /// Sends `request` to the app and returns how the user ended the session.
+  /// Sends `request` to the app and returns how the session ended.
   ///
   /// The client connects, retrying until ``connectionTimeout`` has passed while there is no
-  /// socket or nothing listens on it, sends the request, and waits for the window to close.
+  /// socket or nothing listens on it, sends the request, and waits for the window to close, or
+  /// only until the app has taken over the files of a comparison with an origin.
   /// Cancelling the calling task closes the connection; the app sees that the tool is gone.
   ///
   /// - Throws: ``SessionError/serverUnreachable(path:)`` if no server accepted the connection in
@@ -31,7 +32,7 @@ public struct SessionClient: Sendable {
   ///   ended, ``SessionError/rejected(_:)`` if the app refused the request,
   ///   ``SessionError/cancelled`` if the task was cancelled, and other ``SessionError`` cases if
   ///   the socket or a message is broken.
-  public func perform(_ request: SessionRequest) async throws(SessionError) -> SessionOutcome {
+  public func perform(_ request: SessionRequest) async throws(SessionError) -> SessionReply {
     let connection = try await connect()
     defer { connection.close() }
     try await connection.write(MessageCoding.line(for: request))
@@ -39,7 +40,8 @@ public struct SessionClient: Sendable {
     while let line = try await reader.nextLine() {
       switch try MessageCoding.decode(SessionEvent.self, from: line) {
       case .opened: Logger.sessionIPC.info("The app opened the session")
-      case .closed(let outcome): return outcome
+      case .accepted: return .accepted
+      case .closed(let outcome): return .closed(outcome)
       case .rejected(let reason): throw .rejected(reason)
       }
     }

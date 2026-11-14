@@ -74,9 +74,9 @@ public struct SeamergeCommand: Sendable {
       throw .appNotOpened(reason: error.localizedDescription)
     }
     do {
-      let outcome = try await client.perform(request)
-      Logger.seamergeCLI.info("The session ended: \(outcome.rawValue)")
-      return outcome.exitStatus
+      let reply = try await client.perform(request)
+      Logger.seamergeCLI.info("The session ended: \(String(describing: reply))")
+      return reply.exitStatus
     } catch {
       Logger.seamergeCLI.error("The session failed: \(String(describing: error))")
       throw CommandError(error, request: request)

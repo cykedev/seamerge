@@ -12,6 +12,9 @@ public enum SessionRequest: Sendable, Hashable {
   /// A comparison of two files.
   case diff(Diff)
 
+  /// A comparison of the files in two folders, as `git difftool --dir-diff` hands them over.
+  case folders(Folders)
+
   /// The files of a merge and what Git is doing while it asks for the merge.
   public struct Merge: Sendable, Hashable {
     /// The common ancestor, or `nil` if there is none.
@@ -73,6 +76,10 @@ public enum SessionRequest: Sendable, Hashable {
     /// What each side is, and which file of the run this is.
     public var context: DiffContext
 
+    /// Where the comparison comes from, if it may join the comparisons of the same origin in one
+    /// window; the tool then waits only until the app has taken the files over.
+    public var origin: Origin?
+
     /// Creates the description of a comparison.
     public init(
       left: URL,
@@ -80,7 +87,8 @@ public enum SessionRequest: Sendable, Hashable {
       displayPath: String? = nil,
       leftLabel: String? = nil,
       rightLabel: String? = nil,
-      context: DiffContext = DiffContext()
+      context: DiffContext = DiffContext(),
+      origin: Origin? = nil
     ) {
       self.left = left
       self.right = right
@@ -88,13 +96,14 @@ public enum SessionRequest: Sendable, Hashable {
       self.leftLabel = leftLabel
       self.rightLabel = rightLabel
       self.context = context
+      self.origin = origin
     }
   }
 }
 
 extension SessionRequest: Codable {
   private enum CodingKeys: String, CodingKey {
-    case version, merge, diff
+    case version, merge, diff, folders
   }
 
   /// Decodes a request, refusing one of another protocol version before reading anything else.
@@ -104,14 +113,16 @@ extension SessionRequest: Codable {
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     try MessageCoding.checkVersion(in: container, forKey: .version)
-    switch (container.contains(.merge), container.contains(.diff)) {
-    case (true, false): self = .merge(try container.decode(Merge.self, forKey: .merge))
-    case (false, true): self = .diff(try container.decode(Diff.self, forKey: .diff))
+    switch (container.contains(.merge), container.contains(.diff), container.contains(.folders)) {
+    case (true, false, false): self = .merge(try container.decode(Merge.self, forKey: .merge))
+    case (false, true, false): self = .diff(try container.decode(Diff.self, forKey: .diff))
+    case (false, false, true):
+      self = .folders(try container.decode(Folders.self, forKey: .folders))
     default:
       throw DecodingError.dataCorrupted(
         .init(
           codingPath: container.codingPath,
-          debugDescription: "A request names exactly one of merge and diff."))
+          debugDescription: "A request names exactly one of merge, diff and folders."))
     }
   }
 
@@ -122,6 +133,7 @@ extension SessionRequest: Codable {
     switch self {
     case .merge(let merge): try container.encode(merge, forKey: .merge)
     case .diff(let diff): try container.encode(diff, forKey: .diff)
+    case .folders(let folders): try container.encode(folders, forKey: .folders)
     }
   }
 }
@@ -159,7 +171,7 @@ extension SessionRequest.Merge: Codable {
 
 extension SessionRequest.Diff: Codable {
   private enum CodingKeys: String, CodingKey {
-    case left, right, displayPath, leftLabel, rightLabel, context
+    case left, right, displayPath, leftLabel, rightLabel, context, origin
   }
 
   /// Decodes the files of a comparison.
@@ -171,6 +183,7 @@ extension SessionRequest.Diff: Codable {
     leftLabel = try container.decodeIfPresent(String.self, forKey: .leftLabel)
     rightLabel = try container.decodeIfPresent(String.self, forKey: .rightLabel)
     context = try container.decode(SessionRequest.DiffContext.self, forKey: .context)
+    origin = try container.decodeIfPresent(SessionRequest.Origin.self, forKey: .origin)
   }
 
   /// Encodes the files of a comparison as absolute paths.
@@ -182,5 +195,6 @@ extension SessionRequest.Diff: Codable {
     try container.encodeIfPresent(leftLabel, forKey: .leftLabel)
     try container.encodeIfPresent(rightLabel, forKey: .rightLabel)
     try container.encode(context, forKey: .context)
+    try container.encodeIfPresent(origin, forKey: .origin)
   }
 }

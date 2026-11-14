@@ -23,7 +23,7 @@ struct SessionCoordinatorTests {
     #expect(window.representedURL == sandbox.folder.appending(path: "story.txt"))
     window.close()
 
-    #expect(try await outcome.value == .cancelled)
+    #expect(try await outcome.value == .closed(.cancelled))
     #expect(coordinator.windowControllers.isEmpty)
     await coordinator.finish()
   }
@@ -44,7 +44,7 @@ struct SessionCoordinatorTests {
     #expect(controller.context.waitingCaller == (isRunByGit ? .git : .commandLine))
     controller.window?.close()
 
-    #expect(try await outcome.value == .cancelled)
+    #expect(try await outcome.value == .closed(.cancelled))
     await coordinator.finish()
   }
 
@@ -96,7 +96,7 @@ struct SessionCoordinatorTests {
       let controller = await recorder.nextOpened()
       windows.append(controller)
       controller.close()
-      #expect(try await outcome.value == .cancelled)
+      #expect(try await outcome.value == .closed(.cancelled))
     }
 
     #expect(Set(windows.map(ObjectIdentifier.init)).count == 12)
@@ -122,7 +122,7 @@ struct SessionCoordinatorTests {
     #expect(undoManagers[0] !== undoManagers[1])
     await coordinator.finish()
     for outcome in outcomes {
-      #expect(try await outcome.value == .cancelled)
+      #expect(try await outcome.value == .closed(.cancelled))
     }
   }
 
@@ -140,7 +140,7 @@ struct SessionCoordinatorTests {
     await coordinator.finish()
 
     for outcome in outcomes {
-      #expect(try await outcome.value == .cancelled)
+      #expect(try await outcome.value == .closed(.cancelled))
     }
     #expect(windows.allSatisfy { $0.window?.isVisible == false })
     #expect(coordinator.windowControllers.isEmpty)
@@ -161,7 +161,7 @@ struct SessionCoordinatorTests {
     #expect(coordinator.kind(of: window) == .diff)
     window.close()
 
-    #expect(try await outcome.value == .saved)
+    #expect(try await outcome.value == .closed(.saved))
     #expect(coordinator.windowControllers.isEmpty)
     await coordinator.finish()
   }
@@ -176,7 +176,7 @@ struct SessionCoordinatorTests {
     NSApplication.shared.sendAction(
       SessionCommand.skipRemainingFiles.action, to: controller, from: nil)
 
-    #expect(try await outcome.value == .cancelled)
+    #expect(try await outcome.value == .closed(.cancelled))
     #expect(controller.window?.isVisible == false)
     #expect(coordinator.windowControllers.isEmpty)
     await coordinator.finish()
@@ -197,7 +197,7 @@ struct SessionCoordinatorTests {
     NSApplication.shared.sendAction(
       SessionCommand.leaveUnresolved.action, to: controller, from: nil)
 
-    #expect(try await outcome.value == .cancelled)
+    #expect(try await outcome.value == .closed(.cancelled))
     #expect(sandbox.presenter.errors.isEmpty)
     #expect(coordinator.windowControllers.isEmpty)
     await coordinator.finish()
@@ -227,7 +227,7 @@ struct SessionCoordinatorTests {
     #expect(controller.validateUserInterfaceItem(menuItem(for: .skipRemainingFiles)))
     window.close()
 
-    #expect(try await outcome.value == .saved)
+    #expect(try await outcome.value == .closed(.saved))
     await coordinator.finish()
   }
 

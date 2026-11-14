@@ -3,6 +3,10 @@ public enum SessionEvent: Sendable, Hashable {
   /// The app shows the window for the request.
   case opened
 
+  /// The app has taken over the files of a comparison that joins a window of its origin, and
+  /// shows them without anyone waiting for the window.
+  case accepted
+
   /// The window was closed; the session is over.
   case closed(SessionOutcome)
 
@@ -28,6 +32,25 @@ public enum SessionOutcome: String, Sendable, Hashable, Codable {
   }
 }
 
+/// How a session ended for the command-line tool: the app took over the files, or the user closed
+/// the window.
+public enum SessionReply: Sendable, Hashable {
+  /// The app took over the files of a comparison that does not keep anyone waiting.
+  case accepted
+
+  /// The user closed the window.
+  case closed(SessionOutcome)
+
+  /// The exit status the command-line tool ends with: 0 for files the app took over, else that
+  /// of the outcome.
+  public var exitStatus: Int32 {
+    switch self {
+    case .accepted: 0
+    case .closed(let outcome): outcome.exitStatus
+    }
+  }
+}
+
 /// Why the app refused a request.
 public enum SessionRejection: String, Sendable, Hashable, Codable {
   /// The request was written in another version of the protocol.
@@ -46,7 +69,7 @@ extension SessionEvent: Codable {
   }
 
   private enum Name: String, Codable {
-    case opened, closed, rejected
+    case opened, accepted, closed, rejected
   }
 
   /// Decodes an event, refusing one of another protocol version before reading anything else.
@@ -59,6 +82,8 @@ extension SessionEvent: Codable {
     switch try container.decode(Name.self, forKey: .event) {
     case .opened:
       self = .opened
+    case .accepted:
+      self = .accepted
     case .closed:
       let outcome = try container.decode(SessionOutcome.self, forKey: .outcome)
       guard try container.decode(Int32.self, forKey: .exit) == outcome.exitStatus else {
@@ -82,6 +107,8 @@ extension SessionEvent: Codable {
     switch self {
     case .opened:
       try container.encode(Name.opened, forKey: .event)
+    case .accepted:
+      try container.encode(Name.accepted, forKey: .event)
     case .closed(let outcome):
       try container.encode(Name.closed, forKey: .event)
       try container.encode(outcome, forKey: .outcome)
