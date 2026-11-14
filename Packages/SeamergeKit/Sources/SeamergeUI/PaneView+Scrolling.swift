@@ -21,42 +21,23 @@ extension PaneView {
     window != nil && !isHiddenOrHasHiddenAncestor && bounds.height > 0 && bounds.width > 0
   }
 
-  /// The place of `row` among the rows the pane shows, where each collapsed run takes the one
-  /// row of its bar; a row behind a bar has the place of the bar.
-  func displayRow(ofRow row: Int) -> Int {
-    var hiddenRows = 0
-    for run in collapsedRuns {
-      if run.rows.upperBound <= row {
-        hiddenRows += run.rows.count - 1
-      } else {
-        if run.rows.contains(row) {
-          return run.rows.lowerBound - hiddenRows
-        }
-        break
-      }
-    }
-    return row - hiddenRows
-  }
-
   /// The row at the reading line, and how far down that row the reading line passes, from 0 at
   /// its top to 1 at its bottom.
   var rowAtReadingLine: (row: Int, fraction: CGFloat) {
     let visible = documentView.visibleRect
     let y = visible.minY + Theme.readingLine * visible.height
     let row = hit(at: convert(CGPoint(x: 0, y: y), from: documentView)).row
-    let top = CGFloat(displayRow(ofRow: row)) * theme.rowHeight
-    return (row, min(max((y - top) / theme.rowHeight, 0), 1))
+    let span = verticalSpan(ofRows: row..<row + 1)
+    let height = span.upperBound - span.lowerBound
+    return (row, height > 0 ? min(max((y - span.lowerBound) / height, 0), 1) : 0)
   }
 
   /// Whether every one of `rows` is in full view; for an empty range, whether the boundary it
   /// lies on is.
   func showsWhole(rows: Range<Int>) -> Bool {
     let visible = documentView.visibleRect
-    let rowHeight = theme.rowHeight
-    let top = CGFloat(displayRow(ofRow: rows.lowerBound)) * rowHeight
-    let bottom =
-      rows.isEmpty ? top : CGFloat(displayRow(ofRow: rows.upperBound - 1) + 1) * rowHeight
-    return top >= visible.minY && bottom <= visible.maxY
+    let span = verticalSpan(ofRows: rows)
+    return span.lowerBound >= visible.minY && span.upperBound <= visible.maxY
   }
 
   /// Scrolls so that `row` comes to rest at the reading line, or as near to it as the text
@@ -69,8 +50,9 @@ extension PaneView {
     let clipView = scrollView.contentView
     let visible = clipView.bounds
     let range = max(documentView.frame.height - visible.height, 0)
+    let span = verticalSpan(ofRows: row..<row + 1)
     let y =
-      (CGFloat(displayRow(ofRow: row)) + fraction) * theme.rowHeight - Theme.readingLine
+      span.lowerBound + fraction * (span.upperBound - span.lowerBound) - Theme.readingLine
       * visible.height
     let origin = CGPoint(x: visible.minX, y: min(max(y, 0), range).rounded())
     guard origin != visible.origin else { return }

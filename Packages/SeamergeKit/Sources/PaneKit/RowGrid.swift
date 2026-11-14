@@ -8,6 +8,10 @@ struct RowGrid {
   /// The offset at which each row starts.
   private var rowStarts: [Int]
 
+  /// The columns that each row takes, with tabs expanded, negative where the row holds a
+  /// character whose width the count only estimates.
+  private var rowColumns: [Int32]
+
   /// The length of the text.
   private(set) var textLength: Int
 
@@ -23,12 +27,17 @@ struct RowGrid {
   /// Finds the rows of `text`, expanding tabs to multiples of `tabWidth` columns.
   init(text: String, tabWidth: Int) {
     var rowStarts = [0]
+    var rowColumns: [Int32] = []
     var offset = 0
-    let widestRowColumns = Self.measure(text.unicodeScalars, tabWidth: tabWidth) { length in
-      offset += length
-      rowStarts.append(offset)
+    let widestRowColumns = Self.measure(text.unicodeScalars, tabWidth: tabWidth) { row in
+      offset += row.length
+      if row.endsWithLineFeed {
+        rowStarts.append(offset)
+      }
+      rowColumns.append(row.columns)
     }
     self.rowStarts = rowStarts
+    self.rowColumns = rowColumns
     self.textLength = text.utf16.count
     self.widestRowColumns = widestRowColumns
     self.tabWidth = tabWidth
@@ -49,13 +58,18 @@ struct RowGrid {
     let oldEnd = lastRow + 1 < rowStarts.count ? rowStarts[lastRow + 1] - 1 : textLength
     let newEnd = oldEnd + delta
     var newStarts: [Int] = []
+    var newColumns: [Int32] = []
     let rows = text.substring(with: NSRange(location: rowStart, length: newEnd - rowStart))
     var offset = rowStart
-    let columns = Self.measure(rows.unicodeScalars, tabWidth: tabWidth) { rowLength in
-      offset += rowLength
-      newStarts.append(offset)
+    let columns = Self.measure(rows.unicodeScalars, tabWidth: tabWidth) { row in
+      offset += row.length
+      if row.endsWithLineFeed {
+        newStarts.append(offset)
+      }
+      newColumns.append(row.columns)
     }
     rowStarts.replaceSubrange(firstRow + 1..<lastRow + 1, with: newStarts)
+    rowColumns.replaceSubrange(firstRow..<lastRow + 1, with: newColumns)
     for row in firstRow + 1 + newStarts.count..<rowStarts.count {
       rowStarts[row] += delta
     }
@@ -65,29 +79,56 @@ struct RowGrid {
       oldRows: firstRow..<lastRow + 1, newRows: firstRow..<firstRow + newStarts.count + 1)
   }
 
-  /// Measures the rows of `scalars` and returns the columns of the widest; `rowEnded` learns the
-  /// length of each row that a line feed ends, the line feed included.
+  /// A row as `measure` finds it.
+  private struct MeasuredRow {
+    /// The length of the row in code units, its line feed included.
+    var length: Int
+    /// Whether a line feed ends the row, rather than the end of the text.
+    var endsWithLineFeed: Bool
+    /// The columns of the row, negative where they are estimated.
+    var columns: Int32
+  }
+
+  /// Measures the rows of `scalars` and returns the columns of the widest; `rowMeasured` learns
+  /// each row, the last one too.
   private static func measure(
-    _ scalars: some Sequence<Unicode.Scalar>, tabWidth: Int, rowEnded: (Int) -> Void
+    _ scalars: some Sequence<Unicode.Scalar>, tabWidth: Int, rowMeasured: (MeasuredRow) -> Void
   ) -> Int {
     var length = 0
     var columns = 0
+    var isExact = true
     var widestRowColumns = 0
+    func endRow(withLineFeed: Bool) {
+      rowMeasured(
+        MeasuredRow(
+          length: length, endsWithLineFeed: withLineFeed,
+          columns: isExact ? Int32(clamping: columns) : -Int32(clamping: max(columns, 1))))
+      widestRowColumns = max(widestRowColumns, columns)
+    }
     for scalar in scalars {
       length += scalar.utf16.count
       switch scalar {
       case "\n":
-        rowEnded(length)
+        endRow(withLineFeed: true)
         length = 0
-        widestRowColumns = max(widestRowColumns, columns)
         columns = 0
+        isExact = true
       case "\t":
         columns += tabWidth - columns % tabWidth
       default:
         columns += Self.columns(of: scalar)
+        isExact = isExact && scalar.value < 0x300
       }
     }
-    return max(widestRowColumns, columns)
+    endRow(withLineFeed: false)
+    return widestRowColumns
+  }
+
+  /// The columns that `row` takes, with tabs expanded, or `nil` if it holds a character whose
+  /// width the count only estimates, such as a wide or a combining one.
+  func exactColumns(ofRow row: Int) -> Int? {
+    let columns = rowColumns[row]
+    return columns >= 0 ? Int(columns) : nil
   }
 
   /// The number of rows.
@@ -141,7 +182,7 @@ struct RowGrid {
   ///
   /// Wide East Asian characters and emoji take two, combining marks none. The count serves only
   /// to size the text view before TextKit lays the text out, so an approximation is enough.
-  private static func columns(of scalar: Unicode.Scalar) -> Int {
+  static func columns(of scalar: Unicode.Scalar) -> Int {
     let value = scalar.value
     if value < 0x300 { return 1 }
     switch value {

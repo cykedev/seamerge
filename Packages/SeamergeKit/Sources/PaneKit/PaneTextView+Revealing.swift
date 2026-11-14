@@ -59,9 +59,10 @@ extension PaneTextView {
   /// has some text before it; without, the view moves only as far as it takes.
   private func origin(showing offset: Int, in visible: CGRect, withContext: Bool) -> CGPoint? {
     let row = grid.row(containingOffset: offset)
+    let (x, line) = position(ofOffset: offset)
     let place = CGRect(
-      x: xPosition(ofOffset: offset),
-      y: CGFloat(displayRows.displayRow(ofRow: row)) * theme.rowHeight,
+      x: x,
+      y: CGFloat(displayRows.lines(ofRows: row..<row + 1).lowerBound + line) * theme.rowHeight,
       width: theme.characterWidth, height: theme.rowHeight)
     var origin = visible.origin
     if place.minY < visible.minY || place.maxY > visible.maxY {
@@ -84,11 +85,12 @@ extension PaneTextView {
     return origin == visible.origin ? nil : origin
   }
 
-  /// The distance from the left edge of the view to the character at `offset`.
+  /// The distance from the left edge of the view to the character at `offset`, and the screen
+  /// line of its row that the character is on.
   ///
   /// Lays out the paragraph of the character, and only that one.
-  private func xPosition(ofOffset offset: Int) -> CGFloat {
-    let lineStart = textContainerOrigin.x
+  private func position(ofOffset offset: Int) -> (x: CGFloat, line: Int) {
+    let lineStart = (textContainerOrigin.x, 0)
     guard let textLayoutManager else { return lineStart }
     let row = grid.row(containingOffset: offset)
     let paragraph = grid.paragraphOffsets(ofRows: row..<row + 1)
@@ -104,12 +106,16 @@ extension PaneTextView {
       let fragment = textLayoutManager.textLayoutFragment(for: location) as? RowLayoutFragment
     else { return lineStart }
     let index = offset - fragment.paragraphStart
+    let lines = fragment.textLineFragments
     guard
-      let line = fragment.textLineFragments.first(where: {
+      let lineIndex = lines.firstIndex(where: {
         $0.characterRange.lowerBound <= index && index <= $0.characterRange.upperBound
       })
     else { return lineStart }
-    return lineStart + fragment.layoutFragmentFrame.minX + line.typographicBounds.minX
+    let line = lines[lineIndex]
+    let x =
+      textContainerOrigin.x + fragment.layoutFragmentFrame.minX + line.typographicBounds.minX
       + line.locationForCharacter(at: index).x
+    return (x, fragment.rowIndex(of: line) == 0 ? lineIndex : 0)
   }
 }

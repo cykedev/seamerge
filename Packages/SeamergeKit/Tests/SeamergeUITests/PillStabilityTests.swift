@@ -118,8 +118,9 @@ import Testing
       controller.presentation.changes.blocks[$0].kind == .conflict
     }
     let block = conflicts[conflicts.count / 2]
-    let row = result.displayRow(ofRow: result.content.blocks[block].rows.lowerBound)
-    result.scroll(to: CGPoint(x: 0, y: CGFloat(row - 4) * result.theme.rowHeight))
+    let row = result.content.blocks[block].rows.lowerBound
+    let top = result.verticalSpan(ofRows: row..<row + 1).lowerBound
+    result.scroll(to: CGPoint(x: 0, y: top - 4 * result.theme.rowHeight))
     try checkSteps(
       [.toggle(.a, ofBlock: block), .toggle(.b, ofBlock: block), .reset(ofBlock: block)],
       keep: block, in: controller)
@@ -227,8 +228,9 @@ import Testing
 
   /// The top of the first row of `block`, or of the boundary it lies on, in the window.
   private func topOfBlock(_ block: Int, in pane: PaneView) -> CGFloat {
-    let row = pane.displayRow(ofRow: pane.content.blocks[block].rows.lowerBound)
+    let row = pane.content.blocks[block].rows.lowerBound
     let text = pane.documentView
-    return text.convert(CGPoint(x: 0, y: CGFloat(row) * pane.theme.rowHeight), to: nil).y
+    return text.convert(CGPoint(x: 0, y: pane.verticalSpan(ofRows: row..<row).lowerBound), to: nil)
+      .y
   }
 }

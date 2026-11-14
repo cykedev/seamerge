@@ -116,6 +116,21 @@ public struct Theme {
   /// The number of characters that a pane shows at its minimum width.
   static let minimumTextColumns = 20
 
+  /// How many columns the screen lines after the first of a wrapped row are indented beyond the
+  /// indentation of the row, so that the eye sees that the row goes on.
+  static let continuationIndentColumns = 2
+
+  /// The most columns of a row's indentation that its screen lines after the first follow, so
+  /// that they keep room for text even in a narrow pane.
+  static let maximumFollowedIndentColumns = 16
+
+  /// How far the screen lines after the first of a wrapped row are indented, given the columns of
+  /// spaces and tabs that the row starts with.
+  func continuationIndent(afterIndentationOf columns: Int) -> CGFloat {
+    let followed = min(columns, Self.maximumFollowedIndentColumns)
+    return CGFloat(followed + Self.continuationIndentColumns) * characterWidth
+  }
+
   /// The number of characters that stay visible before a place that the pane scrolls to.
   static let revealContextColumns = 8
 

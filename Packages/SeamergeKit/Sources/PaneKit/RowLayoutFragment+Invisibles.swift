@@ -18,8 +18,11 @@ extension RowLayoutFragment {
     defer { context.restoreGState() }
     // The context is flipped; text needs its own matrix to stand upright.
     context.textMatrix = CGAffineTransform(scaleX: 1, y: -1)
-    for (lineIndex, line) in textLineFragments.enumerated()
-    where lineIndex < invisibles.lineEndings.count {
+    let lines = textLineFragments
+    for (lineIndex, line) in lines.enumerated() {
+      let row = rowIndex(of: line)
+      // The ending of a row follows the last of its lines.
+      let isLastOfRow = lineIndex + 1 == lines.count || rowIndex(of: lines[lineIndex + 1]) != row
       let text = line.attributedString.string as NSString
       let range = line.characterRange
       let baseline = point.y + CGFloat(lineIndex) * rowHeight + invisibles.baseline
@@ -41,7 +44,9 @@ extension RowLayoutFragment {
           draw(symbol, x: cellStart(index), baseline: baseline, in: context)
         }
       }
-      if let ending = symbols.lineEnding(invisibles.lineEndings[lineIndex]) {
+      if isLastOfRow, row < invisibles.lineEndings.count,
+        let ending = symbols.lineEnding(invisibles.lineEndings[row])
+      {
         draw(ending, x: cellStart(end), baseline: baseline, in: context)
       }
     }

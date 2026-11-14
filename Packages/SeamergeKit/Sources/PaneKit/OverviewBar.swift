@@ -207,9 +207,9 @@ public final class OverviewBar: NSScroller {
 
   /// Reports the block of a mark that VoiceOver pressed and scrolls it into view.
   fileprivate func pressMark(_ mark: OverviewMark) {
-    let rows = displayRows.displayRows(ofRows: mark.rows)
-    let middle = (CGFloat(rows.lowerBound) + CGFloat(rows.upperBound)) / 2
-    scroll(showing: middle / CGFloat(max(displayRows.count, 1)))
+    let lines = displayRows.lines(ofRows: mark.rows)
+    let middle = (CGFloat(lines.lowerBound) + CGFloat(lines.upperBound)) / 2
+    scroll(showing: middle / CGFloat(max(displayRows.lineCount, 1)))
     delegate?.overviewBar(self, didSelectBlock: mark.block)
   }
 
@@ -228,11 +228,12 @@ public final class OverviewBar: NSScroller {
     }
     let shownMarks = marks.map { mark in
       var shown = mark
-      shown.rows = displayRows.displayRows(ofRows: mark.rows)
+      shown.rows = displayRows.lines(ofRows: mark.rows)
       return shown
     }
     let layout = OverviewLayout(
-      marks: shownMarks, rowCount: displayRows.count, rowHeight: theme.rowHeight, area: markArea)
+      marks: shownMarks, rowCount: displayRows.lineCount, rowHeight: theme.rowHeight,
+      area: markArea)
     cachedLayout = layout
     return layout
   }

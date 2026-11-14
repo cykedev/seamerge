@@ -49,8 +49,13 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     /// Whether the fragment's rows lie behind the bar of a collapsed run, which draws in their
     /// place.
     var isCollapsed: Bool
+    /// The number of screen lines of each row: at least those of its text, more where a pane it
+    /// lines up with wraps it more.
+    var rowLines: [Int]
     /// The fill of each row, or `nil` for a row on the text background.
     var rowFills: [NSColor?]
+    /// The fill of the screen lines of each row below its text, or `nil` for the background.
+    var paddingFills: [NSColor?]
     /// The hairlines at the edges of changed blocks in each row.
     var edges: [Edges]
     /// The color of the text background, which covers AppKit's selection.
@@ -170,24 +175,24 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     nil
   }
 
-  /// The display rows that the fragment takes: as many as its rows, or the one of a bar.
-  private var displayRows: Range<Int> {
+  /// The screen lines that the fragment takes: those of its rows, or the one of a bar.
+  private var lines: Range<Int> {
     guard let painter else { return rows }
     let rows = rows
-    return MainActor.assumeIsolated { painter.displayRows(ofRows: rows) }
+    return MainActor.assumeIsolated { painter.lines(ofRows: rows) }
   }
 
-  /// The frame of the fragment on the grid: its first display row times the row height.
+  /// The frame of the fragment on the grid: its first screen line times the row height.
   ///
   /// TextKit places a fragment that it has not laid out yet by an estimate from the number of
   /// characters before it, which misses rows of a long file by thousands of points. The grid
   /// knows the place exactly.
   override var layoutFragmentFrame: CGRect {
     let frame = super.layoutFragmentFrame
-    let displayRows = displayRows
+    let lines = lines
     return CGRect(
-      x: frame.minX, y: CGFloat(displayRows.lowerBound) * rowHeight, width: frame.width,
-      height: CGFloat(displayRows.count) * rowHeight)
+      x: frame.minX, y: CGFloat(lines.lowerBound) * rowHeight, width: frame.width,
+      height: CGFloat(lines.count) * rowHeight)
   }
 
   override var renderingSurfaceBounds: CGRect {
@@ -205,21 +210,32 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     let rows = rowsBounds(extent).offsetBy(dx: point.x, dy: point.y)
     context.setFillColor(painting.background.cgColor)
     context.fill(rows)
-    for (index, fill) in painting.rowFills.enumerated() {
-      guard let fill else { continue }
-      context.setFillColor(fill.cgColor)
-      context.fill(
-        CGRect(
-          x: rows.minX, y: rows.minY + CGFloat(index) * rowHeight, width: rows.width,
-          height: rowHeight))
-    }
-    for (index, edges) in painting.edges.enumerated() {
-      let top = rows.minY + CGFloat(index) * rowHeight
-      for (color, y) in [(edges.top, top), (edges.bottom, top + rowHeight - extent.hairline)] {
+    let textLines = textLinesOfRows(count: painting.rowLines.count)
+    var top = rows.minY
+    for index in painting.rowLines.indices {
+      let height = CGFloat(painting.rowLines[index]) * rowHeight
+      let textHeight = min(CGFloat(textLines[index]) * rowHeight, height)
+      for (fill, rect) in [
+        (
+          painting.rowFills[index],
+          CGRect(x: rows.minX, y: top, width: rows.width, height: textHeight)
+        ),
+        (
+          painting.paddingFills[index],
+          CGRect(x: rows.minX, y: top + textHeight, width: rows.width, height: height - textHeight)
+        ),
+      ] {
+        guard let fill, !rect.isEmpty else { continue }
+        context.setFillColor(fill.cgColor)
+        context.fill(rect)
+      }
+      let edges = painting.edges[index]
+      for (color, y) in [(edges.top, top), (edges.bottom, top + height - extent.hairline)] {
         guard let color else { continue }
         context.setFillColor(color.cgColor)
         context.fill(CGRect(x: rows.minX, y: y, width: rows.width, height: extent.hairline))
       }
+      top += height
     }
     for run in painting.runs {
       for rect in runRects(run.range, fullHeight: false, painting) {
@@ -252,7 +268,25 @@ final class RowLayoutFragment: NSTextLayoutFragment {
   private func rowsBounds(_ extent: Extent) -> CGRect {
     CGRect(
       x: -(super.layoutFragmentFrame.minX + extent.containerInset), y: 0,
-      width: extent.width, height: CGFloat(rows.count) * rowHeight)
+      width: extent.width, height: CGFloat(lines.count) * rowHeight)
+  }
+
+  /// The number of screen lines that TextKit gives the text of each of the fragment's `count`
+  /// rows, at least one each.
+  ///
+  /// A fragment lays out more than one row only before an empty last row, which TextKit gives
+  /// a line of its own at the end of the paragraph.
+  private func textLinesOfRows(count: Int) -> [Int] {
+    var lines = Array(repeating: 0, count: count)
+    for line in textLineFragments {
+      lines[min(rowIndex(of: line), count - 1)] += 1
+    }
+    return lines.map { max($0, 1) }
+  }
+
+  /// The index among the fragment's rows of the row that `line` belongs to.
+  func rowIndex(of line: NSTextLineFragment) -> Int {
+    line.characterRange.lowerBound >= line.attributedString.length && rows.count > 1 ? 1 : 0
   }
 
   /// The rectangles of the text from offset `range.lowerBound` to `range.upperBound`, relative to
@@ -318,9 +352,10 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     }
     let width = painting.extent.removalMarkWidth
     let height = painting.textBandHeight
+    let lineIndex = textLineFragments.firstIndex { $0 === line } ?? 0
     return CGRect(
-      x: (left + right) / 2 - width / 2, y: (rowHeight - height) / 2, width: width,
-      height: height)
+      x: (left + right) / 2 - width / 2,
+      y: CGFloat(lineIndex) * rowHeight + (rowHeight - height) / 2, width: width, height: height)
   }
 
   /// The bounds of the ink of the character at `index` in `line`, relative to the start of its
@@ -346,8 +381,8 @@ protocol RowPainter: AnyObject, Sendable {
   /// How far the drawing of every fragment reaches now.
   var extent: RowLayoutFragment.Extent { get }
 
-  /// The display rows that a fragment laying out `rows` takes.
-  func displayRows(ofRows rows: Range<Int>) -> Range<Int>
+  /// The screen lines that a fragment laying out `rows` takes.
+  func lines(ofRows rows: Range<Int>) -> Range<Int>
 
   /// The rows that the fragment of the paragraph from offset `start` to `end` lays out.
   func rows(ofParagraphFrom start: Int, to end: Int) -> Range<Int>

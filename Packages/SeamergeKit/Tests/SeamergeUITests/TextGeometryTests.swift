@@ -22,7 +22,7 @@ import Testing
         textView.firstRect(forCharacterRange: range, actualRange: &actualRange),
         textView.accessibilityFrame(for: range),
       ]
-      let rowTop = CGFloat(pane.displayRow(ofRow: row)) * pane.theme.rowHeight
+      let rowTop = pane.verticalSpan(ofRows: row..<row + 1).lowerBound
       let rowBottom = rowTop + pane.theme.rowHeight
       for onScreen in rects {
         let rect = textView.convert(window.convertFromScreen(onScreen), from: nil)

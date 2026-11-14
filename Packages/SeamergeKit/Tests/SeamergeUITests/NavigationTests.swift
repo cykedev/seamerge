@@ -85,8 +85,9 @@ import Testing
       presentation.jump(to: block)
       for pane in Windows.panes(of: controller) {
         let readingLine = (pane.documentView.visibleRect.height * Theme.readingLine).rounded()
-        let row = pane.displayRow(ofRow: pane.content.blocks[block].rows.lowerBound)
-        let top = CGFloat(row) * pane.theme.rowHeight - Windows.scrollOffset(of: pane)
+        let row = pane.content.blocks[block].rows.lowerBound
+        let top =
+          pane.verticalSpan(ofRows: row..<row + 1).lowerBound - Windows.scrollOffset(of: pane)
         #expect(abs(top - readingLine) <= pane.theme.rowHeight, "block \(block)")
         #expect(pane.currentBlock == block)
       }

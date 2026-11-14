@@ -8,7 +8,7 @@ extension PaneView {
   func collapse(_ runs: [CollapsedRun]) {
     guard runs != displayRows.runs else { return }
     let visible = clipView.bounds
-    let topRow = displayRows.rowPosition(ofDisplay: Double(visible.minY / rowHeight))
+    let topRow = displayRows.rowPosition(ofLine: Double(visible.minY / rowHeight))
     let barHadFocus = runBars.values.contains { window?.firstResponder === $0 }
     let change = {
       self.removeRunBars()
@@ -16,7 +16,7 @@ extension PaneView {
       self.showDisplayRows()
       self.needsLayout = true
       self.layoutSubtreeIfNeeded()
-      let y = CGFloat(self.displayRows.displayPosition(ofRow: topRow)) * self.rowHeight
+      let y = CGFloat(self.displayRows.linePosition(ofRow: topRow)) * self.rowHeight
       // Where the runs above stay as they were, the text stays to the fraction of a point, so
       // that nothing in view moves, not even by rounding.
       let target = abs(y - visible.minY) < 0.01 ? visible.minY : y.rounded()
@@ -55,9 +55,10 @@ extension PaneView {
     runBarLayer.frame = CGRect(
       x: 0, y: 0, width: gutterView.frame.width + clipView.frame.width,
       height: clipView.frame.height)
-    let first = Int((visible.minY / rowHeight).rounded(.down))
-    let end = Int((visible.maxY / rowHeight).rounded(.up))
-    let indices = displayRows.runIndices(withBarsIn: first..<end)
+    let first = displayRows.displayRow(atLine: Int((visible.minY / rowHeight).rounded(.down)))
+    let endLine = Int((visible.maxY / rowHeight).rounded(.up))
+    let end = endLine > 0 ? displayRows.displayRow(atLine: endLine - 1) + 1 : 0
+    let indices = displayRows.runIndices(withBarsIn: first..<max(first, end))
     for (index, bar) in runBars where !indices.contains(index) {
       bar.removeFromSuperview()
       runBars[index] = nil
@@ -66,7 +67,9 @@ extension PaneView {
       let bar = runBars[index] ?? makeRunBar(index)
       bar.contentInset = gutterView.frame.width + Theme.textInset
       bar.frame = CGRect(
-        x: 0, y: CGFloat(displayRows.barRow(ofRun: index)) * rowHeight - visible.minY,
+        x: 0,
+        y: CGFloat(displayRows.firstLine(ofDisplayRow: displayRows.barRow(ofRun: index)))
+          * rowHeight - visible.minY,
         width: runBarLayer.frame.width, height: rowHeight)
     }
   }

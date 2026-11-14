@@ -4,9 +4,10 @@ import AppKit
 ///
 /// Selection, copying, the find bar, input methods and VoiceOver come from `NSTextView`. The
 /// view adds the row fills, the highlights and marks within lines and its size, all from the
-/// grid rather than from TextKit, so that row *r* lies at its display row times `rowHeight` in
-/// every pane; the rows behind a collapsed run take no room, except the one of its bar. Its
-/// fragments draw the selection, translucent above the row fills (see `RowLayoutFragment`).
+/// grid rather than from TextKit, so that row *r* lies at the first screen line of its display
+/// row times `rowHeight` in every pane; the rows behind a collapsed run take no room, except the
+/// one of its bar. Its fragments draw the selection, translucent above the row fills (see
+/// `RowLayoutFragment`).
 final class PaneTextView: NSTextView {
   private(set) var theme = Theme()
   private(set) var content = PaneContent.empty
@@ -15,6 +16,16 @@ final class PaneTextView: NSTextView {
   private(set) var displayRows = DisplayRows(runs: [], rowCount: 1) {
     didSet { contentStorage.hiddenRanges = hiddenRanges }
   }
+
+  /// How the rows break into screen lines at the width of the text, or `nil` while lines do not
+  /// wrap.
+  private(set) var lineWrapping: RowWrapping?
+
+  /// The rows that wrap at the width of this pane's own text.
+  ///
+  /// The pane shows each row as high as in the most wrapped of the panes it lines up with,
+  /// which ``setWrappedRows(_:)`` gives it.
+  private(set) var ownWrappedRows = WrappedRows.none
 
   /// The content storage, which the text view holds only weakly.
   let contentStorage = PaneContentStorage()
@@ -179,7 +190,14 @@ final class PaneTextView: NSTextView {
     self.content = content
     self.theme = theme
     self.grid = grid
-    displayRows = DisplayRows(runs: collapsedRuns, rowCount: grid.rowCount)
+    if let lineWrapping {
+      // The width of characters may have changed with the theme.
+      self.lineWrapping = makeLineWrapping(width: lineWrapping.width)
+    }
+    ownWrappedRows = wrappedRows(in: 0..<grid.rowCount, of: content.text as NSString)
+    // The pane lines the rows up with its neighbors once it has shown them.
+    displayRows = DisplayRows(
+      runs: collapsedRuns, rowCount: grid.rowCount, wrappedRows: ownWrappedRows)
     textVersion.increment()
     if let currentBlock, !content.blocks.indices.contains(currentBlock) {
       self.currentBlock = nil
@@ -281,7 +299,12 @@ final class PaneTextView: NSTextView {
       let rows = change.newRows(of: run.rows)
       return rows.isEmpty ? nil : CollapsedRun(rows: rows)
     }
-    displayRows = DisplayRows(runs: runs, rowCount: grid.rowCount)
+    let rewritten = wrappedRows(in: change.newRows, of: text as NSString).entries
+    ownWrappedRows.takeOver(change, rewritten: rewritten)
+    // The rows that the edit rewrote take their own lines until the panes line up again.
+    var wrappedRows = displayRows.wrappedRows
+    wrappedRows.takeOver(change, rewritten: rewritten)
+    displayRows = DisplayRows(runs: runs, rowCount: grid.rowCount, wrappedRows: wrappedRows)
     highlightsByBlock.removeAll()
     cachedPreviewSpans = nil
     cachedPreviewRows = nil
@@ -293,7 +316,8 @@ final class PaneTextView: NSTextView {
   /// - Precondition: The runs are sorted, do not overlap and lie within the rows.
   func setCollapsedRuns(_ runs: [CollapsedRun]) {
     guard runs != displayRows.runs else { return }
-    displayRows = DisplayRows(runs: runs, rowCount: grid.rowCount)
+    displayRows = DisplayRows(
+      runs: runs, rowCount: grid.rowCount, wrappedRows: displayRows.wrappedRows)
     guard let textLayoutManager else { return }
     // Which paragraphs the layout manager enumerates changes with the runs.
     textLayoutManager.invalidateLayout(for: textLayoutManager.documentRange)
@@ -312,6 +336,58 @@ final class PaneTextView: NSTextView {
         ? grid.offsets(ofRow: run.rows.upperBound).lowerBound : grid.textLength
       return grid.offsets(ofRow: run.rows.lowerBound + 1).lowerBound..<end
     }
+  }
+
+  /// Wraps the lines at `width`, the width of the text area less its insets, or lets them run
+  /// on without wrapping for `nil`, and returns whether the rows that wrap in this pane changed.
+  ///
+  /// The pane lays out its text again and finds the rows that wrap; it shows them once it is
+  /// given the rows that wrap in the panes it lines up with too.
+  @discardableResult
+  func wrapLines(atWidth width: CGFloat?) -> Bool {
+    guard width != lineWrapping?.width else { return false }
+    lineWrapping = width.map(makeLineWrapping(width:))
+    // TextKit lays out the whole text again for a container of another size.
+    textContainer?.size = CGSize(
+      width: width ?? CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+    setNeedsDisplayOfFragments(in: bounds)
+    let wrappedRows = wrappedRows(in: 0..<grid.rowCount, of: string as NSString)
+    guard wrappedRows != ownWrappedRows else { return false }
+    ownWrappedRows = wrappedRows
+    return true
+  }
+
+  /// Shows each row as high as `wrappedRows` says, the rows that wrap in this pane or in a pane
+  /// it lines up with, and returns whether any row changed its height.
+  ///
+  /// Rows that wrap less here than `wrappedRows` says keep a quiet fill below their text.
+  @discardableResult
+  func setWrappedRows(_ wrappedRows: WrappedRows) -> Bool {
+    let wrappedRows = wrappedRows.clamped(toRowCount: grid.rowCount)
+    guard wrappedRows != displayRows.wrappedRows else { return false }
+    displayRows = DisplayRows(
+      runs: displayRows.runs, rowCount: grid.rowCount, wrappedRows: wrappedRows)
+    // The fragments find their frames from the rows; those in view lay out and draw again.
+    textVersion.increment()
+    if let textLayoutManager,
+      let viewport = textLayoutManager.textViewportLayoutController.viewportRange
+    {
+      textLayoutManager.invalidateLayout(for: viewport)
+    }
+    needsDisplay = true
+    setNeedsDisplayOfFragments(in: bounds)
+    return true
+  }
+
+  /// The rows among `rows` of `text` that wrap at the width of the lines, none while lines do
+  /// not wrap.
+  private func wrappedRows(in rows: Range<Int>, of text: NSString) -> WrappedRows {
+    guard let lineWrapping else { return .none }
+    return WrappedRows(lineWrapping.wrappedRows(rows, of: text, grid: grid))
+  }
+
+  private func makeLineWrapping(width: CGFloat) -> RowWrapping {
+    RowWrapping(width: width, attributes: textAttributes, theme: theme)
   }
 
   /// Marks the block at `block` as the current one, or none.
@@ -353,8 +429,8 @@ final class PaneTextView: NSTextView {
   /// The row at `point` of the view, the nearest one beyond the text; on a bar, the first row
   /// that it hides.
   private func row(at point: CGPoint) -> Int {
-    let displayRow = Int((point.y / theme.rowHeight).rounded(.down))
-    return displayRows.row(atDisplayRow: min(max(displayRow, 0), displayRows.count - 1))
+    let line = Int((point.y / theme.rowHeight).rounded(.down))
+    return displayRows.row(atDisplayRow: displayRows.clampedDisplayRow(atLine: line))
   }
 
   override func becomeFirstResponder() -> Bool {
@@ -400,12 +476,21 @@ final class PaneTextView: NSTextView {
     }
   }
 
-  /// The attributes of all text: one font, rows of the grid's height, no wrapping.
+  /// The attributes of all text: one font, lines of the grid's height, broken at words.
+  ///
+  /// Each paragraph indents its lines after the first beyond its own indentation, which the
+  /// content storage asks the view for as it makes the paragraph.
+  ///
+  /// Whether lines wrap at all depends on the width of the text container alone, so that turning
+  /// wrapping on or off leaves the attributes, and with them the colors of the text, as they are.
   var textAttributes: [NSAttributedString.Key: Any] {
     let paragraph = NSMutableParagraphStyle()
     paragraph.minimumLineHeight = theme.rowHeight
     paragraph.maximumLineHeight = theme.rowHeight
-    paragraph.lineBreakMode = .byClipping
+    paragraph.lineBreakMode = .byWordWrapping
+    // TextKit would otherwise move words to the next line to avoid a short last line, which the
+    // count of screen lines could not foresee.
+    paragraph.lineBreakStrategy = []
     paragraph.tabStops = []
     paragraph.defaultTabInterval = CGFloat(theme.tabWidth) * theme.characterWidth
     return [
@@ -465,11 +550,11 @@ final class PaneTextView: NSTextView {
     // Draws the fragments of the rows again, which ask for their painting as they draw.
     textLayoutManager.invalidateRenderingAttributes(for: range)
     applyTextColors(in: offsets)
-    let displayRows = displayRows.displayRows(ofRows: rows)
+    let lines = displayRows.lines(ofRows: rows)
     setNeedsDisplayOfFragments(
       in: CGRect(
-        x: bounds.minX, y: CGFloat(displayRows.lowerBound) * theme.rowHeight, width: bounds.width,
-        height: CGFloat(displayRows.count) * theme.rowHeight))
+        x: bounds.minX, y: CGFloat(lines.lowerBound) * theme.rowHeight, width: bounds.width,
+        height: CGFloat(lines.count) * theme.rowHeight))
   }
 
   /// Marks the views within the text view that show the fragments in `rect` as needing display.
@@ -494,6 +579,15 @@ final class PaneTextView: NSTextView {
     let blockIndex = content.blockIndex(atRow: row)
     return theme.rowFill(
       for: style(ofRow: row), isFiller: content.isFiller(row: row),
+      isCurrent: blockIndex != nil && blockIndex == currentBlock)
+  }
+
+  /// The fill of the screen lines of `row` below its text, where the row wraps less than in a
+  /// pane it lines up with: as quiet as the fill of a filler row, or `nil` on the background.
+  private func paddingFill(atRow row: Int) -> NSColor? {
+    let blockIndex = content.blockIndex(atRow: row)
+    return theme.rowFill(
+      for: style(ofRow: row), isFiller: true,
       isCurrent: blockIndex != nil && blockIndex == currentBlock)
   }
 
@@ -632,6 +726,28 @@ extension PaneTextView: @MainActor NSTextLayoutManagerDelegate {
 }
 
 extension PaneTextView: @MainActor NSTextContentStorageDelegate {
+  /// Indents the lines after the first of the paragraph in `range` beyond its own indentation,
+  /// so that a wrapped row goes on below its own text; the text itself stays as it is.
+  ///
+  /// The indent takes effect only where a row wraps, so paragraphs need not be made again when
+  /// wrapping is turned on or off.
+  func textContentStorage(
+    _ textContentStorage: NSTextContentStorage, textParagraphWith range: NSRange
+  ) -> NSTextParagraph? {
+    guard let textStorage = textContentStorage.textStorage, range.length > 0 else { return nil }
+    let text = textStorage.attributedSubstring(from: range)
+    guard
+      let style = text.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle,
+      let indented = style.mutableCopy() as? NSMutableParagraphStyle
+    else { return nil }
+    indented.headIndent = RowWrapping.continuationIndent(
+      of: text.string as NSString, theme: theme)
+    let paragraph = NSMutableAttributedString(attributedString: text)
+    paragraph.addAttribute(
+      .paragraphStyle, value: indented, range: NSRange(location: 0, length: paragraph.length))
+    return NSTextParagraph(attributedString: paragraph)
+  }
+
   /// Leaves out the paragraphs of the rows that collapsed runs hide, so that they take no room;
   /// the first row of each run stays, as the place of its bar.
   func textContentManager(
@@ -646,8 +762,8 @@ extension PaneTextView: @MainActor NSTextContentStorageDelegate {
 }
 
 extension PaneTextView: RowPainter {
-  func displayRows(ofRows rows: Range<Int>) -> Range<Int> {
-    displayRows.displayRows(ofRows: rows)
+  func lines(ofRows rows: Range<Int>) -> Range<Int> {
+    displayRows.lines(ofRows: rows)
   }
 
   func rows(ofParagraphFrom start: Int, to end: Int) -> Range<Int> {
@@ -672,7 +788,9 @@ extension PaneTextView: RowPainter {
     }
     return RowLayoutFragment.Painting(
       extent: extent, isCollapsed: displayRows.runIndex(containingRow: rows.lowerBound) != nil,
-      rowFills: rows.map(rowFill(atRow:)), edges: rows.map(edges(atRow:)),
+      rowLines: rows.map { displayRows.lines(ofRows: $0..<$0 + 1).count },
+      rowFills: rows.map(rowFill(atRow:)), paddingFills: rows.map(paddingFill(atRow:)),
+      edges: rows.map(edges(atRow:)),
       background: Theme.backgroundColor,
       textBandHeight: theme.textBandHeight, runs: changes.runs, selections: selections,
       removals: changes.removals,

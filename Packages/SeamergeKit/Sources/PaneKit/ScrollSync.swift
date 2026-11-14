@@ -125,10 +125,9 @@ public final class ScrollSync {
       let y =
         mappings[Pair(leader: ObjectIdentifier(leader), follower: ObjectIdentifier(follower))]
         .map { mapping in
-          let displayRow =
-            (origin.y + Theme.readingLine * leader.visibleHeight) / leader.rowHeight
-          let row = mapping(leader.displayRows.rowPosition(ofDisplay: Double(displayRow)))
-          return CGFloat(follower.displayRows.displayPosition(ofRow: row)) * follower.rowHeight
+          let line = (origin.y + Theme.readingLine * leader.visibleHeight) / leader.rowHeight
+          let row = mapping(leader.displayRows.rowPosition(ofLine: Double(line)))
+          return CGFloat(follower.displayRows.linePosition(ofRow: row)) * follower.rowHeight
             - Theme.readingLine * follower.visibleHeight
         } ?? origin.y
       // Sideways the follower takes the leader's position as it is, beyond an edge too, so that

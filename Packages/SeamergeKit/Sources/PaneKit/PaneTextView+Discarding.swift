@@ -68,11 +68,11 @@ extension PaneTextView {
       return
     }
     let page = Int((visibleRect.height / theme.rowHeight).rounded(.up))
-    let lastDisplayRow = displayRows.count - 1
     let farthest = min(farthestRowShown, grid.rowCount - 1)
+    let farthestLine = displayRows.lines(ofRows: farthest..<farthest + 1).lowerBound
     let end =
-      displayRows.row(
-        atDisplayRow: min(displayRows.displayRow(ofRow: farthest) + 2 * page, lastDisplayRow)) + 1
+      displayRows.row(atDisplayRow: displayRows.clampedDisplayRow(atLine: farthestLine + 2 * page))
+      + 1
     guard firstRow < end else {
       finishDiscarding()
       return
@@ -141,8 +141,8 @@ extension PaneTextView {
   private var lastShownRow: Int? {
     let visible = visibleRect
     guard window != nil, visible.height > 0 else { return nil }
-    let displayRow = min(Int((visible.maxY / theme.rowHeight).rounded(.up)), displayRows.count - 1)
-    return displayRows.row(atDisplayRow: max(displayRow, 0))
+    let line = Int((visible.maxY / theme.rowHeight).rounded(.up))
+    return displayRows.row(atDisplayRow: displayRows.clampedDisplayRow(atLine: line))
   }
 
   /// The first row more than a page below the visible text, or `nil` if there is none or the
@@ -151,7 +151,8 @@ extension PaneTextView {
     let visible = visibleRect
     guard window != nil, visible.height > 0 else { return nil }
     let page = Int((visible.height / theme.rowHeight).rounded(.up))
-    let displayRow = Int((visible.maxY / theme.rowHeight).rounded(.up)) + page
-    return displayRow < displayRows.count ? displayRows.row(atDisplayRow: displayRow) : nil
+    let line = Int((visible.maxY / theme.rowHeight).rounded(.up)) + page
+    return line < displayRows.lineCount
+      ? displayRows.row(atDisplayRow: displayRows.displayRow(atLine: line)) : nil
   }
 }

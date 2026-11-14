@@ -215,7 +215,7 @@ import Testing
     let textView = pane.documentView
     let window = try #require(textView.window)
     let point = CGPoint(
-      x: 20, y: (CGFloat(pane.displayRow(ofRow: row)) + 0.5) * pane.theme.rowHeight)
+      x: 20, y: pane.verticalSpan(ofRows: row..<row + 1).lowerBound + pane.theme.rowHeight / 2)
     let event = try #require(
       NSEvent.mouseEvent(
         with: .rightMouseDown, location: textView.convert(point, to: nil), modifierFlags: [],

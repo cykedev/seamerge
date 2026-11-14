@@ -65,7 +65,8 @@ enum Windows {
   /// The point in `pane` at the middle of the first row of `block`, a little into the text.
   static func point(inBlock block: Int, of pane: PaneView) -> CGPoint {
     let rows = pane.content.blocks[block].rows
-    let y = (CGFloat(pane.displayRow(ofRow: rows.lowerBound)) + 0.5) * pane.theme.rowHeight
+    let row = rows.lowerBound
+    let y = pane.verticalSpan(ofRows: row..<row + 1).lowerBound + pane.theme.rowHeight / 2
     return pane.convert(CGPoint(x: 8, y: y), from: pane.documentView)
   }
 

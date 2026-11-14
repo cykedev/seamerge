@@ -91,26 +91,32 @@ final class GutterView: NSView {
   /// The rows that `rect` of the gutter shows, without those behind bars.
   func rows(in rect: CGRect) -> [Int] {
     let rowHeight = theme.rowHeight
-    let first = max(Int(((rect.minY + scrollOffset) / rowHeight).rounded(.down)), 0)
-    let end = min(Int(((rect.maxY + scrollOffset) / rowHeight).rounded(.up)), displayRows.count)
+    let firstLine = max(Int(((rect.minY + scrollOffset) / rowHeight).rounded(.down)), 0)
+    let endLine = Int(((rect.maxY + scrollOffset) / rowHeight).rounded(.up))
+    let first = min(displayRows.displayRow(atLine: firstLine), displayRows.count)
+    let end =
+      endLine > firstLine
+      ? min(displayRows.displayRow(atLine: endLine - 1) + 1, displayRows.count) : first
     return (first..<max(first, end)).compactMap { displayRow in
       displayRows.runIndex(atDisplayRow: displayRow) == nil
         ? displayRows.row(atDisplayRow: displayRow) : nil
     }
   }
 
-  /// The rectangle of `row` across the gutter.
+  /// The rectangle of `row` across the gutter, all of its screen lines.
   func rect(ofRow row: Int) -> CGRect {
-    CGRect(
-      x: 0, y: CGFloat(displayRows.displayRow(ofRow: row)) * theme.rowHeight - scrollOffset,
-      width: bounds.width, height: theme.rowHeight)
+    let lines = displayRows.lines(ofRows: row..<row + 1)
+    return CGRect(
+      x: 0, y: CGFloat(lines.lowerBound) * theme.rowHeight - scrollOffset,
+      width: bounds.width, height: CGFloat(lines.count) * theme.rowHeight)
   }
 
-  /// The slot of the marker `index` places from the trailing edge in `rowRect`.
+  /// The slot of the marker `index` places from the trailing edge beside the first screen line
+  /// of the row of `rowRect`.
   func markerSlot(_ index: Int, in rowRect: CGRect) -> CGRect {
     CGRect(
       x: bounds.width - CGFloat(index + 1) * Theme.markerSlotWidth, y: rowRect.minY,
-      width: Theme.markerSlotWidth, height: rowRect.height)
+      width: Theme.markerSlotWidth, height: min(rowRect.height, theme.rowHeight))
   }
 
   override var isFlipped: Bool { true }
@@ -218,7 +224,8 @@ final class GutterView: NSView {
       hoveredRun = nil
       return
     }
-    let displayRow = Int(((point.y + scrollOffset) / theme.rowHeight).rounded(.down))
+    let line = Int(((point.y + scrollOffset) / theme.rowHeight).rounded(.down))
+    let displayRow = line >= 0 ? displayRows.displayRow(atLine: line) : -1
     guard displayRow >= 0, displayRow < displayRows.count,
       displayRows.runIndex(atDisplayRow: displayRow) == nil
     else {
@@ -244,10 +251,10 @@ final class GutterView: NSView {
   /// Where the sign that collapses the expanded run at `index` lies: in the slot of the markers
   /// beside the run's first row, as large as the smallest target of a click.
   func collapseSignRect(ofRun index: Int) -> CGRect {
-    let rowRect = rect(ofRow: expandedRuns[index].rows.lowerBound)
+    let slot = markerSlot(0, in: rect(ofRow: expandedRuns[index].rows.lowerBound))
     let size = max(Theme.markerSlotWidth, Theme.decisionControlSize)
-    let height = max(rowRect.height, Theme.decisionControlSize)
-    return CGRect(x: bounds.width - size, y: rowRect.midY - height / 2, width: size, height: height)
+    let height = max(slot.height, Theme.decisionControlSize)
+    return CGRect(x: bounds.width - size, y: slot.midY - height / 2, width: size, height: height)
   }
 
   override func menu(for event: NSEvent) -> NSMenu? {
@@ -257,8 +264,8 @@ final class GutterView: NSView {
 
   /// The row at `point` of the gutter, the nearest one beyond the text.
   private func row(at point: CGPoint) -> Int {
-    let displayRow = Int(((point.y + scrollOffset) / theme.rowHeight).rounded(.down))
-    return displayRows.row(atDisplayRow: min(max(displayRow, 0), displayRows.count - 1))
+    let line = Int(((point.y + scrollOffset) / theme.rowHeight).rounded(.down))
+    return displayRows.row(atDisplayRow: displayRows.clampedDisplayRow(atLine: line))
   }
 
   /// The width that the gutter needs for the widest line number and the markers of `content`.

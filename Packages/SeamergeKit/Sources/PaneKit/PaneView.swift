@@ -4,7 +4,8 @@ import AppKit
 ///
 /// The pane shows what it is given and knows neither the engine nor the merge model. Row *r* of
 /// the content lies at `r × theme.rowHeight` from the top of the text, in every pane alike, less
-/// the rows that collapsed runs above it hide: each run takes the one row of its bar.
+/// the rows that collapsed runs above it hide, each run taking the one row of its bar, and plus
+/// the screen lines that wrapped rows above it take beyond their first.
 ///
 /// The pane moves its text only when the user scrolls, when it is told to reveal a block, and
 /// when the selection or a find result has to come into view; nothing else shifts what it shows.
@@ -154,6 +155,22 @@ public final class PaneView: NSView {
     set { textView.showsInvisibles = newValue }
   }
 
+  /// Whether long lines wrap at the width of the pane rather than run on beyond its right edge.
+  ///
+  /// A row that wraps takes as many screen lines as it needs, the lines after its first
+  /// indented and without a line number. The panes that a ``RowAlignment`` lines up with this
+  /// one show the row as high, with a quiet fill below a version that needs fewer lines.
+  public var wrapsLines = false {
+    didSet {
+      guard wrapsLines != oldValue else { return }
+      updateLineWrapping()
+      needsLayout = true
+    }
+  }
+
+  /// The alignment that the pane's rows line up in with other panes, if any.
+  weak var rowAlignment: RowAlignment?
+
   /// The overview bar that serves as the pane's vertical scroller, beside its right edge, or
   /// `nil` for a pane without one, which scrolls along with a pane that has it.
   ///
@@ -216,8 +233,17 @@ public final class PaneView: NSView {
   /// On the bar of a collapsed run, the row is the first one that the run hides.
   public func hit(at point: CGPoint) -> PaneHit {
     let y = point.y + clipView.bounds.minY
-    let displayRow = min(max(Int((y / theme.rowHeight).rounded(.down)), 0), displayRows.count - 1)
-    return hit(atRow: displayRows.row(atDisplayRow: displayRow))
+    let line = Int((y / theme.rowHeight).rounded(.down))
+    return hit(atRow: displayRows.row(atDisplayRow: displayRows.clampedDisplayRow(atLine: line)))
+  }
+
+  /// The vertical extent of `rows` in the text, from the top of their first screen line to the
+  /// bottom of their last; for an empty range, the boundary that it lies on.
+  ///
+  /// Rows behind the bar of a collapsed run take the place of the bar.
+  public func verticalSpan(ofRows rows: Range<Int>) -> Range<CGFloat> {
+    let lines = displayRows.lines(ofRows: rows)
+    return CGFloat(lines.lowerBound) * rowHeight..<CGFloat(lines.upperBound) * rowHeight
   }
 
   /// The rows as the pane shows them, with its collapsed runs.
@@ -327,8 +353,9 @@ public final class PaneView: NSView {
     overviewBar?.frame = CGRect(
       x: bounds.width - barWidth, y: 0, width: barWidth, height: bounds.height)
     scrollView.tile()
+    updateLineWrapping()
     let visibleWidth = clipView.bounds.width
-    let ownRange = max(textView.textWidth - visibleWidth, 0)
+    let ownRange = wrapsLines ? 0 : max(textView.textWidth - visibleWidth, 0)
     if ownRange != ownHorizontalScrollRange {
       ownHorizontalScrollRange = ownRange
       scrollSync?.updateHorizontalScrollRange()
@@ -344,7 +371,7 @@ public final class PaneView: NSView {
     textView.setFrameSize(
       CGSize(
         width: visibleWidth + range,
-        height: max(CGFloat(displayRows.count) * rowHeight, clipView.bounds.height)))
+        height: max(CGFloat(displayRows.lineCount) * rowHeight, clipView.bounds.height)))
     textDidScroll()
   }
 
@@ -361,9 +388,65 @@ public final class PaneView: NSView {
     // The old expanded runs need not fit the new rows; the owner hands new ones.
     gutterView.expandedRuns = []
     textView.show(content, collapsedRuns: collapsedRuns, theme: theme)
+    alignRows()
     gutterView.theme = theme
     gutterView.content = content
     gutterView.currentBlock = textView.currentBlock
+    showDisplayRows()
+    decisionColumn?.update()
+    needsLayout = true
+  }
+
+  /// Wraps the lines at the width that the text has now, if they wrap, and lines the rows up
+  /// again where that changed the rows that wrap.
+  ///
+  /// A pane narrower than its minimum, such as one whose split view item is collapsed, does not
+  /// wrap, so that it does not make the rows of its neighbors taller. While the user drags the
+  /// edge of the window far down a long text, the lines keep their width until the drag ends.
+  func updateLineWrapping() {
+    if inLiveResize && textView.lineWrapping != nil && rowsAboveView > Self.rowsAboveViewToWrapLive
+    {
+      return
+    }
+    let width = clipView.bounds.width - 2 * Theme.textInset
+    let fits = width >= CGFloat(Theme.minimumTextColumns) * theme.characterWidth
+    if textView.wrapLines(atWidth: wrapsLines && fits ? width : nil) {
+      alignRows()
+    }
+  }
+
+  /// The most rows above the visible text at which lines wrap anew at every step while the user
+  /// drags the edge of the window; beyond, they wrap anew once the drag ends.
+  ///
+  /// TextKit lays out every paragraph above the visible text again when the width of the lines
+  /// changes, some 12 µs each, so that a step far down a long file would take most of a second.
+  private static let rowsAboveViewToWrapLive = 2_000
+
+  /// The number of rows above the visible text.
+  private var rowsAboveView: Int {
+    let line = Int((clipView.bounds.minY / rowHeight).rounded(.down))
+    return displayRows.row(atDisplayRow: displayRows.clampedDisplayRow(atLine: line))
+  }
+
+  public override func viewDidEndLiveResize() {
+    super.viewDidEndLiveResize()
+    updateLineWrapping()
+    needsLayout = true
+  }
+
+  /// Gives the pane the rows that wrap in it or in the panes it lines up with.
+  func alignRows() {
+    if let rowAlignment {
+      rowAlignment.align()
+    } else {
+      showWrappedRows(textView.ownWrappedRows)
+    }
+  }
+
+  /// Shows each row as high as `wrappedRows` says.
+  func showWrappedRows(_ wrappedRows: WrappedRows) {
+    guard textView.setWrappedRows(wrappedRows) else { return }
+    removeRunBars()
     showDisplayRows()
     decisionColumn?.update()
     needsLayout = true
@@ -466,6 +549,7 @@ extension PaneView: RowInteraction {
   }
 
   func textDidChange() {
+    rowAlignment?.align()
     removeRunBars()
     gutterView.content = content
     showDisplayRows()
@@ -483,9 +567,7 @@ extension PaneView: DecisionColumnHost {
     guard content.blocks.indices.contains(block) else { return nil }
     let row = content.blocks[block].rows.lowerBound
     guard row >= displayRows.rowCount || !displayRows.isHidden(row: row) else { return nil }
-    let displayRow =
-      row < displayRows.rowCount ? displayRows.displayRow(ofRow: row) : displayRows.count
-    return CGFloat(displayRow) * rowHeight - clipView.bounds.minY
+    return verticalSpan(ofRows: row..<row).lowerBound - clipView.bounds.minY
   }
 
   func rowCenter(ofBlock block: Int) -> CGFloat? {
@@ -496,18 +578,16 @@ extension PaneView: DecisionColumnHost {
       // A block without rows lies on the boundary before the row it would start at.
       let row = rows.lowerBound
       if row < displayRows.rowCount && displayRows.isHidden(row: row) { return nil }
-      let displayRow =
-        row < displayRows.rowCount ? displayRows.displayRow(ofRow: row) : displayRows.count
-      return CGFloat(displayRow) * rowHeight - scrollOffset
+      return verticalSpan(ofRows: rows).lowerBound - scrollOffset
     }
     guard displayRows.runIndex(containingRow: rows.lowerBound) == nil else { return nil }
-    return (CGFloat(displayRows.displayRow(ofRow: rows.lowerBound)) + 0.5) * rowHeight
-      - scrollOffset
+    // The middle of the first screen line, beside the start of the block's text.
+    return verticalSpan(ofRows: rows).lowerBound + rowHeight / 2 - scrollOffset
   }
 
   var rowsExtent: ClosedRange<CGFloat> {
     let top = -clipView.bounds.minY
-    return top...top + CGFloat(displayRows.count) * rowHeight
+    return top...top + CGFloat(displayRows.lineCount) * rowHeight
   }
 
   func liesBetweenRows(_ block: Int) -> Bool {
@@ -515,7 +595,8 @@ extension PaneView: DecisionColumnHost {
   }
 
   func block(atY y: CGFloat) -> Int? {
-    let displayRow = Int(((y + clipView.bounds.minY) / rowHeight).rounded(.down))
+    let line = Int(((y + clipView.bounds.minY) / rowHeight).rounded(.down))
+    let displayRow = line >= 0 ? displayRows.displayRow(atLine: line) : -1
     guard displayRow >= 0, displayRow < displayRows.count,
       displayRows.runIndex(atDisplayRow: displayRow) == nil
     else { return nil }
