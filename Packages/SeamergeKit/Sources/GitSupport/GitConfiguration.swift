@@ -100,7 +100,7 @@ public struct GitConfiguration: Sendable {
 
   /// `text` as one word for a POSIX shell: unchanged if it holds no character the shell treats
   /// specially, otherwise in single quotes.
-  private static func shellQuoted(_ text: String) -> String {
+  static func shellQuoted(_ text: String) -> String {
     let plain = CharacterSet(
       charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/._-+:,@%")
     if !text.isEmpty, text.unicodeScalars.allSatisfy(plain.contains) {
