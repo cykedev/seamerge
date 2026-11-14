@@ -18,10 +18,13 @@ struct SessionSummary: Equatable {
   let fileProgress: String?
 
   /// Summarizes `changes` in `context`, with the sides of a comparison where `arrangement` puts
-  /// them.
-  init(changes: SessionChanges, context: SessionContext, arrangement: PaneArrangement) {
+  /// them, and names the comparison mode where it differs from `startMode`, that of a new window.
+  init(
+    changes: SessionChanges, context: SessionContext, arrangement: PaneArrangement,
+    startMode: ComparisonMode
+  ) {
     let session = changes.session
-    let modeNote = Self.modeNote(for: session.options.mode)
+    let modeNote = Self.modeNote(for: session.options.mode, startMode: startMode)
     if arrangement.showsResult {
       let file = session.file(for: .b)
       title =
@@ -110,10 +113,10 @@ struct SessionSummary: Equatable {
         comment: "Subtitle: the changes of the own side after those of A, such as 5 from B.")
   }
 
-  /// The mode of the comparison where it differs from the mode a window compares in by default,
-  /// or `nil` if it compares in that mode.
-  private static func modeNote(for mode: ComparisonMode) -> String? {
-    guard mode != .windowDefault else { return nil }
+  /// The mode of the comparison where it differs from `startMode`, the mode a new window
+  /// compares in, or `nil` if it compares in that mode.
+  private static func modeNote(for mode: ComparisonMode, startMode: ComparisonMode) -> String? {
+    guard mode != startMode else { return nil }
     return switch mode {
     case .exact:
       String(

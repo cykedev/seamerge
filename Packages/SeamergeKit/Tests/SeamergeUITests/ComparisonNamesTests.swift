@@ -38,7 +38,7 @@ import Testing
 
     let session = try await Session.loadDiff(
       old: SessionFile(url: URL(filePath: "/dev/null"), label: "null"),
-      new: SessionFile(url: added, label: "tsconfig.storybook.json"))
+      new: SessionFile(url: added, label: "tsconfig.storybook.json"), mode: .windowDefault)
     let controller = try Windows.controller(for: session)
 
     #expect(session.file(for: .a)?.text == "")

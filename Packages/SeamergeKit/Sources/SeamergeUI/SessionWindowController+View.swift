@@ -48,21 +48,10 @@ extension SessionWindowController {
     updateFooter()
   }
 
-  /// Wraps long lines at the width of their panes in every session window, or lets them run on.
+  /// Wraps long lines at the width of their panes, or lets them run on.
   @objc func toggleLineWrapping(_ sender: Any?) {
-    lineWrapping.isOn.toggle()
-  }
-
-  /// Wraps lines as the user last chose, in whichever window.
-  func observeLineWrapping() {
-    NotificationCenter.default.addObserver(
-      self, selector: #selector(lineWrappingDidChange(_:)),
-      name: LineWrapping.didChangeNotification, object: lineWrapping.defaults)
-  }
-
-  @objc private func lineWrappingDidChange(_ notification: Notification) {
     presentation.keepingTheLineOfBInPlace {
-      presentation.wrapsLines = lineWrapping.isOn
+      presentation.wrapsLines.toggle()
       layout.view.layoutSubtreeIfNeeded()
     }
     updateFooter()
@@ -96,9 +85,9 @@ extension SessionWindowController {
     fontSize = Self.fontSizes.last { $0 < fontSize } ?? fontSize
   }
 
-  /// Shows the text at its standard size.
+  /// Shows the text at the size of the settings.
   @objc func actualSize(_ sender: Any?) {
-    fontSize = Self.standardFontSize
+    fontSize = settings.fontSize
   }
 
   /// Asks in a sheet for a line and jumps to it in the pane with the focus.
@@ -188,9 +177,6 @@ extension SessionWindowController {
         + (collectionLayout.sidebarItem.isCollapsed ? 0 : WindowMetrics.minimumSidebarWidth),
       height: size.height + max(titlebarHeight ?? 0, 0))
   }
-
-  /// The size of the code at Actual Size.
-  static let standardFontSize = Theme().font.pointSize
 
   /// The sizes of the code that Zoom In and Zoom Out step through.
   static let fontSizes: [CGFloat] = [10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32]

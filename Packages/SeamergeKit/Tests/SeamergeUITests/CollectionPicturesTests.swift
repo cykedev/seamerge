@@ -68,7 +68,7 @@ import Testing
   @Test(arguments: Look.all)
   func signsAndFoldersAreLegibleInTheList(look: Look) throws {
     let options = DisplayOptions(increasesContrast: look.increasesContrast)
-    let theme = options.theme(fontSize: 13)
+    let theme = options.theme(settings: .private(), fontSize: 13)
     let window = try #require(Contrast.resolve(.windowBackgroundColor, in: look.appearance))
     let selection = Contrast.over(
       Contrast.resolve(.unemphasizedSelectedContentBackgroundColor, in: look.appearance), window)

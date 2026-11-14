@@ -21,7 +21,7 @@ struct LoadedFile {
 
 extension SessionWindowController {
   /// Opens a window for `collection`: the list of its files in the sidebar, once there are two,
-  /// and the first file beside it.
+  /// and the first file beside it, drawn and started as `settings` say.
   ///
   /// The window keeps showing files as the collection receives them.
   ///
@@ -29,17 +29,17 @@ extension SessionWindowController {
   /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the headers of the first file
   ///   can be made.
   public convenience init(
-    collection: FileCollection, undoManager: UndoManager
+    collection: FileCollection, undoManager: UndoManager, settings: UserSettings
   ) async throws(SessionLoadingError) {
     guard let file = collection.files.first else {
       preconditionFailure("A window of a collection needs a file to show")
     }
-    let loaded = try await Self.load(file, mode: .windowDefault)
+    let loaded = try await Self.load(file, mode: settings.comparisonMode)
     self.init(
       session: loaded.session, context: Self.context(of: file, at: 0, in: collection),
       undoManager: undoManager, displayOptions: .current(in: .shared), pasteboard: .general,
       workspace: NSWorkspace.shared, prompts: SessionSheets(), doneStyle: .standard,
-      defaults: .standard, syntaxChoices: .shared, window: SessionWindow(),
+      settings: settings, syntaxChoices: .shared, window: SessionWindow(),
       unavailable: loaded.unavailable, collection: collection)
     observeDisplayOptions()
   }

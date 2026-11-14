@@ -4,7 +4,7 @@ import AppKit
 /// beside it the panes and footer of the chosen file.
 ///
 /// The sidebar shows once the window has two files, unless the user hid it, which every such
-/// window remembers; before that, Show Sidebar does nothing.
+/// window remembers in the settings; before that, Show Sidebar does nothing.
 @MainActor
 final class CollectionSplitViewController: NSSplitViewController {
   /// The list of the files.
@@ -17,7 +17,7 @@ final class CollectionSplitViewController: NSSplitViewController {
   var hasSeveralFiles = false {
     didSet {
       guard hasSeveralFiles != oldValue else { return }
-      sidebarItem.isCollapsed = !(hasSeveralFiles && showsSidebarByChoice)
+      sidebarItem.isCollapsed = !(hasSeveralFiles && settings.showsFileList)
       sidebarDidChange()
     }
   }
@@ -32,13 +32,13 @@ final class CollectionSplitViewController: NSSplitViewController {
   var sidebarDidChange: () -> Void = {}
 
   private let contentItem: NSSplitViewItem
-  private let defaults: UserDefaults
+  private let settings: UserSettings
 
-  /// Creates the content with `fileList` in the sidebar and `content` beside it; `defaults`
+  /// Creates the content with `fileList` in the sidebar and `content` beside it; `settings`
   /// keep whether the user hid the sidebar.
-  init(fileList: FileListViewController, content: NSViewController, defaults: UserDefaults) {
+  init(fileList: FileListViewController, content: NSViewController, settings: UserSettings) {
     self.fileList = fileList
-    self.defaults = defaults
+    self.settings = settings
     sidebarItem = NSSplitViewItem(sidebarWithViewController: fileList)
     sidebarItem.minimumThickness = WindowMetrics.minimumSidebarWidth
     sidebarItem.maximumThickness = WindowMetrics.maximumSidebarWidth
@@ -60,7 +60,7 @@ final class CollectionSplitViewController: NSSplitViewController {
     guard hasSeveralFiles else { return }
     let shows = sidebarItem.isCollapsed
     super.toggleSidebar(sender)
-    showsSidebarByChoice = shows
+    settings.showsFileList = shows
     sidebarDidChange()
   }
 
@@ -68,14 +68,6 @@ final class CollectionSplitViewController: NSSplitViewController {
     let isValid = super.validateUserInterfaceItem(item)
     return item.action == #selector(toggleSidebar(_:)) ? isValid && hasSeveralFiles : isValid
   }
-
-  /// Whether the user wants the list in view; true until the user hides it.
-  private var showsSidebarByChoice: Bool {
-    get { !defaults.bool(forKey: Self.hidesSidebarKey) }
-    set { defaults.set(!newValue, forKey: Self.hidesSidebarKey) }
-  }
-
-  private static let hidesSidebarKey = "HidesFileList"
 }
 
 /// Keeps the panes below the toolbar, which the sidebar beside them reaches up under.

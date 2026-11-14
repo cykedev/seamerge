@@ -196,7 +196,7 @@ import Testing
     #expect(try controller.mergeResult.theme.font.pointSize == 14)
     #expect(abs(lineAtReadingLine(of: b) - line) <= 1)
     controller.actualSize(nil)
-    #expect(controller.fontSize == SessionWindowController.standardFontSize)
+    #expect(controller.fontSize == controller.settings.fontSize)
     while controller.canPerform(.zoomOut) {
       controller.zoomOut(nil)
     }

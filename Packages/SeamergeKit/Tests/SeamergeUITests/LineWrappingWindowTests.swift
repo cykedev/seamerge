@@ -5,15 +5,15 @@ import Testing
 
 @testable import SeamergeUI
 
-/// Wrap Lines: for every pane of every window and across launches, with the rows of the inputs
-/// level and the line at the reading line kept in place.
+/// Wrap Lines: for every pane of the window, starting as the settings say, with the rows of the
+/// inputs level and the line at the reading line kept in place.
 @MainActor
 @Suite(.timeLimit(.minutes(1))) struct LineWrappingWindowTests {
-  @Test func wrapLinesWrapsEveryPaneOfEveryWindowAndStaysForTheNextOne() async throws {
-    let defaults = UserDefaults.privateSuite()
+  @Test func wrapLinesWrapsEveryPaneOfItsWindowAndLeavesTheOthersAndTheSettings() async throws {
+    let settings = UserSettings.private()
     let session = try await Self.merge()
-    let first = try Windows.controller(for: session, defaults: defaults)
-    let second = try Windows.controller(for: session, defaults: defaults)
+    let first = try Windows.controller(for: session, settings: settings)
+    let second = try Windows.controller(for: session, settings: settings)
     let item = NSMenuItem(
       title: SessionCommand.toggleLineWrapping.title,
       action: SessionCommand.toggleLineWrapping.action, keyEquivalent: "")
@@ -22,24 +22,32 @@ import Testing
 
     first.toggleLineWrapping(nil)
 
-    for controller in [first, second] {
-      #expect(Windows.panes(of: controller).allSatisfy { $0.wrapsLines })
-      #expect(controller.content.footer.button(of: .lineWrapping)?.state == .on)
-    }
-    #expect(second.validateUserInterfaceItem(item) && item.state == .on)
-    #expect(LineWrapping(defaults: defaults).isOn)
-    let third = try Windows.controller(for: session, defaults: defaults)
-    #expect(Windows.panes(of: third).allSatisfy { $0.wrapsLines })
+    #expect(Windows.panes(of: first).allSatisfy { $0.wrapsLines })
+    #expect(first.content.footer.button(of: .lineWrapping)?.state == .on)
+    #expect(first.validateUserInterfaceItem(item) && item.state == .on)
+    #expect(Windows.panes(of: second).allSatisfy { !$0.wrapsLines })
+    #expect(second.validateUserInterfaceItem(item) && item.state == .off)
+    #expect(!settings.wrapsLines)
+  }
 
-    second.toggleLineWrapping(nil)
-    #expect(Windows.panes(of: first).allSatisfy { !$0.wrapsLines })
+  @Test func newWindowWrapsLinesAsTheSettingsSay() async throws {
+    let settings = UserSettings.private()
+    let session = try await Self.merge()
+    let open = try Windows.controller(for: session, settings: settings)
+
+    settings.wrapsLines = true
+
+    let new = try Windows.controller(for: session, settings: settings)
+    #expect(Windows.panes(of: new).allSatisfy { $0.wrapsLines })
+    #expect(new.content.footer.button(of: .lineWrapping)?.state == .on)
+    #expect(Windows.panes(of: open).allSatisfy { !$0.wrapsLines })
   }
 
   @Test(arguments: [CGFloat(820), 1_400])
   func rowsOfTheInputsStayLevelWhileTheirLinesWrap(width: CGFloat) async throws {
-    let defaults = UserDefaults.privateSuite()
-    LineWrapping(defaults: defaults).isOn = true
-    let controller = try Windows.controller(for: try await Self.merge(), defaults: defaults)
+    let settings = UserSettings.private()
+    settings.wrapsLines = true
+    let controller = try Windows.controller(for: try await Self.merge(), settings: settings)
     let window = try #require(controller.window)
     window.setContentSize(CGSize(width: width, height: 700))
     window.contentView?.layoutSubtreeIfNeeded()
@@ -58,8 +66,7 @@ import Testing
   }
 
   @Test func turningWrappingOnKeepsTheLineAtTheReadingLine() async throws {
-    let defaults = UserDefaults.privateSuite()
-    let controller = try Windows.controller(for: try await Self.merge(), defaults: defaults)
+    let controller = try Windows.controller(for: try await Self.merge())
     let pane = controller.layout.sourcePanes[0].pane
     controller.go(toLine: 40, in: pane)
     let before = pane.rowAtReadingLine.row

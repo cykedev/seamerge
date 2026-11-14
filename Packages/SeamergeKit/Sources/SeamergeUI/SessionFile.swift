@@ -20,33 +20,32 @@ public struct SessionFile: Sendable, Hashable {
 }
 
 extension Session {
-  /// Reads the files and merges them in the comparison mode of the window, away from the main
-  /// actor.
+  /// Reads the files and merges them in the comparison mode `mode`, away from the main actor.
   ///
   /// - Throws: ``SessionLoadingError`` with the file that cannot be read or is not text, or why
   ///   the files cannot be compared.
   @concurrent
   public static func loadMerge(
-    base: SessionFile?, a: SessionFile, b: SessionFile
+    base: SessionFile?, a: SessionFile, b: SessionFile, mode: ComparisonMode
   ) async throws(SessionLoadingError) -> Session {
     let baseFile = try base.map(read)
     let (aFile, bFile) = (try read(a), try read(b))
     do {
       return try await merge(
-        base: baseFile, a: aFile, b: bFile, options: ComparisonOptions(mode: .windowDefault))
+        base: baseFile, a: aFile, b: bFile, options: ComparisonOptions(mode: mode))
     } catch {
       throw SessionLoadingError(error, files: [.base: base, .a: a, .b: b].compactMapValues(\.self))
     }
   }
 
   /// Reads the files and compares the older file `old` with the newer file `new` in the
-  /// comparison mode `mode`, by default that of the window, away from the main actor.
+  /// comparison mode `mode`, away from the main actor.
   ///
   /// - Throws: ``SessionLoadingError`` with the file that cannot be read or is not text, or why
   ///   the files cannot be compared.
   @concurrent
   public static func loadDiff(
-    old: SessionFile, new: SessionFile, mode: ComparisonMode = .windowDefault
+    old: SessionFile, new: SessionFile, mode: ComparisonMode
   ) async throws(SessionLoadingError) -> Session {
     let (oldFile, newFile) = (try read(old), try read(new))
     do {

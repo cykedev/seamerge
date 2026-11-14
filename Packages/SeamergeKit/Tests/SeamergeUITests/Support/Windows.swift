@@ -18,12 +18,12 @@ enum Windows {
     options: DisplayOptions = DisplayOptions(reducesMotion: true),
     workspace: WorkspaceRecorder = WorkspaceRecorder(), prompts: PromptRecorder = PromptRecorder(),
     undoManager: UndoManager = UndoManager(), unavailable: UnavailableComparison? = nil,
-    defaults: UserDefaults = .privateSuite(), syntaxChoices: SyntaxChoices = SyntaxChoices()
+    settings: UserSettings = .private(), syntaxChoices: SyntaxChoices = SyntaxChoices()
   ) throws -> SessionWindowController {
     let controller = SessionWindowController(
       session: session, context: context, undoManager: undoManager, displayOptions: options,
       pasteboard: .withUniqueName(), workspace: workspace, prompts: prompts, doneStyle: .standard,
-      defaults: defaults, syntaxChoices: syntaxChoices, window: SessionWindow(),
+      settings: settings, syntaxChoices: syntaxChoices, window: SessionWindow(),
       unavailable: unavailable)
     let window = try #require(controller.window)
     window.contentView?.layoutSubtreeIfNeeded()
@@ -37,7 +37,7 @@ enum Windows {
   static func picture(
     _ session: Session, context: SessionContext, look: Look,
     options: DisplayOptions = DisplayOptions(), doneStyle: SessionToolbar.DoneStyle = .standard,
-    defaults: UserDefaults = .privateSuite(), actsAsKey: Bool = false,
+    settings: UserSettings = .private(), actsAsKey: Bool = false,
     size: CGSize? = WindowMetrics.defaultContentSize, named name: String,
     unavailable: UnavailableComparison? = nil,
     prepare: (SessionWindowController) -> Void = { _ in }
@@ -45,7 +45,7 @@ enum Windows {
     let controller = SessionWindowController(
       session: session, context: context, undoManager: UndoManager(), displayOptions: options,
       pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(), prompts: PromptRecorder(),
-      doneStyle: doneStyle, defaults: defaults,
+      doneStyle: doneStyle, settings: settings,
       window: actsAsKey ? KeySessionWindow() : SessionWindow(), unavailable: unavailable)
     let window = try #require(controller.window)
     defer { window.close() }
@@ -73,6 +73,14 @@ enum Windows {
   /// The top of the visible part of the text of `pane`.
   static func scrollOffset(of pane: PaneView) -> CGFloat {
     pane.documentView.visibleRect.minY
+  }
+}
+
+extension UserSettings {
+  /// Settings in user defaults of their own, which no other test and no setting of the user
+  /// sees.
+  static func `private`() -> UserSettings {
+    UserSettings(defaults: .privateSuite())
   }
 }
 
@@ -269,16 +277,16 @@ extension Windows {
   /// A window for `collection`, laid out without a screen.
   static func controller(
     for collection: FileCollection, options: DisplayOptions = DisplayOptions(reducesMotion: true),
-    defaults: UserDefaults = .privateSuite(), window: SessionWindow = SessionWindow()
+    settings: UserSettings = .private(), window: SessionWindow = SessionWindow()
   ) async throws -> SessionWindowController {
     let file = try #require(collection.files.first)
-    let loaded = try await SessionWindowController.load(file, mode: .windowDefault)
+    let loaded = try await SessionWindowController.load(file, mode: settings.comparisonMode)
     let controller = SessionWindowController(
       session: loaded.session,
       context: SessionWindowController.context(of: file, at: 0, in: collection),
       undoManager: UndoManager(), displayOptions: options, pasteboard: .withUniqueName(),
       workspace: WorkspaceRecorder(), prompts: PromptRecorder(), doneStyle: .standard,
-      defaults: defaults, window: window, unavailable: loaded.unavailable,
+      settings: settings, window: window, unavailable: loaded.unavailable,
       collection: collection)
     controller.window?.contentView?.layoutSubtreeIfNeeded()
     return controller

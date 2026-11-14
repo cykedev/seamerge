@@ -41,10 +41,14 @@ struct DisplayOptions: Hashable {
       increasesContrast: increasesContrast, differentiatesWithoutColor: differentiatesWithoutColor)
   }
 
-  /// The theme of the panes with these settings, with code of `fontSize` points.
-  func theme(fontSize: CGFloat) -> Theme {
+  /// The theme of the panes with these settings, with code in the font, line spacing and tab
+  /// width of `settings`, at `fontSize` points.
+  @MainActor
+  func theme(settings: UserSettings, fontSize: CGFloat) -> Theme {
     var theme = theme
-    theme.font = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
+    theme.font = settings.codeFont(ofSize: fontSize)
+    theme.lineHeightMultiple = settings.lineSpacing.multiple
+    theme.tabWidth = settings.tabWidth
     return theme
   }
 }

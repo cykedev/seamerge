@@ -2,9 +2,10 @@ import AppKit
 import SyntaxKit
 
 extension SessionWindowController {
-  /// Colors the code of every session window by its syntax, or leaves it in the color of text.
+  /// Colors the code of the window by its syntax, or leaves it in the color of text.
   @objc func toggleSyntaxHighlighting(_ sender: Any?) {
-    syntaxHighlighting.isOn.toggle()
+    highlightsSyntax.toggle()
+    showSyntax()
   }
 
   /// Colors the code of the window as the language of the choice that `sender` sends, and keeps
@@ -22,13 +23,13 @@ extension SessionWindowController {
 
   /// The language the code is colored as, or `nil` while syntax highlighting is off.
   var syntaxLanguage: LanguageDescription? {
-    syntaxHighlighting.isOn ? syntaxChoice.language(detected: detectedLanguage) : nil
+    highlightsSyntax ? syntaxChoice.language(detected: detectedLanguage) : nil
   }
 
   /// Whether a language can be chosen now: while the code is colored and the window shows the
   /// lines of its files.
   var canChooseSyntax: Bool {
-    syntaxHighlighting.isOn && unavailable == nil && binaryMerge == nil
+    highlightsSyntax && unavailable == nil && binaryMerge == nil
   }
 
   /// Puts a checkmark at the choice in effect, names the recognized language in Automatic, and
@@ -37,17 +38,6 @@ extension SessionWindowController {
     item.title = choice.title(detected: detectedLanguage)
     item.state = choice == syntaxChoice ? .on : .off
     return canChooseSyntax
-  }
-
-  /// Colors the code as highlighting is set, in whichever window, and the language chosen.
-  func observeSyntaxHighlighting() {
-    NotificationCenter.default.addObserver(
-      self, selector: #selector(syntaxHighlightingDidChange(_:)),
-      name: SyntaxHighlighting.didChangeNotification, object: syntaxHighlighting.defaults)
-  }
-
-  @objc private func syntaxHighlightingDidChange(_ notification: Notification) {
-    showSyntax()
   }
 
   /// Colors the code as ``syntaxLanguage`` says and shows the choice in the footer.

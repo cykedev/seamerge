@@ -35,14 +35,11 @@ public final class SessionWindowController: NSWindowController {
   /// The panes and the footer below them.
   let content: SessionContentController
 
-  /// Whether the windows show their footer.
-  let footerVisibility: FooterVisibility
+  /// The settings of the app: how the code is drawn, and how the window starts.
+  let settings: UserSettings
 
-  /// Whether the windows color their code by its syntax.
-  let syntaxHighlighting: SyntaxHighlighting
-
-  /// Whether the panes wrap long lines, as the user chose for every window.
-  let lineWrapping: LineWrapping
+  /// Whether the window colors its code by its syntax.
+  var highlightsSyntax: Bool
 
   /// The language of the files as the window recognized it.
   var detectedLanguage: LanguageDescription
@@ -160,8 +157,8 @@ public final class SessionWindowController: NSWindowController {
     }
   }
 
-  /// The size of the code, in points.
-  var fontSize = SessionWindowController.standardFontSize {
+  /// The size of the code, in points: the size of the settings until the user zooms.
+  var fontSize: CGFloat {
     didSet {
       guard fontSize != oldValue else { return }
       presentation.keepingTheLineOfBInPlace { applyTheme() }
@@ -178,13 +175,15 @@ public final class SessionWindowController: NSWindowController {
   ///   - session: A merge or a comparison of two files.
   ///   - context: Where the result goes and what Git is doing.
   ///   - undoManager: The undo manager of the window, which belongs to this session alone.
+  ///   - settings: How the code is drawn and how the window starts.
   public convenience init(
-    session: Session, context: SessionContext = SessionContext(), undoManager: UndoManager
+    session: Session, context: SessionContext = SessionContext(), undoManager: UndoManager,
+    settings: UserSettings
   ) {
     self.init(
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
-      prompts: SessionSheets(), doneStyle: .standard, defaults: .standard, syntaxChoices: .shared,
+      prompts: SessionSheets(), doneStyle: .standard, settings: settings, syntaxChoices: .shared,
       window: SessionWindow())
     observeDisplayOptions()
   }
@@ -198,13 +197,13 @@ public final class SessionWindowController: NSWindowController {
   /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the headers can be made.
   public convenience init(
     unavailable comparison: UnavailableComparison, context: SessionContext,
-    undoManager: UndoManager
+    undoManager: UndoManager, settings: UserSettings
   ) async throws(SessionLoadingError) {
     let session = try await comparison.emptySession()
     self.init(
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
-      prompts: SessionSheets(), doneStyle: .standard, defaults: .standard, syntaxChoices: .shared,
+      prompts: SessionSheets(), doneStyle: .standard, settings: settings, syntaxChoices: .shared,
       window: SessionWindow(), unavailable: comparison)
     observeDisplayOptions()
   }
@@ -215,13 +214,14 @@ public final class SessionWindowController: NSWindowController {
   ///
   /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the headers can be made.
   public convenience init(
-    binaryMerge merge: BinaryMerge, context: SessionContext, undoManager: UndoManager
+    binaryMerge merge: BinaryMerge, context: SessionContext, undoManager: UndoManager,
+    settings: UserSettings
   ) async throws(SessionLoadingError) {
     let session = try await merge.emptySession()
     self.init(
       session: session, context: context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general, workspace: NSWorkspace.shared,
-      prompts: SessionSheets(), doneStyle: .standard, defaults: .standard, syntaxChoices: .shared,
+      prompts: SessionSheets(), doneStyle: .standard, settings: settings, syntaxChoices: .shared,
       window: SessionWindow(), binaryMerge: merge)
     observeDisplayOptions()
   }
@@ -235,24 +235,23 @@ public final class SessionWindowController: NSWindowController {
 
   /// Opens a window for `session` that draws with `displayOptions`, whatever the system's
   /// settings are, copies to `pasteboard`, opens files with `workspace`, asks with `prompts`,
-  /// shows the button that saves and closes of a merge in `doneStyle`, keeps whether the footer
-  /// shows in `defaults`, keeps the languages chosen for files in `syntaxChoices`, and lays
-  /// itself out in `window`; for an `unavailable` comparison, it
-  /// says why in place of the lines. `now` tells the time, which ends a run of typing after a
-  /// pause.
+  /// shows the button that saves and closes of a merge in `doneStyle`, draws and starts as
+  /// `settings` say, keeps the languages chosen for files in `syntaxChoices`, and lays itself
+  /// out in `window`; for an `unavailable` comparison, it says why in place of the lines. `now`
+  /// tells the time, which ends a run of typing after a pause.
   ///
   /// For a `collection`, the window shows `session`, one of its files, beside the list of the
   /// files.
   init(
     session: Session, context: SessionContext, undoManager: UndoManager,
     displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace,
-    prompts: any SessionPrompts, doneStyle: SessionToolbar.DoneStyle, defaults: UserDefaults,
+    prompts: any SessionPrompts, doneStyle: SessionToolbar.DoneStyle, settings: UserSettings,
     syntaxChoices: SyntaxChoices = SyntaxChoices(),
     window: SessionWindow, unavailable: UnavailableComparison? = nil,
     binaryMerge: BinaryMerge? = nil, collection: FileCollection? = nil,
     now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
   ) {
-    let theme = displayOptions.theme(fontSize: Self.standardFontSize)
+    let theme = displayOptions.theme(settings: settings, fontSize: settings.fontSize)
     let arrangement = PaneArrangement(session: session)
     let headers = Dictionary(
       uniqueKeysWithValues: arrangement.sourceRoles.map { role in
@@ -272,9 +271,9 @@ public final class SessionWindowController: NSWindowController {
         }))
     self.content = content
     content.footer.theme = theme
-    footerVisibility = FooterVisibility(defaults: defaults)
-    syntaxHighlighting = SyntaxHighlighting(defaults: defaults)
-    lineWrapping = LineWrapping(defaults: defaults)
+    self.settings = settings
+    highlightsSyntax = settings.highlightsSyntax
+    fontSize = settings.fontSize
     self.syntaxChoices = syntaxChoices
     let detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
     self.detectedLanguage = detectedLanguage
@@ -291,18 +290,22 @@ public final class SessionWindowController: NSWindowController {
       CollectionSplitViewController(
         fileList: FileListViewController(
           theme: theme, folderColor: CompareFilesColors(displayOptions).quietText),
-        content: content, defaults: defaults)
+        content: content, settings: settings)
     }
     sessionUndoManager = undoManager
     self.displayOptions = displayOptions
     presentation = SessionPresentation(
       session: session, arrangement: arrangement, layout: layout, headers: headers,
       resultHeader: resultHeader, displayOptions: displayOptions,
-      language: syntaxHighlighting.isOn
+      language: settings.highlightsSyntax
         ? syntaxChoices[syntaxPath].language(detected: detectedLanguage) : nil)
-    presentation.wrapsLines = lineWrapping.isOn
+    presentation.wrapsLines = settings.wrapsLines
+    for pane in presentation.allPanes {
+      pane.showsInvisibles = settings.showsInvisibles
+    }
     summary = SessionSummary(
-      changes: presentation.changes, context: context, arrangement: arrangement)
+      changes: presentation.changes, context: context, arrangement: arrangement,
+      startMode: settings.comparisonMode)
     saving = presentation.result.map {
       ResultSaving(result: $0, session: session, url: context.resultURL)
     }
@@ -331,7 +334,7 @@ public final class SessionWindowController: NSWindowController {
     // answer.
     window.delegate = self
     window.contentViewController = collectionLayout ?? content
-    content.showsFooter = footerVisibility.isVisible
+    content.showsFooter = settings.showsFooter
     window.toolbar = toolbar.toolbar
     window.setContentSize(WindowMetrics.defaultContentSize)
     window.contentMinSize = minimumContentSize
@@ -339,6 +342,10 @@ public final class SessionWindowController: NSWindowController {
     window.representedURL = context.resultURL
     layout.updateMinimumWidths()
     layout.placeDividers()
+    if arrangement.sourceRoles.contains(.base), !settings.showsBase {
+      layout.showsBase = false
+      presentation.showSourcesAgain()
+    }
     sessionDidChange()
     presentation.showCurrentBlock()
     presentation.delegate = self
@@ -353,8 +360,6 @@ public final class SessionWindowController: NSWindowController {
     }
     observeStepsOfUndo()
     observeFooterVisibility()
-    observeSyntaxHighlighting()
-    observeLineWrapping()
     setUpCollection()
     stateDidChange()
     watchFiles()
@@ -406,9 +411,9 @@ public final class SessionWindowController: NSWindowController {
     layout.showCallerIsGone()
   }
 
-  /// Draws the window with the theme of its display options and font size.
+  /// Draws the window with the theme of its display options, settings and font size.
   private func applyTheme() {
-    let theme = displayOptions.theme(fontSize: fontSize)
+    let theme = displayOptions.theme(settings: settings, fontSize: fontSize)
     layout.apply(theme)
     presentation.apply(theme)
     content.footer.theme = theme
@@ -417,7 +422,8 @@ public final class SessionWindowController: NSWindowController {
   /// Titles the window after the session it shows now.
   func sessionDidChange() {
     summary = SessionSummary(
-      changes: presentation.changes, context: context, arrangement: presentation.arrangement)
+      changes: presentation.changes, context: context, arrangement: presentation.arrangement,
+      startMode: settings.comparisonMode)
     window?.title = summary.title
     window?.setAccessibilityTitle([summary.title, summary.fullSubtitle].joined(separator: ", "))
     updateSubtitle()
@@ -555,13 +561,13 @@ extension SessionWindowController: NSUserInterfaceValidations {
   /// invisible characters shown, the footer hidden.
   func isSwitchedOn(_ command: SessionCommand) -> Bool {
     switch command {
-    case .toggleFooter: !footerVisibility.isVisible
+    case .toggleFooter: !settings.showsFooter
     case .toggleBase: !layout.showsBase
     case .toggleResultMaximized: layout.maximizesResult
     case .toggleInvisibles: presentation.allPanes.contains(where: \.showsInvisibles)
     case .toggleScrollSynchronization: presentation.scrollSync.isEnabled
-    case .toggleSyntaxHighlighting: syntaxHighlighting.isOn
-    case .toggleLineWrapping: lineWrapping.isOn
+    case .toggleSyntaxHighlighting: highlightsSyntax
+    case .toggleLineWrapping: presentation.wrapsLines
     default: false
     }
   }
@@ -597,7 +603,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
     case .smallerFontSize:
       fontSize > Self.fontSizes[0]
     case .otherFontSize:
-      fontSize != Self.standardFontSize
+      fontSize != settings.fontSize
     case .fileOnDisk:
       editableFileURL != nil
     case .blockText:

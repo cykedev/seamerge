@@ -10,29 +10,39 @@ import Testing
 /// colors nothing.
 @MainActor
 @Suite(.timeLimit(.minutes(1))) struct SyntaxChoiceTests {
-  @Test func highlightSyntaxTurnsOffTheColorsOfEveryWindowAndBackOn() async throws {
-    let defaults = UserDefaults.privateSuite()
+  @Test func highlightSyntaxTurnsOffTheColorsOfItsWindowAndBackOn() async throws {
+    let settings = UserSettings.private()
     let session = try await SyntaxFixture.merge()
-    let first = try Windows.controller(for: session, defaults: defaults)
-    let second = try Windows.controller(for: session, defaults: defaults)
+    let first = try Windows.controller(for: session, settings: settings)
+    let second = try Windows.controller(for: session, settings: settings)
     await SyntaxFixture.lexing(of: first)
     let item = Self.item(.toggleSyntaxHighlighting)
     #expect(first.validateUserInterfaceItem(item) && item.state == .on)
 
     first.toggleSyntaxHighlighting(nil)
 
-    for controller in [first, second] {
-      #expect(Windows.panes(of: controller).allSatisfy { $0.syntaxProvider == nil })
-      #expect(controller.presentation.syntax.language == nil)
-    }
-    #expect(second.validateUserInterfaceItem(item) && item.state == .off)
-    #expect(!SyntaxHighlighting(defaults: defaults).isOn)
-    let third = try Windows.controller(for: session, defaults: defaults)
-    #expect(third.presentation.syntax.language == nil)
+    #expect(Windows.panes(of: first).allSatisfy { $0.syntaxProvider == nil })
+    #expect(first.presentation.syntax.language == nil)
+    #expect(first.validateUserInterfaceItem(item) && item.state == .off)
+    #expect(second.presentation.syntax.language?.name == "Swift")
+    #expect(second.validateUserInterfaceItem(item) && item.state == .on)
+    #expect(settings.highlightsSyntax)
 
-    second.toggleSyntaxHighlighting(nil)
+    first.toggleSyntaxHighlighting(nil)
     await SyntaxFixture.lexing(of: first)
     #expect(first.presentation.syntax.language?.name == "Swift")
+  }
+
+  @Test func newWindowColorsItsCodeAsTheSettingsSay() async throws {
+    let settings = UserSettings.private()
+    let session = try await SyntaxFixture.merge()
+
+    settings.highlightsSyntax = false
+
+    let controller = try Windows.controller(for: session, settings: settings)
+    #expect(controller.presentation.syntax.language == nil)
+    let item = Self.item(.toggleSyntaxHighlighting)
+    #expect(controller.validateUserInterfaceItem(item) && item.state == .off)
   }
 
   @Test func chosenLanguageColorsEveryPaneAndStaysForThePathOfTheFile() async throws {

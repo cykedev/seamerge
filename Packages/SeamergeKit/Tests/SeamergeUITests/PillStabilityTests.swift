@@ -112,12 +112,12 @@ import Testing
   }
 
   @Test func barStaysWhenTheLinesOfItsBlockWrapMoreOrFewerTimes() async throws {
-    let defaults = UserDefaults.privateSuite()
-    LineWrapping(defaults: defaults).isOn = true
+    let settings = UserSettings.private()
+    settings.wrapsLines = true
     let long = String(repeating: "words that wrap ", count: 12)
     let session = try await SampleMerges.merge(
       base: "u0\nx1\nu2\n", a: "u0\nA \(long)\nu2\n", b: "u0\nB \(long)\(long)\nu2\n")
-    let controller = try Windows.controller(for: session, defaults: defaults)
+    let controller = try Windows.controller(for: session, settings: settings)
     let result = try controller.mergeResult
     let span = result.verticalSpan(ofRows: 1..<2)
     try #require(span.upperBound - span.lowerBound > result.theme.rowHeight, "the block wraps")

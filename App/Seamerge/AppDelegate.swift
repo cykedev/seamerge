@@ -24,6 +24,9 @@ final class AppDelegate: NSObject {
   /// File > Open Recent.
   let recentComparisonsMenu: RecentComparisonsMenu
 
+  /// The settings of the app, which every session window draws and starts with.
+  let settings: UserSettings
+
   /// The window Compare Files, once it has appeared.
   private(set) var compareFilesWindowController: CompareFilesWindowController?
 
@@ -38,8 +41,8 @@ final class AppDelegate: NSObject {
 
   private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "App")
 
-  /// Creates the delegate of an app started with `arguments`, which keeps its recent
-  /// comparisons in `defaults`, listens for the helper at `socketURL`, keeps the copies of
+  /// Creates the delegate of an app started with `arguments`, which keeps its settings and
+  /// recent comparisons in `defaults`, listens for the helper at `socketURL`, keeps the copies of
   /// collected files in `collectionCache`, shows alerts and hides with `presenter`, and sets up
   /// Git and Tower in `integrationStore`.
   init(
@@ -50,10 +53,13 @@ final class AppDelegate: NSObject {
     isLaunchedForSession = arguments.contains(HelperLaunch.argument)
     self.presenter = presenter
     self.integrationStore = integrationStore
+    settings = UserSettings(defaults: defaults)
     recentComparisons = RecentComparisons(defaults: defaults)
     recentComparisonsMenu = RecentComparisonsMenu(recentComparisons: recentComparisons)
     mainMenu = MainMenu(openRecentMenu: recentComparisonsMenu.menu)
-    coordinator = SessionCoordinator(socketURL: socketURL, cache: collectionCache) {
+    coordinator = SessionCoordinator(
+      socketURL: socketURL, cache: collectionCache, settings: settings
+    ) {
       [weak presenter] error in
       presenter?.present(error)
     }

@@ -150,7 +150,7 @@ extension SessionWindowController {
   }
 
   /// Carries out `command`, which chooses the sources of the current block, and goes on to the
-  /// next open conflict if the block was an open conflict before.
+  /// next open conflict if the block was an open conflict before and the settings say so.
   ///
   /// From any other block, above all one edited by hand, the selection stays, so that the user
   /// sees what the command did.
@@ -161,7 +161,9 @@ extension SessionWindowController {
     let wasOpen = presentation.navigation.isOpenConflict[block]
     carryOut(plan, named: command.undoName ?? command.title)
     announceState(ofBlock: block)
-    if wasOpen, let next = presentation.navigation.target(of: .nextOpenConflict) {
+    if wasOpen, settings.goesToNextConflict,
+      let next = presentation.navigation.target(of: .nextOpenConflict)
+    {
       presentation.jump(to: next)
     }
   }

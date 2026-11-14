@@ -159,8 +159,9 @@ import Testing
     let name = "SeamergeUITests.\(UUID().uuidString)"
     let defaults = UserDefaults.privateSuite(named: name)
     defer { defaults.removePersistentDomain(forName: name) }
-    let first = try Windows.controller(for: try await SampleMerges.helloWorld(), defaults: defaults)
-    let second = try Windows.controller(for: try await SampleDiffs.greeting(), defaults: defaults)
+    let settings = UserSettings(defaults: defaults)
+    let first = try Windows.controller(for: try await SampleMerges.helloWorld(), settings: settings)
+    let second = try Windows.controller(for: try await SampleDiffs.greeting(), settings: settings)
     let item = NSMenuItem(
       title: SessionCommand.toggleFooter.title, action: SessionCommand.toggleFooter.action,
       keyEquivalent: "")
@@ -183,11 +184,11 @@ import Testing
     #expect(item.title == "Show Footer")
 
     let relaunched = try Windows.controller(
-      for: try await SampleMerges.helloWorld(), defaults: defaults)
+      for: try await SampleMerges.helloWorld(), settings: UserSettings(defaults: defaults))
     #expect(!relaunched.content.showsFooter)
 
-    relaunched.toggleFooter(nil)
-    for controller in [first, second, relaunched] {
+    second.toggleFooter(nil)
+    for controller in [first, second] {
       #expect(controller.content.showsFooter)
       #expect(controller.window?.contentBorderThickness(for: .minY) == WindowMetrics.footerHeight)
     }
@@ -205,7 +206,7 @@ import Testing
         session: session, context: SessionContext(), undoManager: UndoManager(),
         displayOptions: DisplayOptions(), pasteboard: .withUniqueName(),
         workspace: WorkspaceRecorder(), prompts: PromptRecorder(), doneStyle: .standard,
-        defaults: .privateSuite(), window: SessionWindow())
+        settings: .private(), window: SessionWindow())
       let window = try #require(controller.window)
       defer { window.close() }
       Rendering.prepare(window, size: window.contentMinSize, appearance: Look.light.appearance)

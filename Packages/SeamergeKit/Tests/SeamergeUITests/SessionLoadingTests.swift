@@ -7,15 +7,15 @@ import Testing
 /// Reading the files of a session: in the mode of the window, and with an error that names the
 /// file to blame.
 struct SessionLoadingTests {
-  @Test func mergeIsComparedInTheModeOfTheWindow() async throws {
+  @Test func mergeIsComparedInTheModeItIsGiven() async throws {
     let files = try SampleFiles()
     let session = try await Session.loadMerge(
       base: SessionFile(url: try files.file("base.txt"), label: "base"),
       a: SessionFile(url: try files.file("a.txt"), label: "a"),
-      b: SessionFile(url: try files.file("b.txt"), label: "b"))
+      b: SessionFile(url: try files.file("b.txt"), label: "b"), mode: .ignoreAllWhitespace)
 
     #expect(session.kind == .merge)
-    #expect(session.options.mode == .windowDefault)
+    #expect(session.options.mode == .ignoreAllWhitespace)
   }
 
   @Test func fileThatIsNotTextIsNamed() async throws {
@@ -26,7 +26,7 @@ struct SessionLoadingTests {
     await #expect(throws: SessionLoadingError.binaryFile(image)) {
       try await Session.loadMerge(
         base: nil, a: SessionFile(url: try files.file("a.txt"), label: "a"),
-        b: SessionFile(url: image, label: "b"))
+        b: SessionFile(url: image, label: "b"), mode: .windowDefault)
     }
     #expect(
       SessionLoadingError.binaryFile(image).errorDescription == "“image.png” isn’t a text file.")
@@ -40,7 +40,7 @@ struct SessionLoadingTests {
       try await Session.loadMerge(
         base: SessionFile(url: missing, label: "base"),
         a: SessionFile(url: try files.file("a.txt"), label: "a"),
-        b: SessionFile(url: try files.file("b.txt"), label: "b"))
+        b: SessionFile(url: try files.file("b.txt"), label: "b"), mode: .windowDefault)
     }
     let error = SessionLoadingError.unreadableFile(missing)
     #expect(error.errorDescription == "Seamerge can’t read “missing.txt”.")

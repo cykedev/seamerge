@@ -99,7 +99,7 @@ import Testing
       options: ComparisonOptions(mode: .windowDefault))
     let summary = SessionSummary(
       changes: SessionChanges(session: inDefaultMode), context: .init(),
-      arrangement: PaneArrangement(session: inDefaultMode))
+      arrangement: PaneArrangement(session: inDefaultMode), startMode: .windowDefault)
     #expect(summary.changes == "3 changes from A · 1 from B")
     #expect(ComparisonMode.windowDefault == .ignoreWhitespaceAmount)
   }
@@ -110,7 +110,7 @@ import Testing
     let other = try await session.recomputed(options: ComparisonOptions(mode: mode))
     let summary = SessionSummary(
       changes: SessionChanges(session: other), context: .init(),
-      arrangement: PaneArrangement(session: other))
+      arrangement: PaneArrangement(session: other), startMode: .windowDefault)
     let note =
       switch mode {
       case .exact: "Compared exactly"
@@ -126,7 +126,7 @@ import Testing
     let (session, context) = try await scenario.load()
     let summary = SessionSummary(
       changes: SessionChanges(session: session), context: context,
-      arrangement: PaneArrangement(session: session))
+      arrangement: PaneArrangement(session: session), startMode: .windowDefault)
     let font = NSFont.preferredFont(forTextStyle: .subheadline)
     #expect(summary.fullSubtitle == "1 change from A · 1 from B · Rebase onto main · Commit 2 of 3")
     #expect(summary.subtitle(fittingWidth: 1000, font: font) == summary.fullSubtitle)
@@ -142,7 +142,7 @@ import Testing
     let (session, context) = try await scenario.load()
     let summary = SessionSummary(
       changes: SessionChanges(session: session), context: context,
-      arrangement: PaneArrangement(session: session))
+      arrangement: PaneArrangement(session: session), startMode: .windowDefault)
     #expect(summary.fullSubtitle == "1 change from A · 1 from B · 11 more files with conflicts")
   }
 
@@ -160,7 +160,8 @@ import Testing
   @Test func windowUsesTheUndoManagerOfTheSessionAndHasNoTabs() async throws {
     let session = try await SampleMerges.helloWorld()
     let undoManager = UndoManager()
-    let controller = SessionWindowController(session: session, undoManager: undoManager)
+    let controller = SessionWindowController(
+      session: session, undoManager: undoManager, settings: .private())
     let window = try #require(controller.window)
     #expect(window.undoManager === undoManager)
     #expect(window.tabbingMode == .disallowed)
@@ -204,7 +205,7 @@ import Testing
       session: session, context: context, undoManager: UndoManager(),
       displayOptions: DisplayOptions(), pasteboard: .withUniqueName(),
       workspace: WorkspaceRecorder(),
-      prompts: PromptRecorder(), doneStyle: .standard, defaults: .privateSuite(),
+      prompts: PromptRecorder(), doneStyle: .standard, settings: .private(),
       window: SessionWindow())
   }
 }

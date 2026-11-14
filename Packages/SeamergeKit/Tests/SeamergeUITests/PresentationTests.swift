@@ -219,7 +219,7 @@ import Testing
       session: session, context: context, undoManager: UndoManager(),
       displayOptions: DisplayOptions(), pasteboard: .withUniqueName(),
       workspace: WorkspaceRecorder(),
-      prompts: PromptRecorder(), doneStyle: .standard, defaults: .privateSuite(),
+      prompts: PromptRecorder(), doneStyle: .standard, settings: .private(),
       window: SessionWindow())
   }
 }

@@ -15,35 +15,35 @@ import Testing
     try Windows.picture(
       try await LineWrappingWindowTests.merge(), context: SessionContext(), look: look,
       options: DisplayOptions(increasesContrast: look.increasesContrast),
-      defaults: Self.wrappingDefaults(), named: "wrapped-merge-\(look.name)")
+      settings: Self.wrappingSettings(), named: "wrapped-merge-\(look.name)")
   }
 
   @Test(arguments: [Look.light, .dark])
   func comparisonIsPicturedWithWrappedLines(look: Look) async throws {
     try Windows.picture(
       try await Self.diff(), context: SessionContext(), look: look,
-      defaults: Self.wrappingDefaults(), named: "wrapped-diff-\(look.name)")
+      settings: Self.wrappingSettings(), named: "wrapped-diff-\(look.name)")
   }
 
   @Test(arguments: [Look.light, .dark])
   func mergeIsPicturedWithWrappedLinesInTheSmallestWindow(look: Look) async throws {
     try Windows.picture(
       try await LineWrappingWindowTests.merge(), context: SessionContext(), look: look,
-      defaults: Self.wrappingDefaults(), size: nil, named: "wrapped-merge-smallest-\(look.name)")
+      settings: Self.wrappingSettings(), size: nil, named: "wrapped-merge-smallest-\(look.name)")
   }
 
   @Test func mergeIsPicturedWithWrappedLinesWithoutColorAndTransparency() async throws {
     try Windows.picture(
       try await LineWrappingWindowTests.merge(), context: SessionContext(), look: .light,
       options: DisplayOptions(differentiatesWithoutColor: true, reducesTransparency: true),
-      defaults: Self.wrappingDefaults(), named: "wrapped-merge-without-color-light")
+      settings: Self.wrappingSettings(), named: "wrapped-merge-without-color-light")
   }
 
-  /// User defaults in which lines wrap.
-  static func wrappingDefaults() -> UserDefaults {
-    let defaults = UserDefaults.privateSuite()
-    LineWrapping(defaults: defaults).isOn = true
-    return defaults
+  /// Settings in which new windows wrap lines.
+  static func wrappingSettings() -> UserSettings {
+    let settings = UserSettings.private()
+    settings.wrapsLines = true
+    return settings
   }
 
   /// A comparison whose newer file makes an indented line longer and adds a long comment.

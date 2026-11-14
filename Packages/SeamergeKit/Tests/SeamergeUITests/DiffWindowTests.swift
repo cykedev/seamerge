@@ -231,7 +231,7 @@ import Testing
     try Data(SampleDiffs.greetingNew.utf8).write(to: workingCopy)
     let session = try await Session.loadDiff(
       old: SessionFile(url: before, label: "Greeting.swift"),
-      new: SessionFile(url: workingCopy, label: "Greeting.swift"))
+      new: SessionFile(url: workingCopy, label: "Greeting.swift"), mode: .windowDefault)
     let workspace = WorkspaceRecorder()
 
     let withGit = try Windows.controller(

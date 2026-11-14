@@ -37,6 +37,7 @@ final class SessionCoordinator {
 
   private let socketURL: URL
   private let cache: CollectionCache
+  private let settings: UserSettings
   private let presentError: (any Error) -> Void
   private var collections: [OpenCollection] = []
   private var kinds: [ObjectIdentifier: Session.Kind] = [:]
@@ -48,14 +49,15 @@ final class SessionCoordinator {
   private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "App")
 
   /// Creates a coordinator that listens for the helper at `socketURL` once it starts, keeps the
-  /// copies of the files of collections in `cache`, and shows what keeps a session from opening
-  /// with `presentError`.
+  /// copies of the files of collections in `cache`, opens windows as `settings` say, and shows
+  /// what keeps a session from opening with `presentError`.
   init(
-    socketURL: URL, cache: CollectionCache = .standard,
+    socketURL: URL, cache: CollectionCache = .standard, settings: UserSettings,
     presentError: @escaping (any Error) -> Void
   ) {
     self.socketURL = socketURL
     self.cache = cache
+    self.settings = settings
     self.presentError = presentError
   }
 
@@ -124,12 +126,14 @@ final class SessionCoordinator {
     let session =
       if let base = comparison.base {
         try await Session.loadMerge(
-          base: file(base), a: file(comparison.left), b: file(comparison.right))
+          base: file(base), a: file(comparison.left), b: file(comparison.right),
+          mode: settings.comparisonMode)
       } else {
-        try await Session.loadDiff(old: file(comparison.left), new: file(comparison.right))
+        try await Session.loadDiff(
+          old: file(comparison.left), new: file(comparison.right), mode: settings.comparisonMode)
       }
     let controller = SessionWindowController(
-      session: session, context: SessionContext(), undoManager: UndoManager())
+      session: session, context: SessionContext(), undoManager: UndoManager(), settings: settings)
     guard !isFinishing else { return }
     show(controller, kind: session.kind) { _ in }
   }
@@ -158,7 +162,7 @@ final class SessionCoordinator {
     }
     let controller: SessionWindowController
     do {
-      controller = try await Self.makeWindow(for: connection.request)
+      controller = try await Self.makeWindow(for: connection.request, settings: settings)
     } catch {
       presentError(error)
       await send(.closed(.cancelled), on: connection)
@@ -233,7 +237,7 @@ final class SessionCoordinator {
     let controller: SessionWindowController
     do {
       controller = try await SessionWindowController(
-        collection: collection.files, undoManager: UndoManager())
+        collection: collection.files, undoManager: UndoManager(), settings: settings)
     } catch {
       presentError(error)
       end(collection)
@@ -308,7 +312,7 @@ final class SessionCoordinator {
     let controller: SessionWindowController
     do {
       controller = try await SessionWindowController(
-        collection: FileCollection(files: files), undoManager: UndoManager())
+        collection: FileCollection(files: files), undoManager: UndoManager(), settings: settings)
     } catch {
       presentError(error)
       await send(.closed(.saved), on: connection)
@@ -348,8 +352,8 @@ final class SessionCoordinator {
     }
   }
 
-  /// Reads the files of `request` and opens a window for their merge or comparison, in the
-  /// comparison mode of the window.
+  /// Reads the files of `request` and opens a window for their merge or comparison, drawn and
+  /// started as `settings` say.
   ///
   /// A merge knows who waits for it: Git where the command line says so, else the command line.
   /// Every side of a merge shows the name of the file it is merged into, since Git hands over
@@ -360,7 +364,7 @@ final class SessionCoordinator {
   ///
   /// - Throws: Why the files of a merge cannot be opened.
   private static func makeWindow(
-    for request: SessionRequest
+    for request: SessionRequest, settings: UserSettings
   ) async throws(SessionLoadingError) -> SessionWindowController {
     switch request {
     case .merge(let merge):
@@ -374,14 +378,15 @@ final class SessionCoordinator {
         waitingCaller: merge.isRunByGit ? .git : .commandLine)
       do {
         let session = try await Session.loadMerge(
-          base: merge.base.map { SessionFile(url: $0, label: label) }, a: a, b: b)
+          base: merge.base.map { SessionFile(url: $0, label: label) }, a: a, b: b,
+          mode: settings.comparisonMode)
         return SessionWindowController(
-          session: session, context: context, undoManager: UndoManager())
+          session: session, context: context, undoManager: UndoManager(), settings: settings)
       } catch .binaryFile {
         Self.logger.notice("Asking which side of the binary file to take")
         return try await SessionWindowController(
           binaryMerge: BinaryMerge(a: a, b: b, output: merge.output), context: context,
-          undoManager: UndoManager())
+          undoManager: UndoManager(), settings: settings)
       }
     case .diff(let diff):
       let file = { (url: URL, label: String?) in
@@ -390,14 +395,14 @@ final class SessionCoordinator {
       let (old, new) = (file(diff.left, diff.leftLabel), file(diff.right, diff.rightLabel))
       let context = SessionContext(difftool: DifftoolContext(diff))
       do {
-        let session = try await Session.loadDiff(old: old, new: new)
+        let session = try await Session.loadDiff(old: old, new: new, mode: settings.comparisonMode)
         return SessionWindowController(
-          session: session, context: context, undoManager: UndoManager())
+          session: session, context: context, undoManager: UndoManager(), settings: settings)
       } catch {
         Self.logger.notice("Showing why the files cannot be compared: \(String(describing: error))")
         return try await SessionWindowController(
           unavailable: UnavailableComparison(old: old, new: new, reason: error), context: context,
-          undoManager: UndoManager())
+          undoManager: UndoManager(), settings: settings)
       }
     case .folders:
       preconditionFailure("The folders of a directory diff are served as a collection")

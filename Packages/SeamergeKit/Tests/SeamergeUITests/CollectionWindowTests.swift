@@ -98,14 +98,14 @@ import Testing
     let defaults = UserDefaults.privateSuite()
     let files = try SampleCollections.commit(in: try SampleCollections.folder())
     let first = try await Windows.controller(
-      for: FileCollection(files: files), defaults: defaults)
+      for: FileCollection(files: files), settings: UserSettings(defaults: defaults))
     let layout = try #require(first.collectionLayout)
     #expect(!layout.sidebarItem.isCollapsed)
 
     layout.toggleSidebar(nil)
 
     let second = try await Windows.controller(
-      for: FileCollection(files: files), defaults: defaults)
+      for: FileCollection(files: files), settings: UserSettings(defaults: defaults))
     #expect(second.collectionLayout?.sidebarItem.isCollapsed == true)
   }
 

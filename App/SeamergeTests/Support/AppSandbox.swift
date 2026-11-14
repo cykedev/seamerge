@@ -10,6 +10,8 @@ import Testing
 final class AppSandbox {
   let folder: URL
   let defaults: UserDefaults
+  /// The settings of the app in the test, kept in its user defaults.
+  let settings: UserSettings
   /// Records the alerts the app would show and whether it would hide.
   let presenter = PresenterRecorder()
   private let suiteName = "app.eiden.seamerge.tests.\(UUID().uuidString)"
@@ -20,6 +22,7 @@ final class AppSandbox {
       path: "SM-\(UUID().uuidString.prefix(8))", directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     defaults = try #require(UserDefaults(suiteName: suiteName))
+    settings = UserSettings(defaults: defaults)
   }
 
   isolated deinit {
@@ -57,7 +60,8 @@ final class AppSandbox {
   /// A coordinator that listens at the socket of the sandbox, with `recorder` as its delegate.
   func startCoordinator(recorder: WindowRecorder) throws -> SessionCoordinator {
     let coordinator = SessionCoordinator(
-      socketURL: socketURL, cache: collectionCache, presentError: presentError)
+      socketURL: socketURL, cache: collectionCache, settings: settings,
+      presentError: presentError)
     coordinator.delegate = recorder
     try coordinator.start()
     return coordinator

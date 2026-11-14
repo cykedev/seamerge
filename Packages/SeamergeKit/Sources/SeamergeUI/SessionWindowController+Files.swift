@@ -203,7 +203,7 @@ extension SessionWindowController {
     else { return }
     let sheetWindow = CompareFilesWindow()
     let sheet = CompareFilesWindowController(
-      recentComparisons: RecentComparisons(defaults: footerVisibility.defaults),
+      recentComparisons: RecentComparisons(defaults: settings.defaults),
       displayOptions: displayOptions, panels: SystemPanels(), window: sheetWindow,
       purpose: .change(presentation.changes.session.kind)
     ) { [weak self] text in self?.presentation.announce(text) }
@@ -232,21 +232,15 @@ extension SessionWindowController {
   /// - Throws: Why the files cannot be compared, before anything changes.
   func changeFiles(to comparison: FileComparison) async throws(SessionLoadingError) {
     let file = { (url: URL) in SessionFile(url: url, label: url.lastPathComponent) }
-    var session =
+    let mode = comparisonOptions.mode
+    let session =
       if let base = comparison.base {
         try await Session.loadMerge(
-          base: file(base), a: file(comparison.left), b: file(comparison.right))
+          base: file(base), a: file(comparison.left), b: file(comparison.right), mode: mode)
       } else {
-        try await Session.loadDiff(old: file(comparison.left), new: file(comparison.right))
+        try await Session.loadDiff(
+          old: file(comparison.left), new: file(comparison.right), mode: mode)
       }
-    let options = comparisonOptions
-    if session.options != options {
-      do {
-        session = try await session.recomputed(options: options)
-      } catch {
-        throw .comparisonFailed
-      }
-    }
     if let window, let sheetWindow = changeFilesSheet?.window {
       window.endSheet(sheetWindow)
     }

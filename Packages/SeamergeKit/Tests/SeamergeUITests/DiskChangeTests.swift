@@ -31,7 +31,7 @@ struct DiskChangeTests {
       }
       let file = { (name: String) in SessionFile(url: folder.appending(path: name), label: name) }
       let session = try await Session.loadMerge(
-        base: file("base.txt"), a: file("a.txt"), b: file("b.txt"))
+        base: file("base.txt"), a: file("a.txt"), b: file("b.txt"), mode: .windowDefault)
       let resultURL = resultFile ? folder.appending(path: "result.txt") : nil
       if let resultURL {
         try Data("<<<<<<< conflict\n".utf8).write(to: resultURL)
@@ -366,7 +366,7 @@ struct BinaryMergeTests {
       session: session, context: SessionContext(resultURL: output, git: git),
       undoManager: UndoManager(), displayOptions: DisplayOptions(), pasteboard: .withUniqueName(),
       workspace: WorkspaceRecorder(), prompts: prompts, doneStyle: .standard,
-      defaults: .privateSuite(), window: SessionWindow(), binaryMerge: merge)
+      settings: .private(), window: SessionWindow(), binaryMerge: merge)
     return (controller, merge)
   }
 

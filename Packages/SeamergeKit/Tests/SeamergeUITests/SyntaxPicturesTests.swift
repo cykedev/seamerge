@@ -41,7 +41,7 @@ import Testing
       session: try await SampleMerges.helloWorld(), context: SampleMerges.helloWorldContext,
       undoManager: UndoManager(), displayOptions: options, pasteboard: .withUniqueName(),
       workspace: WorkspaceRecorder(), prompts: PromptRecorder(), doneStyle: .standard,
-      defaults: .privateSuite(), window: SessionWindow())
+      settings: .private(), window: SessionWindow())
     let window = try #require(controller.window)
     defer { window.close() }
     Rendering.prepare(window, size: WindowMetrics.defaultContentSize, appearance: look.appearance)
