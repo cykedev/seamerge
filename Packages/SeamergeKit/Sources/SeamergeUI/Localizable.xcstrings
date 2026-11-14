@@ -552,6 +552,12 @@
         }
       }
     },
+    "Git runs Seamerge with a command of your own.": {
+      "comment": "Compare Files: the line about Git when the user changed the command of the app."
+    },
+    "Git uses an earlier setup of Seamerge. Set it up again to renew it.": {
+      "comment": "Compare Files: the line about Git when an earlier version set it up."
+    },
     "Git will no longer ask before opening a tool or keep .orig backup files.": {
       "comment": "Set Up Git Integration: both general switches change."
     },
@@ -800,6 +806,9 @@
     },
     "Removing takes Seamerge out of Git’s settings. Git’s general settings for tools stay as they are.": {
       "comment": "Set Up Git Integration: what removing does after a setup by hand."
+    },
+    "Renews the entry and the script of Seamerge in Tower’s settings.": {
+      "comment": "Set Up Git Integration: adding to Tower renews an earlier entry."
     },
     "Reopen All Conflicts": {
       "comment": "Merge menu command."
@@ -1225,6 +1234,9 @@
     },
     "your commit": {
       "comment": "Role: the user's own commit that a rebase moves."
+    },
+    "your own command for Seamerge": {
+      "comment": "Set Up Git Integration: a command of the app that the user changed."
     },
     "yours": {
       "comment": "Role: the branch the user is on."

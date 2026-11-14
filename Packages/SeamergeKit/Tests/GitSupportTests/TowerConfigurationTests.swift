@@ -22,7 +22,7 @@ struct TowerConfigurationTests {
       #expect(entries.first?["DisplayName"] as? String == "Seamerge")
       #expect(entries.first?["LaunchScript"] as? String == "seamerge.sh")
       #expect(entries.first?["SupportsMergeTool"] as? Bool == true)
-      #expect(entries.first?["SupportsDiffChangeset"] as? Bool == false)
+      #expect(entries.first?["SupportsDiffChangeset"] as? Bool == true)
       let script = tower.folder.appending(path: "seamerge.sh").path
       #expect(FileManager.default.isExecutableFile(atPath: script))
     }
@@ -77,6 +77,44 @@ struct TowerConfigurationTests {
     }
   }
 
+  @Test func entryOfAnEarlierVersionIsRenewed() throws {
+    try withSandbox { sandbox in
+      let tower = configuration(in: sandbox)
+      try tower.add()
+      let listURL = tower.folder.appending(path: "CompareTools.plist")
+      var entries = try list(of: tower)
+      entries[0]["SupportsDiffChangeset"] = false
+      try PropertyListSerialization.data(fromPropertyList: entries, format: .xml, options: 0)
+        .write(to: listURL)
+      #expect(try !tower.isAdded())
+      #expect(try tower.change() == .updatesEntry)
+
+      try tower.add()
+
+      #expect(try tower.isAdded())
+      #expect(try list(of: tower).first?["SupportsDiffChangeset"] as? Bool == true)
+    }
+  }
+
+  /// A comparison that the user ended with the rest of its run ends with 1, which Tower would
+  /// report as a failure of Git; a merge that is not saved must still fail.
+  @Test(arguments: [(["LOCAL", "REMOTE", "a.swift"], Int32(0)), (["L", "R", "B", "M"], Int32(1))])
+  func scriptReportsASkippedComparisonAsSuccess(arguments: [String], status: Int32) throws {
+    try withSandbox { sandbox in
+      let helper = try sandbox.makeExecutable("seamerge", in: "Seamerge", script: "exit 1")
+      let tower = TowerConfiguration(
+        helper: helper,
+        folder: TowerConfiguration.folder(inHome: sandbox.directory.appending(path: "home")))
+      try tower.add()
+
+      let result = try runProcess(
+        tower.folder.appending(path: "seamerge.sh"), arguments: arguments,
+        environment: sandbox.environment)
+
+      #expect(result.status == status)
+    }
+  }
+
   @Test func listThatIsNotAListOfToolsStaysUntouched() throws {
     try withSandbox { sandbox in
       let tower = configuration(in: sandbox)
@@ -94,10 +132,10 @@ struct TowerConfigurationTests {
   /// Runs the script with the arguments Tower passes, with a helper in a folder that needs
   /// quoting, which records its arguments.
   @Test(arguments: [
-    (["LOCAL", "REMOTE"], ["diff", "--", "LOCAL", "REMOTE"]),
+    (["LOCAL", "REMOTE"], ["diff", "--collect", "--", "LOCAL", "REMOTE"]),
     (
       ["LOCAL", "REMOTE", "src/a.swift"],
-      ["diff", "--path", "src/a.swift", "--", "LOCAL", "REMOTE"]
+      ["diff", "--collect", "--path", "src/a.swift", "--", "LOCAL", "REMOTE"]
     ),
     (
       ["LOCAL", "REMOTE", "BASE", "MERGED"],
@@ -160,6 +198,39 @@ struct TowerConfigurationTests {
 
       let unmerged = try git.output(["diff", "--name-only", "--diff-filter=U"], in: repository)
       #expect(unmerged.isEmpty == saves, "\(unmerged)")
+    }
+  }
+
+  /// Runs the script as Tower runs a directory diff: `git difftool --dir-diff --no-symlinks`
+  /// with the command Tower sets, which passes an empty path.
+  @Test func directoryDiffFromTowerHandsTheTwoFoldersToTheHelper() throws {
+    try withSandbox { sandbox in
+      let repository = try sandbox.makeRepository("diff")
+      let helper = try sandbox.makeExecutable(
+        "seamerge", in: "app",
+        script: #"""
+          for argument in "$@"; do
+            if [ -d "$argument" ]; then echo folder; else printf '%s\n' "$argument"; fi
+          done > "$(dirname "$0")/arguments"
+          """#)
+      let tower = TowerConfiguration(
+        helper: helper,
+        folder: TowerConfiguration.folder(inHome: sandbox.directory.appending(path: "home")))
+      try tower.add()
+      let script = tower.folder.appending(path: "seamerge.sh").path
+
+      _ = try sandbox.git().run(
+        [
+          "-c", #"difftool.tower.cmd="\#(script)" "$LOCAL" "$REMOTE" "$MERGED""#, "difftool",
+          "-y", "-t", "tower", "--dir-diff", "--no-symlinks",
+        ], in: repository)
+
+      let recorded = try String(
+        contentsOf: helper.deletingLastPathComponent().appending(path: "arguments"), encoding: .utf8
+      )
+      #expect(
+        recorded.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+          == ["diff", "--collect", "--path", "", "--", "folder", "folder", ""])
     }
   }
 

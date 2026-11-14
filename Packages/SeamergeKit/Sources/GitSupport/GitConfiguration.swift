@@ -30,6 +30,10 @@ public struct GitConfiguration: Sendable {
   /// The entries, in the order they are written.
   public let entries: [Entry]
 
+  /// The values that earlier versions of the setup wrote for keys whose value has changed since,
+  /// by key, which setting up again may replace without asking.
+  public let earlierValues: [String: [String]]
+
   /// Creates the configuration for the helper at `helper`.
   ///
   /// The commands Git runs pass the files as `git mergetool` and `git difftool` name them, and
@@ -42,8 +46,13 @@ public struct GitConfiguration: Sendable {
       + #"--remote "$REMOTE" --output "$MERGED""#
     // Git passes a file of the working tree by its relative path, which may start with a dash,
     // so `--` ends the options before the files. In the merge, every file follows an option.
-    let diffCommand = #"\#(helperCommand) diff --path "$MERGED" -- "$LOCAL" "$REMOTE""#
+    // The comparisons of one run come together in one window, and Git need not wait for it.
+    let diffCommand =
+      #"\#(helperCommand) diff --collect --path "$MERGED" -- "$LOCAL" "$REMOTE""#
     let tool = "seamerge"
+    earlierValues = [
+      "difftool.\(tool).cmd": [#"\#(helperCommand) diff --path "$MERGED" -- "$LOCAL" "$REMOTE""#]
+    ]
     entries = [
       Entry(key: "merge.tool", value: tool),
       Entry(key: "mergetool.\(tool).cmd", value: mergeCommand),

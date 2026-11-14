@@ -58,6 +58,17 @@ struct IntegrationStatus: Sendable, Equatable {
           "Git isn’t installed. Install the Xcode Command Line Tools to use Seamerge with Git.",
         bundle: .module, comment: "Compare Files: the line about Git when Git is missing.")
     }
+    if state.merge == .outdatedSeamerge || state.diff == .outdatedSeamerge {
+      return String(
+        localized: "Git uses an earlier setup of Seamerge. Set it up again to renew it.",
+        bundle: .module,
+        comment: "Compare Files: the line about Git when an earlier version set it up.")
+    }
+    if state.merge == .changedSeamerge || state.diff == .changedSeamerge {
+      return String(
+        localized: "Git runs Seamerge with a command of your own.", bundle: .module,
+        comment: "Compare Files: the line about Git when the user changed the command of the app.")
+    }
     if state.merge.isMoved || state.diff.isMoved {
       return String(
         localized: "Git points to a copy of Seamerge that has moved.", bundle: .module,
@@ -104,7 +115,11 @@ extension GitIntegrationState.Tool {
   /// The name of the tool for the sheet, or `nil` for no tool and for this copy.
   var replacedName: String? {
     switch self {
-    case .none, .seamerge: nil
+    case .none, .seamerge, .outdatedSeamerge: nil
+    case .changedSeamerge:
+      String(
+        localized: "your own command for Seamerge", bundle: .module,
+        comment: "Set Up Git Integration: a command of the app that the user changed.")
     case .other(let name): name
     case .movedSeamerge(let helper):
       String(

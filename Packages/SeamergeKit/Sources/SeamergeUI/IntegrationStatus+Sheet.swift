@@ -128,6 +128,11 @@ extension IntegrationStatus {
           The other tools stay.
           """, bundle: .module,
         comment: "Set Up Git Integration: what adding to Tower adds when it lists other tools.")
+    case (.notAdded(.updatesEntry)?, _):
+      String(
+        localized: "Renews the entry and the script of Seamerge in Tower’s settings.",
+        bundle: .module, comment: "Set Up Git Integration: adding to Tower renews an earlier entry."
+      )
     case (.notAdded(.replacesEntry)?, _):
       String(
         localized: "Replaces the entry and the script of another copy of Seamerge in Tower.",

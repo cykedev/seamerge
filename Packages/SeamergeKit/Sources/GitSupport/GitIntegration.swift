@@ -39,10 +39,18 @@ public struct GitIntegration: Sendable {
       guard name == Self.tool else { return .other(name) }
       let key = "\(kind)tool.\(Self.tool).cmd"
       let command = try effectiveValue(of: key)
-      if command == configuration.entries.first(where: { $0.key == key })?.value {
+      let expected = configuration.entries.first { $0.key == key }?.value
+      if command == expected {
         return .seamerge
       }
-      return .movedSeamerge(helper: command.flatMap { GitConfiguration.firstWord(of: $0) } ?? "")
+      if let command, configuration.earlierValues[key]?.contains(command) == true {
+        return .outdatedSeamerge
+      }
+      let helper = command.flatMap { GitConfiguration.firstWord(of: $0) } ?? ""
+      if helper == expected.flatMap({ GitConfiguration.firstWord(of: $0) }) {
+        return .changedSeamerge
+      }
+      return .movedSeamerge(helper: helper)
     }
     var changedSwitches: Set<GitIntegrationState.Switch> = []
     for (key, setting) in [
@@ -181,6 +189,14 @@ public struct GitIntegrationState: Sendable, Hashable {
 
     /// This copy of Seamerge.
     case seamerge
+
+    /// This copy of Seamerge, with the command of an earlier version, which setting up again
+    /// renews.
+    case outdatedSeamerge
+
+    /// This copy of Seamerge, with a command that the user changed, which setting up again
+    /// replaces.
+    case changedSeamerge
 
     /// A copy of Seamerge whose helper is at `helper`, which is not this copy.
     case movedSeamerge(helper: String)

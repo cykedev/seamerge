@@ -101,6 +101,16 @@ import Testing
       IntegrationStatus.git(merge: .none, diff: .none, switches: []).changedSwitches == nil)
   }
 
+  @Test func sheetSaysThatSettingUpReplacesACommandTheUserChanged() {
+    let status = IntegrationStatus.git(merge: .seamerge, diff: .changedSeamerge)
+
+    #expect(status.line == "Git runs Seamerge with a command of your own.")
+    #expect(status.offersSetUp)
+    #expect(status.replacedTools == "Replaces: your own command for Seamerge.")
+    #expect(
+      IntegrationStatus.git(merge: .seamerge, diff: .outdatedSeamerge).replacedTools == nil)
+  }
+
   @Test func nothingIsWrittenUntilSetUpThenTheLineChanges() async throws {
     let (fixture, store, sheet) = try await presentedSheet(for: .kaleidoscope)
     #expect(await store.writes.isEmpty)

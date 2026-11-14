@@ -75,6 +75,37 @@ struct GitIntegrationTests {
     }
   }
 
+  @Test func commandOfAnEarlierVersionOfThisCopyIsSeenAsOutdated() throws {
+    try withSandbox { sandbox in
+      let git = sandbox.git()
+      _ = try GitIntegration(helper: helper, git: git).setUp(keeping: nil)
+      _ = try git.run([
+        "config", "--global", "difftool.seamerge.cmd",
+        #"\#(helper.path) diff --path "$MERGED" -- "$LOCAL" "$REMOTE""#,
+      ])
+
+      let state = try GitIntegration(helper: helper, git: git).state()
+
+      #expect(state.merge == .seamerge)
+      #expect(state.diff == .outdatedSeamerge)
+    }
+  }
+
+  @Test func commandTheUserChangedIsNotTakenForAnEarlierVersion() throws {
+    try withSandbox { sandbox in
+      let git = sandbox.git()
+      _ = try GitIntegration(helper: helper, git: git).setUp(keeping: nil)
+      _ = try git.run([
+        "config", "--global", "difftool.seamerge.cmd",
+        #"\#(helper.path) diff --collect --label-left old --path "$MERGED" -- "$LOCAL" "$REMOTE""#,
+      ])
+
+      let state = try GitIntegration(helper: helper, git: git).state()
+
+      #expect(state.diff == .changedSeamerge)
+    }
+  }
+
   @Test func systemConfigurationCountsLikeTheGlobalOne() throws {
     try withSandbox { sandbox in
       let system = sandbox.directory.appending(path: "gitconfig-system")

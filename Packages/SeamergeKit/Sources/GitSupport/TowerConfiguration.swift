@@ -21,6 +21,9 @@ public struct TowerConfiguration: Sendable {
 
     /// Replaces the entry and the script of a copy of the tool that is not this one.
     case replacesEntry
+
+    /// Renews the entry and the script of this copy, which an earlier version wrote.
+    case updatesEntry
   }
 
   /// The files of the folder that adding the entry replaces, as they were.
@@ -49,7 +52,11 @@ public struct TowerConfiguration: Sendable {
     self.folder = folder
     let helperWord = GitConfiguration.shellQuoted(helper.path)
     // Tower passes the merged file of a merge as fourth argument, and the path of a compared
-    // file in the working tree as third. Git runs both commands and waits for them.
+    // file as third, empty for the two folders of a directory diff. A comparison ends with 1
+    // when the user closed its window before the rest of the run came; Git then ends the run
+    // with an error, which Tower would report, so the script reports success instead. That
+    // hides the other failures that end with 1 from Tower as well, such as a lost connection to
+    // the app or a window the app cannot open; the helper still writes them to its error output.
     script = """
       #!/bin/sh
       # Opens a comparison or a merge from Tower in Seamerge.
@@ -57,10 +64,15 @@ public struct TowerConfiguration: Sendable {
       if [ "$#" -ge 4 ]; then
         exec "$helper" merge --from-git --base "$3" --local "$1" --remote "$2" --output "$4"
       elif [ "$#" -eq 3 ]; then
-        exec "$helper" diff --path "$3" -- "$1" "$2"
+        "$helper" diff --collect --path "$3" -- "$1" "$2"
       else
-        exec "$helper" diff -- "$1" "$2"
+        "$helper" diff --collect -- "$1" "$2"
       fi
+      status=$?
+      if [ "$status" -eq 1 ]; then
+        exit 0
+      fi
+      exit "$status"
 
       """
   }
@@ -76,7 +88,9 @@ public struct TowerConfiguration: Sendable {
   ///
   /// - Throws: ``TowerConfigurationError`` if the list or the script exists but cannot be read.
   public func isAdded() throws(TowerConfigurationError) -> Bool {
-    guard try readList().contains(where: Self.isOwn) else { return false }
+    guard try readList().contains(where: { Self.isOwn($0) && Self.isCurrent($0) }) else {
+      return false
+    }
     do {
       return try String(contentsOf: scriptURL, encoding: .utf8) == script
     } catch CocoaError.fileReadNoSuchFile {
@@ -92,7 +106,8 @@ public struct TowerConfiguration: Sendable {
   public func change() throws(TowerConfigurationError) -> Change? {
     let list = try readList()
     if list.contains(where: Self.isOwn) {
-      return try isAdded() ? nil : .replacesEntry
+      if try isAdded() { return nil }
+      return try isOwnScript() ? .updatesEntry : .replacesEntry
     }
     return list.isEmpty ? .createsList : .addsToList
   }
@@ -192,8 +207,28 @@ public struct TowerConfiguration: Sendable {
       "Identifier": identifier,
       "LaunchScript": "\(identifier).sh",
       "SupportsMergeTool": true,
-      "SupportsDiffChangeset": false,
+      // Tower then passes the path of a compared file, also between two commits.
+      "SupportsDiffChangeset": true,
     ]
+  }
+
+  /// Whether `entry` is the entry this version writes.
+  private static func isCurrent(_ entry: [String: Any]) -> Bool {
+    NSDictionary(dictionary: entry).isEqual(to: Self.entry)
+  }
+
+  /// Whether the script in the folder hands the files to this copy of the helper, as one an
+  /// earlier version wrote.
+  private func isOwnScript() throws(TowerConfigurationError) -> Bool {
+    let helperLine = script.split(separator: "\n").first { $0.hasPrefix("helper=") }
+    do {
+      let existing = try String(contentsOf: scriptURL, encoding: .utf8)
+      return helperLine.map { existing.split(separator: "\n").contains($0) } ?? false
+    } catch CocoaError.fileReadNoSuchFile {
+      return false
+    } catch {
+      throw .unreadable(scriptURL, reason: error.localizedDescription)
+    }
   }
 
   private static func isOwn(_ entry: [String: Any]) -> Bool {
