@@ -31,6 +31,16 @@ final class AppSandbox {
     }
   }
 
+  /// Settings of Git and Tower inside the sandbox: its folder is the home folder, and Git reads
+  /// a configuration file there instead of the user's.
+  var integrationStore: SystemIntegrationStore {
+    var environment = ProcessInfo.processInfo.environment.filter { !$0.key.hasPrefix("GIT_") }
+    environment["GIT_CONFIG_NOSYSTEM"] = "1"
+    environment["GIT_CONFIG_GLOBAL"] = folder.appending(path: ".gitconfig").path
+    return SystemIntegrationStore(
+      bundle: Bundle.main.bundleURL, home: folder, environment: environment)
+  }
+
   /// Where the app in the test listens for the helper.
   var socketURL: URL { folder.appending(path: "s.sock") }
 

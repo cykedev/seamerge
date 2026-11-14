@@ -7,6 +7,9 @@
     "%@ added as %@": {
       "comment": "VoiceOver: a file was put in a field, such as LoginView.swift added as Base."
     },
+    "%@ added as %@)": {
+      "comment": "VoiceOver: a file was put in a field, such as LoginView.swift added as Base."
+    },
     "%@ and %@": {
       "comment": "Two sides that share a toggle, such as feature/login and main."
     },
@@ -32,6 +35,9 @@
           }
         }
       }
+    },
+    "%@ for merge and %@ for diff": {
+      "comment": "Set Up Git Integration: two replaced tools, such as Kaleidoscope for merge…"
     },
     "%@ mixes line endings. The result is written with %@ throughout.": {
       "comment": "Notice below the result header: B ends its lines in more than one way, such as main mixes line endings. The result is written with LF throughout.",
@@ -198,6 +204,15 @@
     "Actual Size": {
       "comment": "View menu command."
     },
+    "Add Seamerge to Tower": {
+      "comment": "Set Up Git Integration: the box that adds the app to Tower's tools."
+    },
+    "Add to Tower": {
+      "comment": "Set Up Git Integration: the button that adds the app to Tower's tools."
+    },
+    "Adds Seamerge to the list of tools in Tower’s settings and creates a script for it. The other tools stay.": {
+      "comment": "Set Up Git Integration: what adding to Tower adds when it lists other tools."
+    },
     "All Conflicts Resolved": {
       "comment": "Toolbar: every conflict is resolved."
     },
@@ -352,6 +367,9 @@
         }
       }
     },
+    "Commands": {
+      "comment": "VoiceOver: the commands of the setup in Set Up Git Integration."
+    },
     "Commit": {
       "comment": "Details of a side: the commit."
     },
@@ -385,6 +403,9 @@
     "Copy Path": {
       "comment": "Context menu of a header."
     },
+    "Copy the commands to paste them into Terminal": {
+      "comment": "Tooltip of the button Copy in Set Up Git Integration."
+    },
     "Couldn’t Compare the Files Anew": {
       "comment": "Sheet after switching the comparison failed."
     },
@@ -393,6 +414,9 @@
     },
     "Count every difference, whitespace and line endings too": {
       "comment": "Help tag of Compare > Exact."
+    },
+    "Creates a list of tools and a script for Seamerge in Tower’s settings.": {
+      "comment": "Set Up Git Integration: what adding to Tower creates."
     },
     "Cut": {
       "comment": "Context menu: cut the selected text."
@@ -463,8 +487,29 @@
     "From the base": {
       "comment": "VoiceOver: a part of the result taken from the common ancestor."
     },
+    "Git Uses Seamerge for Merge and Diff": {
+      "comment": "Set Up Git Integration: the title once Git uses the app."
+    },
+    "Git couldn’t save the settings.": {
+      "comment": "Set Up Git Integration: writing Git's configuration failed."
+    },
+    "Git doesn’t use Seamerge yet.": {
+      "comment": "Compare Files: the line about Git when it uses the app for neither."
+    },
     "Git is no longer waiting for this merge.": {
       "comment": "Notice below the result header after the Git command that asked has ended."
+    },
+    "Git isn’t installed.": {
+      "comment": "Set Up Git Integration: the reason of a failure when Git is missing."
+    },
+    "Git isn’t installed. Install the Xcode Command Line Tools to use Seamerge with Git.": {
+      "comment": "Compare Files: the line about Git when Git is missing."
+    },
+    "Git opens Seamerge when you run git mergetool or git difftool. This applies to all repositories that don’t set their own tool.": {
+      "comment": "Set Up Git Integration: what setting up does."
+    },
+    "Git points to a copy of Seamerge that has moved.": {
+      "comment": "Compare Files: the line about Git when it uses another copy of the app."
     },
     "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decisions in %lld blocks are lost.": {
       "comment": "Sheet before leaving a merge unresolved: Git restores the file it had before the merge tool, such as in 3 blocks.",
@@ -488,6 +533,15 @@
           }
         }
       }
+    },
+    "Git will no longer ask before opening a tool or keep .orig backup files.": {
+      "comment": "Set Up Git Integration: both general switches change."
+    },
+    "Git will no longer ask before opening a tool.": {
+      "comment": "Set Up Git Integration: Git stops asking before it opens a tool."
+    },
+    "Git will no longer keep .orig backup files.": {
+      "comment": "Set Up Git Integration: Git stops keeping backups of merged files."
     },
     "Go": {
       "comment": "Button: jump to the line."
@@ -606,6 +660,9 @@
     "Mixed": {
       "comment": "Line endings: more than one kind."
     },
+    "Move Seamerge to the Applications folder first.": {
+      "comment": "Set Up Git Integration: the app runs from a disk image or Downloads."
+    },
     "Next Change": {
       "comment": "Go menu command."
     },
@@ -678,6 +735,9 @@
     "Reload": {
       "comment": "Files that changed on disk: the button of a sheet that offers to show them as they are now, and the step of the Undo menu that did."
     },
+    "Remove": {
+      "comment": "Set Up Git Integration: the button that takes the setup back."
+    },
     "Remove File": {
       "comment": "Compare Files: the button that empties a field."
     },
@@ -687,8 +747,29 @@
     "Remove this file from the field": {
       "comment": "Help tag of the button that empties a field of Compare Files."
     },
+    "Removing also takes Seamerge out of Tower.": {
+      "comment": "Set Up Git Integration: removing changes Tower too."
+    },
+    "Removing leaves Git without a merge and diff tool.": {
+      "comment": "Set Up Git Integration: removing when Git had no tool before."
+    },
+    "Removing restores: %@ for merge and %@ for diff.": {
+      "comment": "Set Up Git Integration: removing brings back two tools, such as Kaleidoscope."
+    },
+    "Removing takes Seamerge out of Git’s settings. Git’s general settings for tools stay as they are.": {
+      "comment": "Set Up Git Integration: what removing does after a setup by hand."
+    },
     "Reopen All Conflicts": {
       "comment": "Merge menu command."
+    },
+    "Replaces the entry and the script of another copy of Seamerge in Tower.": {
+      "comment": "Set Up Git Integration: adding to Tower replaces a copy."
+    },
+    "Replaces: %@.": {
+      "comment": "Set Up Git Integration: the replaced copy of the app."
+    },
+    "Replaces: %@. Its settings stay in place, so you can switch back.": {
+      "comment": "Set Up Git Integration: the replaced tool, such as Kaleidoscope."
     },
     "Reset": {
       "comment": "Resetting decisions: the button of the sheet before resetting every one, and the submenu of a context menu with the ways to reset."
@@ -756,6 +837,9 @@
     "Scroll the panes together": {
       "comment": "Help tag of the footer toggle of synchronized scrolling while it is off."
     },
+    "Seamerge at %@)": {
+      "comment": "Set Up Git Integration: another copy of the app, such as Seamerge at /Volumes/A.app."
+    },
     "Seamerge can’t merge the contents of this file. Use one side as a whole, or leave it unresolved.": {
       "comment": "Merge of a file that is not text: what can be done."
     },
@@ -777,11 +861,20 @@
     "Select All": {
       "comment": "Context menu: select the whole text."
     },
+    "Set Up": {
+      "comment": "Set Up Git Integration: the button that makes Git use the app."
+    },
+    "Set Up Git Integration…": {
+      "comment": "Compare Files: the button next to the line about Git."
+    },
     "Show All Lines": {
       "comment": "View menu command."
     },
     "Show Base": {
       "comment": "View menu command."
+    },
+    "Show Commands": {
+      "comment": "Set Up Git Integration: the triangle that shows the commands of the setup."
     },
     "Show Footer": {
       "comment": "View menu command."
@@ -829,6 +922,9 @@
       "comment": "Compare menu: swap the left and the right file."
     },
     "Swapped %@ and %@": {
+      "comment": "VoiceOver: two fields swapped their files."
+    },
+    "Swapped %@) and %@)": {
       "comment": "VoiceOver: two fields swapped their files."
     },
     "Switch": {
@@ -907,6 +1003,9 @@
     "The window still shows the previous comparison.": {
       "comment": "Sheet after switching the comparison failed: what happens next."
     },
+    "This copy of Seamerge is incomplete. Download it again.": {
+      "comment": "Set Up Git Integration: the helper is missing from the app."
+    },
     "This discards handwritten text in %lld blocks.": {
       "comment": "Sheet before resetting every decision, such as in 3 blocks.",
       "localizations": {
@@ -941,6 +1040,12 @@
     },
     "Toggle Source": {
       "comment": "Merge menu: the submenu that adds or removes a side."
+    },
+    "Tower’s list of tools can’t be read, so Seamerge can’t add itself to it.": {
+      "comment": "Set Up Git Integration: Tower's list is damaged."
+    },
+    "Tower’s list of tools couldn’t be changed.": {
+      "comment": "Set Up Git Integration: writing Tower's list of tools failed."
     },
     "Treat LF, CRLF and CR as equal": {
       "comment": "Help tag of Compare > Ignore Line Endings."
@@ -995,6 +1100,9 @@
     },
     "Use None": {
       "comment": "Merge menu command."
+    },
+    "Use Seamerge for Git Merges and Diffs": {
+      "comment": "Set Up Git Integration: the title of the offer."
     },
     "Use Version of %@": {
       "comment": "Context menu of a changed block of a side, such as Use Version of main."
@@ -1101,6 +1209,18 @@
     },
     "“%@” was changed by another app.": {
       "comment": "Sheet: another app changed the file the result is saved to."
+    },
+    "✓ Added to Tower": {
+      "comment": "Set Up Git Integration: Tower lists the app already."
+    },
+    "✓ Git uses Seamerge for diff.": {
+      "comment": "Compare Files: the line about Git when it uses the app for diffs only."
+    },
+    "✓ Git uses Seamerge for merge and diff": {
+      "comment": "Compare Files: the line about Git when it uses the app for both."
+    },
+    "✓ Git uses Seamerge for merge.": {
+      "comment": "Compare Files: the line about Git when it uses the app for merges only."
     }
   },
   "version": "1.0"

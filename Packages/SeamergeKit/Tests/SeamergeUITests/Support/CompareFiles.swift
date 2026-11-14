@@ -17,14 +17,17 @@ final class CompareFilesFixture {
   private let defaults: UserDefaults
   private let suiteName = "app.eiden.seamerge.tests.\(UUID().uuidString)"
 
-  init(displayOptions: DisplayOptions = DisplayOptions()) throws {
+  init(
+    displayOptions: DisplayOptions = DisplayOptions(),
+    integrationStore: (any IntegrationStore)? = nil
+  ) throws {
     defaults = try #require(UserDefaults(suiteName: suiteName))
     recentComparisons = RecentComparisons(defaults: defaults)
     window = CompareFilesWindow()
     var announce: (String) -> Void = { _ in }
     controller = CompareFilesWindowController(
       recentComparisons: recentComparisons, displayOptions: displayOptions, panels: panels,
-      window: window
+      window: window, integrationStore: integrationStore
     ) { announce($0) }
     announce = { [weak self] in self?.announcements.append($0) }
     controller.delegate = delegate

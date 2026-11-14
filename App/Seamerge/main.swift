@@ -1,9 +1,12 @@
 import AppKit
+import SeamergeUI
 import SessionIPC
 
 let application = NSApplication.shared
 let delegate = AppDelegate(
   arguments: CommandLine.arguments, defaults: .standard, socketURL: SessionSocket.defaultURL,
-  presenter: ApplicationPresenter())
+  presenter: ApplicationPresenter(),
+  integrationStore: SystemIntegrationStore(
+    bundle: Bundle.main.bundleURL, home: FileManager.default.homeDirectoryForCurrentUser))
 application.delegate = delegate
 application.run()

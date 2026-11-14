@@ -71,7 +71,11 @@ final class MainMenu {
       Titles.app,
       [
         [Self.item(Titles.about, #selector(NSApplication.orderFrontStandardAboutPanel(_:)))],
-        [Self.item(Titles.settings, key: ","), Self.item(Titles.setUpGitIntegration)],
+        [
+          Self.item(Titles.settings, key: ","),
+          Self.item(
+            Titles.setUpGitIntegration, #selector(AppDelegate.showGitIntegration(_:))),
+        ],
         [services],
         [
           Self.item(Titles.hide, #selector(NSApplication.hide(_:)), key: "h"),

@@ -33,16 +33,21 @@ final class AppDelegate: NSObject {
   /// Shows alerts and hides the app.
   private let presenter: any AppPresenter
 
+  /// The settings of Git and Tower that the window Compare Files reads and writes.
+  private let integrationStore: SystemIntegrationStore
+
   private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "App")
 
   /// Creates the delegate of an app started with `arguments`, which keeps its recent
-  /// comparisons in `defaults`, listens for the helper at `socketURL`, and shows alerts and hides
-  /// with `presenter`.
+  /// comparisons in `defaults`, listens for the helper at `socketURL`, shows alerts and hides
+  /// with `presenter`, and sets up Git and Tower in `integrationStore`.
   init(
-    arguments: [String], defaults: UserDefaults, socketURL: URL, presenter: any AppPresenter
+    arguments: [String], defaults: UserDefaults, socketURL: URL, presenter: any AppPresenter,
+    integrationStore: SystemIntegrationStore
   ) {
     isLaunchedForSession = arguments.contains(HelperLaunch.argument)
     self.presenter = presenter
+    self.integrationStore = integrationStore
     recentComparisons = RecentComparisons(defaults: defaults)
     recentComparisonsMenu = RecentComparisonsMenu(recentComparisons: recentComparisons)
     mainMenu = MainMenu(openRecentMenu: recentComparisonsMenu.menu)
@@ -62,6 +67,11 @@ final class AppDelegate: NSObject {
     compareFiles().showWindow(sender)
   }
 
+  /// Shows the window Compare Files and on it the sheet Set Up Git Integration.
+  @objc func showGitIntegration(_ sender: Any?) {
+    compareFiles().showGitIntegration(sender)
+  }
+
   /// Puts `urls` in the fields of the window Compare Files and shows it, and tells whether the
   /// window took them.
   @discardableResult
@@ -76,7 +86,8 @@ final class AppDelegate: NSObject {
     if let compareFilesWindowController {
       return compareFilesWindowController
     }
-    let controller = CompareFilesWindowController(recentComparisons: recentComparisons)
+    let controller = CompareFilesWindowController(
+      recentComparisons: recentComparisons, integrationStore: integrationStore)
     controller.delegate = self
     compareFilesWindowController = controller
     return controller
@@ -153,6 +164,15 @@ extension AppDelegate: NSApplicationDelegate {
       sender.reply(toApplicationShouldTerminate: true)
     }
     return .terminateLater
+  }
+}
+
+extension AppDelegate: NSMenuItemValidation {
+  /// Set Up Git Integration… works while Git is not known to be missing and its sheet is not
+  /// shown; the other commands of the app always work.
+  func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+    guard menuItem.action == #selector(showGitIntegration(_:)) else { return true }
+    return compareFilesWindowController?.validateUserInterfaceItem(menuItem) ?? true
   }
 }
 

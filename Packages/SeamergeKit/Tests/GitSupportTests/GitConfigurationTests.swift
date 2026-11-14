@@ -203,8 +203,4 @@ struct GitConfigurationTests {
     let text = try String(contentsOf: helper.appendingPathExtension("arguments"), encoding: .utf8)
     return text.split(separator: "\n").map(String.init)
   }
-
-  private func writeGlobalConfiguration(_ text: String, in sandbox: Sandbox) throws {
-    try Data(text.utf8).write(to: sandbox.globalConfiguration)
-  }
 }

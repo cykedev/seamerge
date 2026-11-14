@@ -73,6 +73,22 @@ public final class CompareFilesWindowController: NSWindowController {
   /// - Throws: Why the files cannot be opened; the sheet shows it and keeps them.
   var onChange: (FileComparison) async throws -> Void = { _ in }
 
+  /// Reads and writes the settings of Git and Tower, or `nil` for a window without the line
+  /// about Git.
+  let integrationStore: (any IntegrationStore)?
+
+  /// What the settings of Git and Tower said when they were last read, `nil` until then.
+  var integrationStatus: IntegrationStatus?
+
+  /// The line at the bottom: whether Git opens Seamerge.
+  let gitStatusLabel = NSTextField(labelWithString: "")
+
+  /// The button next to the line, which shows the sheet Set Up Git Integration.
+  let gitSetUpButton: NSButton
+
+  /// The sheet Set Up Git Integration while it is shown.
+  var integrationSheet: GitIntegrationSheet?
+
   private let heading: NSTextField
   private let recentSection: NSStackView
   private let cancelButton: NSButton
@@ -86,13 +102,16 @@ public final class CompareFilesWindowController: NSWindowController {
     case change(Session.Kind)
   }
 
-  /// Creates the window, which lists the comparisons of `recentComparisons` and draws with the
-  /// accessibility settings of the system.
-  public convenience init(recentComparisons: RecentComparisons) {
+  /// Creates the window, which lists the comparisons of `recentComparisons`, says at the bottom
+  /// what the settings in `integrationStore` say about Git, and draws with the accessibility
+  /// settings of the system.
+  public convenience init(
+    recentComparisons: RecentComparisons, integrationStore: SystemIntegrationStore
+  ) {
     let window = CompareFilesWindow()
     self.init(
       recentComparisons: recentComparisons, displayOptions: .current(in: .shared),
-      panels: SystemPanels(), window: window
+      panels: SystemPanels(), window: window, integrationStore: integrationStore
     ) { text in
       NSAccessibility.post(
         element: window, notification: .announcementRequested,
@@ -105,14 +124,21 @@ public final class CompareFilesWindowController: NSWindowController {
       name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
   }
 
-  /// Creates the window, which draws with `displayOptions`, asks with `panels` and tells
-  /// VoiceOver what changed through `announce`.
+  /// Creates the window, which draws with `displayOptions`, asks with `panels`, reads and writes
+  /// the settings of Git with `integrationStore` and tells VoiceOver what changed through
+  /// `announce`.
   init(
     recentComparisons: RecentComparisons, displayOptions: DisplayOptions,
     panels: any CompareFilesPanels, window: CompareFilesWindow, purpose: Purpose = .compare,
-    announce: @escaping (String) -> Void
+    integrationStore: (any IntegrationStore)? = nil, announce: @escaping (String) -> Void
   ) {
     self.recentComparisons = recentComparisons
+    self.integrationStore = purpose == .compare ? integrationStore : nil
+    gitSetUpButton = NSButton(
+      title: String(
+        localized: "Set Up Git Integration…", bundle: .module,
+        comment: "Compare Files: the button next to the line about Git."),
+      target: nil, action: nil)
     self.displayOptions = displayOptions
     self.panels = panels
     self.announce = announce
@@ -155,6 +181,9 @@ public final class CompareFilesWindowController: NSWindowController {
     cancelButton.action = #selector(cancelOperation(_:))
     cancelButton.keyEquivalent = "\u{1B}"
     cancelButton.isHidden = purpose == .compare
+    gitSetUpButton.target = self
+    gitSetUpButton.action = #selector(showGitIntegration(_:))
+    gitSetUpButton.isHidden = true
     recentList.onOpen = { [weak self] comparison in self?.open(comparison) }
     NotificationCenter.default.addObserver(
       self, selector: #selector(recentComparisonsDidChange(_:)),
@@ -207,6 +236,9 @@ public final class CompareFilesWindowController: NSWindowController {
     let content = FileDropView()
     content.delegate = self
     content.addSubview(stack)
+    if purpose == .compare {
+      addGitStatusRow(to: content)
+    }
     // The window takes the height of its content when it appears and keeps it while it is open;
     // a list that empties then leaves room below rather than moving the window.
     let fittingBottom = stack.bottomAnchor.constraint(equalTo: content.bottomAnchor)
@@ -221,7 +253,7 @@ public final class CompareFilesWindowController: NSWindowController {
   }
 
   /// Shows the window in front, at the height of its content, with the focus on the first empty
-  /// field.
+  /// field, and reads again what Git says.
   public override func showWindow(_ sender: Any?) {
     if window?.isVisible != true {
       showRecentComparisons(fitting: true)
@@ -229,6 +261,9 @@ public final class CompareFilesWindowController: NSWindowController {
     selectionDidChange()
     super.showWindow(sender)
     focusFirstEmptyField()
+    if integrationSheet == nil {
+      Task { await readIntegrationStatus() }
+    }
   }
 
   /// Puts `urls` in the fields as if they were dropped on the window and tells whether the
@@ -380,6 +415,7 @@ public final class CompareFilesWindowController: NSWindowController {
       caption.textColor = colors.quietText
     }
     heading.textColor = colors.quietText
+    gitStatusLabel.textColor = colors.quietText
     recentList.quietTextColor = colors.quietText
   }
 
@@ -422,11 +458,13 @@ public final class CompareFilesWindowController: NSWindowController {
 extension CompareFilesWindowController: NSWindowDelegate {}
 
 extension CompareFilesWindowController: NSUserInterfaceValidations {
-  /// Swap Sides needs a file in an outer field; the other commands of the window always work.
+  /// Swap Sides needs a file in an outer field, and Set Up Git Integration… needs Git; the other
+  /// commands of the window always work.
   public func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
     switch item.action {
     case #selector(swapSides(_:)): selection[.left] != nil || selection[.right] != nil
     case #selector(openComparison(_:)): openButton.isEnabled
+    case #selector(showGitIntegration(_:)): canSetUpGitIntegration && integrationSheet == nil
     default: true
     }
   }

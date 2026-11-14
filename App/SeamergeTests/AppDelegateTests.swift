@@ -95,7 +95,8 @@ struct AppDelegateTests {
   @Test func filesThatCannotBeOpenedFailTheOpeningOfTheWindowCompareFiles() async throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
-    let controller = CompareFilesWindowController(recentComparisons: delegate.recentComparisons)
+    let controller = CompareFilesWindowController(
+      recentComparisons: delegate.recentComparisons, integrationStore: sandbox.integrationStore)
     let binary = try sandbox.file("image.png", "\u{0}\u{1}PNG\u{0}")
     let merge = FileComparison(
       left: binary, base: try sandbox.file("base.txt"), right: try sandbox.file("mine.txt"))
@@ -208,7 +209,8 @@ struct AppDelegateTests {
     delegate.coordinator.delegate = recorder
     let comparison = FileComparison(
       left: try sandbox.file("old.txt", "a\n"), right: try sandbox.file("new.txt", "b\n"))
-    let controller = CompareFilesWindowController(recentComparisons: delegate.recentComparisons)
+    let controller = CompareFilesWindowController(
+      recentComparisons: delegate.recentComparisons, integrationStore: sandbox.integrationStore)
 
     try await delegate.compareFilesWindowController(controller, open: comparison)
     let first = await recorder.nextOpened()
@@ -228,6 +230,6 @@ struct AppDelegateTests {
   private func makeDelegate(in sandbox: AppSandbox, arguments: [String]) -> AppDelegate {
     AppDelegate(
       arguments: arguments, defaults: sandbox.defaults, socketURL: sandbox.socketURL,
-      presenter: sandbox.presenter)
+      presenter: sandbox.presenter, integrationStore: sandbox.integrationStore)
   }
 }

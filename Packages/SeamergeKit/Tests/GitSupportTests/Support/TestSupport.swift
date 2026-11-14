@@ -68,6 +68,11 @@ func withSandbox(_ body: (Sandbox) throws -> Void) throws {
   try body(Sandbox(directory: directory))
 }
 
+/// Replaces the global configuration of `sandbox` with `text`.
+func writeGlobalConfiguration(_ text: String, in sandbox: Sandbox) throws {
+  try Data(text.utf8).write(to: sandbox.globalConfiguration)
+}
+
 /// Runs an executable to its end and returns its exit status and its combined output.
 func runProcess(
   _ executable: URL, arguments: [String], environment: [String: String], in directory: URL? = nil

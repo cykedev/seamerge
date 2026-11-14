@@ -98,6 +98,35 @@ public struct GitConfiguration: Sendable {
     }
   }
 
+  /// The first word of `command`, a command for a shell, without its quotes.
+  ///
+  /// The first word is the path of the program the command runs. Single quotes and backslashes
+  /// are undone as the shell does; double quotes are taken as they are, which is enough for the
+  /// commands this type writes.
+  static func firstWord(of command: String) -> String? {
+    var word = ""
+    var hasWord = false
+    var isQuoted = false
+    var isEscaped = false
+    for character in command {
+      if isEscaped {
+        word.append(character)
+        isEscaped = false
+      } else if character == "'" {
+        isQuoted.toggle()
+      } else if character == "\\", !isQuoted {
+        isEscaped = true
+      } else if character.isWhitespace, !isQuoted {
+        if hasWord { break }
+        continue
+      } else {
+        word.append(character)
+      }
+      hasWord = true
+    }
+    return hasWord ? word : nil
+  }
+
   /// `text` as one word for a POSIX shell: unchanged if it holds no character the shell treats
   /// specially, otherwise in single quotes.
   static func shellQuoted(_ text: String) -> String {
