@@ -298,7 +298,18 @@ final class SessionPresentation {
 
   /// Shows the inputs in the panes side by side, on the grid or with the lines of their files as
   /// they are, with their collapsed runs.
+  ///
+  /// The panes get their contents one after the other without following each other, since
+  /// until all of them have theirs, they show different blocks; they stand together again
+  /// afterwards.
   func showSources() {
+    scrollSync.withoutFollowing(showSourceContents)
+    showOverviewGrid()
+    alignSourcesToB()
+  }
+
+  /// Gives each pane side by side its content, on the grid or with the lines of its file.
+  private func showSourceContents() {
     let ignoredDifferences = IgnoredDifferences(in: changes.session)
     let conflictMarkRole = changes.conflictMarkRole(baseIsShown: layout.showsBase)
     highlights = []
@@ -317,7 +328,6 @@ final class SessionPresentation {
       pane.setContent(content, collapsedRuns: sourceRuns(in: role))
       pane.expandedRuns = sourceExpandedRuns(in: role)
     }
-    showOverviewGrid()
   }
 
   /// Lines up the lines of the panes side by side on the grid, or shows the lines of their files
@@ -523,6 +533,7 @@ final class SessionPresentation {
       pane.expandedRuns = sourceExpandedRuns(in: role)
     }
     showOverviewGrid()
+    alignSourcesToB()
     layout.resultPane?.collapsedRuns = resultRuns
     layout.resultPane?.expandedRuns = resultExpandedRuns
   }
@@ -564,7 +575,8 @@ final class SessionPresentation {
     lineTexts = [:]
     collapsed = CollapsedRows(session: session, document: nil)
     connectSourcePanes()
-    showSession()
+    // The panes show the blocks of the old files until each has the new ones.
+    scrollSync.withoutFollowing(showSession)
     currentBlock = nil
     setCurrentBlock(nil)
     leadingPane?.scroll(toPlaceRowAtReadingLine: 0, motion: .cut)

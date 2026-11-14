@@ -19,6 +19,16 @@ final class PaneScrollView: NSScrollView {
     contentView.postsBoundsChangedNotifications = true
   }
 
+  /// Whether the scroll view is handling an event of the scroll wheel or the trackpad, during
+  /// which its text moves because the user scrolls it by hand.
+  private(set) var isHandlingScrollWheel = false
+
+  override func scrollWheel(with event: NSEvent) {
+    isHandlingScrollWheel = true
+    defer { isHandlingScrollWheel = false }
+    super.scrollWheel(with: event)
+  }
+
   /// Scroll views of panes are never archived.
   required init?(coder: NSCoder) {
     nil

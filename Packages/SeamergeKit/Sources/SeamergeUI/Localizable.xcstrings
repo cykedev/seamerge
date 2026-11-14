@@ -561,6 +561,9 @@
     "Footer" : {
       "comment" : "VoiceOver: the footer with the comparison mode and the view toggles."
     },
+    "For now, only when comparing two files." : {
+      "comment" : "Settings: note below Align Lines, which a merge does not take yet."
+    },
     "From %@" : {
       "comment" : "VoiceOver: a part of the result taken from one side, such as From A."
     },

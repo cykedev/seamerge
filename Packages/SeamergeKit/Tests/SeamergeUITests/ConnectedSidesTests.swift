@@ -74,35 +74,128 @@ import Testing
     #expect(UserSettings(defaults: settings.defaults).alignsLines == false)
   }
 
-  @Test(arguments: [false, true])
-  func blockAtTheReadingLineOfThePaneThatScrollsStandsAtTheReadingLineOfTheOther(
-    wraps: Bool
+  @Test(arguments: [(false, false), (true, false), (false, true), (true, true)])
+  func panesScrolledByHandMoveSteadilyAndStandTogetherOnTheTrack(
+    wraps: Bool, collapses: Bool
   ) async throws {
     let controller = try await connectedWindow(longLines: wraps)
     if wraps {
       controller.toggleLineWrapping(nil)
-      controller.window?.contentView?.layoutSubtreeIfNeeded()
     }
+    if !collapses {
+      controller.showAllLines(nil)
+    }
+    controller.window?.contentView?.layoutSubtreeIfNeeded()
     let (a, b) = try panes(of: controller)
-    let map = ScrollMap(
-      session: controller.presentation.changes.session, from: .lines(.a), to: .lines(.b))
-    var checked = 0
-    for (leader, follower, forward) in [(b, a, false), (a, b, true)] {
-      let text = leader.documentView
-      let end = text.frame.height - text.visibleRect.height
-      for y in stride(from: 0, to: end, by: leader.theme.rowHeight * 1.7) {
-        text.scroll(CGPoint(x: 0, y: y))
-        guard !reachesItsEnd(follower), follower.documentView.visibleRect.minY > 0 else {
-          continue
+    let track = try #require(ScrollTrack(panes: [a, b]))
+    for leader in [b, a] {
+      let step = leader.rowHeight / 4
+      var steps = 0
+      for direction in [1.0, -1.0] {
+        var places = [a.readingLinePlace, b.readingLinePlace]
+        leader.textView.liveScrollDidStart()
+        while steps < 20_000 {
+          let origin = leader.documentView.visibleRect.origin
+          leader.documentView.scroll(CGPoint(x: 0, y: origin.y + direction * step))
+          let now = [a.readingLinePlace, b.readingLinePlace]
+          let moves = zip(now, places).map { ($0 - $1) * direction }
+          #expect(
+            moves.allSatisfy { $0 >= -0.001 && $0 <= leader.rowHeight },
+            "\(moves) at step \(steps), \(direction)")
+          let positions = [
+            track.trackPositions(ofPane: 0, atPlace: now[0]),
+            track.trackPositions(ofPane: 1, atPlace: now[1]),
+          ]
+          // Panes at the top or the end of their texts may stand short of the track.
+          if !now.indices.contains(where: { atAnEnd([a, b][$0]) }) {
+            #expect(
+              positions[0].lowerBound <= positions[1].upperBound + 0.5
+                && positions[1].lowerBound <= positions[0].upperBound + 0.5,
+              "the panes stand together on the track: \(positions)")
+          }
+          guard moves.contains(where: { $0 > 0.001 }) else { break }
+          places = now
+          steps += 1
         }
-        let leading = position(atReadingLineOf: leader)
-        let expected = forward ? map.targetPosition(at: leading) : map.sourcePosition(at: leading)
-        let following = position(atReadingLineOf: follower)
-        #expect(abs(following - expected) < 0.06, "leader at \(y): \(following) for \(expected)")
-        checked += 1
+        leader.textView.liveScrollDidEnd()
+      }
+      #expect(steps > 200)
+    }
+  }
+
+  @Test func panesScrolledByKeysAndTheOverviewBarStandTogetherOnTheTrack() async throws {
+    let controller = try await connectedWindow()
+    let (a, b) = try panes(of: controller)
+    let window = try #require(controller.window)
+    let track = try #require(ScrollTrack(panes: [a, b]))
+    func expectTogether(_ context: String) {
+      let places = [a.readingLinePlace, b.readingLinePlace]
+      let positions = [
+        track.trackPositions(ofPane: 0, atPlace: places[0]),
+        track.trackPositions(ofPane: 1, atPlace: places[1]),
+      ]
+      guard !atAnEnd(a), !atAnEnd(b) else { return }
+      #expect(
+        positions[0].lowerBound <= positions[1].upperBound + 0.5
+          && positions[1].lowerBound <= positions[0].upperBound + 0.5,
+        "\(context): \(positions)")
+    }
+    for (pane, other) in [(a, b), (b, a)] {
+      window.makeFirstResponder(pane.documentView)
+      pane.documentView.setSelectedRange(NSRange(location: 0, length: 0))
+      pane.documentView.scrollRangeToVisible(pane.documentView.selectedRange())
+      var previous = [pane.readingLinePlace, other.readingLinePlace]
+      for step in 0..<400 {
+        pane.documentView.moveDown(nil)
+        pane.documentView.scrollRangeToVisible(pane.documentView.selectedRange())
+        let now = [pane.readingLinePlace, other.readingLinePlace]
+        #expect(now[0] >= previous[0] && now[1] >= previous[1] - 0.001, "key \(step)")
+        expectTogether("key \(step)")
+        previous = now
+      }
+      for _ in 0..<20 {
+        pane.documentView.pageUp(nil)
+        expectTogether("page up")
       }
     }
-    #expect(checked > 40)
+    let bar = controller.presentation.sourcesOverviewBar
+    for value in stride(from: 0.0, through: 1.0, by: 0.05) {
+      bar.doubleValue = value
+      bar.sendAction(bar.action, to: bar.target)
+      expectTogether("overview bar at \(value)")
+    }
+  }
+
+  @Test func windowOfSeveralFilesShowsTheNextFileFarDownWithOtherBlocks() async throws {
+    let folder = try SampleCollections.folder()
+    func lines(_ name: String, _ count: Int) -> String {
+      (0..<count).map { "let \(name)\($0) = \($0)" }.joined(separator: "\n") + "\n"
+    }
+    let collection = FileCollection(files: [
+      try SampleCollections.file(
+        "Long.swift", old: lines("u", 300) + "gone\n" + lines("v", 300),
+        new: lines("u", 300) + lines("v", 300) + "added\n", number: 1, count: 2, in: folder),
+      try SampleCollections.file(
+        "Short.swift", old: "a\nb\nc\n", new: "a\nB\nB2\nB3\nc\n", number: 2, count: 2,
+        in: folder),
+    ])
+    let settings = UserSettings.private()
+    settings.alignsLines = false
+    let controller = try await Windows.controller(for: collection, settings: settings)
+    let window = try #require(controller.window)
+    let (a, b) = try panes(of: controller)
+    #expect(a.content.blocks.count == 2)
+    controller.showAllLines(nil)
+    b.documentView.scroll(CGPoint(x: 0, y: b.documentView.frame.height))
+
+    #expect(window.tryToPerform(SessionCommand.nextFile.action, with: nil))
+    await controller.fileLoad?.value
+    window.contentView?.layoutSubtreeIfNeeded()
+
+    #expect(a.content.blocks.count == 1 && b.content.blocks.count == 1)
+    #expect(a.content.lineNumbers.count == 3 && b.content.lineNumbers.count == 5)
+    b.documentView.scroll(CGPoint(x: 0, y: 10))
+    #expect(ScrollTrack(panes: [a, b]) != nil)
   }
 
   @Test(arguments: [false, true])
@@ -282,6 +375,11 @@ import Testing
   private func position(atReadingLineOf pane: PaneView) -> Double {
     let (row, fraction) = pane.rowAtReadingLine
     return Double(row) + Double(fraction)
+  }
+
+  /// Whether `pane` stands at the top or the end of its text.
+  private func atAnEnd(_ pane: PaneView) -> Bool {
+    pane.documentView.visibleRect.minY <= 0 || reachesItsEnd(pane)
   }
 
   private func reachesItsEnd(_ pane: PaneView) -> Bool {

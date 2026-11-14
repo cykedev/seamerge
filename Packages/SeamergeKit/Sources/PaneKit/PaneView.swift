@@ -67,6 +67,7 @@ public final class PaneView: NSView {
     gutterView.currentBlock = textView.currentBlock
     decisionColumn?.update()
     invalidateSeams()
+    scrollSync?.trackDidChange(of: self)
   }
 
   /// The runs of rows that the pane hides, each behind a bar one row high that the user can
@@ -318,6 +319,27 @@ public final class PaneView: NSView {
     max(textView.frame.height - clipView.bounds.height, 0)
   }
 
+  /// The height of the reading line in the text, a quarter down the visible part.
+  var readingLinePlace: CGFloat {
+    clipView.bounds.minY + Theme.readingLine * visibleHeight
+  }
+
+  /// Scrolls so that the reading line lies at `place` in the text, as far as the text allows,
+  /// and sideways to `x`, as given.
+  func placeReadingLine(at place: CGFloat, x: CGFloat) {
+    let y = min(max(place - Theme.readingLine * visibleHeight, 0), verticalScrollRange)
+    let target = CGPoint(x: x, y: y)
+    if scrollOrigin != target {
+      scroll(to: target)
+    }
+  }
+
+  /// Whether the user scrolls the pane by hand, with a gesture, the scroll wheel or a scroller,
+  /// rather than the pane scrolling to a place.
+  var isScrolledByHand: Bool {
+    textView.isLiveScrolling || scrollView.isHandlingScrollWheel
+  }
+
   /// Moves the top left corner of the visible part of the text to `origin`, as given.
   func scroll(to origin: CGPoint) {
     clipView.scroll(to: origin)
@@ -489,6 +511,7 @@ public final class PaneView: NSView {
     gutterView.displayRows = displayRows
     overviewBar?.displayRows = overviewGrid?.displayRows ?? displayRows
     invalidateSeams()
+    scrollSync?.trackDidChange(of: self)
   }
 
   @objc private func clipViewBoundsDidChange(_ notification: Notification) {

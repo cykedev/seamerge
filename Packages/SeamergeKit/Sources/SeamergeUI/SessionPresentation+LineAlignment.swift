@@ -20,22 +20,20 @@ extension SessionPresentation {
     ScrollMap(session: changes.session, from: .grid, to: .lines(role))
   }
 
-  /// Couples neighboring panes side by side block by block, while they show the lines of their
-  /// files, so that the block at the reading line of one stands at the reading line of the
-  /// other; on the grid, they share one origin.
+  /// Lets the panes side by side scroll over a common track while they show the lines of their
+  /// files, so that none of them jumps where the other has lines it lacks; on the grid, they
+  /// share one origin.
   func connectSourcePanes() {
-    let panes = layout.sourcePanes
-    for (left, right) in zip(panes, panes.dropFirst()) {
-      guard !alignsLines else {
-        scrollSync.removeRowMapping(between: left.pane, and: right.pane)
-        continue
-      }
-      let map = ScrollMap(
-        session: changes.session, from: .lines(left.role), to: .lines(right.role))
-      scrollSync.setRowMapping(
-        between: left.pane, and: right.pane, forward: { map.targetPosition(at: $0) },
-        backward: { map.sourcePosition(at: $0) })
-    }
+    scrollSync.setTrack(for: alignsLines ? [] : layout.sourcePanes.map(\.pane))
+  }
+
+  /// Brings the panes side by side together on their track again where B stands, after they
+  /// changed how they show the lines of their files, so that none of them jumps when the user
+  /// next scrolls; on the grid, each keeps its own rows in place.
+  func alignSourcesToB() {
+    guard !alignsLines, let b = layout.sourcePane(.b), b.isShown else { return }
+    layout.view.layoutSubtreeIfNeeded()
+    scrollSync.align(to: b)
   }
 
   /// Lets the overview bar of the panes side by side measure on the grid while its pane shows
