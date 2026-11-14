@@ -43,9 +43,11 @@ enum Rendering {
   /// it would on screen.
   ///
   /// With `isKey`, the window acts as the key window, which a window without a screen never
-  /// becomes, so that a focused selection shows in the accent color.
+  /// becomes, so that a focused selection shows in the accent color. The window draws in the
+  /// light appearance unless `appearance` says otherwise, whatever the system shows.
   static func host(
-    _ view: NSView, size: CGSize, appearance: NSAppearance? = nil, isKey: Bool = false
+    _ view: NSView, size: CGSize, appearance: NSAppearance? = NSAppearance(named: .aqua),
+    isKey: Bool = false
   ) -> NSWindow {
     let window = (isKey ? KeyWindow.self : NSWindow.self).init(
       contentRect: CGRect(origin: .zero, size: size), styleMask: [.borderless],
