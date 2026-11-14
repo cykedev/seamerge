@@ -45,17 +45,18 @@ public final class SessionWindowController: NSWindowController {
   let lineWrapping: LineWrapping
 
   /// The language of the files as the window recognized it.
-  let detectedLanguage: LanguageDescription
+  var detectedLanguage: LanguageDescription
 
   /// The languages chosen for files, by their paths, while the app runs.
   let syntaxChoices: SyntaxChoices
 
   /// The path of the file whose language the window recognized, under which it keeps the
   /// language chosen for it.
-  let syntaxPath: String
+  var syntaxPath: String
 
-  /// Where the result goes, what Git is doing, and who waits for the session.
-  public let context: SessionContext
+  /// Where the result goes, what Git is doing, and who waits for the session; in a window that
+  /// compares several files, what Git says about the file it shows.
+  public internal(set) var context: SessionContext
 
   /// The pasteboard that Copy and Copy Path write to.
   let pasteboard: NSPasteboard
@@ -105,7 +106,28 @@ public final class SessionWindowController: NSWindowController {
 
   /// The comparison whose files cannot be compared, which the window names and explains in
   /// place of their lines, or `nil` if the window shows the lines.
-  let unavailable: UnavailableComparison?
+  var unavailable: UnavailableComparison?
+
+  /// The files of a window that compares several, or `nil` for a window of one session.
+  public let collection: FileCollection?
+
+  /// The sidebar with the list of the files and the panes beside it, if the window compares
+  /// several files.
+  let collectionLayout: CollectionSplitViewController?
+
+  /// The index of the file the window shows among the files of its collection.
+  var fileIndex = 0
+
+  /// The place in each file of the collection that the window showed, by path, which it shows
+  /// again when the user comes back to the file.
+  var filePlaces: [String: FilePlace] = [:]
+
+  /// The files of the collection that the window has read, by path: the one it shows and those
+  /// beside it.
+  var loadedFiles: [String: LoadedFile] = [:]
+
+  /// The reading of the file the window is about to show, while it runs.
+  var fileLoad: Task<Void, Never>?
 
   /// The merge of a file that is not text, whose window asks which side to take, or `nil`.
   let binaryMerge: BinaryMerge?
@@ -205,7 +227,7 @@ public final class SessionWindowController: NSWindowController {
   }
 
   /// Draws anew whenever the accessibility settings of the system change.
-  private func observeDisplayOptions() {
+  func observeDisplayOptions() {
     NSWorkspace.shared.notificationCenter.addObserver(
       self, selector: #selector(accessibilityDisplayOptionsDidChange(_:)),
       name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
@@ -218,13 +240,16 @@ public final class SessionWindowController: NSWindowController {
   /// itself out in `window`; for an `unavailable` comparison, it
   /// says why in place of the lines. `now` tells the time, which ends a run of typing after a
   /// pause.
+  ///
+  /// For a `collection`, the window shows `session`, one of its files, beside the list of the
+  /// files.
   init(
     session: Session, context: SessionContext, undoManager: UndoManager,
     displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace,
     prompts: any SessionPrompts, doneStyle: SessionToolbar.DoneStyle, defaults: UserDefaults,
     syntaxChoices: SyntaxChoices = SyntaxChoices(),
     window: SessionWindow, unavailable: UnavailableComparison? = nil,
-    binaryMerge: BinaryMerge? = nil,
+    binaryMerge: BinaryMerge? = nil, collection: FileCollection? = nil,
     now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
   ) {
     let theme = displayOptions.theme(fontSize: Self.standardFontSize)
@@ -239,12 +264,13 @@ public final class SessionWindowController: NSWindowController {
       headers: arrangement.sourceRoles.compactMap { headers[$0] }, resultHeader: resultHeader,
       theme: theme)
     self.layout = layout
-    content = SessionContentController(
+    let content = SessionContentController(
       layout: layout,
       footer: SessionFooterView(
         toggles: FooterToggle.allCases.filter {
           $0 != .base || arrangement.sourceRoles.contains(.base)
         }))
+    self.content = content
     content.footer.theme = theme
     footerVisibility = FooterVisibility(defaults: defaults)
     syntaxHighlighting = SyntaxHighlighting(defaults: defaults)
@@ -258,7 +284,15 @@ public final class SessionWindowController: NSWindowController {
     self.workspace = workspace
     self.prompts = prompts
     self.now = now
-    toolbar = SessionToolbar(kind: session.kind, doneStyle: doneStyle)
+    toolbar = SessionToolbar(
+      kind: session.kind, doneStyle: doneStyle, hasSidebar: collection != nil)
+    self.collection = collection
+    collectionLayout = collection.map { _ in
+      CollectionSplitViewController(
+        fileList: FileListViewController(
+          theme: theme, folderColor: CompareFilesColors(displayOptions).quietText),
+        content: content, defaults: defaults)
+    }
     sessionUndoManager = undoManager
     self.displayOptions = displayOptions
     presentation = SessionPresentation(
@@ -277,7 +311,8 @@ public final class SessionWindowController: NSWindowController {
     if let unavailable {
       layout.showInPlaceOfTheLines(
         UnavailableComparisonView(
-          title: unavailable.title, message: unavailable.message(in: context)))
+          title: unavailable.title,
+          message: unavailable.message(in: collection == nil ? context : SessionContext())))
     } else if let binaryMerge {
       layout.showInPlaceOfTheLines(
         UnavailableComparisonView(
@@ -287,11 +322,15 @@ public final class SessionWindowController: NSWindowController {
     window.tabbingMode = .disallowed
     window.isReleasedWhenClosed = false
     window.toolbarStyle = .unified
+    if collection != nil {
+      // The sidebar reaches up under the toolbar.
+      window.styleMask.insert(.fullSizeContentView)
+    }
     super.init(window: window)
     // The delegate comes first: the window asks it for its undo manager once and keeps the
     // answer.
     window.delegate = self
-    window.contentViewController = content
+    window.contentViewController = collectionLayout ?? content
     content.showsFooter = footerVisibility.isVisible
     window.toolbar = toolbar.toolbar
     window.setContentSize(WindowMetrics.defaultContentSize)
@@ -316,6 +355,7 @@ public final class SessionWindowController: NSWindowController {
     observeFooterVisibility()
     observeSyntaxHighlighting()
     observeLineWrapping()
+    setUpCollection()
     stateDidChange()
     watchFiles()
   }
@@ -529,7 +569,9 @@ extension SessionWindowController: NSUserInterfaceValidations {
   /// Whether `command` can have an effect now; while the window cannot show the lines of its
   /// files, only skipping the remaining files can.
   func canPerform(_ command: SessionCommand) -> Bool {
-    if unavailable != nil && command != .skipRemainingFiles && command != .toggleFooter {
+    if unavailable != nil,
+      ![.skipRemainingFiles, .toggleFooter, .nextFile, .previousFile].contains(command)
+    {
       return false
     }
     if binaryMerge != nil {
@@ -540,6 +582,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
       presentation.navigation.target(of: jump) != nil
     case .anotherPane:
       focusablePanes.count > 1
+    case .anotherFile(let forward):
+      collection.map { $0.files.indices.contains(fileIndex + (forward ? 1 : -1)) } ?? false
     case .noComparisonUnderWay:
       !isSwitchingComparison
     case .basePane:
@@ -563,7 +607,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
     case .swappableSides:
       presentation.arrangement.canSwapSides
     case .remainingFiles:
-      context.difftool?.hasFilesAfterThisOne ?? false
+      collection == nil && context.difftool?.hasFilesAfterThisOne ?? false
     case .choice(let roles):
       decisionPlan(choosing: roles).map { !$0.isEmpty } ?? false
     case .toggle(let role):

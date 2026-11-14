@@ -264,3 +264,40 @@ extension SessionPresentation {
     get throws { try #require(decisionColumn, "A merge has a result") }
   }
 }
+
+extension Windows {
+  /// A window for `collection`, laid out without a screen.
+  static func controller(
+    for collection: FileCollection, options: DisplayOptions = DisplayOptions(reducesMotion: true),
+    defaults: UserDefaults = .privateSuite(), window: SessionWindow = SessionWindow()
+  ) async throws -> SessionWindowController {
+    let file = try #require(collection.files.first)
+    let loaded = try await SessionWindowController.load(file, mode: .windowDefault)
+    let controller = SessionWindowController(
+      session: loaded.session,
+      context: SessionWindowController.context(of: file, at: 0, in: collection),
+      undoManager: UndoManager(), displayOptions: options, pasteboard: .withUniqueName(),
+      workspace: WorkspaceRecorder(), prompts: PromptRecorder(), doneStyle: .standard,
+      defaults: defaults, window: window, unavailable: loaded.unavailable,
+      collection: collection)
+    controller.window?.contentView?.layoutSubtreeIfNeeded()
+    return controller
+  }
+
+  /// Draws the window of `collection` in `look` at `size`, after `prepare`.
+  static func picture(
+    _ collection: FileCollection, look: Look, options: DisplayOptions = DisplayOptions(),
+    size: CGSize? = WindowMetrics.defaultContentSize, named name: String,
+    prepare: @MainActor (SessionWindowController) async throws -> Void = { _ in }
+  ) async throws {
+    let controller = try await controller(for: collection, options: options)
+    let window = try #require(controller.window)
+    defer { window.close() }
+    Rendering.prepare(window, size: size ?? window.contentMinSize, appearance: look.appearance)
+    controller.layout.placeDividers()
+    controller.stateDidChange()
+    try await prepare(controller)
+    window.contentView?.layoutSubtreeIfNeeded()
+    try Rendering.write(Rendering.bitmap(of: window), named: name)
+  }
+}

@@ -121,6 +121,9 @@
     "Show Ignored Changes": {
       "comment": "View menu: mark the differences the comparison mode ignores."
     },
+    "Show Sidebar": {
+      "comment": "View menu: show the list of the files of a window."
+    },
     "Show Toolbar": {
       "comment": "View menu."
     },

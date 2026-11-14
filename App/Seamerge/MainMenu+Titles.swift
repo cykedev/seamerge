@@ -41,6 +41,8 @@ extension MainMenu {
     static let showIgnoredChanges = String(
       localized: "Show Ignored Changes",
       comment: "View menu: mark the differences the comparison mode ignores.")
+    static let showSidebar = String(
+      localized: "Show Sidebar", comment: "View menu: show the list of the files of a window.")
     static let showToolbar = String(localized: "Show Toolbar", comment: "View menu.")
     static let customizeToolbar = String(localized: "Customize Toolbar…", comment: "View menu.")
     static let enterFullScreen = String(localized: "Enter Full Screen", comment: "View menu.")

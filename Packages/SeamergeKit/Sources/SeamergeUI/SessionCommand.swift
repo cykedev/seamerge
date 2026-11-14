@@ -28,6 +28,12 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Jumps to the last change.
   case lastChange
 
+  /// Shows the next file of a window that compares several.
+  case nextFile
+
+  /// Shows the previous file of a window that compares several.
+  case previousFile
+
   /// Moves the focus to the next pane: from A over Base and B to the result, and back to A.
   case nextPane
 
@@ -174,6 +180,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "First Change", bundle: .module, comment: "Go menu command.")
     case .lastChange:
       String(localized: "Last Change", bundle: .module, comment: "Go menu command.")
+    case .nextFile:
+      String(localized: "Next File", bundle: .module, comment: "Go menu command.")
+    case .previousFile:
+      String(localized: "Previous File", bundle: .module, comment: "Go menu command.")
     case .nextPane:
       String(localized: "Next Pane", bundle: .module, comment: "Go menu command.")
     case .previousPane:
@@ -420,6 +430,14 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Show the right file on the left and the left file on the right",
         bundle: .module, comment: "Help tag of Compare > Swap Sides.")
+    case .nextFile:
+      String(
+        localized: "Show the file after this one", bundle: .module,
+        comment: "Help tag of Go > Next File.")
+    case .previousFile:
+      String(
+        localized: "Show the file before this one", bundle: .module,
+        comment: "Help tag of Go > Previous File.")
     case .skipRemainingFiles:
       String(
         localized: "Close and compare no more files of this run", bundle: .module,
@@ -457,6 +475,8 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .previousChange: #selector(SessionWindowController.selectPreviousChange(_:))
     case .firstChange: #selector(SessionWindowController.selectFirstChange(_:))
     case .lastChange: #selector(SessionWindowController.selectLastChange(_:))
+    case .nextFile: #selector(SessionWindowController.showNextFile(_:))
+    case .previousFile: #selector(SessionWindowController.showPreviousFile(_:))
     case .nextPane: #selector(SessionWindowController.selectNextPane(_:))
     case .previousPane: #selector(SessionWindowController.selectPreviousPane(_:))
     case .compareExactly: #selector(SessionWindowController.compareExactly(_:))

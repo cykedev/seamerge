@@ -227,6 +227,8 @@ import Testing
       ---
       Hide Footer ⌘/
       ---
+      Show Sidebar ⌃⌘S
+      ---
       Show Toolbar ⌥⌘T
       Customize Toolbar…
       ---
@@ -239,6 +241,9 @@ import Testing
       Previous Change ⌥⇧⌘↑
       First Change
       Last Change
+      ---
+      Next File
+      Previous File
       ---
       Next Pane ⌃⇥
       Previous Pane ⌃⇧⇥

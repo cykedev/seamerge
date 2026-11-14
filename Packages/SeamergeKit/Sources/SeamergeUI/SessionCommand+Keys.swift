@@ -39,6 +39,8 @@ extension SessionCommand {
     case .actualSize: return ("0", [.command])
     case .goToLine: return ("l", [.command])
     case .openInEditor: return ("o", [.option, .command])
+    case .nextFile: return kind == .diff ? (Self.rightArrow, jumps) : nil
+    case .previousFile: return kind == .diff ? (Self.leftArrow, jumps) : nil
     case .nextPane: return (Self.tab, [.control])
     case .previousPane: return (Self.tab, [.shift, .control])
     case .useA: return ("1", [.command])

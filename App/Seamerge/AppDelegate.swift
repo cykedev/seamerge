@@ -39,10 +39,12 @@ final class AppDelegate: NSObject {
   private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "App")
 
   /// Creates the delegate of an app started with `arguments`, which keeps its recent
-  /// comparisons in `defaults`, listens for the helper at `socketURL`, shows alerts and hides
-  /// with `presenter`, and sets up Git and Tower in `integrationStore`.
+  /// comparisons in `defaults`, listens for the helper at `socketURL`, keeps the copies of
+  /// collected files in `collectionCache`, shows alerts and hides with `presenter`, and sets up
+  /// Git and Tower in `integrationStore`.
   init(
-    arguments: [String], defaults: UserDefaults, socketURL: URL, presenter: any AppPresenter,
+    arguments: [String], defaults: UserDefaults, socketURL: URL,
+    collectionCache: CollectionCache = .standard, presenter: any AppPresenter,
     integrationStore: SystemIntegrationStore
   ) {
     isLaunchedForSession = arguments.contains(HelperLaunch.argument)
@@ -51,7 +53,8 @@ final class AppDelegate: NSObject {
     recentComparisons = RecentComparisons(defaults: defaults)
     recentComparisonsMenu = RecentComparisonsMenu(recentComparisons: recentComparisons)
     mainMenu = MainMenu(openRecentMenu: recentComparisonsMenu.menu)
-    coordinator = SessionCoordinator(socketURL: socketURL) { [weak presenter] error in
+    coordinator = SessionCoordinator(socketURL: socketURL, cache: collectionCache) {
+      [weak presenter] error in
       presenter?.present(error)
     }
     super.init()

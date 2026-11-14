@@ -20,6 +20,12 @@ protocol SessionCoordinatorDelegate: AnyObject {
 /// manager of its own, built in the comparison mode of the window. For the helper, the
 /// coordinator answers `opened` once the window shows, and the outcome once it closes; if the
 /// helper goes away first, it tells the window, which stays open.
+///
+/// A comparison that comes with its origin joins the window of the other comparisons of that
+/// origin while their collection receives files, or starts a collection with a window of its own.
+/// The coordinator keeps a copy of each of its files and answers `accepted` at once, so that Git
+/// goes on to the next file without waiting for the window. Once that window has closed, the
+/// comparisons of the collection that still come are cancelled without a window.
 @MainActor
 final class SessionCoordinator {
   /// Learns when windows open and close; the coordinator does not retain it.
@@ -29,7 +35,9 @@ final class SessionCoordinator {
   private(set) var windowControllers: [SessionWindowController] = []
 
   private let socketURL: URL
+  private let cache: CollectionCache
   private let presentError: (any Error) -> Void
+  private var collections: [OpenCollection] = []
   private var kinds: [ObjectIdentifier: Session.Kind] = [:]
   private var serverTask: Task<Void, Never>?
   private var isFinishing = false
@@ -38,10 +46,15 @@ final class SessionCoordinator {
 
   private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "App")
 
-  /// Creates a coordinator that listens for the helper at `socketURL` once it starts, and shows
-  /// what keeps a session from opening with `presentError`.
-  init(socketURL: URL, presentError: @escaping (any Error) -> Void) {
+  /// Creates a coordinator that listens for the helper at `socketURL` once it starts, keeps the
+  /// copies of the files of collections in `cache`, and shows what keeps a session from opening
+  /// with `presentError`.
+  init(
+    socketURL: URL, cache: CollectionCache = .standard,
+    presentError: @escaping (any Error) -> Void
+  ) {
     self.socketURL = socketURL
+    self.cache = cache
     self.presentError = presentError
   }
 
@@ -51,6 +64,8 @@ final class SessionCoordinator {
   ///   another copy of the app listens.
   func start() throws(SessionError) {
     let server = try SessionServer(socketURL: socketURL)
+    // Only the copy of the app that listens owns the cache; copies left there are from a crash.
+    cache.removeAll()
     // The task keeps the coordinator until it stops listening in finish().
     serverTask = Task {
       await server.run { connection in
@@ -81,6 +96,7 @@ final class SessionCoordinator {
     serverTask?.cancel()
     await serverTask?.value
     serverTask = nil
+    cache.removeAll()
   }
 
   /// Waits until no helper is being served: every helper has had its answer or has gone away.
@@ -129,9 +145,15 @@ final class SessionCoordinator {
         idleWaiters = []
       }
     }
-    if case .folders = connection.request {
+    switch connection.request {
+    case .diff(let diff) where diff.origin != nil:
+      await serveCollected(diff, on: connection)
+      return
+    case .folders:
       await send(.rejected(.unsupportedRequest), on: connection)
       return
+    case .merge, .diff:
+      break
     }
     let controller: SessionWindowController
     do {
@@ -146,8 +168,20 @@ final class SessionCoordinator {
       return
     }
 
+    await serveWindow(controller, kind: connection.request.kind, on: connection) {
+      SessionIPC.SessionOutcome($0)
+    }
+  }
+
+  /// Shows `controller` for the helper of `connection`, answers `opened`, and once the window
+  /// closes, the outcome that `outcome` makes of how it closed; if the helper goes away first,
+  /// tells the window.
+  private func serveWindow(
+    _ controller: SessionWindowController, kind: Session.Kind, on connection: SessionConnection,
+    outcome: @escaping (SeamergeUI.SessionOutcome) -> SessionIPC.SessionOutcome
+  ) async {
     let (endings, ending) = AsyncStream.makeStream(of: SessionEnding.self)
-    show(controller, kind: connection.request.kind) { outcome in
+    show(controller, kind: kind) { outcome in
       ending.yield(.closed(outcome))
     }
     do {
@@ -164,12 +198,93 @@ final class SessionCoordinator {
     defer { disconnection.cancel() }
     var iterator = endings.makeAsyncIterator()
     switch await iterator.next() {
-    case .closed(let outcome):
-      await send(.closed(SessionIPC.SessionOutcome(outcome)), on: connection)
+    case .closed(let closing):
+      await send(.closed(outcome(closing)), on: connection)
     case .disconnected, nil:
       Self.logger.notice("The helper no longer waits for its window")
       controller.callerDisconnected()
     }
+  }
+
+  /// Adds the comparison of `diff` to the collection of its origin, or starts one with a window of
+  /// its own, and answers `accepted` once its files are kept; answers that it was cancelled if
+  /// the window of the collection has closed.
+  private func serveCollected(_ diff: SessionRequest.Diff, on connection: SessionConnection) async {
+    guard let requestOrigin = diff.origin, !isFinishing else {
+      await send(.closed(.cancelled), on: connection)
+      return
+    }
+    let origin = CollectionOrigin(requestOrigin)
+    collections.removeAll { !$0.files.isReceiving }
+    if let joined = collections.first(where: { $0.files.accepts(origin) }) {
+      await add(CollectedFile(diff), to: joined, on: connection)
+      return
+    }
+    let collection = OpenCollection(
+      files: FileCollection(origin: origin, expectedCount: diff.context.filePosition?.count),
+      folder: cache.makeFolder(),
+      workingTree: URL(filePath: origin.repository, directoryHint: .isDirectory))
+    collections.append(collection)
+    guard await keep(CollectedFile(diff), in: collection) else {
+      await send(.closed(.cancelled), on: connection)
+      return
+    }
+    let controller: SessionWindowController
+    do {
+      controller = try await SessionWindowController(
+        collection: collection.files, undoManager: UndoManager())
+    } catch {
+      presentError(error)
+      end(collection)
+      await send(.closed(.cancelled), on: connection)
+      return
+    }
+    guard !isFinishing else {
+      end(collection)
+      await send(.closed(.cancelled), on: connection)
+      return
+    }
+    show(controller, kind: .diff) { [weak self] _ in self?.end(collection) }
+    await send(.accepted, on: connection)
+  }
+
+  /// Adds `file` to `collection` once it is kept, and answers `accepted`, or that it was
+  /// cancelled if the window of the collection has closed.
+  private func add(
+    _ file: CollectedFile, to collection: OpenCollection, on connection: SessionConnection
+  ) async {
+    let isAdded = await keep(file, in: collection)
+    await send(isAdded ? .accepted : .closed(.cancelled), on: connection)
+  }
+
+  /// Keeps a copy of each side of `file` that is not in the working tree and adds it to
+  /// `collection`; tells whether it did, which it does not once the window has closed.
+  ///
+  /// A side that cannot be copied stays where it is, so that the window says it cannot read it
+  /// once the file is shown.
+  private func keep(_ file: CollectedFile, in collection: OpenCollection) async -> Bool {
+    guard !collection.files.isDismissed else { return false }
+    var kept = file
+    do {
+      kept = try await cache.keep(
+        file, in: collection.folder, workingTree: collection.workingTree)
+    } catch {
+      Self.logger.error("Cannot keep \(file.path, privacy: .public): \(error, privacy: .public)")
+    }
+    guard !collection.files.isDismissed else {
+      // The window closed while the files were copied, and its copies went with it.
+      cache.remove(collection.folder)
+      return false
+    }
+    collection.files.add(kept)
+    return true
+  }
+
+  /// Ends `collection` as its window closes: further calls of its origin are cancelled while it
+  /// would receive them, and its copies go.
+  private func end(_ collection: OpenCollection) {
+    collection.files.dismiss()
+    cache.remove(collection.folder)
   }
 
   /// Shows `controller`, which shows a session of `kind`, and keeps it until its window closes;
@@ -263,6 +378,21 @@ extension SessionRequest {
     case .merge: .merge
     case .diff, .folders: .diff
     }
+  }
+}
+
+/// The files of one collection, where their copies go, and the working tree whose files need
+/// none.
+@MainActor
+private final class OpenCollection {
+  let files: FileCollection
+  let folder: URL
+  let workingTree: URL
+
+  init(files: FileCollection, folder: URL, workingTree: URL) {
+    self.files = files
+    self.folder = folder
+    self.workingTree = workingTree
   }
 }
 

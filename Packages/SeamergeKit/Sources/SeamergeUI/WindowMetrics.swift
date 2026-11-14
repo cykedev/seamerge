@@ -93,6 +93,15 @@ enum WindowMetrics {
   /// The least room around the title and the message of a comparison that cannot be shown.
   static let unavailableInset: CGFloat = 24
 
+  /// The width of the list of files in the sidebar of a window that compares several files.
+  static let sidebarWidth: CGFloat = 220
+
+  /// The narrowest the list of files gets before it collapses.
+  static let minimumSidebarWidth: CGFloat = 160
+
+  /// The widest the list of files gets.
+  static let maximumSidebarWidth: CGFloat = 400
+
   /// The size of a new window.
   static let defaultContentSize = CGSize(width: 1280, height: 800)
 

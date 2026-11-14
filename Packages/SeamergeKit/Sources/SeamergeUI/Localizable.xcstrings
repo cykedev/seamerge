@@ -1,6 +1,9 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ (%@)": {
+      "comment": "Help tag of a file in the sidebar: its path and what happened, such as Sources/App.swift (Modified)."
+    },
     "%@ The file is unchanged, and the window keeps your work.": {
       "comment": "Sheet after saving failed: the reason, then what still holds."
     },
@@ -213,6 +216,9 @@
     "Adds Seamerge to the list of tools in Tower’s settings and creates a script for it. The other tools stay.": {
       "comment": "Set Up Git Integration: what adding to Tower adds when it lists other tools."
     },
+    "All %lld files received": {
+      "comment": "VoiceOver: every file of a run has come, such as All 40 files received."
+    },
     "All Conflicts Resolved": {
       "comment": "Toolbar: every conflict is resolved."
     },
@@ -424,6 +430,9 @@
     "Date": {
       "comment": "Details of a side: when the commit was made."
     },
+    "Deleted": {
+      "comment": "A file in the sidebar that has no later side."
+    },
     "Deleted File": {
       "comment": "Header of the missing later side of a comparison of a deleted file."
     },
@@ -477,6 +486,9 @@
     },
     "File %lld of %lld": {
       "comment": "Subtitle: which file of a git difftool run is compared, such as File 3 of 12."
+    },
+    "Files": {
+      "comment": "VoiceOver: the list of the files in the sidebar of a window that compares several."
     },
     "First Change": {
       "comment": "Go menu command."
@@ -669,8 +681,14 @@
     "Mixed": {
       "comment": "Line endings: more than one kind."
     },
+    "Modified": {
+      "comment": "A file in the sidebar whose two sides differ."
+    },
     "Move Seamerge to the Applications folder first.": {
       "comment": "Set Up Git Integration: the app runs from a disk image or Downloads."
+    },
+    "New": {
+      "comment": "A file in the sidebar that has no earlier side."
     },
     "New File": {
       "comment": "Header of the missing earlier side of a comparison of a new file."
@@ -679,6 +697,9 @@
       "comment": "Go menu command."
     },
     "Next Conflict": {
+      "comment": "Go menu command."
+    },
+    "Next File": {
       "comment": "Go menu command."
     },
     "Next Pane": {
@@ -726,6 +747,9 @@
     "Previous Conflict": {
       "comment": "Go menu command."
     },
+    "Previous File": {
+      "comment": "Go menu command."
+    },
     "Previous Pane": {
       "comment": "Go menu command."
     },
@@ -740,6 +764,12 @@
     },
     "Rebase onto %@ · Commit %lld of %lld": {
       "comment": "Subtitle: how far a rebase has come, such as Rebase onto main · Commit 3 of 7."
+    },
+    "Receiving %lld of %lld…": {
+      "comment": "Sidebar: how many files of a run have come, such as Receiving 12 of 40…."
+    },
+    "Receiving Files…": {
+      "comment": "Sidebar: files still come and it is not known how many."
     },
     "Recent": {
       "comment": "Compare Files: the heading of the comparisons opened last."
@@ -911,6 +941,12 @@
     },
     "Show the base between A and B": {
       "comment": "Help tag of the footer toggle of the base while the base is hidden."
+    },
+    "Show the file after this one": {
+      "comment": "Help tag of Go > Next File."
+    },
+    "Show the file before this one": {
+      "comment": "Help tag of Go > Previous File."
     },
     "Show the right file on the left and the left file on the right": {
       "comment": "Help tag of Compare > Swap Sides."

@@ -45,6 +45,7 @@ final class SessionToolbar: NSObject {
 
   private let kind: Session.Kind
   private let doneStyle: DoneStyle
+  private let hasSidebar: Bool
   private let countLabel = NSTextField(labelWithString: "")
   private let progressIndicator = NSProgressIndicator()
   private let countView: NSStackView
@@ -52,10 +53,13 @@ final class SessionToolbar: NSObject {
 
   /// Creates the toolbar of a window of `kind`, with the button that saves and closes in
   /// `doneStyle` if it has one.
-  init(kind: Session.Kind, doneStyle: DoneStyle) {
+  init(kind: Session.Kind, doneStyle: DoneStyle, hasSidebar: Bool = false) {
     self.kind = kind
     self.doneStyle = doneStyle
-    toolbar = NSToolbar(identifier: kind == .merge ? "SessionToolbar" : "ComparisonToolbar")
+    self.hasSidebar = hasSidebar
+    toolbar = NSToolbar(
+      identifier: kind == .merge
+        ? "SessionToolbar" : hasSidebar ? "CollectionToolbar" : "ComparisonToolbar")
     progressIndicator.style = .spinning
     progressIndicator.controlSize = .small
     progressIndicator.isDisplayedWhenStopped = false
@@ -297,9 +301,11 @@ extension SessionToolbar: NSToolbarDelegate {
   /// The elements of a merge: the conflicts in the middle and Done at the end; those of a
   /// comparison: the changes in the middle.
   func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-    switch kind {
+    let sidebarItems: [NSToolbarItem.Identifier] =
+      hasSidebar ? [.toggleSidebar, .sidebarTrackingSeparator] : []
+    return switch kind {
     case .merge: [.conflictCount, .conflictNavigation, .flexibleSpace, .done]
-    case .diff: [.changeCount, .changeNavigation]
+    case .diff: sidebarItems + [.changeCount, .changeNavigation]
     }
   }
 
@@ -310,7 +316,17 @@ extension SessionToolbar: NSToolbarDelegate {
         .conflictCount, .conflictNavigation, .changeNavigation, .comparison, .done,
         .flexibleSpace, .space,
       ]
-    case .diff: [.changeCount, .changeNavigation, .comparison, .flexibleSpace, .space]
+    case .diff:
+      (hasSidebar ? [.toggleSidebar, .sidebarTrackingSeparator] : [])
+        + [.changeCount, .changeNavigation, .comparison, .flexibleSpace, .space]
+    }
+  }
+
+  /// Shows the button that shows and hides the sidebar, or hides it while the window has too
+  /// few files for a list.
+  func showsSidebarButton(_ shows: Bool) {
+    for item in toolbar.items where item.itemIdentifier == .toggleSidebar {
+      item.isHidden = !shows
     }
   }
 

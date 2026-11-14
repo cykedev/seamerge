@@ -9,6 +9,9 @@ extension SessionCommand {
     /// Moving the focus needs another pane in view.
     case anotherPane
 
+    /// Another file of the window lies in the direction, after or before the one shown.
+    case anotherFile(forward: Bool)
+
     /// Choosing a comparison mode needs no comparison under way.
     case noComparisonUnderWay
 
@@ -92,6 +95,8 @@ extension SessionCommand {
     case .previousChange: .jumpTarget(.previousChange)
     case .firstChange: .jumpTarget(.firstChange)
     case .lastChange: .jumpTarget(.lastChange)
+    case .nextFile: .anotherFile(forward: true)
+    case .previousFile: .anotherFile(forward: false)
     case .nextPane, .previousPane: .anotherPane
     case .compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace:
       .noComparisonUnderWay

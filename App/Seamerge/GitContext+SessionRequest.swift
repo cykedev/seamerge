@@ -1,4 +1,6 @@
+import Foundation
 import GitSupport
+import SeamergeUI
 import SessionIPC
 
 // The request carries values of its own, so that the helper and the app share no more than the
@@ -104,5 +106,25 @@ extension RebaseProgress {
     self.init(
       targetName: SideName(progress.targetName), commitNumber: progress.commitNumber,
       commitCount: progress.commitCount)
+  }
+}
+
+extension CollectionOrigin {
+  /// The origin the helper sent with a comparison.
+  init(_ origin: SessionRequest.Origin) {
+    self.init(
+      repository: origin.repository,
+      run: origin.run.map { ProcessRun(processID: $0.processID, startTime: $0.startTime) })
+  }
+}
+
+extension CollectedFile {
+  /// The files of a comparison the helper sent, named as a comparison that Git started.
+  init(_ diff: SessionRequest.Diff) {
+    let path = diff.displayPath ?? diff.right.lastPathComponent
+    self.init(
+      old: SessionFile(url: diff.left, label: diff.leftLabel ?? path),
+      new: SessionFile(url: diff.right, label: diff.rightLabel ?? path),
+      difftool: DifftoolContext(diff) ?? DifftoolContext(path: path))
   }
 }

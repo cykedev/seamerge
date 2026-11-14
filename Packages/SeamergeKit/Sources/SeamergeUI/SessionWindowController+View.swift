@@ -170,11 +170,23 @@ extension SessionWindowController {
 
   /// The least size of the content of the window: what the panes in view and the footer need,
   /// and no narrower than the toolbar needs to keep its count and arrows in view.
+  ///
+  /// In a window that compares several files, the list in the sidebar adds its least width while
+  /// it shows, and the toolbar its height, since the content reaches up under it.
   var minimumContentSize: CGSize {
     let footerWidth = content.showsFooter ? content.footer.minimumWidth : 0
-    return CGSize(
+    let size = CGSize(
       width: max(layout.minimumWidth, WindowMetrics.minimumToolbarWidth, footerWidth),
       height: layout.minimumHeight + content.footerHeightInView)
+    guard let collectionLayout, let window else { return size }
+    collectionLayout.minimumContentWidth = size.width
+    let titlebarHeight = window.contentView.map {
+      $0.frame.height - window.contentLayoutRect.height
+    }
+    return CGSize(
+      width: size.width
+        + (collectionLayout.sidebarItem.isCollapsed ? 0 : WindowMetrics.minimumSidebarWidth),
+      height: size.height + max(titlebarHeight ?? 0, 0))
   }
 
   /// The size of the code at Actual Size.

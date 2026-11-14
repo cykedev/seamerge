@@ -485,6 +485,20 @@ final class SessionPresentation {
       })
   }
 
+  /// Shows `session`, the comparison of other files, from its top with no current block, as a
+  /// window that compares several files does when the user goes to another file.
+  ///
+  /// - Precondition: The window shows a comparison, which has no result.
+  func showOtherFiles(_ session: Session) {
+    precondition(!arrangement.showsResult, "Only a comparison shows other files in its panes")
+    changes = SessionChanges(session: session, origin: arrangement.origin)
+    collapsed = CollapsedRows(session: session, document: nil)
+    showSession()
+    currentBlock = nil
+    setCurrentBlock(nil)
+    leadingPane?.scroll(toPlaceRowAtReadingLine: 0, motion: .cut)
+  }
+
   /// Puts the two sides of a comparison the other way round: each pane shows the other side,
   /// with its header, color and markers, so that an insertion reads as a removal; the current
   /// block, the expanded runs and the place at the reading line stay.

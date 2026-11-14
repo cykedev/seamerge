@@ -46,7 +46,7 @@ extension SessionCommand {
       [
         [.nextConflict, .previousConflict],
         [.nextChange, .previousChange, .firstChange, .lastChange],
-        [.nextPane, .previousPane], [.goToLine],
+        [.nextFile, .previousFile], [.nextPane, .previousPane], [.goToLine],
       ]
     case .compare:
       [

@@ -164,6 +164,11 @@ final class MainMenu {
         commands(.toggleFooter),
         [
           Self.item(
+            Titles.showSidebar, #selector(NSSplitViewController.toggleSidebar(_:)), key: "s",
+            modifiers: [.control, .command])
+        ],
+        [
+          Self.item(
             Titles.showToolbar, #selector(NSWindow.toggleToolbarShown(_:)), key: "t",
             modifiers: [.option, .command]),
           Self.item(

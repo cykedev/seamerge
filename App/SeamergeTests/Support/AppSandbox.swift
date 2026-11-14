@@ -41,6 +41,11 @@ final class AppSandbox {
       bundle: Bundle.main.bundleURL, home: folder, environment: environment)
   }
 
+  /// Where the app in the test keeps the copies of collected files.
+  var collectionCache: CollectionCache {
+    CollectionCache(folder: folder.appending(path: "Collections", directoryHint: .isDirectory))
+  }
+
   /// Where the app in the test listens for the helper.
   var socketURL: URL { folder.appending(path: "s.sock") }
 
@@ -51,7 +56,8 @@ final class AppSandbox {
 
   /// A coordinator that listens at the socket of the sandbox, with `recorder` as its delegate.
   func startCoordinator(recorder: WindowRecorder) throws -> SessionCoordinator {
-    let coordinator = SessionCoordinator(socketURL: socketURL, presentError: presentError)
+    let coordinator = SessionCoordinator(
+      socketURL: socketURL, cache: collectionCache, presentError: presentError)
     coordinator.delegate = recorder
     try coordinator.start()
     return coordinator

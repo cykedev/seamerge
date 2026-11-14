@@ -29,7 +29,8 @@ final class SessionSplitViewController: NSSplitViewController {
   /// Carries out a choice of the pop-up menus of the result header.
   var chooseResultFormat: (ResultFormatChoice) -> Void = { _ in }
 
-  private let sourcesController = NSSplitViewController()
+  private let sourcesController = PanesSplitViewController()
+  private var viewInPlaceOfTheLines: NSView?
   private let sourceHeaderViews: [HeaderHostingView<SideHeaderView>]
   private let resultHeaderView: HeaderHostingView<ResultHeaderView>?
 
@@ -90,6 +91,8 @@ final class SessionSplitViewController: NSSplitViewController {
   /// Shows `view` across the panes side by side, below their headers, in place of their lines,
   /// which a comparison does whose files cannot be compared.
   func showInPlaceOfTheLines(_ view: NSView) {
+    viewInPlaceOfTheLines?.removeFromSuperview()
+    viewInPlaceOfTheLines = view
     for (_, pane) in sourcePanes {
       pane.isHidden = true
     }
@@ -103,6 +106,22 @@ final class SessionSplitViewController: NSSplitViewController {
       view.leadingAnchor.constraint(equalTo: container.leadingAnchor),
       view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
     ])
+  }
+
+  /// Shows the lines in the panes again, in place of the view that said why they could not be
+  /// shown.
+  func showLinesAgain() {
+    viewInPlaceOfTheLines?.removeFromSuperview()
+    viewInPlaceOfTheLines = nil
+    for (_, pane) in sourcePanes {
+      pane.isHidden = false
+    }
+  }
+
+  /// The panes have no sidebar: Show Sidebar belongs to the split view around them, in a window
+  /// that compares several files, and passes them by on its way along the responder chain.
+  override func responds(to selector: Selector!) -> Bool {
+    selector == #selector(toggleSidebar(_:)) ? false : super.responds(to: selector)
   }
 
   /// Whether the pane of the base is in view; while it is hidden, A and B share its width.
@@ -280,6 +299,15 @@ final class HeaderHostingView<Content: View>: NSHostingView<Content> {
 
   override func menu(for event: NSEvent) -> NSMenu? {
     menuProvider(role)
+  }
+}
+
+/// The split view of the panes side by side, which passes Show Sidebar by like the split view
+/// around it.
+@MainActor
+private final class PanesSplitViewController: NSSplitViewController {
+  override func responds(to selector: Selector!) -> Bool {
+    selector == #selector(toggleSidebar(_:)) ? false : super.responds(to: selector)
   }
 }
 
