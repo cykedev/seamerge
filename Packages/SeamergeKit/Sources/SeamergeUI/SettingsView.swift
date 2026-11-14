@@ -96,6 +96,10 @@ struct SettingsView: View {
       }
     } header: {
       Text("Text", bundle: .module, comment: "Settings: heading of the group of the code font.")
+    } footer: {
+      Text(
+        "Every window shows the change at once.", bundle: .module,
+        comment: "Settings: note below the group of the code font.")
     }
   }
 

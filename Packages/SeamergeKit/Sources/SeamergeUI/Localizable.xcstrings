@@ -493,6 +493,9 @@
     "Every line shown": {
       "comment": "VoiceOver: the footer toggle of collapsed lines while no run is collapsed."
     },
+    "Every window shows the change at once.": {
+      "comment": "Settings: note below the group of the code font."
+    },
     "Exact": {
       "comment": "Compare menu: compare every byte."
     },

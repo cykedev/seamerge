@@ -5,8 +5,9 @@ import Observation
 /// The settings of the app and what its windows remember, kept in the user defaults; the only
 /// place that reads or writes them for the windows.
 ///
-/// The settings say how the code is drawn and how each new window starts; the controls of a
-/// window change only that window. What a window remembers for every window, its
+/// The settings say how the code is drawn and how each new window starts. The text settings
+/// take effect at once in every open window; the others are where a new window starts, and the
+/// controls of a window change only that window. What a window remembers for every window, its
 /// footer and sidebar, is kept here as well, without a place in Settings.
 ///
 /// Values that the user defaults hold out of range, or that name what no longer exists, read as
@@ -14,6 +15,11 @@ import Observation
 @MainActor
 @Observable
 public final class UserSettings {
+  /// Posted, with the settings as the object, after the font, its size, the line spacing or the
+  /// tab width changed.
+  static let textDidChangeNotification = Notification.Name(
+    "app.eiden.seamerge.UserSettingsTextDidChange")
+
   /// Posted, with the settings as the object, after the footer was hidden or shown.
   static let footerVisibilityDidChangeNotification = Notification.Name(
     "app.eiden.seamerge.UserSettingsFooterVisibilityDidChange")
@@ -26,6 +32,7 @@ public final class UserSettings {
     didSet {
       guard fontFamily != oldValue else { return }
       defaults.set(fontFamily, forKey: Key.fontFamily)
+      textDidChange()
     }
   }
 
@@ -37,6 +44,7 @@ public final class UserSettings {
       guard size != storedFontSize else { return }
       storedFontSize = size
       defaults.set(Double(size), forKey: Key.fontSize)
+      textDidChange()
     }
   }
 
@@ -45,6 +53,7 @@ public final class UserSettings {
     didSet {
       guard lineSpacing != oldValue else { return }
       defaults.set(lineSpacing.storedName, forKey: Key.lineSpacing)
+      textDidChange()
     }
   }
 
@@ -56,6 +65,7 @@ public final class UserSettings {
       guard width != storedTabWidth else { return }
       storedTabWidth = width
       defaults.set(width, forKey: Key.tabWidth)
+      textDidChange()
     }
   }
 
@@ -167,6 +177,10 @@ public final class UserSettings {
 
   /// The weight of a regular font in the scale of the font manager.
   private static let regularWeight = 5
+
+  private func textDidChange() {
+    NotificationCenter.default.post(name: Self.textDidChangeNotification, object: self)
+  }
 
   /// The names of the values in the user defaults.
   ///

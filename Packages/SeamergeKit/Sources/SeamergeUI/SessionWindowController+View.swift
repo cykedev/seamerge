@@ -90,6 +90,25 @@ extension SessionWindowController {
     fontSize = settings.fontSize
   }
 
+  /// Draws the code anew whenever Settings change its font, size, line spacing or tab width.
+  func observeTextSettings() {
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(textSettingsDidChange(_:)),
+      name: UserSettings.textDidChangeNotification, object: settings)
+  }
+
+  /// Takes over the new size of the settings, which ends a zoom of the window, or else draws
+  /// with the new font, line spacing or tab width at the size the window has.
+  @objc private func textSettingsDidChange(_ notification: Notification) {
+    guard settings.fontSize == settingsFontSize else {
+      settingsFontSize = settings.fontSize
+      fontSize = settings.fontSize
+      return
+    }
+    presentation.keepingTheLineOfBInPlace { applyTheme() }
+    updateMinimumSize()
+  }
+
   /// Asks in a sheet for a line and jumps to it in the pane with the focus.
   @objc func goToLine(_ sender: Any?) {
     guard let window else { return }

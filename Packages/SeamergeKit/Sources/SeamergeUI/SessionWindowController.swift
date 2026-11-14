@@ -157,6 +157,10 @@ public final class SessionWindowController: NSWindowController {
     }
   }
 
+  /// The size of the code in the settings when the window last took it over, which tells a
+  /// change of the size from a change of the font.
+  var settingsFontSize: CGFloat
+
   /// The size of the code, in points: the size of the settings until the user zooms.
   var fontSize: CGFloat {
     didSet {
@@ -274,6 +278,7 @@ public final class SessionWindowController: NSWindowController {
     self.settings = settings
     highlightsSyntax = settings.highlightsSyntax
     fontSize = settings.fontSize
+    settingsFontSize = settings.fontSize
     self.syntaxChoices = syntaxChoices
     let detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
     self.detectedLanguage = detectedLanguage
@@ -360,6 +365,7 @@ public final class SessionWindowController: NSWindowController {
     }
     observeStepsOfUndo()
     observeFooterVisibility()
+    observeTextSettings()
     setUpCollection()
     stateDidChange()
     watchFiles()
@@ -412,7 +418,7 @@ public final class SessionWindowController: NSWindowController {
   }
 
   /// Draws the window with the theme of its display options, settings and font size.
-  private func applyTheme() {
+  func applyTheme() {
     let theme = displayOptions.theme(settings: settings, fontSize: fontSize)
     layout.apply(theme)
     presentation.apply(theme)
