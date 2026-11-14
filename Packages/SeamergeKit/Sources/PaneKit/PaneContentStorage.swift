@@ -99,8 +99,10 @@ final class PaneContentStorage: NSTextContentStorage {
   }
 
   /// Lets go of the paragraph elements that the storage holds for the shown paragraphs in
-  /// `range`, which it would otherwise move along, one by one, with every edit before them; does
-  /// nothing while the text storage is being edited.
+  /// `range`, which it would otherwise move along, one by one, with every edit before them.
+  ///
+  /// While the text storage is being edited, it cannot report an edit of its own and does
+  /// nothing; callers ask only outside an edit, and a debug build stops where one does not.
   ///
   /// The storage keeps an element for every paragraph that TextKit has laid out. It drops them
   /// only where the text storage reports an edit, and an edit of attributes is the only one that
@@ -110,7 +112,9 @@ final class PaneContentStorage: NSTextContentStorage {
   /// again. Hidden paragraphs have no elements, as the storage steps over them, and are left
   /// alone, so that TextKit never handles them.
   func discardElements(in range: Range<Int>) {
-    guard let textStorage, !range.isEmpty, textStorage.editedMask.isEmpty else { return }
+    guard let textStorage, !range.isEmpty else { return }
+    assert(textStorage.editedMask.isEmpty, "Paragraph elements cannot be dropped during an edit")
+    guard textStorage.editedMask.isEmpty else { return }
     var shownParts: [Range<Int>] = []
     var start = range.lowerBound
     var index = hiddenRanges.partitioningIndex { $0.upperBound > start }

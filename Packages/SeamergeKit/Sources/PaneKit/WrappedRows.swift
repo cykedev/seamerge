@@ -61,6 +61,17 @@ struct WrappedRows: Equatable, Sendable {
     return WrappedRows(merged)
   }
 
+  /// The first row that takes another number of screen lines here than in `other`, or `nil` if
+  /// every row takes as many in both.
+  func firstRow(differingFrom other: WrappedRows) -> Int? {
+    for (own, others) in zip(entries, other.entries) where own != others {
+      return min(own.row, others.row)
+    }
+    let (shorter, longer) =
+      entries.count < other.entries.count ? (entries, other.entries) : (other.entries, entries)
+    return longer.count > shorter.count ? longer[shorter.count].row : nil
+  }
+
   /// The rows below `rowCount`.
   func clamped(toRowCount rowCount: Int) -> WrappedRows {
     guard let last = entries.last, last.row >= rowCount else { return self }

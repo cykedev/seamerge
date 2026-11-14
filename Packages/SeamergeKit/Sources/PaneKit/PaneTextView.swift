@@ -364,11 +364,21 @@ final class PaneTextView: NSTextView {
   @discardableResult
   func setWrappedRows(_ wrappedRows: WrappedRows) -> Bool {
     let wrappedRows = wrappedRows.clamped(toRowCount: grid.rowCount)
-    guard wrappedRows != displayRows.wrappedRows else { return false }
+    guard let firstChange = wrappedRows.firstRow(differingFrom: displayRows.wrappedRows) else {
+      return false
+    }
     displayRows = DisplayRows(
       runs: displayRows.runs, rowCount: grid.rowCount, wrappedRows: wrappedRows)
-    // The fragments find their frames from the rows; those in view lay out and draw again.
+    // The fragments find their frames from the rows. TextKit keeps the frames of the fragments it
+    // has laid out, though, and finds the fragment at a place by them, so it would look for the
+    // visible part among frames that no longer hold and show nothing there. The elements from the
+    // first row that changed its height on are dropped, so that TextKit makes their fragments
+    // anew, at the frames the rows have now, once it lays them out again.
     textVersion.increment()
+    if firstChange < grid.rowCount {
+      let start = grid.paragraphOffsets(ofRows: firstChange..<firstChange + 1).lowerBound
+      contentStorage.discardElements(in: start..<grid.textLength)
+    }
     if let textLayoutManager,
       let viewport = textLayoutManager.textViewportLayoutController.viewportRange
     {

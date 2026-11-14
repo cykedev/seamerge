@@ -50,6 +50,16 @@ import Testing
     #expect(rows.linePosition(ofRow: 3.25) == 4)
   }
 
+  @Test func firstDifferingRowIsTheFirstRowWhoseLinesDiffer() {
+    let rows = WrappedRows([Entry(row: 2, lines: 3), Entry(row: 5, lines: 2)])
+
+    #expect(rows.firstRow(differingFrom: rows) == nil)
+    #expect(rows.firstRow(differingFrom: WrappedRows([Entry(row: 2, lines: 3)])) == 5)
+    #expect(rows.firstRow(differingFrom: WrappedRows([Entry(row: 2, lines: 2)])) == 2)
+    #expect(rows.firstRow(differingFrom: WrappedRows([Entry(row: 4, lines: 3)])) == 2)
+    #expect(WrappedRows.none.firstRow(differingFrom: rows) == 2)
+  }
+
   @Test func mergingTakesTheMostLinesOfEachRow() {
     let first = WrappedRows([Entry(row: 1, lines: 2), Entry(row: 4, lines: 5)])
     let second = WrappedRows([Entry(row: 1, lines: 3), Entry(row: 2, lines: 2)])
