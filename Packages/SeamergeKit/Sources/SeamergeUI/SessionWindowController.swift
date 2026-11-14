@@ -41,6 +41,9 @@ public final class SessionWindowController: NSWindowController {
   /// Whether the windows color their code by its syntax.
   let syntaxHighlighting: SyntaxHighlighting
 
+  /// Whether the panes wrap long lines, as the user chose for every window.
+  let lineWrapping: LineWrapping
+
   /// The language of the files as the window recognized it.
   let detectedLanguage: LanguageDescription
 
@@ -245,6 +248,7 @@ public final class SessionWindowController: NSWindowController {
     content.footer.theme = theme
     footerVisibility = FooterVisibility(defaults: defaults)
     syntaxHighlighting = SyntaxHighlighting(defaults: defaults)
+    lineWrapping = LineWrapping(defaults: defaults)
     self.syntaxChoices = syntaxChoices
     let detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
     self.detectedLanguage = detectedLanguage
@@ -262,6 +266,7 @@ public final class SessionWindowController: NSWindowController {
       resultHeader: resultHeader, displayOptions: displayOptions,
       language: syntaxHighlighting.isOn
         ? syntaxChoices[syntaxPath].language(detected: detectedLanguage) : nil)
+    presentation.wrapsLines = lineWrapping.isOn
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: arrangement)
     saving = presentation.result.map {
@@ -310,6 +315,7 @@ public final class SessionWindowController: NSWindowController {
     observeStepsOfUndo()
     observeFooterVisibility()
     observeSyntaxHighlighting()
+    observeLineWrapping()
     stateDidChange()
     watchFiles()
   }
@@ -487,7 +493,9 @@ extension SessionWindowController: NSUserInterfaceValidations {
     if let menuItem = item as? NSMenuItem {
       if let mode = command.comparisonMode {
         menuItem.state = mode == comparisonOptions.mode ? .on : .off
-      } else if command == .toggleScrollSynchronization || command == .toggleSyntaxHighlighting {
+      } else if [.toggleScrollSynchronization, .toggleSyntaxHighlighting, .toggleLineWrapping]
+        .contains(command)
+      {
         menuItem.state = isSwitchedOn(command) ? .on : .off
       }
       if let alternateTitle = command.alternateTitle {
@@ -513,6 +521,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
     case .toggleInvisibles: presentation.allPanes.contains(where: \.showsInvisibles)
     case .toggleScrollSynchronization: presentation.scrollSync.isEnabled
     case .toggleSyntaxHighlighting: syntaxHighlighting.isOn
+    case .toggleLineWrapping: lineWrapping.isOn
     default: false
     }
   }

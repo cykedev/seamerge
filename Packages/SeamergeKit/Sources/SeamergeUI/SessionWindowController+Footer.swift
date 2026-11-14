@@ -46,6 +46,7 @@ extension SessionWindowController {
   private func footerState(of toggle: FooterToggle) -> NSControl.StateValue {
     switch toggle {
     case .invisibles: isSwitchedOn(.toggleInvisibles) ? .on : .off
+    case .lineWrapping: isSwitchedOn(.toggleLineWrapping) ? .on : .off
     case .scrollSynchronization: isSwitchedOn(.toggleScrollSynchronization) ? .on : .off
     case .base: layout.showsBase ? .on : .off
     case .collapsedLines:

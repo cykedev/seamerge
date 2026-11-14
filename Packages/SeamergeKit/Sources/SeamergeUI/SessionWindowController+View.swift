@@ -48,6 +48,26 @@ extension SessionWindowController {
     updateFooter()
   }
 
+  /// Wraps long lines at the width of their panes in every session window, or lets them run on.
+  @objc func toggleLineWrapping(_ sender: Any?) {
+    lineWrapping.isOn.toggle()
+  }
+
+  /// Wraps lines as the user last chose, in whichever window.
+  func observeLineWrapping() {
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(lineWrappingDidChange(_:)),
+      name: LineWrapping.didChangeNotification, object: lineWrapping.defaults)
+  }
+
+  @objc private func lineWrappingDidChange(_ notification: Notification) {
+    presentation.keepingTheLineOfBInPlace {
+      presentation.wrapsLines = lineWrapping.isOn
+      layout.view.layoutSubtreeIfNeeded()
+    }
+    updateFooter()
+  }
+
   /// Shows every line of every pane.
   @objc func showAllLines(_ sender: Any?) {
     presentation.showAllRows()

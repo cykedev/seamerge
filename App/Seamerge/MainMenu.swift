@@ -153,7 +153,8 @@ final class MainMenu {
       [
         commands(.toggleBase, .toggleResultMaximized),
         commands(.toggleScrollSynchronization, .toggleSyntaxHighlighting) + [Self.syntaxSubmenu()]
-          + commands(.toggleInvisibles) + [Self.item(Titles.showIgnoredChanges)]
+          + commands(.toggleInvisibles, .toggleLineWrapping)
+          + [Self.item(Titles.showIgnoredChanges)]
           + commands(.showAllLines, .collapseUnchangedLines),
         commands(.zoomIn, .zoomOut, .actualSize),
         commands(.toggleFooter),

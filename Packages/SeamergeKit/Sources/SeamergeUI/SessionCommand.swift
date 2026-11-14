@@ -64,6 +64,9 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Shows spaces, tabs and line endings as quiet symbols, or hides them.
   case toggleInvisibles
 
+  /// Wraps long lines at the width of their panes in every session window, or lets them run on.
+  case toggleLineWrapping
+
   /// Shows every line, the collapsed runs of unchanged lines expanded.
   case showAllLines
 
@@ -198,6 +201,8 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "Highlight Syntax", bundle: .module, comment: "View menu command.")
     case .toggleInvisibles:
       String(localized: "Show Invisibles", bundle: .module, comment: "View menu command.")
+    case .toggleLineWrapping:
+      String(localized: "Wrap Lines", bundle: .module, comment: "View menu command.")
     case .showAllLines:
       String(localized: "Show All Lines", bundle: .module, comment: "View menu command.")
     case .collapseUnchangedLines:
@@ -466,6 +471,7 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .toggleSyntaxHighlighting:
       #selector(SessionWindowController.toggleSyntaxHighlighting(_:))
     case .toggleInvisibles: #selector(SessionWindowController.toggleInvisibles(_:))
+    case .toggleLineWrapping: #selector(SessionWindowController.toggleLineWrapping(_:))
     case .showAllLines: #selector(SessionWindowController.showAllLines(_:))
     case .collapseUnchangedLines: #selector(SessionWindowController.collapseUnchangedLines(_:))
     case .toggleFooter: #selector(SessionWindowController.toggleFooter(_:))

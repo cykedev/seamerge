@@ -39,6 +39,18 @@ final class SessionPresentation {
   /// The coupling of the panes, which keeps them at the same place while one of them scrolls.
   let scrollSync = ScrollSync()
 
+  /// The alignment of the inputs, which keeps their rows level while long lines wrap.
+  let rowAlignment = RowAlignment()
+
+  /// Whether the panes wrap long lines at their width.
+  var wrapsLines = false {
+    didSet {
+      for pane in allPanes {
+        pane.wrapsLines = wrapsLines
+      }
+    }
+  }
+
   /// Learns when the current block changes and supplies the context menus of the panes; the
   /// presentation does not retain it.
   weak var delegate: (any SessionPresentationDelegate)?
@@ -135,6 +147,9 @@ final class SessionPresentation {
     for pane in allPanes {
       scrollSync.add(pane)
       pane.delegate = self
+    }
+    for (_, pane) in layout.sourcePanes {
+      rowAlignment.add(pane)
     }
     if let resultPane = layout.resultPane {
       for (_, pane) in layout.sourcePanes {

@@ -579,6 +579,9 @@
     "Let each pane scroll on its own": {
       "comment": "Help tag of the footer toggle of synchronized scrolling while it is on."
     },
+    "Let long lines run on beyond the edge": {
+      "comment": "Help tag of the footer toggle of line wrapping while lines wrap."
+    },
     "Line Endings": {
       "comment": "Line endings: the label in the details of a side, LF, CRLF or CR, and the submenu of the File menu that chooses those of the result."
     },
@@ -1001,6 +1004,15 @@
     },
     "Windows 1252": {
       "comment": "Encoding: Windows code page."
+    },
+    "Wrap Lines": {
+      "comment": "View menu command."
+    },
+    "Wrap long lines (no lines to show)": {
+      "comment": "Help tag of the footer toggle of line wrapping in a window without lines."
+    },
+    "Wrap long lines at the width of the panes": {
+      "comment": "Help tag of the footer toggle of line wrapping while lines run on."
     },
     "Your changes will be lost if you don’t save them.": {
       "comment": "Sheet before closing a merge of files with unsaved changes: what follows."

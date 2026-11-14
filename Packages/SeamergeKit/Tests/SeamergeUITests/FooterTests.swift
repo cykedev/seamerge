@@ -13,10 +13,14 @@ import Testing
   @Test func mergeHasEveryToggleAndAComparisonHasNoBase() async throws {
     let merge = try Windows.controller(for: try await SampleMerges.helloWorld())
     #expect(
-      merge.content.footer.toggles == [.invisibles, .collapsedLines, .scrollSynchronization, .base])
+      merge.content.footer.toggles == [
+        .invisibles, .lineWrapping, .collapsedLines, .scrollSynchronization, .base,
+      ])
     let comparison = try Windows.controller(for: try await SampleDiffs.greeting())
     #expect(
-      comparison.content.footer.toggles == [.invisibles, .collapsedLines, .scrollSynchronization])
+      comparison.content.footer.toggles == [
+        .invisibles, .lineWrapping, .collapsedLines, .scrollSynchronization,
+      ])
     #expect(comparison.content.footer.button(of: .base) == nil)
   }
 
@@ -39,6 +43,7 @@ import Testing
     let footer = controller.content.footer
     let cases: [(FooterToggle, initial: NSControl.StateValue, isOn: () -> Bool)] = [
       (.invisibles, .off, { controller.isSwitchedOn(.toggleInvisibles) }),
+      (.lineWrapping, .off, { controller.isSwitchedOn(.toggleLineWrapping) }),
       (.scrollSynchronization, .on, { controller.isSwitchedOn(.toggleScrollSynchronization) }),
       (.base, .on, { controller.layout.showsBase }),
     ]

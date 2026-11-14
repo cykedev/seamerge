@@ -216,6 +216,7 @@ import Testing
         ---
         Plain Text
       Show Invisibles
+      Wrap Lines ⌥⌘L
       Show Ignored Changes (deactivated)
       Show All Lines ⇧⌘L
       Collapse Unchanged Lines ⌥⇧⌘L

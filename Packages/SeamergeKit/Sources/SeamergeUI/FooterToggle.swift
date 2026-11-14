@@ -7,6 +7,9 @@ enum FooterToggle: CaseIterable {
   /// Shows spaces, tabs and line endings, or hides them.
   case invisibles
 
+  /// Wraps long lines at the width of the panes, or lets them run on.
+  case lineWrapping
+
   /// Collapses long runs of unchanged lines, or shows every line.
   case collapsedLines
 
@@ -24,6 +27,7 @@ enum FooterToggle: CaseIterable {
   func command(in state: NSControl.StateValue) -> SessionCommand {
     switch self {
     case .invisibles: .toggleInvisibles
+    case .lineWrapping: .toggleLineWrapping
     case .collapsedLines: state == .on ? .showAllLines : .collapseUnchangedLines
     case .scrollSynchronization: .toggleScrollSynchronization
     case .base: .toggleBase
@@ -34,6 +38,7 @@ enum FooterToggle: CaseIterable {
   var symbolName: String {
     switch self {
     case .invisibles: "paragraphsign"
+    case .lineWrapping: "arrow.turn.down.left"
     case .collapsedLines: "rectangle.compress.vertical"
     case .scrollSynchronization: "arrow.up.arrow.down"
     case .base: "rectangle.split.3x1"
@@ -48,6 +53,7 @@ enum FooterToggle: CaseIterable {
       String(
         localized: "Invisibles", bundle: .module,
         comment: "VoiceOver: the footer toggle that shows spaces, tabs and line endings.")
+    case .lineWrapping: SessionCommand.toggleLineWrapping.title
     case .collapsedLines: SessionCommand.collapseUnchangedLines.title
     case .scrollSynchronization: SessionCommand.toggleScrollSynchronization.title
     case .base: Role.base.letter
@@ -84,6 +90,10 @@ enum FooterToggle: CaseIterable {
       String(
         localized: "Show invisible characters (no lines to show)", bundle: .module,
         comment: "Help tag of the footer toggle of invisibles in a window without lines.")
+    case .lineWrapping:
+      String(
+        localized: "Wrap long lines (no lines to show)", bundle: .module,
+        comment: "Help tag of the footer toggle of line wrapping in a window without lines.")
     case .collapsedLines:
       String(
         localized: "Collapse unchanged lines (none in this file)", bundle: .module,
@@ -111,6 +121,14 @@ enum FooterToggle: CaseIterable {
       String(
         localized: "Hide spaces, tabs and line endings", bundle: .module,
         comment: "Help tag of the footer toggle of invisibles while they are shown.")
+    case (.lineWrapping, false):
+      String(
+        localized: "Wrap long lines at the width of the panes", bundle: .module,
+        comment: "Help tag of the footer toggle of line wrapping while lines run on.")
+    case (.lineWrapping, true):
+      String(
+        localized: "Let long lines run on beyond the edge", bundle: .module,
+        comment: "Help tag of the footer toggle of line wrapping while lines wrap.")
     case (.collapsedLines, false):
       String(
         localized: "Hide long runs of unchanged lines behind a bar", bundle: .module,
