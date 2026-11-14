@@ -128,6 +128,33 @@ struct CollectionCoordinatorTests {
     #expect(!FileManager.default.fileExists(atPath: left.path))
     await coordinator.finish()
   }
+
+  @Test func directoryDiffShowsTheDifferingFilesAndGitWaitsForTheWindow() async throws {
+    let sandbox = try AppSandbox()
+    let recorder = WindowRecorder()
+    let coordinator = try sandbox.startCoordinator(recorder: recorder)
+    for (path, text) in [
+      ("left/same.txt", "same\n"), ("right/same.txt", "same\n"), ("left/a.txt", "old\n"),
+      ("right/a.txt", "new\n"), ("right/new.txt", "new\n"),
+    ] {
+      let url = sandbox.folder.appending(path: path)
+      try FileManager.default.createDirectory(
+        at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+      try Data(text.utf8).write(to: url)
+    }
+    let outcome = perform(
+      .folders(
+        .init(
+          left: sandbox.folder.appending(path: "left"),
+          right: sandbox.folder.appending(path: "right"))), at: sandbox.socketURL)
+
+    let controller = await recorder.nextOpened()
+    #expect(controller.collection?.files.map(\.path) == ["a.txt", "new.txt"])
+    controller.window?.close()
+
+    #expect(try await outcome.value == .closed(.saved))
+    await coordinator.finish()
+  }
 }
 
 extension AppSandbox {

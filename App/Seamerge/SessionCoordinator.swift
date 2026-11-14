@@ -25,7 +25,8 @@ protocol SessionCoordinatorDelegate: AnyObject {
 /// origin while their collection receives files, or starts a collection with a window of its own.
 /// The coordinator keeps a copy of each of its files and answers `accepted` at once, so that Git
 /// goes on to the next file without waiting for the window. Once that window has closed, the
-/// comparisons of the collection that still come are cancelled without a window.
+/// comparisons of the collection that still come are cancelled without a window. The two folders
+/// of a directory diff become a collection of their own, whose window Git waits for.
 @MainActor
 final class SessionCoordinator {
   /// Learns when windows open and close; the coordinator does not retain it.
@@ -149,8 +150,8 @@ final class SessionCoordinator {
     case .diff(let diff) where diff.origin != nil:
       await serveCollected(diff, on: connection)
       return
-    case .folders:
-      await send(.rejected(.unsupportedRequest), on: connection)
+    case .folders(let folders):
+      await serveFolders(folders, on: connection)
       return
     case .merge, .diff:
       break
@@ -285,6 +286,39 @@ final class SessionCoordinator {
   private func end(_ collection: OpenCollection) {
     collection.files.dismiss()
     cache.remove(collection.folder)
+  }
+
+  /// Shows the files that differ between the two folders of `folders` in one window, which Git
+  /// waits for before it deletes them, and answers success once it closes; the targets of links
+  /// it writes go when the window closes.
+  private func serveFolders(_ folders: SessionRequest.Folders, on connection: SessionConnection)
+    async
+  {
+    // The targets of links go into the cache, and with the window.
+    let linkFolder = cache.makeFolder()
+    defer { cache.remove(linkFolder) }
+    let files = await FolderComparison.files(
+      left: folders.left, right: folders.right, workingTree: folders.repository,
+      linkFolder: linkFolder)
+    guard !files.isEmpty, !isFinishing else {
+      Self.logger.notice("The folders hold no differing files")
+      await send(.closed(.saved), on: connection)
+      return
+    }
+    let controller: SessionWindowController
+    do {
+      controller = try await SessionWindowController(
+        collection: FileCollection(files: files), undoManager: UndoManager())
+    } catch {
+      presentError(error)
+      await send(.closed(.saved), on: connection)
+      return
+    }
+    guard !isFinishing else {
+      await send(.closed(.saved), on: connection)
+      return
+    }
+    await serveWindow(controller, kind: .diff, on: connection) { _ in .saved }
   }
 
   /// Shows `controller`, which shows a session of `kind`, and keeps it until its window closes;
