@@ -12,7 +12,7 @@ import Testing
 @MainActor
 @Suite(.timeLimit(.minutes(1))) struct WrapAndDrawTests {
   @Test func everyPaneOfAMergeShowsItsRowsAfterWrappingIsSwitchedFarDown() async throws {
-    let controller = try Windows.controller(for: try await Self.example())
+    let controller = try Windows.controller(for: try await SampleMerges.example())
     let pane = try #require(controller.layout.sourcePane(.base))
     controller.go(toLine: 151, in: pane)
     for step in 0..<3 {
@@ -25,7 +25,8 @@ import Testing
   @Test func everyPaneOfAMergeShowsItsRowsWhileRunsCollapseAndExpandFarDown() async throws {
     let settings = UserSettings.private()
     settings.wrapsLines = true
-    let controller = try Windows.controller(for: try await Self.example(), settings: settings)
+    let controller = try Windows.controller(
+      for: try await SampleMerges.example(), settings: settings)
     let pane = try #require(controller.layout.sourcePane(.base))
     controller.go(toLine: 300, in: pane)
     for step in 0..<4 {
@@ -85,18 +86,6 @@ import Testing
         manager.textLayoutFragment(for: CGPoint(x: 0, y: visible.minY)) as? RowLayoutFragment)
       #expect(found.rows.contains(topRow), "\(context): \(found.rows) found for \(topRow)")
     }
-  }
-
-  /// The merge of the example in the repository, `OrderService.java`, whose base stands short
-  /// and with filler rows beside long lines of A and B around its line 151.
-  static func example() async throws -> Session {
-    let examples = URL(filePath: #filePath).deletingLastPathComponent()
-      .appending(path: "../../../../Examples").standardized
-    func text(_ role: String) throws -> String {
-      try String(
-        contentsOf: examples.appending(path: "\(role)/OrderService.java"), encoding: .utf8)
-    }
-    return try await SampleMerges.merge(base: try text("Base"), a: try text("A"), b: try text("B"))
   }
 
   /// A base of 400 short lines; A inserts five lines after every twentieth of the first 150, each

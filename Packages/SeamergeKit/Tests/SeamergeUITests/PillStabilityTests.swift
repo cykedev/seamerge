@@ -6,7 +6,8 @@ import Testing
 @testable import SeamergeUI
 
 /// A click on the bar of toggles of a block leaves the result in block mode, and the bar where
-/// it was, to the pixel, whatever the block becomes; the top of the block stays in place too.
+/// it was, to the pixel, whatever the block becomes, with lines lined up or connected by bands;
+/// the top of the block stays in place too.
 @MainActor
 @Suite struct PillStabilityTests {
   @Test func clickOnAToggleLeavesSingleKeysToTheCommandsAndAClickInTheTextTypes() async throws {
@@ -102,12 +103,13 @@ import Testing
     ),
   ]
 
-  @Test(arguments: transitions)
+  @Test(arguments: transitions, [true, false])
   func barThatWasClickedStaysWhereItWasWhateverItsBlockBecomes(
-    transition: (String, Int, [Step])
+    transition: (String, Int, [Step]), alignsLines: Bool
   ) async throws {
     let (_, block, steps) = transition
-    let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
+    let controller = try Windows.controller(
+      for: try await EditingFixture.nineBlocks(), settings: Self.settings(alignsLines: alignsLines))
     try checkSteps(steps, keep: block, in: controller)
   }
 
@@ -126,8 +128,10 @@ import Testing
       keep: 0, in: controller)
   }
 
-  @Test func barStaysInAScrolledResultAndTheTopOfItsBlockToo() async throws {
-    let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
+  @Test(arguments: [true, false])
+  func barStaysInAScrolledResultAndTheTopOfItsBlockToo(alignsLines: Bool) async throws {
+    let controller = try Windows.controller(
+      for: try await SampleMerges.manyBlocks(), settings: Self.settings(alignsLines: alignsLines))
     let result = try controller.mergeResult
     let conflicts = controller.presentation.changes.blocks.indices.filter {
       controller.presentation.changes.blocks[$0].kind == .conflict
@@ -184,6 +188,13 @@ import Testing
     // The block has no lines; its bar stands on the boundary where they were.
     #expect(
       abs(row.frame.midY - top) <= 0.5, "\(change): bar at \(row.frame.midY), block at \(top)")
+  }
+
+  /// Settings in which a new window lines up its lines, or connects its changes with bands.
+  private static func settings(alignsLines: Bool) -> UserSettings {
+    let settings = UserSettings.private()
+    settings.alignsLines = alignsLines
+    return settings
   }
 
   /// Takes `steps` and checks after each that the bar of `block` and the top of the block stand

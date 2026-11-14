@@ -20,16 +20,57 @@ extension SessionPresentation {
     ScrollMap(session: changes.session, from: .grid, to: .lines(role))
   }
 
-  /// Lets the panes side by side scroll over a common track while they show the lines of their
-  /// files, so that none of them jumps where the other has lines it lacks; on the grid, they
-  /// share one origin.
-  func connectSourcePanes() {
-    scrollSync.setTrack(for: alignsLines ? [] : layout.sourcePanes.map(\.pane))
+  /// Lets the panes in view scroll over a common track while the panes side by side show the
+  /// lines of their files, the result of a merge among them, so that none of them jumps where
+  /// another has lines it lacks; on the grid, the panes side by side share one origin and the
+  /// result follows them through its scroll map.
+  ///
+  /// With the result on the track, the same block stands at the reading line of every pane, at
+  /// the same fraction; where the result has no lines, it stands still as the panes above do.
+  func connectPanes() {
+    if let resultPane = layout.resultPane {
+      for (_, pane) in layout.sourcePanes {
+        if alignsLines {
+          scrollSync.setRowMapping(
+            between: resultPane, and: pane,
+            forward: { [weak self] line in
+              self?.result?.scrollMap.sourcePosition(at: line) ?? line
+            },
+            backward: { [weak self] row in
+              self?.result?.scrollMap.targetPosition(at: row) ?? row
+            })
+        } else {
+          scrollSync.removeRowMapping(between: resultPane, and: pane)
+        }
+      }
+    }
+    scrollSync.setTrack(for: alignsLines ? [] : panesOnTrack)
   }
 
-  /// Brings the panes side by side together on their track again where B stands, after they
-  /// changed how they show the lines of their files, so that none of them jumps when the user
-  /// next scrolls; on the grid, each keeps its own rows in place.
+  /// The panes that scroll over the common track while the panes side by side show the lines of
+  /// their files: those in view, from left to right, then the result, if there is one; none
+  /// while the result has the whole window.
+  private var panesOnTrack: [PaneView] {
+    guard !layout.maximizesResult else { return [] }
+    let sources = layout.sourcePanes.filter { $0.role != .base || layout.showsBase }
+    return sources.map(\.pane) + [layout.resultPane].compactMap(\.self)
+  }
+
+  /// Gives each seam the blocks in which the inputs on either side have the same text, which
+  /// get no band: next to the base, the changes of the other side only.
+  func showSeamBands() {
+    for seam in layout.seams {
+      guard let left = seam.leftPane.flatMap(role(of:)),
+        let right = seam.rightPane.flatMap(role(of:))
+      else { continue }
+      seam.blocksWithoutBand = changes.blocksWithoutDifference(between: left, and: right)
+    }
+  }
+
+  /// Brings the panes on the track together again where B stands, the result of a merge among
+  /// them, after the panes side by side changed how they show the lines of their files, so that
+  /// none of them jumps when the user next scrolls; on the grid, each keeps its own rows in
+  /// place.
   func alignSourcesToB() {
     guard !alignsLines, let b = layout.sourcePane(.b), b.isShown else { return }
     layout.view.layoutSubtreeIfNeeded()

@@ -26,6 +26,7 @@ extension SessionWindowController {
     guard canPerform(.toggleResultMaximized) else { return }
     let wasInBlockMode = isInBlockMode
     layout.maximizesResult.toggle()
+    presentation.resultDidChangeMaximized()
     if layout.maximizesResult && wasInBlockMode {
       enterTextMode()
     }
@@ -39,8 +40,7 @@ extension SessionWindowController {
     updateFooter()
   }
 
-  /// Lines up the lines of the panes side by side, or connects their changes with bands; only
-  /// in a comparison of two files.
+  /// Lines up the lines of the panes side by side, or connects their changes with bands.
   @objc func toggleLineAlignment(_ sender: Any?) {
     guard canPerform(.toggleLineAlignment) else { return }
     presentation.setAlignsLines(!presentation.alignsLines)

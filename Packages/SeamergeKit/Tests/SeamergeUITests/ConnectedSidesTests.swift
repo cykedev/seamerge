@@ -32,7 +32,7 @@ import Testing
     #expect(a.content.lineNumbers.count == session.rowLayout.rowCount)
   }
 
-  @Test func menuItemIsCheckedWhileLinesLineUpAndOnlyAComparisonCanTurnThemOff() async throws {
+  @Test func menuItemIsCheckedWhileLinesLineUpInAComparisonAndAMerge() async throws {
     let item = NSMenuItem(
       title: SessionCommand.toggleLineAlignment.title,
       action: SessionCommand.toggleLineAlignment.action, keyEquivalent: "a")
@@ -44,14 +44,17 @@ import Testing
     #expect(item.state == .off)
 
     let merge = try Windows.controller(for: try await SampleMerges.helloWorld())
-    #expect(!merge.validateUserInterfaceItem(item))
+    #expect(merge.validateUserInterfaceItem(item))
+    #expect(item.state == .on)
     merge.toggleLineAlignment(nil)
-    #expect(merge.presentation.alignsLines)
+    #expect(!merge.presentation.alignsLines)
+    #expect(merge.validateUserInterfaceItem(item))
+    #expect(item.state == .off)
     let key = try #require(SessionCommand.toggleLineAlignment.keyEquivalent(in: .diff))
     #expect(key.key == "a" && key.modifiers == [.option, .command])
   }
 
-  @Test func footerToggleFollowsAlignLinesAndIsOffInAMerge() async throws {
+  @Test func footerToggleFollowsAlignLinesInAComparisonAndAMerge() async throws {
     let comparison = try Windows.controller(for: try await SampleDiffs.everyKindOfChange())
     let button = try #require(comparison.content.footer.button(of: .lineAlignment))
     #expect(button.state == .on)
@@ -60,17 +63,21 @@ import Testing
     #expect(button.state == .off)
 
     let merge = try Windows.controller(for: try await SampleMerges.helloWorld())
-    #expect(merge.content.footer.button(of: .lineAlignment)?.isEnabled == false)
+    let mergeButton = try #require(merge.content.footer.button(of: .lineAlignment))
+    #expect(mergeButton.isEnabled && mergeButton.state == .on)
+    #expect(NSApp.sendAction(try #require(mergeButton.action), to: merge, from: mergeButton))
+    #expect(!merge.presentation.alignsLines)
+    #expect(mergeButton.state == .off)
   }
 
-  @Test func settingsDecideHowANewComparisonStartsButNotAMerge() async throws {
+  @Test func settingsDecideHowANewComparisonAndANewMergeStart() async throws {
     let settings = UserSettings.private()
     settings.alignsLines = false
     let comparison = try Windows.controller(
       for: try await SampleDiffs.everyKindOfChange(), settings: settings)
     #expect(!comparison.presentation.alignsLines)
     let merge = try Windows.controller(for: try await SampleMerges.helloWorld(), settings: settings)
-    #expect(merge.presentation.alignsLines)
+    #expect(!merge.presentation.alignsLines)
     #expect(UserSettings(defaults: settings.defaults).alignsLines == false)
   }
 

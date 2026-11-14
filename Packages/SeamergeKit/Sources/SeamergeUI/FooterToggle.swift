@@ -111,9 +111,8 @@ enum FooterToggle: CaseIterable {
           "Help tag of the footer toggle of synchronized scrolling in a window without lines.")
     case .lineAlignment:
       String(
-        localized: "Connect changes with bands (only when comparing two files)", bundle: .module,
-        comment:
-          "Help tag of the footer toggle of aligned lines in a merge or a window without lines.")
+        localized: "Connect changes with bands (no lines to show)", bundle: .module,
+        comment: "Help tag of the footer toggle of aligned lines in a window without lines.")
     case .base:
       String(
         localized: "Show or hide the base (restore the layout first)", bundle: .module,

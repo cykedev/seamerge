@@ -444,8 +444,8 @@
     "Conflicts" : {
       "comment" : "Toolbar items: the count of the open conflicts and the buttons that go through them."
     },
-    "Connect changes with bands (only when comparing two files)" : {
-      "comment" : "Help tag of the footer toggle of aligned lines in a merge or a window without lines."
+    "Connect changes with bands (no lines to show)" : {
+      "comment" : "Help tag of the footer toggle of aligned lines in a window without lines."
     },
     "Copy" : {
       "comment" : "Context menu: copy the selected text, or the block if nothing is selected.\nSet Up Git Integration: the button that copies the commands."
@@ -560,9 +560,6 @@
     },
     "Footer" : {
       "comment" : "VoiceOver: the footer with the comparison mode and the view toggles."
-    },
-    "For now, only when comparing two files." : {
-      "comment" : "Settings: note below Align Lines, which a merge does not take yet."
     },
     "From %@" : {
       "comment" : "VoiceOver: a part of the result taken from one side, such as From A."

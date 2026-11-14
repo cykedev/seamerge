@@ -43,6 +43,25 @@ enum SampleMerges {
       options: ComparisonOptions(mode: .windowDefault))
   }
 
+  /// The merge of the example in the repository, `OrderService.java`, as Git hands it over:
+  /// cases 1 to 7 of the test data stand at its top, among them conflicts on the first line and
+  /// on an import that both sides insert, a block that only A inserts and a line of 329
+  /// characters; its base stands short with filler rows beside long lines of A and B around its
+  /// line 151.
+  static func example() async throws -> Session {
+    let examples = URL(filePath: #filePath).deletingLastPathComponent()
+      .appending(path: "../../../../../Examples").standardized
+    func file(_ role: String, label: String) throws -> SourceFile {
+      SourceFile(
+        bytes: try Data(contentsOf: examples.appending(path: "\(role)/OrderService.java")),
+        label: label)
+    }
+    return try await Session.merge(
+      base: try file("Base", label: "OrderService.java (base)"),
+      a: try file("A", label: "feature/discounts"), b: try file("B", label: "main"),
+      options: ComparisonOptions(mode: .windowDefault))
+  }
+
   /// The context of the sample merge: the result goes to `HelloWorld.java`.
   static let helloWorldContext = SessionContext(
     resultURL: URL(filePath: "/Users/ada/Documents/color-test/HelloWorld.java"))

@@ -166,16 +166,8 @@ final class SessionPresentation {
       }
     } else {
       layout.showsSeams = true
-      connectSourcePanes()
     }
-    if let resultPane = layout.resultPane {
-      for (_, pane) in layout.sourcePanes {
-        scrollSync.setRowMapping(
-          between: resultPane, and: pane,
-          forward: { [weak self] line in self?.result?.scrollMap.sourcePosition(at: line) ?? line },
-          backward: { [weak self] row in self?.result?.scrollMap.targetPosition(at: row) ?? row })
-      }
-    }
+    connectPanes()
     syntax.onLexed = { [weak self] in self?.showSyntax() }
     showSession()
     if let resultPane = layout.resultPane {
@@ -304,6 +296,7 @@ final class SessionPresentation {
   /// afterwards.
   func showSources() {
     scrollSync.withoutFollowing(showSourceContents)
+    showSeamBands()
     showOverviewGrid()
     alignSourcesToB()
   }
@@ -354,7 +347,7 @@ final class SessionPresentation {
       }
     }
     layout.showsSeams = !alignsLines
-    connectSourcePanes()
+    connectPanes()
     showSources()
     for (pane, role, ranges) in selections {
       pane.documentView.selectedRanges = ranges.map { NSValue(range: paneRange($0, in: role)) }
@@ -553,7 +546,7 @@ final class SessionPresentation {
       changes = SessionChanges(session: session, origin: arrangement.origin)
       lineTexts = [:]
       collapsed = CollapsedRows(session: session, document: result?.document)
-      connectSourcePanes()
+      connectPanes()
       showSession()
     }
     let rowLayout = changes.session.rowLayout
@@ -574,7 +567,7 @@ final class SessionPresentation {
     changes = SessionChanges(session: session, origin: arrangement.origin)
     lineTexts = [:]
     collapsed = CollapsedRows(session: session, document: nil)
-    connectSourcePanes()
+    connectPanes()
     // The panes show the blocks of the old files until each has the new ones.
     scrollSync.withoutFollowing(showSession)
     currentBlock = nil
@@ -593,7 +586,7 @@ final class SessionPresentation {
       layout.show(arrangement.sourceRoles.compactMap { headers[$0] })
       changes = SessionChanges(session: changes.session, origin: arrangement.origin)
       nameSourcePanes()
-      connectSourcePanes()
+      connectPanes()
       showSession()
     }
     for pane in allPanes {
@@ -602,9 +595,20 @@ final class SessionPresentation {
   }
 
   /// Shows the panes side by side again, after the base came into view or went out of it,
-  /// which decides the pane that carries the marks of conflicts.
+  /// which decides the pane that carries the marks of conflicts, the panes on the track and the
+  /// seams between them.
   func showSourcesAgain() {
+    connectPanes()
     showSession()
+  }
+
+  /// Puts the panes on the track that are in view now, after the result took the whole window
+  /// or gave it back, and brings the panes side by side to where the result stands.
+  func resultDidChangeMaximized() {
+    connectPanes()
+    guard let resultPane = layout.resultPane, !layout.maximizesResult else { return }
+    layout.view.layoutSubtreeIfNeeded()
+    scrollSync.align(to: resultPane)
   }
 
   /// Whether Collapse Unchanged Lines would change what the panes show: all rows show and there

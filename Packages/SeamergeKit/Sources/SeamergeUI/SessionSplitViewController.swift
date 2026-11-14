@@ -130,19 +130,34 @@ final class SessionSplitViewController: NSSplitViewController {
   /// with bands, wide enough to show them, rather than hairlines.
   ///
   /// The panes keep their share of the width; each seam stays a divider that can be dragged.
-  var showsSeams: Bool {
-    get { !seamSplitView.seams.isEmpty }
-    set {
-      guard newValue != showsSeams else { return }
-      let panes = sourcePanes.map(\.pane)
-      seamSplitView.seams = newValue ? zip(panes, panes.dropFirst()).map(PaneSeam.init) : []
-      for seam in seamSplitView.seams {
-        seam.theme = panes.first?.theme ?? Theme()
+  /// The seams lie between the panes in view: while the base is hidden, one connects A with B.
+  var showsSeams = false {
+    didSet {
+      if showsSeams != oldValue {
+        placeSeamsBetweenShownPanes()
       }
     }
   }
 
-  /// The seams between the panes side by side, from left to right, while they show seams.
+  /// Gives the panes in view a seam between each two neighbors while they show seams, and takes
+  /// the seams away otherwise; seams that stay between the same panes stay as they are.
+  private func placeSeamsBetweenShownPanes() {
+    let shown = zip(sourcesController.splitViewItems, sourcePanes)
+      .filter { !$0.0.isCollapsed }.map(\.1.pane)
+    let pairs = showsSeams ? Array(zip(shown, shown.dropFirst())) : []
+    let current = seamSplitView.seams
+    guard
+      pairs.count != current.count
+        || zip(pairs, current).contains(where: { $0.0 !== $1.leftPane || $0.1 !== $1.rightPane })
+    else { return }
+    seamSplitView.seams = pairs.map(PaneSeam.init)
+    for seam in seamSplitView.seams {
+      seam.theme = shown.first?.theme ?? Theme()
+    }
+  }
+
+  /// The seams between the panes side by side in view, from left to right, while they show
+  /// seams.
   var seams: [PaneSeam] {
     seamSplitView.seams
   }
@@ -166,6 +181,9 @@ final class SessionSplitViewController: NSSplitViewController {
         return
       }
       baseItem.isCollapsed = !newValue
+      // The seams lie between the panes as they share the room anew.
+      sourcesController.splitView.layoutSubtreeIfNeeded()
+      placeSeamsBetweenShownPanes()
       if newValue {
         placeSourceDividers()
       }
@@ -222,11 +240,12 @@ final class SessionSplitViewController: NSSplitViewController {
   /// The narrowest the panes get together: each source pane in view at its least width, with
   /// the dividers between them, and the result no narrower than it needs.
   var minimumWidth: CGFloat {
-    let divider = sourcesController.splitView.dividerThickness
+    // A collapsed pane keeps its divider, which then meets the one beside it.
+    let dividers =
+      sourcesController.splitView.dividerThickness * CGFloat(max(sourcePanes.count - 1, 0))
     let shown = zip(sourcesController.splitViewItems, sourcePanes).filter { !$0.0.isCollapsed }
     let panes = shown.map(\.1.pane.minimumWidth).reduce(0, +)
-    return max(
-      panes + divider * CGFloat(max(shown.count - 1, 0)), resultPane?.minimumWidth ?? 0)
+    return max(panes + dividers, resultPane?.minimumWidth ?? 0)
   }
 
   /// The least height of the panes together: the sources and the result, if there is one, each
@@ -395,15 +414,21 @@ private final class SeamSplitView: NSSplitView {
       dividerStyle = .thin
       adjustSubviews()
       // The panes give up the room for the seams in proportion, which may fall between points.
-      for index in arrangedSubviews.indices.dropLast() {
+      for index in arrangedSubviews.indices.dropLast()
+      where !isSubviewCollapsed(arrangedSubviews[index]) {
         setPosition(arrangedSubviews[index].frame.maxX.rounded(), ofDividerAt: index)
       }
       needsLayout = true
     }
   }
 
+  /// The seams share the room of the dividers: where the pane between two others is
+  /// collapsed, its two dividers meet, each half as thick, so that one seam's width lies
+  /// between the panes beside it.
   override var dividerThickness: CGFloat {
-    seams.isEmpty ? super.dividerThickness : Theme.seamWidth
+    let dividerCount = max(arrangedSubviews.count - 1, 1)
+    return seams.isEmpty
+      ? super.dividerThickness : Theme.seamWidth * CGFloat(seams.count) / CGFloat(dividerCount)
   }
 
   override func drawDivider(in rect: NSRect) {
@@ -416,13 +441,17 @@ private final class SeamSplitView: NSSplitView {
     placeSeams()
   }
 
-  /// Lays each seam over its divider, across the full height.
+  /// Lays each seam over the dividers between its panes, across the full height.
   func placeSeams() {
-    let panes = arrangedSubviews
-    for (index, seam) in seams.enumerated() where index + 1 < panes.count {
-      let left = panes[index].frame.maxX
-      let right = panes[index + 1].frame.minX
-      seam.frame = CGRect(x: left, y: bounds.minY, width: right - left, height: bounds.height)
+    for seam in seams {
+      guard
+        let leftPane = seam.leftPane, let rightPane = seam.rightPane,
+        let left = arrangedSubviews.first(where: leftPane.isDescendant(of:)),
+        let right = arrangedSubviews.first(where: rightPane.isDescendant(of:))
+      else { continue }
+      seam.frame = CGRect(
+        x: left.frame.maxX, y: bounds.minY, width: right.frame.minX - left.frame.maxX,
+        height: bounds.height)
     }
   }
 }

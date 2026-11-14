@@ -1,3 +1,4 @@
+import Foundation
 import MergeModel
 import PaneKit
 
@@ -41,6 +42,19 @@ struct SessionChanges {
     case .changedInB: [.b]
     case .changedInBoth, .conflict, .changed: [.a, .b]
     }
+  }
+
+  /// The indices of the changed blocks in which the inputs `first` and `second` have the same
+  /// text: next to the base, where the side did not change it; between A and B, where both made
+  /// the same change.
+  func blocksWithoutDifference(between first: Role, and second: Role) -> IndexSet {
+    let roles: Set = [first, second]
+    return IndexSet(
+      blocks.indices.filter { index in
+        let changers = Self.changers(of: blocks[index])
+        guard roles.contains(.base) else { return blocks[index].kind == .changedInBoth }
+        return roles.subtracting([.base]).isDisjoint(with: changers)
+      })
   }
 
   /// How many changed blocks `role` contributes to.

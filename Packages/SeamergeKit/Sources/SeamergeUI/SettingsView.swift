@@ -24,12 +24,7 @@ struct SettingsView: View {
         }
         Toggle(SessionCommand.toggleSyntaxHighlighting.title, isOn: $settings.highlightsSyntax)
         Toggle(SessionCommand.toggleLineWrapping.title, isOn: $settings.wrapsLines)
-        Toggle(isOn: $settings.alignsLines) {
-          Text(SessionCommand.toggleLineAlignment.title)
-          Text(
-            "For now, only when comparing two files.", bundle: .module,
-            comment: "Settings: note below Align Lines, which a merge does not take yet.")
-        }
+        Toggle(SessionCommand.toggleLineAlignment.title, isOn: $settings.alignsLines)
         Toggle(SessionCommand.toggleInvisibles.title, isOn: $settings.showsInvisibles)
         Toggle(isOn: $settings.showsBase) {
           Text(

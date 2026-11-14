@@ -92,7 +92,7 @@ public final class UserSettings {
     didSet { defaults.set(wrapsLines, forKey: Key.wrapsLines) }
   }
 
-  /// Whether a new comparison lines up the lines of its panes side by side, rather than showing
+  /// Whether a new window lines up the lines of its panes side by side, rather than showing
   /// the lines of each file as they are and connecting their changes with bands.
   public var alignsLines: Bool {
     didSet { defaults.set(!alignsLines, forKey: Key.connectsChanges) }

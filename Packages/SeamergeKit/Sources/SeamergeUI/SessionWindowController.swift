@@ -304,7 +304,7 @@ public final class SessionWindowController: NSWindowController {
       resultHeader: resultHeader, displayOptions: displayOptions,
       language: settings.highlightsSyntax
         ? syntaxChoices[syntaxPath].language(detected: detectedLanguage) : nil,
-      alignsLines: settings.alignsLines || arrangement.showsResult)
+      alignsLines: settings.alignsLines)
     presentation.wrapsLines = settings.wrapsLines
     for pane in presentation.allPanes {
       pane.showsInvisibles = settings.showsInvisibles
@@ -623,8 +623,6 @@ extension SessionWindowController: NSUserInterfaceValidations {
       layout.resultPane != nil
     case .swappableSides:
       presentation.arrangement.canSwapSides
-    case .connectableSides:
-      !presentation.arrangement.showsResult
     case .remainingFiles:
       collection == nil && context.difftool?.hasFilesAfterThisOne ?? false
     case .choice(let roles):
