@@ -35,6 +35,11 @@ public struct PaneContent: Sendable {
   /// and copying leaves it out. Its rows are tinted in the color of its side.
   public var previews: [PanePreview]
 
+  /// Whether a block without rows shows as a hairline across the pane, with its marks in the
+  /// gutter, on the boundary where its lines are missing: on a pane that connects its changes to
+  /// those of its neighbors rather than filling rows to line up with them.
+  public var marksBlocksWithoutRows: Bool
+
   /// Creates the content of a pane.
   ///
   /// Without `lineEndings`, every row that shows a line ends with a line feed, except the last
@@ -46,9 +51,11 @@ public struct PaneContent: Sendable {
   public init(
     text: String, lineNumbers: [Int32], blocks: [PaneBlock] = [],
     ignoredDifferenceRows: IndexSet = [], lineEndings: [LineEnding]? = nil,
-    previews: [PanePreview] = [], rowTints: [Int: BlockStyle] = [:]
+    previews: [PanePreview] = [], rowTints: [Int: BlockStyle] = [:],
+    marksBlocksWithoutRows: Bool = false
   ) {
     self.text = text
+    self.marksBlocksWithoutRows = marksBlocksWithoutRows
     self.lineNumbers = lineNumbers
     self.blocks = blocks
     self.ignoredDifferenceRows = ignoredDifferenceRows
@@ -78,6 +85,21 @@ public struct PaneContent: Sendable {
     }
     guard low < blocks.count, blocks[low].rows.contains(row) else { return nil }
     return low
+  }
+
+  /// The index of the block without rows that lies on the boundary before `row`, if blocks
+  /// without rows are marked and one lies there; `row` may be the number of rows, for the end.
+  func markedBlockIndex(atBoundary row: Int) -> Int? {
+    guard marksBlocksWithoutRows else { return nil }
+    let index = blocks.partitioningIndex(where: { $0.rows.lowerBound >= row })
+    guard index < blocks.count, blocks[index].rows == row..<row else { return nil }
+    return index
+  }
+
+  /// The row that draws the hairline of a block without rows on the boundary before `row`: the
+  /// row below the boundary, at its top, or at the end of the text the last row, at its bottom.
+  func hairlineRow(ofBoundary row: Int) -> Int {
+    min(row, lineNumbers.count - 1)
   }
 
   /// Whether `row` is a filler row, which shows no line of the file.

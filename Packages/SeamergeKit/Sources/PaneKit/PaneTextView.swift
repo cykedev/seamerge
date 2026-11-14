@@ -278,7 +278,7 @@ final class PaneTextView: NSTextView {
       let old = index < oldBlocks.count ? oldBlocks[index] : nil
       let new = index < blocks.count ? blocks[index] : nil
       guard old != new else { continue }
-      changedRows += [old?.rows, new?.rows].compactMap(\.self)
+      changedRows += [old?.rows, new?.rows].compactMap { $0.map(drawnRows(of:)) }
     }
     // The row after a block draws the edge between them, whose color depends on both.
     for rows in changedRows where !rows.isEmpty {
@@ -396,8 +396,16 @@ final class PaneTextView: NSTextView {
     let previous = currentBlock
     currentBlock = block
     for index in [previous, block].compactMap(\.self) where content.blocks.indices.contains(index) {
-      redraw(rows: content.blocks[index].rows)
+      redraw(rows: drawnRows(of: content.blocks[index].rows))
     }
+  }
+
+  /// The rows that draw a block on `rows`: those rows, or for a block without rows that is
+  /// marked, the row that draws its hairline.
+  func drawnRows(of rows: Range<Int>) -> Range<Int> {
+    guard rows.isEmpty, content.marksBlocksWithoutRows else { return rows }
+    let row = content.hairlineRow(ofBoundary: rows.lowerBound)
+    return row..<row + 1
   }
 
   /// The width that the widest row needs, known before TextKit lays it out, so that the scroll
@@ -604,6 +612,27 @@ final class PaneTextView: NSTextView {
   /// every block; between rows typed by hand and tinted rows, the hairline is the only boundary,
   /// as there is no marker.
   private func edges(atRow row: Int) -> RowLayoutFragment.Edges {
+    var edges = blockEdges(atRow: row)
+    // The hairline of a block without rows is the only sign of it in the text, so it takes the
+    // place of any other edge there.
+    if let block = content.markedBlockIndex(atBoundary: row) {
+      edges.top = hairlineColor(ofBlock: block)
+    }
+    if row == grid.rowCount - 1, let block = content.markedBlockIndex(atBoundary: row + 1) {
+      edges.bottom = hairlineColor(ofBlock: block)
+    }
+    return edges
+  }
+
+  /// The color of the hairline of the block without rows at `block`: the color of its edges, or
+  /// the stronger color of signs while it is current.
+  private func hairlineColor(ofBlock block: Int) -> NSColor? {
+    theme.edgeColor(
+      between: nil, and: content.blocks[block].style, isOnlyBoundary: block == currentBlock)
+  }
+
+  /// The hairlines at the edges of the changed block that `row` belongs to, if any.
+  private func blockEdges(atRow row: Int) -> RowLayoutFragment.Edges {
     guard let block = content.blockIndex(atRow: row) else { return tintEdges(atRow: row) }
     let rows = content.blocks[block].rows
     var edges = tintEdges(atRow: row)

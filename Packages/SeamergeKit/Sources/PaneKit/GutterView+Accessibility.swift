@@ -28,6 +28,12 @@ extension GutterView {
             frame: markerSlot(index, in: rowRect)))
       }
     }
+    for mark in boundaryMarks {
+      children.append(
+        element(
+          named: Self.name(of: mark.mark), help: mark.help,
+          place: placeDescription(ofBoundary: mark.boundary), frame: mark.slot))
+    }
     for index in expandedRuns.indices where rows.contains(expandedRuns[index].rows.lowerBound) {
       children.append(collapseElement(ofRun: index))
     }
@@ -63,11 +69,17 @@ extension GutterView {
   private func element(
     named name: String, help: String?, atRow row: Int, frame: CGRect
   ) -> NSAccessibilityElement {
+    element(named: name, help: help, place: placeDescription(ofRow: row), frame: frame)
+  }
+
+  private func element(
+    named name: String, help: String?, place: String, frame: CGRect
+  ) -> NSAccessibilityElement {
     let element = NSAccessibilityElement()
     element.setAccessibilityRole(.image)
     element.setAccessibilityLabel(name)
     element.setAccessibilityHelp(help)
-    element.setAccessibilityValue(placeDescription(ofRow: row))
+    element.setAccessibilityValue(place)
     element.setAccessibilityParent(self)
     element.setAccessibilityFrameInParentSpace(frame)
     return element
@@ -87,6 +99,23 @@ extension GutterView {
     return String(
       localized: "Before the first line", bundle: .module,
       comment: "VoiceOver: where a mark beside filler rows at the start is.")
+  }
+
+  /// Where the boundary before `row` is, in words: after the line above it, or before the first
+  /// line.
+  private func placeDescription(ofBoundary row: Int) -> String {
+    guard
+      let line = content.lineNumbers[..<min(row, content.lineNumbers.count)].last(where: {
+        $0 >= 0
+      })
+    else {
+      return String(
+        localized: "Before the first line", bundle: .module,
+        comment: "VoiceOver: where a mark beside filler rows at the start is.")
+    }
+    return String(
+      localized: "After line \(Int(line) + 1)", bundle: .module,
+      comment: "VoiceOver: where a mark beside a filler row is.")
   }
 
   /// What VoiceOver calls `mark`.

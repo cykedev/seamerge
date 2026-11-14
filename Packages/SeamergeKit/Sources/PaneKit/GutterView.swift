@@ -146,16 +146,46 @@ final class GutterView: NSView {
     if let blockIndex = content.blockIndex(atRow: row),
       content.blocks[blockIndex].rows.lowerBound == row
     {
-      let block = content.blocks[blockIndex]
-      if let marker = block.marker {
-        marks.append((.marker(marker, block.style), MarkHelp.marker(marker)))
-      }
-      if let conflict = block.conflict {
-        marks.append((.conflict(conflict), MarkHelp.conflict(conflict)))
-      }
+      marks = Self.marks(of: content.blocks[blockIndex])
     }
     if marks.isEmpty && content.ignoredDifferenceRows.contains(row) {
       marks.append((.ignoredDifference, MarkHelp.ignoredDifference))
+    }
+    return marks
+  }
+
+  /// The marks of `block` from the trailing edge on: how its side changed it, then its conflict.
+  private static func marks(of block: PaneBlock) -> [(mark: GutterMark, help: String)] {
+    var marks: [(mark: GutterMark, help: String)] = []
+    if let marker = block.marker {
+      marks.append((.marker(marker, block.style), MarkHelp.marker(marker)))
+    }
+    if let conflict = block.conflict {
+      marks.append((.conflict(conflict), MarkHelp.conflict(conflict)))
+    }
+    return marks
+  }
+
+  /// The marks of the marked blocks without rows whose hairlines are in view, each in its slot,
+  /// which is centered on the hairline, and with the boundary before the row where it lies.
+  var boundaryMarks: [(mark: GutterMark, help: String, slot: CGRect, boundary: Int)] {
+    guard content.marksBlocksWithoutRows else { return [] }
+    let rows = visibleRows
+    guard let first = rows.first, let last = rows.last else { return [] }
+    var marks: [(mark: GutterMark, help: String, slot: CGRect, boundary: Int)] = []
+    let start = content.blocks.partitioningIndex(where: { $0.rows.upperBound >= first })
+    for block in content.blocks[start...] {
+      guard block.rows.lowerBound <= last + 1 else { break }
+      guard block.rows.isEmpty, !displayRows.isHidden(row: min(block.rows.lowerBound, last))
+      else { continue }
+      let lines = displayRows.lines(ofRows: block.rows)
+      let y = CGFloat(lines.lowerBound) * theme.rowHeight - scrollOffset
+      let rowRect = CGRect(
+        x: 0, y: y - theme.rowHeight / 2, width: bounds.width, height: theme.rowHeight)
+      for (index, entry) in Self.marks(of: block).enumerated() {
+        marks.append(
+          (entry.mark, entry.help, markerSlot(index, in: rowRect), block.rows.lowerBound))
+      }
     }
     return marks
   }
@@ -169,6 +199,9 @@ final class GutterView: NSView {
       for index in marks(ofRow: row).indices {
         addToolTip(markerSlot(index, in: rowRect), owner: self, userData: nil)
       }
+    }
+    for mark in boundaryMarks {
+      addToolTip(mark.slot, owner: self, userData: nil)
     }
     if let hoveredRun {
       addToolTip(collapseSignRect(ofRun: hoveredRun), owner: self, userData: nil)
@@ -314,6 +347,9 @@ final class GutterView: NSView {
       }
       drawMarkers(ofRow: row, in: rowRect, color: isCurrent ? currentColor : nil)
     }
+    for mark in boundaryMarks where mark.slot.intersects(dirtyRect) {
+      draw(mark.mark, in: mark.slot, color: nil)
+    }
   }
 
   /// The width of the widest line number of `content`, with room for a few digits at least.
@@ -355,19 +391,24 @@ final class GutterView: NSView {
   ///   each mark has its own color.
   private func drawMarkers(ofRow row: Int, in rowRect: CGRect, color: NSColor?) {
     for (index, entry) in marks(ofRow: row).enumerated() {
-      let slot = markerSlot(index, in: rowRect)
-      switch entry.mark {
-      case .marker(let marker, let style):
-        drawCharacter(
-          Self.character(for: marker), color: color ?? theme.markerColor(for: style),
-          centeredIn: slot, withSeam: color == nil)
-      case .conflict(let conflict):
-        drawCharacter(
-          Self.conflictCharacter, color: color ?? theme.color(for: conflict), centeredIn: slot,
-          withSeam: color == nil)
-      case .ignoredDifference:
-        drawRing(centeredIn: slot, color: color)
-      }
+      draw(entry.mark, in: markerSlot(index, in: rowRect), color: color)
+    }
+  }
+
+  /// Draws `mark` centered in `slot`, in `color` on a filled cell of the current block, or in
+  /// its own color for `nil`.
+  private func draw(_ mark: GutterMark, in slot: CGRect, color: NSColor?) {
+    switch mark {
+    case .marker(let marker, let style):
+      drawCharacter(
+        Self.character(for: marker), color: color ?? theme.markerColor(for: style),
+        centeredIn: slot, withSeam: color == nil)
+    case .conflict(let conflict):
+      drawCharacter(
+        Self.conflictCharacter, color: color ?? theme.color(for: conflict), centeredIn: slot,
+        withSeam: color == nil)
+    case .ignoredDifference:
+      drawRing(centeredIn: slot, color: color)
     }
   }
 
@@ -483,6 +524,9 @@ extension GutterView: NSViewToolTipOwner {
   ) -> String {
     if let hoveredRun, collapseSignRect(ofRun: hoveredRun).contains(point) {
       return MarkHelp.collapseRun
+    }
+    if let mark = boundaryMarks.first(where: { $0.slot.contains(point) }) {
+      return mark.help
     }
     let row = row(at: point)
     let rowRect = rect(ofRow: row)

@@ -83,6 +83,13 @@ public final class ScrollSync {
     mappings[Pair(leader: secondID, follower: firstID)] = backward
   }
 
+  /// Forgets how `first` and `second` follow each other, which then take each other's origin.
+  public func removeRowMapping(between first: PaneView, and second: PaneView) {
+    let (firstID, secondID) = (ObjectIdentifier(first), ObjectIdentifier(second))
+    mappings[Pair(leader: firstID, follower: secondID)] = nil
+    mappings[Pair(leader: secondID, follower: firstID)] = nil
+  }
+
   /// Runs `body`, in which panes move without the others following, as a pane does to keep its
   /// rows in place when its collapsed runs change.
   func withoutFollowing(_ body: () -> Void) {

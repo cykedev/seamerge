@@ -15,6 +15,19 @@ public final class PaneView: NSView {
     didSet { show(content, collapsedRuns: collapsedRuns) }
   }
 
+  /// The seam to the left of the pane, which draws from its rows and scroll position, if any.
+  weak var leadingSeam: PaneSeam?
+
+  /// The seam to the right of the pane, which draws from its rows and scroll position, if any.
+  weak var trailingSeam: PaneSeam?
+
+  /// Has the seams beside the pane drawn again, after its rows, blocks or scroll position
+  /// changed.
+  private func invalidateSeams() {
+    leadingSeam?.needsDisplay = true
+    trailingSeam?.needsDisplay = true
+  }
+
   /// What the pane shows.
   ///
   /// Setting the content alone shows it without collapsed runs, since the old runs need not fit
@@ -53,6 +66,7 @@ public final class PaneView: NSView {
     gutterView.content = content
     gutterView.currentBlock = textView.currentBlock
     decisionColumn?.update()
+    invalidateSeams()
   }
 
   /// The runs of rows that the pane hides, each behind a bar one row high that the user can
@@ -88,6 +102,7 @@ public final class PaneView: NSView {
       textView.setCurrentBlock(newValue)
       gutterView.currentBlock = textView.currentBlock
       decisionColumn?.update()
+      invalidateSeams()
     }
   }
 
@@ -183,10 +198,19 @@ public final class PaneView: NSView {
       if let overviewBar {
         overviewBar.target = self
         overviewBar.action = #selector(overviewBarDidScroll(_:))
-        overviewBar.displayRows = displayRows
+        overviewBar.displayRows = overviewGrid?.displayRows ?? displayRows
         addSubview(overviewBar)
       }
       needsLayout = true
+    }
+  }
+
+  /// The grid that the overview bar measures in, for a pane whose rows are not those of the
+  /// grid; `nil` while the bar measures the pane's own rows.
+  public var overviewGrid: OverviewGrid? {
+    didSet {
+      showDisplayRows()
+      textDidScroll()
     }
   }
 
@@ -463,7 +487,8 @@ public final class PaneView: NSView {
   /// Hands the rows as the pane shows them to the gutter and the overview bar.
   func showDisplayRows() {
     gutterView.displayRows = displayRows
-    overviewBar?.displayRows = displayRows
+    overviewBar?.displayRows = overviewGrid?.displayRows ?? displayRows
+    invalidateSeams()
   }
 
   @objc private func clipViewBoundsDidChange(_ notification: Notification) {
@@ -485,11 +510,34 @@ public final class PaneView: NSView {
     gutterView.scrollOffset = visible.minY
     placeRunBars()
     decisionColumn?.update()
+    invalidateSeams()
     guard let overviewBar else { return }
     let height = textView.frame.height
     overviewBar.isEnabled = height > visible.height
+    if let grid = visibleGridLines {
+      let shown = grid.lines.upperBound - grid.lines.lowerBound
+      overviewBar.knobProportion = grid.lineCount > 0 ? min(shown / grid.lineCount, 1) : 1
+      overviewBar.doubleValue =
+        grid.lineCount > shown
+        ? min(max(grid.lines.lowerBound / (grid.lineCount - shown), 0), 1) : 0
+      return
+    }
     overviewBar.knobProportion = height > 0 ? min(visible.height / height, 1) : 1
     overviewBar.doubleValue = verticalScrollRange > 0 ? visible.minY / verticalScrollRange : 0
+  }
+
+  /// The visible part of the text in screen lines of the overview grid, and the number of
+  /// screen lines of the grid, or `nil` without an overview grid.
+  private var visibleGridLines: (lines: Range<Double>, lineCount: Double)? {
+    guard let overviewGrid else { return nil }
+    let visible = clipView.bounds
+    let gridRows = overviewGrid.displayRows
+    func gridLine(atY y: CGFloat) -> Double {
+      let row = displayRows.rowPosition(ofLine: Double(y / rowHeight))
+      return gridRows.linePosition(ofRow: overviewGrid.gridRow(row))
+    }
+    let top = gridLine(atY: visible.minY)
+    return (top..<max(gridLine(atY: visible.maxY), top), Double(gridRows.lineCount))
   }
 
   /// Scrolls the text to the place of the overview bar's knob, or by a page.
@@ -499,9 +547,21 @@ public final class PaneView: NSView {
       switch sender.hitPart {
       case .decrementPage where !sender.isPlacingKnob: visible.minY - visible.height
       case .incrementPage where !sender.isPlacingKnob: visible.minY + visible.height
-      default: sender.doubleValue * verticalScrollRange
+      default: knobTop(of: sender)
       }
     scroll(to: CGPoint(x: visible.minX, y: min(max(y, 0), verticalScrollRange).rounded()))
+  }
+
+  /// The top of the visible text at the place of the overview bar's knob: on the overview grid,
+  /// the row of the pane at the grid's place of the knob.
+  private func knobTop(of bar: OverviewBar) -> CGFloat {
+    guard let overviewGrid, let grid = visibleGridLines else {
+      return bar.doubleValue * verticalScrollRange
+    }
+    let shown = grid.lines.upperBound - grid.lines.lowerBound
+    let gridLine = bar.doubleValue * max(grid.lineCount - shown, 0)
+    let row = overviewGrid.paneRow(overviewGrid.displayRows.rowPosition(ofLine: gridLine))
+    return CGFloat(displayRows.linePosition(ofRow: row)) * rowHeight
   }
 }
 

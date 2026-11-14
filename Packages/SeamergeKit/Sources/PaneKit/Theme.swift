@@ -139,6 +139,10 @@ public struct Theme {
   /// rest.
   public static let readingLine: CGFloat = 0.25
 
+  /// The width of the seam between two panes that connect their changes with bands: room for a
+  /// band to turn, and a target for dragging the divider below it.
+  public static let seamWidth: CGFloat = 28
+
   /// The width of the overview bar.
   static let overviewBarWidth: CGFloat = 12
 
