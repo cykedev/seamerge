@@ -15,7 +15,19 @@ struct WorkspaceAppLauncher: AppLauncher {
       .deletingLastPathComponent()
   }
 
+  /// Brings a running copy of the app to the front, or starts it.
+  ///
+  /// Opening an app that runs already asks it to reopen, which shows the window Compare Files;
+  /// the session on its way shows its own window instead.
   func openApp() async throws {
+    let running = NSRunningApplication.runningApplications(
+      withBundleIdentifier: Bundle(url: appURL)?.bundleIdentifier ?? ""
+    ).first { $0.bundleURL?.resolvingSymlinksInPath().path == appURL.path }
+    if let running {
+      running.unhide()
+      running.activate()
+      return
+    }
     let configuration = NSWorkspace.OpenConfiguration()
     configuration.activates = true
     configuration.arguments = [HelperLaunch.argument]
