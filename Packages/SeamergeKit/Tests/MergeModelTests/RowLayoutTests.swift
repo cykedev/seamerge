@@ -136,3 +136,35 @@ struct RowLayoutTests {
     }
   }
 }
+
+/// The text of a side without filler rows, as a pane shows it that connects its changes to its
+/// neighbors.
+struct LineTextTests {
+  @Test func lineTextShowsEveryLineOnARowOfItsOwnWithoutFillerRows() async throws {
+    let session = try await diff("a\nb\nc\nd\n", "a\nB\nB2\nc\nnew\n")
+    let layout = session.rowLayout
+
+    for role in [Role.a, .b] {
+      let text = try #require(layout.lineText(for: role))
+      let rows = (0..<text.rowCount).map { text.string.utf16Substring(text.utf16Range(ofRow: $0)) }
+      #expect(text.rowCount == layout.lineCount(in: role))
+      #expect(rows.allSatisfy { !$0.isEmpty })
+    }
+    #expect(try #require(layout.lineText(for: .a)).string == "a\nb\nc\nd")
+    #expect(try #require(layout.lineText(for: .b)).string == "a\nB\nB2\nc\nnew")
+    #expect(layout.lineText(for: .base) == nil)
+  }
+
+  @Test func lineTextShowsLineBreakingCharactersAsPicturesLikeTheGrid() async throws {
+    let session = try await diff("a\u{2028}b\n", "x\n")
+
+    #expect(try #require(session.rowLayout.lineText(for: .a)).string == "a\u{2424}b")
+  }
+
+  @Test func lineTextOfAnEmptyFileHasNoRows() async throws {
+    let session = try await diff("", "a\n")
+
+    #expect(try #require(session.rowLayout.lineText(for: .a)).rowCount == 0)
+    #expect(try #require(session.rowLayout.lineText(for: .a)).string == "")
+  }
+}

@@ -1,27 +1,34 @@
-/// The correspondence between rows of the panes above and lines of the result, block by block.
+/// The correspondence between positions in two ways of counting the text of a session, block by
+/// block: rows of the grid and lines of the result, or the lines of two inputs.
 ///
-/// A position in either is a block and how far through it the position lies; the matching
-/// position in the other is the same block, the same fraction through. Positions are fractional,
-/// so that a pane can match another's position at its reading line exactly. A block whose segment
-/// has no lines lies at a single position of the result. A map describes one state of the
-/// result; after the text changes, make a new one.
+/// A position on either side is a block and how far through it the position lies; the matching
+/// position on the other side is the same block, the same fraction through. Positions are
+/// fractional, so that a pane can match another's position at its reading line exactly. A block
+/// without extent on one side lies at a single position there. A map with the result describes
+/// one state of the result; after the text changes, make a new one.
 public struct ScrollMap: Sendable {
-  /// The first row of each block, followed by the number of rows.
-  private let rowStarts: [Int]
+  /// A way of counting positions in the text of a session.
+  public enum Side: Sendable, Hashable {
+    /// Rows of the grid on which the panes side by side line up.
+    case grid
+    /// Lines of the input of a role, as a pane shows them without filler rows.
+    case lines(Role)
+  }
 
-  /// The first line of the result in each block's segment, followed by the number of lines.
-  private let lineStarts: [Int]
+  /// Where each block starts on the source side, followed by where the last one ends.
+  private let sourceStarts: [Int]
 
-  /// Creates the map for `document` and its text.
+  /// Where each block starts on the target side, followed by where the last one ends.
+  private let targetStarts: [Int]
+
+  /// Creates the map from rows of the grid to lines of `document` and its text.
   ///
   /// The result's lines end at CR, LF, CRLF, NEL, U+2028 and U+2029, as the text system breaks
   /// them; a segment that starts within a line starts on that line.
   ///
   /// - Parameter text: The result text, as long as the segments together.
   public init(document: ResultDocument, text: String) {
-    let rowLayout = document.session.rowLayout
-    rowStarts =
-      document.session.blocks.map { rowLayout.rows(of: $0).lowerBound } + [rowLayout.rowCount]
+    sourceStarts = document.session.rowLayout.blockStarts(on: .grid)
     var lineStarts: [Int] = []
     lineStarts.reserveCapacity(document.segments.count + 1)
     var line = 0
@@ -36,17 +43,28 @@ public struct ScrollMap: Sendable {
       }
     }
     lineStarts.append(line)
-    self.lineStarts = lineStarts
+    targetStarts = lineStarts
   }
 
-  /// The line of the result at the same position as `row` of the panes above.
-  public func resultLine(atRow row: Double) -> Double {
-    Self.position(row, from: rowStarts, to: lineStarts)
+  /// Creates the map from `source` to `target` in the text of `session`.
+  ///
+  /// - Precondition: The inputs of both sides take part in the session.
+  public init(session: Session, from source: Side, to target: Side) {
+    for case .lines(let role) in [source, target] {
+      precondition(session.file(for: role) != nil, "The session has no input \(role)")
+    }
+    sourceStarts = session.rowLayout.blockStarts(on: source)
+    targetStarts = session.rowLayout.blockStarts(on: target)
   }
 
-  /// The row of the panes above at the same position as `line` of the result.
-  public func row(atResultLine line: Double) -> Double {
-    Self.position(line, from: lineStarts, to: rowStarts)
+  /// The position on the target side at the same place as `position` on the source side.
+  public func targetPosition(at position: Double) -> Double {
+    Self.position(position, from: sourceStarts, to: targetStarts)
+  }
+
+  /// The position on the source side at the same place as `position` on the target side.
+  public func sourcePosition(at position: Double) -> Double {
+    Self.position(position, from: targetStarts, to: sourceStarts)
   }
 
   /// Maps `position`, measured against the block starts `source`, to the block starts `target`.

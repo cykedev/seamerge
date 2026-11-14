@@ -46,7 +46,7 @@ struct ResultState {
 
   /// The row of the grid at `line` of the result, counted from 0.
   func gridRow(ofLine line: Int) -> Int {
-    Int(scrollMap.row(atResultLine: Double(line)).rounded(.down))
+    Int(scrollMap.sourcePosition(at: Double(line)).rounded(.down))
   }
 
   /// The row of the result pane in which `offset` of its text lies; the end of the text lies in
@@ -57,6 +57,6 @@ struct ResultState {
 
   /// The line of the result at `row` of the grid.
   func line(ofGridRow row: Int) -> Int {
-    Int(scrollMap.resultLine(atRow: Double(row)))
+    Int(scrollMap.targetPosition(at: Double(row)))
   }
 }

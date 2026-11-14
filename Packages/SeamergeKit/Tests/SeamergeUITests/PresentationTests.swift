@@ -179,11 +179,11 @@ import Testing
       let map = ScrollMap(document: document, text: text)
       let layout = session.rowLayout
       for (block, paneBlock) in zip(changes.blocks, content.blocks) {
-        let line = map.resultLine(atRow: Double(layout.rows(of: block).lowerBound))
+        let line = map.targetPosition(at: Double(layout.rows(of: block).lowerBound))
         #expect(Double(paneBlock.rows.lowerBound) == line, "block \(block.id)")
       }
       let endedLines = content.lineEndings.count { $0 != .none }
-      #expect(map.resultLine(atRow: Double(layout.rowCount)) == Double(endedLines))
+      #expect(map.targetPosition(at: Double(layout.rowCount)) == Double(endedLines))
     }
   }
 

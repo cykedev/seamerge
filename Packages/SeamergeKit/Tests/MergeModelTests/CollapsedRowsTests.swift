@@ -25,6 +25,30 @@ struct CollapsedRowsTests {
     #expect(collapsed.run(containingRow: 6) == nil)
   }
 
+  @Test func runHidesTheSameLinesOfEachSideBeyondInsertionsAndRemovals() async throws {
+    let session = try await diff(
+      "gone1\ngone2\ngone3\n" + Self.lines("u", 12) + "old\n" + Self.lines("v", 10),
+      Self.lines("u", 12) + "new\nnew2\n" + Self.lines("v", 10))
+    let collapsed = CollapsedRows(session: session)
+    try #require(collapsed.runs.count == 2)
+    let (first, last) = (collapsed.runs[0], collapsed.runs[1])
+
+    // The grid has three rows of the removal before the first run.
+    #expect(first.rows == 6..<12)
+    #expect(collapsed.lines(of: first, in: .a) == 6..<12)
+    #expect(collapsed.lines(of: first, in: .b) == 3..<9)
+    // The last run reaches the end of both files.
+    #expect(last.rows == 20..<27)
+    #expect(collapsed.lines(of: last, in: .a) == 19..<26)
+    #expect(collapsed.lines(of: last, in: .b) == 17..<24)
+    let map = ScrollMap(session: session, from: .lines(.a), to: .lines(.b))
+    for run in collapsed.runs {
+      let lines = collapsed.lines(of: run, in: .a)
+      let mapped = map.targetPosition(at: Double(lines.lowerBound))
+      #expect(Int(mapped) == collapsed.lines(of: run, in: .b).lowerBound)
+    }
+  }
+
   @Test func unchangedBlockOfSevenRowsStaysExpanded() async throws {
     let collapsed = try await CollapsedRows(session: Self.comparison(unchangedBetween: 7))
 

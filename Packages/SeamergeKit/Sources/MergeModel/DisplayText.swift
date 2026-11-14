@@ -1,10 +1,11 @@
 import Foundation
 
-/// The text a pane shows for one input: the lines of its file laid out on the row grid.
+/// The text a pane shows for one input: the lines of its file laid out on the row grid, or the
+/// lines of its file alone.
 ///
-/// Each row of the grid is one line of ``string``, and rows are separated by LF, so the string
-/// has exactly as many lines as the grid has rows. A row shows the text of its line without the
-/// line ending; a filler row is empty. Characters that would break a row into two lines in a text
+/// Each row is one line of ``string``, and rows are separated by LF, so the string has exactly
+/// as many lines as there are rows. A row shows the text of its line without the line ending; a
+/// filler row of the grid is empty. Characters that would break a row into two lines in a text
 /// view (a carriage return within a line, NEL, the line separator and the paragraph separator)
 /// are shown as a control picture of the same UTF-16 length, so that a position within a line is
 /// the same in the file and in the row.
@@ -18,26 +19,36 @@ public struct DisplayText: Sendable {
 
   /// Lays out the lines of `file` on the rows of `blocks`.
   init(file: ComparedFile, role: Role, blocks: [Block]) {
-    let rowCount = blocks.reduce(0) { $0 + $1.rowCount }
+    let rows = blocks.lazy.flatMap { block in
+      let lines = block.lines(in: role)
+      return (0..<block.rowCount).lazy.map { $0 < lines.count ? lines.lowerBound + $0 : nil }
+    }
+    self.init(file: file, rows: rows, rowCount: blocks.reduce(0) { $0 + $1.rowCount })
+  }
+
+  /// Lays out each line of `file` on a row of its own, without filler rows.
+  init(linesOf file: ComparedFile) {
+    self.init(
+      file: file, rows: (0..<file.lineCount).lazy.map { Optional($0) }, rowCount: file.lineCount)
+  }
+
+  /// Lays out the `rowCount` rows that `rows` gives, each the line of `file` it names or a filler
+  /// row for `nil`.
+  private init(file: ComparedFile, rows: some Sequence<Int?>, rowCount: Int) {
     var bytes: [UInt8] = []
     bytes.reserveCapacity(file.utf8.count + rowCount)
     var rowStarts: [Int] = []
     rowStarts.reserveCapacity(rowCount + 1)
     var utf16Offset = 0
     file.utf8.withUnsafeBytes { text in
-      for block in blocks {
-        let lines = block.lines(in: role)
-        for row in 0..<block.rowCount {
-          if !rowStarts.isEmpty { bytes.append(UInt8(ascii: "\n")) }
-          rowStarts.append(utf16Offset)
-          if row < lines.count {
-            let line = lines.lowerBound + row
-            Self.appendShowingLineBreaks(
-              text[file.contentByteRange(ofLine: line)], to: &bytes)
-            utf16Offset += file.contentUTF16Length(ofLine: line)
-          }
-          utf16Offset += 1
+      for line in rows {
+        if !rowStarts.isEmpty { bytes.append(UInt8(ascii: "\n")) }
+        rowStarts.append(utf16Offset)
+        if let line {
+          Self.appendShowingLineBreaks(text[file.contentByteRange(ofLine: line)], to: &bytes)
+          utf16Offset += file.contentUTF16Length(ofLine: line)
         }
+        utf16Offset += 1
       }
     }
     rowStarts.append(utf16Offset)

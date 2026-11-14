@@ -108,7 +108,19 @@ public struct CollapsedRows: Sendable {
   /// - Parameter map: The scroll map of the result as it is now.
   public func resultLines(of run: Run, in map: ScrollMap) -> Range<Int> {
     let blockStart = rowLayout.rows(of: run.block).lowerBound
-    let offset = Int(map.resultLine(atRow: Double(blockStart)).rounded()) - blockStart
+    let offset = Int(map.targetPosition(at: Double(blockStart)).rounded()) - blockStart
+    return run.rows.lowerBound + offset..<run.rows.upperBound + offset
+  }
+
+  /// The lines of the input of `role` that `run` hides, so that a pane without filler rows
+  /// collapses them too.
+  ///
+  /// An unchanged block has the same lines in every input, so the run hides as many lines of
+  /// each as rows of the grid.
+  ///
+  /// - Precondition: The input of `role` takes part in the session.
+  public func lines(of run: Run, in role: Role) -> Range<Int> {
+    let offset = run.block.lines(in: role).lowerBound - rowLayout.rows(of: run.block).lowerBound
     return run.rows.lowerBound + offset..<run.rows.upperBound + offset
   }
 

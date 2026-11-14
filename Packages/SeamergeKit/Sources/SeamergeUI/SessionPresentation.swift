@@ -155,8 +155,8 @@ final class SessionPresentation {
       for (_, pane) in layout.sourcePanes {
         scrollSync.setRowMapping(
           between: resultPane, and: pane,
-          forward: { [weak self] line in self?.result?.scrollMap.row(atResultLine: line) ?? line },
-          backward: { [weak self] row in self?.result?.scrollMap.resultLine(atRow: row) ?? row })
+          forward: { [weak self] line in self?.result?.scrollMap.sourcePosition(at: line) ?? line },
+          backward: { [weak self] row in self?.result?.scrollMap.targetPosition(at: row) ?? row })
       }
     }
     syntax.onLexed = { [weak self] in self?.showSyntax() }

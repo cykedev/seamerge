@@ -16,6 +16,9 @@ public struct RowLayout: Sendable {
   /// The text of each pane on the grid.
   private let displayTexts: [Role: DisplayText]
 
+  /// The inputs that take part, whose lines the texts without filler rows show.
+  private let files: [Role: ComparedFile]
+
   /// Lays out `blocks` and the lines of `files` on one grid.
   init(blocks: [Block], files: [Role: ComparedFile]) {
     var blockRowStarts = [0]
@@ -26,6 +29,7 @@ public struct RowLayout: Sendable {
     self.blocks = blocks
     self.blockRowStarts = blockRowStarts
     lineCounts = files.mapValues(\.lineCount)
+    self.files = files
     displayTexts = Dictionary(
       uniqueKeysWithValues: files.map { role, file in
         (role, DisplayText(file: file, role: role, blocks: blocks))
@@ -38,6 +42,27 @@ public struct RowLayout: Sendable {
   /// The text of the pane of `role`, or `nil` if the input does not take part.
   public func displayText(for role: Role) -> DisplayText? {
     displayTexts[role]
+  }
+
+  /// The text of the input of `role` with one row per line and no filler rows, or `nil` if the
+  /// input does not take part: what a pane shows that connects its changes to its neighbors'
+  /// rather than lining up its rows with theirs.
+  ///
+  /// Row *r* of the text shows line *r*; the lines of a block are ``Block/lines(in:)``. The text
+  /// is laid out anew on each call, in time proportional to the size of the file.
+  public func lineText(for role: Role) -> DisplayText? {
+    files[role].map(DisplayText.init(linesOf:))
+  }
+
+  /// Where each block starts on `side`, followed by where the last one ends: in rows of the grid,
+  /// or in lines of an input.
+  func blockStarts(on side: ScrollMap.Side) -> [Int] {
+    switch side {
+    case .grid:
+      return blockRowStarts
+    case .lines(let role):
+      return blocks.map { $0.lines(in: role).lowerBound } + [lineCount(in: role)]
+    }
   }
 
   /// The number of lines of the input of `role`, or 0 if it does not take part.
