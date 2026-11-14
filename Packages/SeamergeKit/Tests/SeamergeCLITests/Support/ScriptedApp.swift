@@ -15,6 +15,9 @@ struct ScriptedApp {
     /// Goes away without closing the window, as an app that crashes.
     case disconnect
 
+    /// Takes over the files of a collected comparison without a window.
+    case accept
+
     /// Refuses the request without opening a window.
     case reject(SessionRejection)
   }
@@ -40,6 +43,10 @@ struct ScriptedApp {
             try await connection.send(.rejected(reason))
             return
           }
+          if case .accept = ending {
+            try await connection.send(.accepted)
+            return
+          }
           try await connection.send(.opened)
           switch ending {
           case .close(let outcome):
@@ -51,7 +58,7 @@ struct ScriptedApp {
             }
             try Data(text.utf8).write(to: merge.output)
             try await connection.send(.closed(.saved))
-          case .disconnect, .reject:
+          case .disconnect, .reject, .accept:
             return
           }
         } catch {

@@ -6,7 +6,9 @@ import os
 /// The `seamerge` command: hands a merge or a comparison to the app and ends with its outcome.
 ///
 /// Git runs the command as its mergetool and difftool. The command checks the files, finds out
-/// what Git is doing, opens the app, sends the session and waits until the user closes the window.
+/// what Git is doing, opens the app, sends the session and waits until the user closes the window;
+/// a comparison that may join the other files of its run in one window waits only until the app
+/// has taken the files over.
 public struct SeamergeCommand: Sendable {
   /// The version `--version` prints.
   public var version: String
@@ -56,7 +58,7 @@ public struct SeamergeCommand: Sendable {
         request = .merge(
           try Self.request(for: merge, in: workingDirectory, environment: environment))
       case .diff(let diff):
-        request = .diff(try Self.request(for: diff, in: workingDirectory, environment: environment))
+        request = try Self.request(for: diff, in: workingDirectory, environment: environment)
       }
       return CommandResult(exitStatus: try await perform(request))
     } catch {
@@ -66,7 +68,26 @@ public struct SeamergeCommand: Sendable {
   }
 
   /// Opens the app, sends `request` and returns the exit status of its outcome.
+  ///
+  /// A comparison that joins the window of the files before it in its run goes to the app
+  /// without bringing it to the front again, as long as the app listens: the window is there,
+  /// and the user may have gone on working elsewhere.
   private func perform(_ request: SessionRequest) async throws(CommandError) -> Int32 {
+    if case .diff(let diff) = request, diff.origin != nil,
+      let number = diff.context.filePosition?.number, number > 1
+    {
+      do {
+        let reply = try await SessionClient(socketURL: client.socketURL, connectionTimeout: .zero)
+          .perform(request)
+        Logger.seamergeCLI.info("The session ended: \(String(describing: reply))")
+        return reply.exitStatus
+      } catch .serverUnreachable {
+        Logger.seamergeCLI.info("The app does not listen; opening it")
+      } catch {
+        Logger.seamergeCLI.error("The session failed: \(String(describing: error))")
+        throw CommandError(error, request: request)
+      }
+    }
     do {
       try await appLauncher.openApp()
     } catch {
@@ -108,6 +129,32 @@ public struct SeamergeCommand: Sendable {
 
   private static func request(
     for arguments: DiffArguments, in directory: URL, environment: [String: String]
+  ) throws(CommandError) -> SessionRequest {
+    // Two folders are those of `git difftool --dir-diff`, also from a setup made before
+    // `--collect` existed.
+    if let folders = try FileCheck.folders(arguments.left, arguments.right, in: directory) {
+      let repository = Git(environment: environment).topLevel(of: directory)
+      return .folders(
+        SessionRequest.Folders(left: folders.left, right: folders.right, repository: repository))
+    }
+    var diff = try Self.diff(for: arguments, in: directory, environment: environment)
+    // A run that compares one file has nothing to collect, and Git waits for its window as before.
+    // Only a run that Git numbers is told apart from the calls of other runs: without the
+    // numbers, the run found above the tool may be a shell that starts many of them.
+    let total = environment["GIT_DIFF_PATH_TOTAL"].flatMap { Int($0) }
+    if arguments.isCollecting, let total, total > 1 {
+      // Git starts the tool at the top of the working tree, which saves asking it for every file.
+      diff.origin = SessionRequest.Origin(
+        repository: directory.standardizedFileURL.path(percentEncoded: false),
+        run: ProcessRun.difftoolRun().map {
+          SessionRequest.Run(processID: $0.processID, startTime: $0.startTime)
+        })
+    }
+    return .diff(diff)
+  }
+
+  private static func diff(
+    for arguments: DiffArguments, in directory: URL, environment: [String: String]
   ) throws(CommandError) -> SessionRequest.Diff {
     let left = try FileCheck.readableFile(arguments.left, option: nil, in: directory)
     let right = try FileCheck.readableFile(arguments.right, option: nil, in: directory)
@@ -118,7 +165,7 @@ public struct SeamergeCommand: Sendable {
       environment["TMPDIR"].map { URL(filePath: $0, directoryHint: .isDirectory) }
       ?? FileManager.default.temporaryDirectory
     let path =
-      arguments.path
+      arguments.path.flatMap { $0.isEmpty ? nil : $0 }
       ?? DifftoolContext.inferredPath(
         leftFile: left, rightFile: right, workingDirectory: directory,
         temporaryDirectory: temporaryDirectory)

@@ -21,6 +21,8 @@
 #   diff         three files changed in the working tree
 #   diff-commits two commits to compare: git difftool HEAD~1 HEAD
 #   diff-new     a file added and a file deleted in the working tree
+#   diff-many    a commit of 40 files in ten folders, among them 2 added and 2
+#                deleted: git difftool HEAD~1 HEAD
 #
 # Neither the Git configuration of the user nor that of the system is read, so
 # every run creates the same commits. The repository gets a configuration of
@@ -29,7 +31,7 @@
 set -euo pipefail
 
 scenarios=(merge rebase cherry-pick revert stash add-add whitespace crlf utf16 many big
-  diff diff-commits diff-new)
+  diff diff-commits diff-new diff-many)
 
 usage() {
   echo "usage: Scripts/make-test-repo.sh <directory> <scenario>" >&2
@@ -286,6 +288,21 @@ case $scenario in
     replace_line story.txt 3 "line 3, changed"
     replace_line notes.txt 7 "line 7, changed"
     commit "Change story and notes"
+    ;;
+
+  diff-many)
+    for number in $(seq 1 38); do
+      mkdir -p "module$((number % 10))"
+      write_lines "module$((number % 10))/file$number.txt" 20
+    done
+    commit "Add 38 files"
+    for number in $(seq 1 36); do
+      replace_line "module$((number % 10))/file$number.txt" $((number % 20 + 1)) "changed"
+    done
+    rm module7/file37.txt module8/file38.txt
+    write_lines module1/added1.txt 5
+    write_lines module2/added2.txt 5
+    commit "Change 36 files, add two and delete two"
     ;;
 
   diff-new)

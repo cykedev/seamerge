@@ -67,3 +67,28 @@ enum FileCheck {
     return url
   }
 }
+
+extension FileCheck {
+  /// The two folders `left` and `right` name, or `nil` if neither names a folder, as for a
+  /// comparison of two files.
+  ///
+  /// - Throws: ``CommandError`` if only one of them names a folder.
+  static func folders(
+    _ left: String, _ right: String, in directory: URL
+  ) throws(CommandError) -> (left: URL, right: URL)? {
+    guard !left.isEmpty, !right.isEmpty else { return nil }
+    let urls = [left, right].map { fileURL(for: $0, in: directory) }
+    let isFolder = urls.map { url in
+      var isDirectory: ObjCBool = false
+      return FileManager.default.fileExists(
+        atPath: url.path(percentEncoded: false), isDirectory: &isDirectory)
+        && isDirectory.boolValue
+    }
+    switch (isFolder[0], isFolder[1]) {
+    case (true, true): return (urls[0], urls[1])
+    case (false, false): return nil
+    case (true, false): throw .folderInsteadOfFile(path: urls[0].path(percentEncoded: false))
+    case (false, true): throw .folderInsteadOfFile(path: urls[1].path(percentEncoded: false))
+    }
+  }
+}

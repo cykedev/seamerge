@@ -27,8 +27,10 @@ enum Invocation {
         Self.scan(
           arguments.dropFirst(), options: Option.merge, flags: Flag.merge, filesFollow: false)
       case "diff":
-        Self.scan(arguments.dropFirst(), options: Option.diff, flags: [], filesFollow: true)
-      default: Self.scan(arguments[...], options: Option.diff, flags: [], filesFollow: true)
+        Self.scan(
+          arguments.dropFirst(), options: Option.diff, flags: Flag.diff, filesFollow: true)
+      default:
+        Self.scan(arguments[...], options: Option.diff, flags: Flag.diff, filesFollow: true)
       }
     if scanned.asksForHelp {
       self = .help
@@ -107,9 +109,13 @@ enum Option: String {
 /// An option that takes no value.
 enum Flag: String {
   case fromGit = "--from-git"
+  case collect = "--collect"
 
   /// The flags of `seamerge merge`.
   static let merge: [Flag] = [.fromGit]
+
+  /// The flags of `seamerge diff`.
+  static let diff: [Flag] = [.collect]
 }
 
 /// The arguments of one form of the command, split into option values and operands.
@@ -202,6 +208,10 @@ struct DiffArguments {
   /// The name for the right file given on the command line.
   var rightLabel: String?
 
+  /// Whether the comparison may join the comparisons of the same run of Git in one window, and
+  /// the command end as soon as the app has taken the files over.
+  var isCollecting: Bool
+
   fileprivate init(_ scanned: ScannedArguments) throws(CommandError) {
     switch scanned.operands.count {
     case 0: throw .missingFiles(count: 2)
@@ -214,5 +224,6 @@ struct DiffArguments {
     path = scanned.values[.path]
     leftLabel = scanned.values[.leftLabel]
     rightLabel = scanned.values[.rightLabel]
+    isCollecting = scanned.flags.contains(.collect)
   }
 }
