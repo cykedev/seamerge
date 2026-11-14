@@ -126,7 +126,7 @@ import Testing
     Seamerge ▸
       About Seamerge
       ---
-      Settings… ⌘, (deactivated)
+      Settings… ⌘,
       Set Up Git Integration…
       ---
       Services ▸

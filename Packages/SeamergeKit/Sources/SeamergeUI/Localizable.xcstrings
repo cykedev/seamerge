@@ -201,6 +201,12 @@
         }
       }
     },
+    "%lld pt": {
+      "comment": "Settings: the size of the code, such as 13 pt."
+    },
+    "%lld spaces": {
+      "comment": "Settings: the width of a tab, such as 4 spaces."
+    },
     "A": {
       "comment": "The badge of the incoming side."
     },
@@ -215,6 +221,9 @@
     },
     "Adds Seamerge to the list of tools in Tower’s settings and creates a script for it. The other tools stay.": {
       "comment": "Set Up Git Integration: what adding to Tower adds when it lists other tools."
+    },
+    "After Use A, Use B and the like on an open conflict.": {
+      "comment": "Settings: when the window goes on to the next conflict."
     },
     "All %lld files received": {
       "comment": "VoiceOver: every file of a run has come, such as All 40 files received."
@@ -379,6 +388,9 @@
     "Commit": {
       "comment": "Details of a side: the commit."
     },
+    "Compact": {
+      "comment": "Settings: lines close together."
+    },
     "Compare": {
       "comment": "Compare Files: the default button with two files."
     },
@@ -466,6 +478,9 @@
     "Drop to Use as %@": {
       "comment": "Compare Files: below a field that a drop would fill, such as Drop to Use as A."
     },
+    "Each window starts like this. The switches in a window’s footer change only that window.": {
+      "comment": "Settings: note below the group of how a new window starts."
+    },
     "Earlier Version": {
       "comment": "Role: the file before the change, shown when both sides have the same name."
     },
@@ -492,6 +507,9 @@
     },
     "First Change": {
       "comment": "Go menu command."
+    },
+    "Font": {
+      "comment": "Settings: the font of the code."
     },
     "Footer": {
       "comment": "VoiceOver: the footer with the comparison mode and the view toggles."
@@ -591,6 +609,9 @@
     "Go to Next Conflict": {
       "comment": "Button of the sheet before saving with open conflicts: do not save, go on."
     },
+    "Go to Next Conflict After Choosing": {
+      "comment": "Settings: whether Use A and the like go on to the next open conflict."
+    },
     "Hide Base": {
       "comment": "View menu command."
     },
@@ -669,6 +690,9 @@
     "Line Number": {
       "comment": "Placeholder of the field of Go to Line."
     },
+    "Line Spacing": {
+      "comment": "Settings: how far apart lines are."
+    },
     "Line endings ignored": {
       "comment": "Subtitle: the comparison treats LF, CRLF and CR as equal."
     },
@@ -684,6 +708,9 @@
     "Merge %@ and %@ with the base %@": {
       "comment": "VoiceOver: a recent merge, with the names of A, B and the base."
     },
+    "Merging": {
+      "comment": "Settings: heading of the merge group."
+    },
     "Mixed": {
       "comment": "Line endings: more than one kind."
     },
@@ -698,6 +725,9 @@
     },
     "New File": {
       "comment": "Header of the missing earlier side of a comparison of a new file."
+    },
+    "New Windows": {
+      "comment": "Settings: heading of the group of how a new window starts."
     },
     "Next Change": {
       "comment": "Go menu command."
@@ -864,6 +894,9 @@
     "Right": {
       "comment": "Compare Files: the role of a field."
     },
+    "SF Mono": {
+      "comment": "Settings: the monospaced font of the system."
+    },
     "Save": {
       "comment": "File menu command."
     },
@@ -918,11 +951,14 @@
     "Set Up Git Integration…": {
       "comment": "Compare Files: the button next to the line about Git."
     },
+    "Settings": {
+      "comment": "Title of the window Settings."
+    },
     "Show All Lines": {
       "comment": "View menu command."
     },
     "Show Base": {
-      "comment": "View menu command."
+      "comment": "View menu command, and the setting of whether a new merge shows the base."
     },
     "Show Commands": {
       "comment": "Set Up Git Integration: the triangle that shows the commands of the setup."
@@ -963,6 +999,9 @@
     "Show where this side comes from": {
       "comment": "Help tag of ⓘ."
     },
+    "Size": {
+      "comment": "Settings: the size of the code."
+    },
     "Skip Remaining Files": {
       "comment": "File menu of a comparison: end the comparisons that are left of the run."
     },
@@ -971,6 +1010,12 @@
     },
     "Some of its characters don’t exist in %@. UTF-8 holds them all.": {
       "comment": "Sheet: the result holds characters the encoding lacks."
+    },
+    "Spacious": {
+      "comment": "Settings: lines far apart."
+    },
+    "Standard": {
+      "comment": "Settings: lines at standard spacing."
     },
     "Stash": {
       "comment": "The name of a stash in a header."
@@ -996,8 +1041,14 @@
     "Syntax": {
       "comment": "View menu: the submenu of the languages the code can be colored as."
     },
+    "Tab Width": {
+      "comment": "Settings: the width of a tab."
+    },
     "Take the version of %@.": {
       "comment": "Help tag of a toggle, such as Take the version of feature/login."
+    },
+    "Text": {
+      "comment": "Settings: heading of the group of the code font."
     },
     "The command that opened this merge is no longer waiting.": {
       "comment": "Notice below the result header after a command other than Git that asked has ended."

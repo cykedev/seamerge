@@ -30,6 +30,9 @@ final class AppDelegate: NSObject {
   /// The window Compare Files, once it has appeared.
   private(set) var compareFilesWindowController: CompareFilesWindowController?
 
+  /// The window Settings, once it has appeared.
+  private(set) var settingsWindowController: SettingsWindowController?
+
   /// Whether the helper started the app to hand over a session.
   private let isLaunchedForSession: Bool
 
@@ -74,6 +77,13 @@ final class AppDelegate: NSObject {
   /// Shows the window Compare Files in front.
   @objc func showCompareFiles(_ sender: Any?) {
     compareFiles().showWindow(sender)
+  }
+
+  /// Shows the window Settings in front, made the first time it is needed.
+  @objc func showSettings(_ sender: Any?) {
+    let controller = settingsWindowController ?? SettingsWindowController(settings: settings)
+    settingsWindowController = controller
+    controller.showWindow(sender)
   }
 
   /// Shows the window Compare Files and on it the sheet Set Up Git Integration.

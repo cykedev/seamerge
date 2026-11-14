@@ -72,7 +72,7 @@ final class MainMenu {
       [
         [Self.item(Titles.about, #selector(NSApplication.orderFrontStandardAboutPanel(_:)))],
         [
-          Self.item(Titles.settings, key: ","),
+          Self.item(Titles.settings, #selector(AppDelegate.showSettings(_:)), key: ","),
           Self.item(
             Titles.setUpGitIntegration, #selector(AppDelegate.showGitIntegration(_:))),
         ],

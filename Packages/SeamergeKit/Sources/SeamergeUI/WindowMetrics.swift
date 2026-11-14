@@ -108,4 +108,7 @@ enum WindowMetrics {
   /// The least height of the panes above the result and of the result, so that the divider
   /// between them stays visible and a few rows show.
   static let minimumPaneHeight: CGFloat = 120
+
+  /// The width of the window Settings.
+  static let settingsWidth: CGFloat = 480
 }

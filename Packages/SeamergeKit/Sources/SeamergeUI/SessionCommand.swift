@@ -379,7 +379,9 @@ public enum SessionCommand: CaseIterable, Sendable {
   var alternateTitle: String? {
     switch self {
     case .toggleBase:
-      String(localized: "Show Base", bundle: .module, comment: "View menu command.")
+      String(
+        localized: "Show Base", bundle: .module,
+        comment: "View menu command, and the setting of whether a new merge shows the base.")
     case .toggleResultMaximized:
       String(localized: "Restore Layout", bundle: .module, comment: "View menu command.")
     case .toggleInvisibles:
