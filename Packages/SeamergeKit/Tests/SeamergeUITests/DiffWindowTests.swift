@@ -196,16 +196,18 @@ import Testing
     #expect(!merge.canPerform(.skipRemainingFiles))
   }
 
-  @Test func windowIsTitledAfterTheFileWithItsPlaceInTheRunOfGit() async throws {
+  @Test func windowIsTitledAfterThePathInTheRepositoryWithItsPlaceInTheRunOfGit() async throws {
     let controller = try Windows.controller(
       for: try await SampleDiffs.greeting(), context: SampleDiffs.gitContext)
     let window = try #require(controller.window)
 
-    #expect(window.title == "Greeting.swift")
+    #expect(window.title == "Sources/Greeting.swift")
     #expect(window.subtitle == "File 3 of 12")
     let labels = controller.layout.sourcePanes.map { $0.pane.accessibilityLabel() }
     #expect(
-      labels == ["A, Sources/Greeting.swift, before", "B, Sources/Greeting.swift, working copy"])
+      labels == [
+        "A, Sources/Greeting.swift, Earlier Version", "B, Sources/Greeting.swift, Working Copy",
+      ])
   }
 
   @Test func windowOfTwoFilesWithoutGitIsTitledAfterBoth() async throws {
@@ -329,14 +331,17 @@ import Testing
   @Test(arguments: [true, false])
   func comparisonThatCannotBeShownSaysWhyAndOnlyCloses(isBinary: Bool) async throws {
     let unavailable = SampleDiffs.unavailable(isBinary: isBinary)
+    let context = SessionContext(
+      difftool: DifftoolContext(
+        path: "Assets/logo.png", leftRole: .before, rightRole: .workingCopy,
+        filePosition: FilePosition(number: 3, count: 12)))
     let controller = try Windows.controller(
-      for: try await unavailable.emptySession(), context: SampleDiffs.gitContext,
-      unavailable: unavailable)
+      for: try await unavailable.emptySession(), context: context, unavailable: unavailable)
     var outcomes: [SessionOutcome] = []
     controller.onFinish = { outcomes.append($0) }
     let window = try #require(controller.window)
 
-    #expect(window.title == "logo.png")
+    #expect(window.title == "Assets/logo.png")
     #expect(unavailable.title == "Seamerge can’t show the differences of “logo.png”")
     let reason =
       isBinary
@@ -348,7 +353,8 @@ import Testing
         == reason + " Close the window to go on to the next file.")
     #expect(controller.layout.sourcePanes.allSatisfy { $0.pane.isHidden })
     let labels = controller.layout.sourcePanes.map { $0.pane.accessibilityLabel() }
-    #expect(labels == ["A, Assets/logo.png, before", "B, Assets/logo.png, working copy"])
+    #expect(
+      labels == ["A, Assets/logo.png, Earlier Version", "B, Assets/logo.png, Working Copy"])
     // Hide Footer holds for every window, this one too.
     for command in SessionCommand.allCases {
       let acts = command == .skipRemainingFiles || command == .toggleFooter

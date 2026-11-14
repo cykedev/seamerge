@@ -57,8 +57,30 @@ public struct DifftoolContext: Sendable, Hashable {
       filePosition: FilePosition(environment: environment))
   }
 
+  /// The path of the compared file relative to `workingDirectory`, when the caller did not
+  /// name it: the path of the one side that is a file in `workingDirectory`, while the other side
+  /// is a temporary copy or missing, as Tower passes the sides of a change in the working tree.
+  ///
+  /// Returns `nil` if both sides or neither are such a file. `temporaryDirectory` is the
+  /// temporary folder of the user, where Git writes its copies.
+  public static func inferredPath(
+    leftFile: URL, rightFile: URL, workingDirectory: URL,
+    temporaryDirectory: URL = FileManager.default.temporaryDirectory
+  ) -> String? {
+    let sides = [leftFile, rightFile].map {
+      ($0, FileOrigin(url: $0, temporaryDirectory: temporaryDirectory))
+    }
+    let ordinary = sides.filter { $0.1 == .ordinary }
+    guard ordinary.count == 1, let file = ordinary.first?.0 else { return nil }
+    let folder = canonicalPath(of: workingDirectory)
+    let path = canonicalPath(of: file)
+    let prefix = folder.hasSuffix("/") ? folder : folder + "/"
+    guard path.hasPrefix(prefix) else { return nil }
+    return String(path.dropFirst(prefix.count))
+  }
+
   private static func canonicalPath(of url: URL) -> String {
-    url.standardizedFileURL.resolvingSymlinksInPath().path
+    FileOrigin.canonicalPath(of: url)
   }
 }
 

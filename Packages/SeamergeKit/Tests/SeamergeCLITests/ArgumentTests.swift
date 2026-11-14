@@ -218,6 +218,28 @@ struct ArgumentTests {
     }
   }
 
+  @Test func diffOfACopyAndAFileInTheWorkingTreeTakesThePathOfTheFile() async throws {
+    try await withSandbox { sandbox in
+      var app = try ScriptedApp(at: sandbox.socketURL, ending: .close(.saved))
+      let copy = try sandbox.makeFile("T/git-blob-taXZ1B/Greeting.swift")
+      try sandbox.makeFile("repo/Sources/Greeting.swift")
+      var environment = sandbox.environment
+      environment["TMPDIR"] = sandbox.directory.appending(path: "T").path
+
+      for left in [copy.path, "/dev/null"] {
+        let result = await sandbox.command().run(
+          ["diff", left, "Sources/Greeting.swift"],
+          workingDirectory: sandbox.directory.appending(path: "repo", directoryHint: .isDirectory),
+          environment: environment)
+        #expect(result.exitStatus == 0, "\(result)")
+        let diff = try #require(try await app.nextRequest().diff)
+        #expect(diff.displayPath == "Sources/Greeting.swift")
+        #expect(diff.context.rightRole == .workingCopy)
+      }
+      await app.stop()
+    }
+  }
+
   @Test(arguments: [nil, "", "missing-base.txt"])
   func missingBaseLeadsToAMergeWithoutBase(base: String?) async throws {
     try await withSandbox { sandbox in

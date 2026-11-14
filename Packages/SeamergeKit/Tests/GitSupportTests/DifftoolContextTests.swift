@@ -141,4 +141,36 @@ struct DifftoolContextTests {
           environment: environment))
     }
   }
+
+  @Test func sideInTheWorkingTreeGivesThePathWhenTheOtherIsACopyOrMissing() throws {
+    try withSandbox { sandbox in
+      let temporary = sandbox.directory.appending(path: "T", directoryHint: .isDirectory)
+      let tree = sandbox.directory.appending(path: "repo", directoryHint: .isDirectory)
+      let copy = temporary.appending(path: "git-blob-taXZ1B/Greeting.swift")
+      let file = tree.appending(path: "Sources/Greeting.swift")
+      func path(_ left: URL, _ right: URL) -> String? {
+        DifftoolContext.inferredPath(
+          leftFile: left, rightFile: right, workingDirectory: tree, temporaryDirectory: temporary)
+      }
+
+      #expect(path(copy, file) == "Sources/Greeting.swift")
+      #expect(path(URL(filePath: "/dev/null"), file) == "Sources/Greeting.swift")
+      #expect(path(file, URL(filePath: "/dev/null")) == "Sources/Greeting.swift")
+      #expect(path(copy, copy) == nil)
+      #expect(path(file, file) == nil)
+      #expect(path(copy, sandbox.directory.appending(path: "elsewhere.swift")) == nil)
+    }
+  }
+
+  @Test func originTellsMissingSidesAndCopiesFromOtherFiles() {
+    let temporary = URL(filePath: "/private/var/folders/xy/T/", directoryHint: .isDirectory)
+    func origin(_ path: String) -> FileOrigin {
+      FileOrigin(url: URL(filePath: path), temporaryDirectory: temporary)
+    }
+
+    #expect(origin("/dev/null") == .missing)
+    #expect(origin("/private/var/folders/xy/T/git-blob-QQ1247/notes.txt") == .temporaryCopy)
+    #expect(origin("/tmp/notes.txt") == .temporaryCopy)
+    #expect(origin("/Users/ada/Projects/app/notes.txt") == .ordinary)
+  }
 }

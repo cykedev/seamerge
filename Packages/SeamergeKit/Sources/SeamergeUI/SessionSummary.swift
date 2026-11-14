@@ -6,8 +6,9 @@ import MergeModel
 /// of a merge brings, how far the Git operation has come, and which file of a run of
 /// `git difftool` a comparison shows.
 struct SessionSummary: Equatable {
-  /// The title: the name of the file that the result of a merge is written to, or the names of
-  /// the files a comparison shows.
+  /// The title: the name of the file that the result of a merge is written to, the path in the
+  /// repository of the file a comparison from Git or Tower shows, or else the names of the files
+  /// a comparison shows.
   let title: String
 
   /// The parts of the subtitle in the order they stand; the operation is the first to go when
@@ -28,7 +29,9 @@ struct SessionSummary: Equatable {
       self.changes = [Self.changeCounts(of: changes), modeNote].compactMap(\.self)
         .joined(separator: Self.separator)
     } else {
-      title = Self.title(of: arrangement.sourceRoles.compactMap(session.file(for:)))
+      title =
+        context.difftool?.path
+        ?? Self.title(of: arrangement.sourceRoles.compactMap(session.file(for:)))
       self.changes = modeNote ?? ""
     }
     operation = context.git?.rebaseProgress.map { progress in
@@ -68,8 +71,11 @@ struct SessionSummary: Equatable {
   ///
   /// The names come from the labels, since Git compares temporary copies whose names are made
   /// up.
+  /// The title of a comparison of `files`: the name both share, or both names; a missing side
+  /// of a new or a deleted file has none.
   private static func title(of files: [SourceFile]) -> String {
-    let names = files.map { ($0.label as NSString).lastPathComponent }
+    let names = files.filter { file in file.url.map { FileOrigin(url: $0) != .missing } ?? true }
+      .map { ($0.label as NSString).lastPathComponent }
     guard let first = names.first, let last = names.last, first != last else {
       return names.first ?? ""
     }

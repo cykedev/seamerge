@@ -112,14 +112,24 @@ public struct SeamergeCommand: Sendable {
     let left = try FileCheck.readableFile(arguments.left, option: nil, in: directory)
     let right = try FileCheck.readableFile(arguments.right, option: nil, in: directory)
     var context = SessionRequest.DiffContext()
-    if let path = arguments.path {
+    // Tower passes no path for a change in the working tree; the side in the working tree has it.
+    // Git writes its copies into the temporary folder of the environment it runs the tool in.
+    let temporaryDirectory =
+      environment["TMPDIR"].map { URL(filePath: $0, directoryHint: .isDirectory) }
+      ?? FileManager.default.temporaryDirectory
+    let path =
+      arguments.path
+      ?? DifftoolContext.inferredPath(
+        leftFile: left, rightFile: right, workingDirectory: directory,
+        temporaryDirectory: temporaryDirectory)
+    if let path {
       context = SessionRequest.DiffContext(
         DifftoolContext.detect(
           path: path, leftFile: left, rightFile: right, workingDirectory: directory,
           environment: environment))
     }
     return SessionRequest.Diff(
-      left: left, right: right, displayPath: arguments.path, leftLabel: arguments.leftLabel,
+      left: left, right: right, displayPath: path, leftLabel: arguments.leftLabel,
       rightLabel: arguments.rightLabel, context: context)
   }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import GitSupport
 import MergeModel
 import os
 
@@ -55,7 +56,12 @@ extension Session {
     }
   }
 
+  /// Reads `file`; `/dev/null`, the missing side of a new or a deleted file, is empty, since it
+  /// cannot be mapped like a file.
   private static func read(_ file: SessionFile) throws(SessionLoadingError) -> SourceFile {
+    if FileOrigin(url: file.url) == .missing {
+      return SourceFile(bytes: Data(), label: file.label, url: file.url)
+    }
     do {
       return try SourceFile(contentsOf: file.url, label: file.label)
     } catch {

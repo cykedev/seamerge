@@ -424,6 +424,9 @@
     "Date": {
       "comment": "Details of a side: when the commit was made."
     },
+    "Deleted File": {
+      "comment": "Header of the missing later side of a comparison of a deleted file."
+    },
     "Details about %@": {
       "comment": "VoiceOver: the ⓘ of a header, such as Details about A, main."
     },
@@ -453,6 +456,9 @@
     },
     "Drop to Use as %@": {
       "comment": "Compare Files: below a field that a drop would fill, such as Drop to Use as A."
+    },
+    "Earlier Version": {
+      "comment": "Role: the file before the change, shown when both sides have the same name."
     },
     "Edited by hand": {
       "comment": "VoiceOver: a part of the result that the user typed."
@@ -621,6 +627,9 @@
     "Last Change": {
       "comment": "Go menu command."
     },
+    "Later Version": {
+      "comment": "Role: the file after the change, shown when both sides have the same name."
+    },
     "Leave Unresolved": {
       "comment": "File menu: close a merge without saving it and report it as not done."
     },
@@ -662,6 +671,9 @@
     },
     "Move Seamerge to the Applications folder first.": {
       "comment": "Set Up Git Integration: the app runs from a disk image or Downloads."
+    },
+    "New File": {
+      "comment": "Header of the missing earlier side of a comparison of a new file."
     },
     "Next Change": {
       "comment": "Go menu command."
@@ -1113,6 +1125,9 @@
     "Windows 1252": {
       "comment": "Encoding: Windows code page."
     },
+    "Working Copy": {
+      "comment": "Role: the file in the working tree, which the user can edit."
+    },
     "Wrap Lines": {
       "comment": "View menu command."
     },
@@ -1154,12 +1169,6 @@
     "Zoom Out": {
       "comment": "View menu command."
     },
-    "after": {
-      "comment": "Role: the file after the change."
-    },
-    "before": {
-      "comment": "Role: the file before the change."
-    },
     "cherry-picked commit": {
       "comment": "Role: the commit being cherry-picked."
     },
@@ -1177,9 +1186,6 @@
     },
     "the base": {
       "comment": "The common ancestor in the help tag of a toggle: Take the version of the base."
-    },
-    "working copy": {
-      "comment": "Role: the file in the working tree, which the user can edit."
     },
     "your commit": {
       "comment": "Role: the user's own commit that a rebase moves."

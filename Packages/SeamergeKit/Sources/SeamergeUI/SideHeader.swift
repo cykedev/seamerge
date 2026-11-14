@@ -65,8 +65,10 @@ struct SideHeader: Equatable {
   /// The header of the pane of `role`.
   ///
   /// The names come from Git where Git started the merge; otherwise, and for a side Git does not
-  /// name, the label of the file stands in. In a comparison that `git difftool` started, the
-  /// role says whether the side is the file before or after the change, or the working copy.
+  /// name, the label of the file stands in. A missing side of a comparison, `/dev/null` for a
+  /// file that is new or deleted, is the new or the deleted file. Where both sides of a
+  /// comparison have the same name, as the copies Git and Tower pass, the role tells them apart:
+  /// the working copy, or else the earlier and the later version.
   ///
   /// - Precondition: `role` takes part in `session`.
   init(role: Role, session: Session, context: SessionContext) {
@@ -81,18 +83,12 @@ struct SideHeader: Equatable {
       }
     }
     self.role = role
-    name = Self.singleLine(
-      side?.name.map(Self.text(of:)) ?? (file.label.isEmpty ? role.letter : file.label))
+    name = Self.name(of: role, session: session, context: context)
     distinctName =
       side?.name == nil ? Self.distinctLabel(of: role, in: session) : name
-    let diffRole = context.difftool.flatMap { difftool in
-      switch role {
-      case .a: difftool.leftRole
-      case .b: difftool.rightRole
-      case .base: nil
-      }
-    }
-    roleText = side?.role.map(Self.text(of:)) ?? diffRole.map(Self.text(of:))
+    roleText =
+      side?.role.map(Self.text(of:))
+      ?? Self.comparisonRole(of: role, named: name, session: session, context: context)
     rolePlacement =
       switch context.git?.operation {
       case .merge, nil: .afterName
@@ -121,6 +117,49 @@ struct SideHeader: Equatable {
       comment:
         "VoiceOver: a pane with its name and role in the order the header shows them, such as A, feature/login, incoming or A, your commit, 1a2b3c4 Fix typo."
     )
+  }
+
+  /// The name in the header of `role`: the name Git gives the side, the new or the deleted file
+  /// for a missing side of a comparison, else the label of the file on one line.
+  private static func name(of role: Role, session: Session, context: SessionContext) -> String {
+    let side = context.git.map { git in
+      switch role {
+      case .a: git.remote
+      case .base: git.base
+      case .b: git.local
+      }
+    }
+    if let name = side?.name {
+      return singleLine(text(of: name))
+    }
+    let file = session.file(for: role)
+    if session.kind == .diff, let url = file?.url, FileOrigin(url: url) == .missing {
+      return role == .a
+        ? String(
+          localized: "New File", bundle: .module,
+          comment: "Header of the missing earlier side of a comparison of a new file.")
+        : String(
+          localized: "Deleted File", bundle: .module,
+          comment: "Header of the missing later side of a comparison of a deleted file.")
+    }
+    let label = file?.label ?? ""
+    return singleLine(label.isEmpty ? role.letter : label)
+  }
+
+  /// What the side `role` of a comparison is, if its name `name` is also the name of the other
+  /// side: the working copy, or else the earlier or the later version.
+  private static func comparisonRole(
+    of role: Role, named name: String, session: Session, context: SessionContext
+  ) -> String? {
+    guard session.kind == .diff, role != .base else { return nil }
+    let other: Role = role == .a ? .b : .a
+    guard session.file(for: other) != nil,
+      Self.name(of: other, session: session, context: context) == name
+    else { return nil }
+    let diffRole =
+      context.difftool.map { role == .a ? $0.leftRole : $0.rightRole }
+      ?? (role == .a ? .before : .after)
+    return text(of: diffRole)
   }
 
   /// The label of the file of `role` on one line, if no other side that a sentence sets it
@@ -172,12 +211,15 @@ struct SideHeader: Equatable {
     switch role {
     case .before:
       String(
-        localized: "before", bundle: .module, comment: "Role: the file before the change.")
+        localized: "Earlier Version", bundle: .module,
+        comment: "Role: the file before the change, shown when both sides have the same name.")
     case .after:
-      String(localized: "after", bundle: .module, comment: "Role: the file after the change.")
+      String(
+        localized: "Later Version", bundle: .module,
+        comment: "Role: the file after the change, shown when both sides have the same name.")
     case .workingCopy:
       String(
-        localized: "working copy", bundle: .module,
+        localized: "Working Copy", bundle: .module,
         comment: "Role: the file in the working tree, which the user can edit.")
     }
   }

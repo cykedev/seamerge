@@ -156,7 +156,7 @@ struct SessionCoordinatorTests {
     let controller = await recorder.nextOpened()
     let window = try #require(controller.window)
     #expect(window.isVisible)
-    #expect(window.title == "story.txt")
+    #expect(window.title == "src/story.txt")
     #expect(window.subtitle == "File 2 of 3")
     #expect(coordinator.kind(of: window) == .diff)
     window.close()
