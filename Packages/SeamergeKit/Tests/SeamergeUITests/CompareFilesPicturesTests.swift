@@ -108,12 +108,22 @@ import Testing
     #expect(fixture.captions == ["Left", "Base (Optional)", "Right"])
   }
 
+  /// The border of an empty field and that of a drop target stand out from the window.
+  ///
+  /// The drop target takes the focus color of the system, which follows the accent color the
+  /// user chose; its contrast is measured with the standard accent of macOS, blue, whose focus
+  /// color is the system blue, so that the test does not depend on the setting of the Mac it runs
+  /// on. That the border is that focus color, opaque, holds whatever the accent.
   @Test(arguments: Look.all)
   func bordersStandOutFromTheWindow(look: Look) throws {
     let colors = CompareFilesColors(DisplayOptions(increasesContrast: look.increasesContrast))
     let background = try #require(Contrast.resolve(.windowBackgroundColor, in: look.appearance))
+    let focus = Contrast.resolve(
+      NSColor.keyboardFocusIndicatorColor.withAlphaComponent(1), in: look.appearance)
+    #expect(Contrast.resolve(colors.dropTargetBorder, in: look.appearance) == focus)
 
-    for border in [colors.emptyFieldBorder, colors.dropTargetBorder] {
+    let standardFocus = NSColor.systemBlue
+    for border in [colors.emptyFieldBorder, standardFocus] {
       let resolved = Contrast.resolve(border, in: look.appearance)
       let ratio = Contrast.ratio(Contrast.over(resolved, background), background)
       #expect(ratio >= 3, "\(border): \(ratio)")
