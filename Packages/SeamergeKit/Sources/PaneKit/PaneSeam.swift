@@ -7,7 +7,8 @@ import AppKit
 /// goes over from the tint of the block on the left to its tint on the right, and its edges carry
 /// on the hairlines at the edges of the block. Where a pane has no rows in the block, its end
 /// of the band is a point on the hairline that marks the place, so that the band is a wedge.
-/// Unchanged rows have no band.
+/// Unchanged rows have no band, nor have blocks in which the two panes do not differ
+/// (``blocksWithoutBand``).
 ///
 /// The seam draws only the bands in view, from the blocks of the panes, their rows as they show
 /// them and where they are scrolled to; it lays out no text. It takes no clicks, so that the
@@ -23,6 +24,16 @@ public final class PaneSeam: NSView {
   /// The fonts, metrics and colors of the panes.
   public var theme = Theme() {
     didSet { needsDisplay = true }
+  }
+
+  /// The blocks in which the panes on either side do not differ, which get no band, as where
+  /// only the other side of a merge changed; none at first.
+  public var blocksWithoutBand = IndexSet() {
+    didSet {
+      if blocksWithoutBand != oldValue {
+        needsDisplay = true
+      }
+    }
   }
 
   /// Creates the seam between `leftPane` and `rightPane`, which tell it when what they show
@@ -131,7 +142,8 @@ public final class PaneSeam: NSView {
     }
   }
 
-  /// The bands of the blocks that reach into the text area of the panes, in block order.
+  /// The bands of the blocks that reach into the text area of the panes, in block order, without
+  /// the blocks that get none.
   ///
   /// A band whose block lies partly above or below the visible text keeps its ends where the
   /// rows are, beyond the area, so that its edges run as they would if all of it were in view.
@@ -149,6 +161,7 @@ public final class PaneSeam: NSView {
       let left = extent(of: index, in: leftPane)
       let right = extent(of: index, in: rightPane)
       guard min(left.lowerBound, right.lowerBound) <= area.maxY else { break }
+      guard !blocksWithoutBand.contains(index) else { continue }
       bands.append(
         Band(
           block: index, left: left, right: right, leftStyle: leftBlocks[index].style,

@@ -102,6 +102,14 @@ public final class ScrollSync {
     mappings[Pair(leader: secondID, follower: firstID)] = backward
   }
 
+  /// Ends the mappings between `first` and `second` in both directions, after which they take
+  /// each other's origin, as panes on the same grid do.
+  public func removeRowMapping(between first: PaneView, and second: PaneView) {
+    let (firstID, secondID) = (ObjectIdentifier(first), ObjectIdentifier(second))
+    mappings[Pair(leader: firstID, follower: secondID)] = nil
+    mappings[Pair(leader: secondID, follower: firstID)] = nil
+  }
+
   /// Lets `panes`, side by side and showing the lines of their files, scroll over a common
   /// track, on which each stretch, a changed block or the unchanged rows between two, is as long
   /// as in the pane that shows it highest; an empty array ends the track.

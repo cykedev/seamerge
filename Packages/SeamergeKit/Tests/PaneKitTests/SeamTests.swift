@@ -66,6 +66,15 @@ import Testing
     #expect(layout.seam.bands.last?.block == blocks - 1)
   }
 
+  @Test func blocksInWhichThePanesDoNotDifferGetNoBand() throws {
+    let (layout, window) = ConnectedLayout.hosted()
+    defer { window.close() }
+    let all = layout.seam.bands.map(\.block)
+    try #require(all.count > 2)
+    layout.seam.blocksWithoutBand = [all[1]]
+    #expect(layout.seam.bands.map(\.block) == all.filter { $0 != all[1] })
+  }
+
   @Test func seamLetsClicksThroughAndVoiceOverPassesItBy() throws {
     let (layout, window) = ConnectedLayout.hosted()
     defer { window.close() }

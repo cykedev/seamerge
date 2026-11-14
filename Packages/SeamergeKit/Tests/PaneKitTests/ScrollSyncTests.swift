@@ -135,6 +135,31 @@ import Testing
     #expect(abs(upper.documentView.visibleRect.minY - (resultRow * 2 * rowHeight - 50)) < 0.001)
   }
 
+  @Test func panesWhoseMappingEndedTakeEachOthersOrigin() throws {
+    let theme = Theme()
+    let upper = PaneView(theme: theme)
+    upper.content = CodeRows.content(count: 400)
+    let result = PaneView(theme: theme)
+    result.content = CodeRows.content(count: 400)
+    let host = NSView(frame: CGRect(x: 0, y: 0, width: 400, height: 400))
+    upper.frame = CGRect(x: 0, y: 0, width: 400, height: 200)
+    result.frame = CGRect(x: 0, y: 200, width: 400, height: 200)
+    let sync = ScrollSync()
+    for pane in [upper, result] {
+      host.addSubview(pane)
+      sync.add(pane)
+    }
+    sync.setRowMapping(between: upper, and: result, forward: { $0 / 2 }, backward: { $0 * 2 })
+    let window = Rendering.host(host, size: host.frame.size)
+    defer { window.close() }
+    sync.removeRowMapping(between: result, and: upper)
+    for (leader, follower) in [(upper, result), (result, upper)] {
+      leader.documentView.scroll(CGPoint(x: 0, y: 30 * theme.rowHeight))
+      #expect(follower.documentView.visibleRect.minY == 30 * theme.rowHeight)
+      leader.documentView.scroll(CGPoint(x: 0, y: 0))
+    }
+  }
+
   @Test func panesScrollOnTheirOwnWhileTheCouplingIsOffAndAlignWhenItIsOn() throws {
     let (layout, window) = Self.coupledLayout()
     defer { window.close() }
