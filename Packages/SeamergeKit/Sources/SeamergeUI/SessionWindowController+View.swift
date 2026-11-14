@@ -83,7 +83,7 @@ extension SessionWindowController {
   /// mode.
   var caretLineInTextMode: Int? {
     guard isInTextMode, let result = layout.resultPane else { return nil }
-    return result.content.row(atOffset: result.documentView.selectedRange().location)
+    return result.row(containingOffset: result.documentView.selectedRange().location)
   }
 
   /// Makes the text larger, by a step of the font sizes.
@@ -182,15 +182,4 @@ extension SessionWindowController {
 
   /// The sizes of the code that Zoom In and Zoom Out step through.
   static let fontSizes: [CGFloat] = [10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32]
-}
-
-extension PaneContent {
-  /// The row that the UTF-16 `offset` of the text lies in.
-  func row(atOffset offset: Int) -> Int {
-    var row = 0
-    for unit in text.utf16.prefix(offset) where unit == UInt16(UInt8(ascii: "\n")) {
-      row += 1
-    }
-    return row
-  }
 }

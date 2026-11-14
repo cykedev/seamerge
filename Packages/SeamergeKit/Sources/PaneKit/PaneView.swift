@@ -211,6 +211,14 @@ public final class PaneView: NSView {
   /// The view that shows the text, for selection and the find bar.
   public var documentView: NSTextView { textView }
 
+  /// The row that the UTF-16 `offset` of the text lies in.
+  ///
+  /// The end of the text lies in the last row. The answer takes as long whichever row it is, so
+  /// that it may be asked at every keystroke.
+  public func row(containingOffset offset: Int) -> Int {
+    textView.grid.row(containingOffset: offset)
+  }
+
   /// The narrowest the pane gets: room for the gutter, a short line of code and the overview
   /// bar, so that its neighbors and the dividers between them stay usable.
   public var minimumWidth: CGFloat {

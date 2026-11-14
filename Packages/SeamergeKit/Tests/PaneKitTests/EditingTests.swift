@@ -335,6 +335,20 @@ import Testing
     #expect(recorder.unannounced.isEmpty)
   }
 
+  @Test func rowOfAnOffsetFollowsTheText() {
+    let (pane, window, _) = Self.editablePane(text: "zero\none\ntwo\n")
+    defer { window.close() }
+    // A line feed belongs to the row it ends; the end of a text that ends with a line feed lies
+    // in the empty last row.
+    #expect([0, 4, 5, 8, 9, 12, 13].map(pane.row(containingOffset:)) == [0, 0, 1, 1, 2, 2, 3])
+    pane.carryOut([PaneEdit(range: 2..<2, text: "\n")])
+    #expect(pane.documentView.string == "ze\nro\none\ntwo\n")
+    #expect([2, 3, 6, 14].map(pane.row(containingOffset:)) == [0, 1, 2, 4])
+    pane.carryOut([PaneEdit(range: 0..<10, text: "")])
+    #expect(pane.documentView.string == "two\n")
+    #expect([0, 3, 4].map(pane.row(containingOffset:)) == [0, 0, 1])
+  }
+
   @Test func linesTypedInAFileWithCRLFEndLikeTheLineTheyWereTypedIn() {
     let pane = PaneView()
     pane.content = PaneContent(
