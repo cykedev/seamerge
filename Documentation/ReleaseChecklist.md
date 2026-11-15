@@ -24,7 +24,16 @@ The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, a min
 
 ## Signing and notarization
 
-- [ ] `Scripts/release.sh` builds, signs and notarizes the app. The downloaded app starts without a warning, and `spctl -a -vv` reports a notarized Developer ID.
+- [ ] `Scripts/release.sh <keychain-profile>` builds, signs and notarizes the app, and writes `Seamerge-<version>.zip`, `Seamerge-<version>.dmg` and `appcast.xml` to `.build/release/<version>/`. The profile is the one that `xcrun notarytool store-credentials` created. The downloaded app starts without a warning, and `spctl -a -vv` reports a notarized Developer ID.
+- [ ] The Sparkle key that signs the appcast is in the login Keychain, and a backup is in the password manager. To restore it on another Mac, run `generate_keys -f <file>` from `.build/xcode/SourcePackages/artifacts/sparkle/Sparkle/bin/`; `Scripts/check.sh --quick` creates that folder. Installed copies check updates against the public key in `App/Config/Info.plist`, so the key must stay the same from release to release.
+- [ ] `generate_appcast` may ask for access to the Keychain. Allow it only on the Mac that makes the release.
+
+## Feed and privacy policy
+
+- [ ] Upload `Seamerge-<version>.zip`, `Seamerge-<version>.dmg` and `appcast.xml` together to the GitHub release `v<version>`, and publish that release as the latest one. The feed is `https://github.com/cykedev/seamerge/releases/latest/download/appcast.xml`; `https://www.seamerge.app/appcast.xml` redirects to it.
+- [ ] `curl --location --silent --output /dev/null --write-out '%{http_code}\n' https://www.seamerge.app/appcast.xml` prints `200`.
+- [ ] The privacy policy at `https://www.seamerge.app/about.html` has the section "Update check in the app" and is online before the tag is created.
+- [ ] An installed copy of the previous release offers the new version under **Seamerge ▸ Check for Updates…**, and **Install and Relaunch** installs it.
 
 ## Commit and tag
 
