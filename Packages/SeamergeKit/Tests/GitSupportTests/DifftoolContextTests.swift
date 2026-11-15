@@ -15,14 +15,17 @@ struct DifftoolContextTests {
     }
   }
 
-  @Test func comparisonOfTwoCommitsHasNoWorkingCopy() throws {
+  @Test(arguments: [
+    ("diff-commits", ["notes.txt", "story.txt"]), ("diff-move", ["shapes.swift"]),
+  ])
+  func comparisonOfTwoCommitsHasNoWorkingCopy(scenario: String, paths: [String]) throws {
     try withSandbox { sandbox in
       let calls = try runDifftool(
-        in: try sandbox.makeRepository("diff-commits"), sandbox: sandbox,
+        in: try sandbox.makeRepository(scenario), sandbox: sandbox,
         arguments: ["HEAD~1", "HEAD"])
 
       let contexts = calls.map(\.context)
-      #expect(contexts.map(\.path) == ["notes.txt", "story.txt"])
+      #expect(contexts.map(\.path) == paths)
       #expect(contexts.allSatisfy { $0.leftRole == .before && $0.rightRole == .after })
     }
   }

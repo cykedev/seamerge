@@ -18,11 +18,15 @@
 #   utf16        a conflict in a file stored as UTF-16 in the working tree
 #   many         a merge with twelve conflicted files, one with a name beyond ASCII
 #   big          a merge of a file of 50,000 lines with 40 conflicts
+#   merge-move   a merge that stops with a conflict: one branch moves a
+#                function, the other changes a line of it at its old place
 #   diff         three files changed in the working tree
 #   diff-commits two commits to compare: git difftool HEAD~1 HEAD
 #   diff-new     a file added and a file deleted in the working tree
 #   diff-many    a commit of 40 files in ten folders, among them 2 added and 2
 #                deleted: git difftool HEAD~1 HEAD
+#   diff-move    a commit that moves a function and moves another with one of
+#                its lines changed: git difftool HEAD~1 HEAD
 #
 # Neither the Git configuration of the user nor that of the system is read, so
 # every run creates the same commits. The repository gets a configuration of
@@ -31,7 +35,7 @@
 set -euo pipefail
 
 scenarios=(merge rebase cherry-pick revert stash add-add whitespace crlf utf16 many big
-  diff diff-commits diff-new diff-many)
+  merge-move diff diff-commits diff-new diff-many diff-move)
 
 usage() {
   echo "usage: Scripts/make-test-repo.sh <directory> <scenario>" >&2
@@ -142,6 +146,61 @@ merge_conflicting_lines() {
   for file in "$@"; do replace_line "$file" 5 "line 5 from main"; done
   commit "Change line 5 on main"
   expect_conflict git merge feature
+}
+
+# Writes functions on rectangles, in the given order and a blank line apart,
+# into a file. Each has enough letters and digits to count as a move. The names
+# area-rounded and describe-times stand for area and describe with the line
+# that returns changed.
+write_functions() {
+  local file=$1 name separator=''
+  shift
+  for name in "$@"; do
+    printf '%s' "$separator"
+    separator=$'\n'
+    case $name in
+      area | area-rounded)
+        printf 'func area(of rectangle: Rectangle) -> Double {\n'
+        printf '  let product = rectangle.width * rectangle.height\n'
+        if [ "$name" = area ]; then
+          printf '  return product\n'
+        else
+          printf '  return product.rounded()\n'
+        fi
+        ;;
+      perimeter)
+        printf 'func perimeter(of rectangle: Rectangle) -> Double {\n'
+        printf '  let sum = rectangle.width + rectangle.height\n'
+        printf '  return 2 * sum\n'
+        ;;
+      diagonal)
+        printf 'func diagonal(of rectangle: Rectangle) -> Double {\n'
+        printf '  let squares = rectangle.width * rectangle.width\n'
+        printf '    + rectangle.height * rectangle.height\n'
+        printf '  return squares.squareRoot()\n'
+        ;;
+      describe | describe-times)
+        printf 'func describe(_ rectangle: Rectangle) -> String {\n'
+        printf '  let width = String(rectangle.width)\n'
+        printf '  let height = String(rectangle.height)\n'
+        if [ "$name" = describe ]; then
+          printf '  return width + " by " + height\n'
+        else
+          printf '  return width + " times " + height\n'
+        fi
+        ;;
+      scale)
+        printf 'func scale(_ rectangle: Rectangle, by factor: Double) -> Rectangle {\n'
+        printf '  let width = rectangle.width * factor\n'
+        printf '  return Rectangle(width: width, height: rectangle.height * factor)\n'
+        ;;
+      center)
+        printf 'func center(of rectangle: Rectangle) -> Point {\n'
+        printf '  Point(x: rectangle.width / 2, y: rectangle.height / 2)\n'
+        ;;
+    esac
+    printf '}\n'
+  done > "$file"
 }
 
 case $scenario in
@@ -273,6 +332,18 @@ case $scenario in
     expect_conflict git merge feature
     ;;
 
+  merge-move)
+    write_functions shapes.swift area perimeter diagonal describe
+    commit "Add shapes"
+    git switch --quiet --create feature
+    write_functions shapes.swift perimeter diagonal area describe
+    commit "Move area below diagonal on feature"
+    git switch --quiet main
+    write_functions shapes.swift area-rounded perimeter diagonal describe
+    commit "Round the area on main"
+    expect_conflict git merge feature
+    ;;
+
   diff)
     for file in one.txt two.txt three.txt; do write_lines "$file" 10; done
     commit "Add three files"
@@ -303,6 +374,13 @@ case $scenario in
     write_lines module1/added1.txt 5
     write_lines module2/added2.txt 5
     commit "Change 36 files, add two and delete two"
+    ;;
+
+  diff-move)
+    write_functions shapes.swift area perimeter diagonal describe scale center
+    commit "Add shapes"
+    write_functions shapes.swift perimeter diagonal area scale center describe-times
+    commit "Move area and describe, and change the word in describe"
     ;;
 
   diff-new)

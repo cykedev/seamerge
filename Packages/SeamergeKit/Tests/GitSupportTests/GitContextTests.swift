@@ -142,7 +142,7 @@ struct GitContextTests {
 
   @Test(arguments: [
     ("add-add", "added.txt"), ("whitespace", "code.txt"), ("crlf", "story.txt"),
-    ("utf16", "greeting.txt"), ("big", "big.txt"),
+    ("utf16", "greeting.txt"), ("big", "big.txt"), ("merge-move", "shapes.swift"),
   ])
   func everyMergeScenarioNamesBothBranches(scenario: String, file: String) throws {
     try withSandbox { sandbox in
