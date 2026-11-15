@@ -1,7 +1,7 @@
 import Foundation
 
-/// The text a pane shows for one input: the lines of its file laid out on the row grid, or the
-/// lines of its file alone.
+/// The text a pane shows: the lines of one input laid out on the row grid, the lines of its file
+/// alone, or the lines of both files of a comparison in a single column.
 ///
 /// Each row is one line of ``string``, and rows are separated by LF, so the string has exactly
 /// as many lines as there are rows. A row shows the text of its line without the line ending; a
@@ -21,35 +21,45 @@ public struct DisplayText: Sendable {
   init(file: ComparedFile, role: Role, blocks: [Block]) {
     let rows = blocks.lazy.flatMap { block in
       let lines = block.lines(in: role)
-      return (0..<block.rowCount).lazy.map { $0 < lines.count ? lines.lowerBound + $0 : nil }
+      return (0..<block.rowCount).lazy.map {
+        $0 < lines.count ? RowSource(file: 0, line: lines.lowerBound + $0) : nil
+      }
     }
-    self.init(file: file, rows: rows, rowCount: blocks.reduce(0) { $0 + $1.rowCount })
+    self.init(files: [file], rows: rows, rowCount: blocks.reduce(0) { $0 + $1.rowCount })
   }
 
   /// Lays out each line of `file` on a row of its own, without filler rows.
   init(linesOf file: ComparedFile) {
     self.init(
-      file: file, rows: (0..<file.lineCount).lazy.map { Optional($0) }, rowCount: file.lineCount)
+      files: [file], rows: (0..<file.lineCount).lazy.map { RowSource(file: 0, line: $0) },
+      rowCount: file.lineCount)
   }
 
-  /// Lays out the `rowCount` rows that `rows` gives, each the line of `file` it names or a filler
-  /// row for `nil`.
-  private init(file: ComparedFile, rows: some Sequence<Int?>, rowCount: Int) {
+  /// The line that a row shows: the index of its file among those laid out, and the line.
+  struct RowSource {
+    var file: Int
+    var line: Int
+  }
+
+  /// Lays out the `rowCount` rows that `rows` gives, each the line of `files` it names or a
+  /// filler row for `nil`.
+  init(files: [ComparedFile], rows: some Sequence<RowSource?>, rowCount: Int) {
     var bytes: [UInt8] = []
-    bytes.reserveCapacity(file.utf8.count + rowCount)
+    bytes.reserveCapacity(files.reduce(rowCount) { $0 + $1.utf8.count })
     var rowStarts: [Int] = []
     rowStarts.reserveCapacity(rowCount + 1)
     var utf16Offset = 0
-    file.utf8.withUnsafeBytes { text in
-      for line in rows {
-        if !rowStarts.isEmpty { bytes.append(UInt8(ascii: "\n")) }
-        rowStarts.append(utf16Offset)
-        if let line {
-          Self.appendShowingLineBreaks(text[file.contentByteRange(ofLine: line)], to: &bytes)
-          utf16Offset += file.contentUTF16Length(ofLine: line)
+    for source in rows {
+      if !rowStarts.isEmpty { bytes.append(UInt8(ascii: "\n")) }
+      rowStarts.append(utf16Offset)
+      if let source {
+        let file = files[source.file]
+        file.utf8.withUnsafeBytes { text in
+          Self.appendShowingLineBreaks(text[file.contentByteRange(ofLine: source.line)], to: &bytes)
         }
-        utf16Offset += 1
+        utf16Offset += file.contentUTF16Length(ofLine: source.line)
       }
+      utf16Offset += 1
     }
     rowStarts.append(utf16Offset)
     string = String(decoding: bytes, as: UTF8.self)
@@ -65,6 +75,23 @@ public struct DisplayText: Sendable {
   public func utf16Range(ofRow row: Int) -> Range<Int> {
     precondition((0..<rowCount).contains(row), "Row \(row) is out of range")
     return rowStarts[row]..<(rowStarts[row + 1] - 1)
+  }
+
+  /// The row that holds the UTF-16 offset `offset`, the end of the row and its separator
+  /// counting as part of the row.
+  ///
+  /// - Precondition: `offset` lies within `0..<string.utf16.count + 1`, and there is a row.
+  func row(containingOffset offset: Int) -> Int {
+    precondition(
+      rowCount > 0 && (0..<rowStarts[rowCount]).contains(offset), "Offset \(offset) is out of range"
+    )
+    var low = 0
+    var high = rowCount
+    while high - low > 1 {
+      let middle = (low + high) / 2
+      if rowStarts[middle] <= offset { low = middle } else { high = middle }
+    }
+    return low
   }
 
   /// Appends UTF-8 bytes and replaces each character that ends a line in a text view with a
