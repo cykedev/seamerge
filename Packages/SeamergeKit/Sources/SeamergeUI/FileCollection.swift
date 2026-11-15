@@ -20,6 +20,15 @@ public final class FileCollection {
   /// The folders whose files the collection compares, or `nil` for the files of calls.
   public let folders: FolderPair?
 
+  /// Whether the folders are those of `git difftool --dir-diff`, whose files Git names.
+  let isFromGit: Bool
+
+  /// The folders whose names tell the sides of a file apart, or `nil` where Git names the sides:
+  /// for the files of calls, and for the folders of `git difftool --dir-diff`.
+  var namingFolders: FolderPair? {
+    isFromGit ? nil : folders
+  }
+
   /// The files, in the order of Git where it numbers them, else by path.
   public private(set) var files: [CollectedFile] = []
 
@@ -67,6 +76,7 @@ public final class FileCollection {
   public init(origin: CollectionOrigin, expectedCount: Int?, quietPeriod: Duration = .seconds(3)) {
     self.origin = origin
     folders = nil
+    isFromGit = false
     self.expectedCount = expectedCount
     self.quietPeriod = quietPeriod
     isReceiving = true
@@ -76,9 +86,10 @@ public final class FileCollection {
   }
 
   /// Creates a collection of `files` that are all there.
-  public init(files: [CollectedFile]) {
+  init(files: [CollectedFile]) {
     origin = nil
     folders = nil
+    isFromGit = false
     expectedCount = files.count
     quietPeriod = .zero
     isReceiving = false
@@ -88,8 +99,13 @@ public final class FileCollection {
   /// Creates a collection for the files of `folders`, which it compares and follows once it
   /// starts; the targets of links go as text into `linkFolder`, which the caller removes once
   /// the collection is dismissed.
-  public convenience init(comparing folders: FolderPair, linkFolder: URL) {
-    self.init(comparer: FolderComparer(folders: folders, linkFolder: linkFolder))
+  ///
+  /// With `workingTree`, the folders are those of `git difftool --dir-diff` in that working
+  /// tree: a link of Git to one of its files stands for that file, and the sides are named as
+  /// Git names them rather than after the temporary folders.
+  public convenience init(comparing folders: FolderPair, linkFolder: URL, workingTree: URL? = nil) {
+    self.init(
+      comparer: FolderComparer(folders: folders, linkFolder: linkFolder, workingTree: workingTree))
   }
 
   /// Creates a collection for two folders that compares them with `comparer` once it starts,
@@ -97,6 +113,7 @@ public final class FileCollection {
   init(comparer: FolderComparer, latency: Duration = .milliseconds(300)) {
     origin = nil
     folders = comparer.folders
+    isFromGit = comparer.workingTree != nil
     expectedCount = nil
     quietPeriod = .zero
     isReceiving = true

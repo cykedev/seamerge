@@ -12,6 +12,10 @@ struct FolderItem: Sendable, Hashable {
     /// A symbolic link, which is compared by its target and never followed.
     case link(target: String)
 
+    /// A link that `git difftool --dir-diff` put in place of the file at `path` in the working
+    /// tree, of `size` bytes; the file is compared and shown as the working copy.
+    case workingCopy(path: String, size: Int64)
+
     /// A file or folder that cannot be read, for the reason given.
     case unreadable(reason: String)
   }
@@ -22,6 +26,11 @@ struct FolderItem: Sendable, Hashable {
 
   /// What the entry is.
   let kind: Kind
+
+  /// Whether the entry stands for a file of the working tree.
+  var isWorkingCopy: Bool {
+    if case .workingCopy = kind { true } else { false }
+  }
 }
 
 /// Lists the entries of a folder for a comparison of folders, without following a link.

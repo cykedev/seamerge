@@ -9,12 +9,21 @@ import os
 /// same name composed; case counts as the file system of the left folder counts it. A link is
 /// compared by its target as text and never followed, so that a link to a folder above it makes
 /// no loop.
+///
+/// Folders that `git difftool --dir-diff` filled hold links to the files of the working tree,
+/// unless Git is told to copy them. With the working tree given, such a link to a file stands
+/// for that file, the working copy, which the user can open and edit; a link to a file of the
+/// working tree that is a link itself is compared by that file's target.
 struct FolderComparer: Sendable {
   /// The folders, as the user chose them.
   let folders: FolderPair
 
   /// Whether the file system of the left folder tells names apart by case.
   let isCaseSensitive: Bool
+
+  /// The top of the working tree whose files the links of Git lead to, as a canonical path that
+  /// ends with a slash, or `nil` outside a comparison of Git.
+  let workingTree: String?
 
   private let left: FolderListing
   private let right: FolderListing
@@ -27,9 +36,16 @@ struct FolderComparer: Sendable {
 
   /// Compares the folders of `folders`; the targets of links go as text into `linkFolder`, which
   /// the caller removes once the comparison is no longer shown.
-  init(folders: FolderPair, linkFolder: URL) {
+  ///
+  /// Links into `workingTree`, the working tree of a comparison of `git difftool --dir-diff`,
+  /// stand for its files.
+  init(folders: FolderPair, linkFolder: URL, workingTree: URL? = nil) {
     self.folders = folders
     self.linkFolder = linkFolder
+    self.workingTree = workingTree.map { tree in
+      let path = Self.canonicalPath(of: tree)
+      return path.hasSuffix("/") ? path : path + "/"
+    }
     // The real path, as the file system reports changes; resolving the links of the URL would
     // drop the /private of /var and /tmp.
     let root = { (url: URL) in
@@ -76,16 +92,55 @@ struct FolderComparer: Sendable {
     let rightItems = right.spelling(of: path, key: key).map(right.items(at:)) ?? []
     var pairs: [String: Pair] = [:]
     for item in leftItems {
-      pairs[self.key(of: item.path), default: Pair(path: item.path)].left = item
+      pairs[self.key(of: item.path), default: Pair(path: item.path)].left = resolved(item, in: left)
     }
     for item in rightItems {
-      pairs[self.key(of: item.path), default: Pair(path: item.path)].right = item
+      pairs[self.key(of: item.path), default: Pair(path: item.path)].right = resolved(
+        item, in: right)
     }
     let unreadable = Set(pairs.filter { $0.value.isUnreadable }.keys)
     if !unreadable.isEmpty {
       pairs = pairs.filter { key, _ in !Self.liesBelow(key, anyOf: unreadable) }
     }
     return pairs.values.sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
+  }
+
+  /// `item`, or, for a link of Git into the working tree, the file of the working tree it leads
+  /// to.
+  ///
+  /// A link to a link there is compared by the target of that link; a hanging link stays as it
+  /// is.
+  private func resolved(_ item: FolderItem, in listing: FolderListing) -> FolderItem {
+    guard let workingTree, case .link(let target) = item.kind else { return item }
+    let link = URL(filePath: listing.absolutePath(of: item.path))
+    let destination = URL(filePath: target, relativeTo: link.deletingLastPathComponent())
+      .standardizedFileURL
+    guard Self.canonicalPath(of: destination).hasPrefix(workingTree) else { return item }
+    var info = stat()
+    guard lstat(destination.path(percentEncoded: false), &info) == 0 else { return item }
+    switch info.st_mode & S_IFMT {
+    case S_IFREG:
+      return FolderItem(
+        path: item.path,
+        kind: .workingCopy(
+          path: destination.path(percentEncoded: false), size: Int64(info.st_size)))
+    case S_IFLNK:
+      do {
+        let ownTarget = try FileManager.default.destinationOfSymbolicLink(
+          atPath: destination.path(percentEncoded: false))
+        return FolderItem(path: item.path, kind: .link(target: ownTarget))
+      } catch {
+        return FolderItem(
+          path: item.path, kind: .unreadable(reason: FolderListing.reason(for: error)))
+      }
+    default:
+      return item
+    }
+  }
+
+  /// The path of `url` with every link in it resolved, as links of Git name the working tree.
+  private static func canonicalPath(of url: URL) -> String {
+    url.standardizedFileURL.resolvingSymlinksInPath().path(percentEncoded: false)
   }
 
   /// Whether the path of `key` lies below one of `keys`, looking only at the folders above it.
@@ -112,9 +167,12 @@ struct FolderComparer: Sendable {
       return .deleted
     case (.link(let leftTarget), .link(let rightTarget)):
       return leftTarget == rightTarget ? .identical : .modified
-    case (.file(let leftSize), .file(let rightSize)):
+    case (.file(let leftSize), .file(let rightSize)),
+      (.file(let leftSize), .workingCopy(_, let rightSize)),
+      (.workingCopy(_, let leftSize), .file(let rightSize)),
+      (.workingCopy(_, let leftSize), .workingCopy(_, let rightSize)):
       return leftSize == rightSize ? nil : .modified
-    case (.file, .link), (.link, .file):
+    case (.file, .link), (.link, .file), (.workingCopy, .link), (.link, .workingCopy):
       return .modified
     }
   }
@@ -125,9 +183,9 @@ struct FolderComparer: Sendable {
     if let change = change(withoutReading: pair) {
       return change
     }
-    guard let leftPath = pair.left?.path, let rightPath = pair.right?.path else { return .modified }
-    let leftURL = URL(filePath: left.absolutePath(of: leftPath))
-    let rightURL = URL(filePath: right.absolutePath(of: rightPath))
+    guard let leftItem = pair.left, let rightItem = pair.right else { return .modified }
+    let leftURL = Self.url(of: leftItem, in: left)
+    let rightURL = Self.url(of: rightItem, in: right)
     do {
       let leftHandle = try FileHandle(forReadingFrom: leftURL)
       defer { close(leftHandle) }
@@ -150,18 +208,34 @@ struct FolderComparer: Sendable {
     }
   }
 
+  /// The file whose bytes stand for `item` of `listing`: the file of the working tree for a link
+  /// of Git, else the entry itself.
+  private static func url(of item: FolderItem, in listing: FolderListing) -> URL {
+    if case .workingCopy(let path, _) = item.kind {
+      return URL(filePath: path)
+    }
+    return URL(filePath: listing.absolutePath(of: item.path))
+  }
+
   /// The file of the list for `pair`, to which `change` happened.
   ///
-  /// The sides are the files themselves, below the tops of their folders; a link is a file in the
-  /// folder of links that holds its target.
+  /// The sides are the files themselves, below the tops of their folders, or the working copy
+  /// that a link of Git leads to; any other link is a file in the folder of links that holds its
+  /// target.
   func file(for pair: Pair, change: CollectedFile.Change) -> CollectedFile {
     CollectedFile(
       old: side(pair.left, in: left), new: side(pair.right, in: right),
-      difftool: DifftoolContext(path: pair.path), change: change)
+      difftool: DifftoolContext(
+        path: pair.path, leftRole: pair.left?.isWorkingCopy == true ? .workingCopy : .before,
+        rightRole: pair.right?.isWorkingCopy == true ? .workingCopy : .after),
+      change: change)
   }
 
   private func side(_ item: FolderItem?, in listing: FolderListing) -> CollectedFile.Side {
     guard let item else { return .missing }
+    if case .workingCopy(let path, _) = item.kind {
+      return .file(SessionFile(url: URL(filePath: path), label: ""))
+    }
     guard case .link(let target) = item.kind else {
       return .entry(folder: listing.root, path: item.path)
     }

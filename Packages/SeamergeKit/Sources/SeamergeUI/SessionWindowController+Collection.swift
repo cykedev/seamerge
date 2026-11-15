@@ -71,7 +71,7 @@ extension SessionWindowController {
       number: 1, count: max(collection.expectedCount ?? 0, listed.count))
     return (
       try await load(file, mode: settings.comparisonMode, ignoring: settings.ignoreRules),
-      SessionContext(difftool: difftool, folders: collection.folders)
+      SessionContext(difftool: difftool, folders: collection.namingFolders)
     )
   }
 
@@ -321,7 +321,7 @@ extension SessionWindowController {
     guard collection != nil else { return }
     var difftool = file.difftool
     difftool.filePosition = filePosition
-    context = SessionContext(difftool: difftool, folders: collection?.folders)
+    context = SessionContext(difftool: difftool, folders: collection?.namingFolders)
     let session = loaded.session
     unavailable = loaded.unavailable
     collectionPlaceholder = nil

@@ -225,17 +225,19 @@ final class SessionCoordinator {
     }
   }
 
-  /// Shows `controller` for the helper of `connection`, answers `opened`, and once the window
-  /// closes, the outcome that `outcome` makes of how it closed; if the helper goes away first,
-  /// tells the window.
+  /// Shows `controller` for the helper of `connection`, calls `afterShowing`, answers `opened`,
+  /// and once the window closes, the outcome that `outcome` makes of how it closed; if the helper
+  /// goes away first, tells the window.
   private func serveWindow(
     _ controller: SessionWindowController, kind: Session.Kind, on connection: SessionConnection,
+    afterShowing: () -> Void = {},
     outcome: @escaping (SeamergeUI.SessionOutcome) -> SessionIPC.SessionOutcome
   ) async {
     let (endings, ending) = AsyncStream.makeStream(of: SessionEnding.self)
     show(controller, kind: kind) { outcome in
       ending.yield(.closed(outcome))
     }
+    afterShowing()
     do {
       try await connection.send(.opened)
     } catch {
@@ -344,31 +346,31 @@ final class SessionCoordinator {
     cache.remove(collection.folder)
   }
 
-  /// Shows the files that differ between the two folders of `folders` in one window, which Git
-  /// waits for before it deletes them, and answers success once it closes; the targets of links
-  /// it writes go when the window closes.
+  /// Compares the two folders of `folders` in one window, as File > Compare Folders… does, and
+  /// answers success once it closes, which Git waits for before it deletes the folders of a
+  /// directory diff; the targets of links that the window writes go with it.
+  ///
+  /// The folders of `git difftool --dir-diff` name their sides as Git does, and a link of Git to
+  /// a file of the working tree stands for that file.
   private func serveFolders(_ folders: SessionRequest.Folders, on connection: SessionConnection)
     async
   {
-    // The targets of links go into the cache, and with the window.
-    let linkFolder = cache.makeFolder()
-    defer { cache.remove(linkFolder) }
-    let files = await FolderComparison.files(
-      left: folders.left, right: folders.right, workingTree: folders.repository,
-      linkFolder: linkFolder)
     guard !isFinishing else {
       await send(.rejected(.quitting), on: connection)
       return
     }
-    guard !files.isEmpty else {
-      Self.logger.notice("The folders hold no differing files")
-      await send(.closed(.saved), on: connection)
-      return
+    let linkFolder = cache.makeFolder()
+    let collection = FileCollection(
+      comparing: FolderPair(left: folders.left, right: folders.right), linkFolder: linkFolder,
+      workingTree: folders.isFromGit ? folders.repository : nil)
+    defer {
+      collection.dismiss()
+      cache.remove(linkFolder)
     }
     let controller: SessionWindowController
     do {
       controller = try await SessionWindowController(
-        collection: FileCollection(files: files), undoManager: UndoManager(), settings: settings)
+        collection: collection, undoManager: UndoManager(), settings: settings)
     } catch {
       presentError(error)
       await send(.closed(.saved), on: connection)
@@ -378,7 +380,9 @@ final class SessionCoordinator {
       await send(.rejected(.quitting), on: connection)
       return
     }
-    await serveWindow(controller, kind: .diff, on: connection) { _ in .saved }
+    await serveWindow(
+      controller, kind: .diff, on: connection, afterShowing: collection.startComparing
+    ) { _ in .saved }
   }
 
   /// Shows `controller`, which shows a session of `kind`, and keeps it until its window closes;

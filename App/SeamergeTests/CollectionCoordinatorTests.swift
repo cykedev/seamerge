@@ -129,28 +129,56 @@ struct CollectionCoordinatorTests {
     await coordinator.finish()
   }
 
-  @Test func directoryDiffShowsTheDifferingFilesAndGitWaitsForTheWindow() async throws {
+  /// The folders of `git difftool --dir-diff` and two folders named on the command line open
+  /// the window of Compare Folders, which Git waits for.
+  ///
+  /// Only the folders of Git follow its links into the working tree and name the sides as Git
+  /// does.
+  @Test(arguments: [true, false])
+  func foldersOpenTheWindowOfCompareFoldersAndGitWaitsForIt(isFromGit: Bool) async throws {
     let sandbox = try AppSandbox()
     let recorder = WindowRecorder()
     let coordinator = try sandbox.startCoordinator(recorder: recorder)
-    for (path, text) in [
-      ("left/same.txt", "same\n"), ("right/same.txt", "same\n"), ("left/a.txt", "old\n"),
-      ("right/a.txt", "new\n"), ("right/new.txt", "new\n"),
+    let (left, right, tree) = (
+      sandbox.folder.appending(path: "left"), sandbox.folder.appending(path: "right"),
+      sandbox.folder.appending(path: "repository")
+    )
+    for (url, text) in [
+      (left.appending(path: "a.txt"), "old\n"), (tree.appending(path: "a.txt"), "new\n"),
+      (left.appending(path: "same.txt"), "same\n"), (tree.appending(path: "same.txt"), "same\n"),
+      (right.appending(path: "new.txt"), "new\n"),
     ] {
-      let url = sandbox.folder.appending(path: path)
       try FileManager.default.createDirectory(
         at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
       try Data(text.utf8).write(to: url)
     }
+    for name in ["a.txt", "same.txt"] {
+      try FileManager.default.createSymbolicLink(
+        at: right.appending(path: name), withDestinationURL: tree.appending(path: name))
+    }
     let outcome = perform(
-      .folders(
-        .init(
-          left: sandbox.folder.appending(path: "left"),
-          right: sandbox.folder.appending(path: "right"))), at: sandbox.socketURL)
+      .folders(.init(left: left, right: right, repository: tree, isFromGit: isFromGit)),
+      at: sandbox.socketURL)
 
     let controller = await recorder.nextOpened()
-    #expect(controller.collection?.files.map(\.path) == ["a.txt", "new.txt"])
-    controller.window?.close()
+    let window = try #require(controller.window)
+    #expect(controller.collection?.folders == FolderPair(left: left, right: right))
+    // The comparison goes on after the window opened, for a few seconds at most. The identical
+    // file of Git is not listed, and the window keeps the file it showed first.
+    let listed = isFromGit ? 2 : 3
+    let deadline = ContinuousClock.now + .seconds(10)
+    while !window.subtitle.contains(" of \(listed)"), ContinuousClock.now < deadline {
+      await Task.yield()
+    }
+
+    #expect(window.subtitle.contains(" of \(listed)"), "\(window.subtitle)")
+    #expect(controller.collection?.files.map(\.path) == ["a.txt", "new.txt", "same.txt"])
+    #expect(window.subtitle.contains("left ↔ right") == !isFromGit)
+    // Git's link to the same file of the working tree holds the same bytes; the user's link is
+    // compared by its target.
+    #expect(
+      controller.collection?.files.last?.change == (isFromGit ? .identical : .modified))
+    window.close()
 
     #expect(try await outcome.value == .closed(.saved))
     await coordinator.finish()
