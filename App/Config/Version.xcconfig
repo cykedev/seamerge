@@ -1,7 +1,8 @@
 // The version of the app and of its command-line helper.
 //
 // MARKETING_VERSION follows Semantic Versioning and is what `seamerge --version`
-// prints; CURRENT_PROJECT_VERSION counts the builds of a version.
+// prints. CURRENT_PROJECT_VERSION is the build number and rises by one with every
+// release, never resetting: Sparkle compares it to decide whether an update is newer.
 
-MARKETING_VERSION = 0.2.0
-CURRENT_PROJECT_VERSION = 2
+MARKETING_VERSION = 0.3.0
+CURRENT_PROJECT_VERSION = 3

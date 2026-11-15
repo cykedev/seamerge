@@ -2,6 +2,26 @@
 
 All notable changes to Seamerge are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-11-15
+
+Users of 0.2.0 download 0.3.0 once by hand from [GitHub Releases](https://github.com/cykedev/seamerge/releases). Version 0.2.0 has no update check, so it cannot offer this version.
+
+### Added
+
+- Updates. Seamerge checks for new versions with your consent and installs one only when you choose to. It asks once, after the second start, and the question waits while a comparison or merge started by Git is in front. The answer is kept in Settings under Updates, and Seamerge ▸ Check for Updates… checks at once.
+- Compare Folders (File ▸ Compare Folders…) compares two folders in one window and lists the files that differ. View ▸ Show Identical Files adds the identical files, and Filter Files (`⇧⌘F`) narrows the list by file name or folder.
+- Moved blocks. A block of lines that moved to another place is recognized in a comparison and in a merge, and both ends carry an arrow, `↓` or `↑`, that points to the other end. A click on the arrow, or Go ▸ Go to Other End of Move, makes the other end the current block.
+
+### Changed
+
+- The tint of a changed block runs under the line numbers up to the text, so a block reads as one band. The line-number cell of the current block keeps its fill when the pane has no focus, in the color of its side.
+
+### Fixed
+
+- Opening or closing the find bar no longer shrinks the text of a pane, and matches below the visible part are scrolled to.
+- The bars of collapsed runs end above the find bar instead of covering it.
+- Typing in the find bar of the result no longer runs decision commands.
+
 ## [0.2.0] - 2026-11-15
 
 ### Added

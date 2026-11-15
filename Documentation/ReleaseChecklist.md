@@ -9,7 +9,7 @@ The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, a min
 - [ ] `Scripts/check.sh` exits with 0 on the commit that is about to be released. The output is the record for the release notes.
 - [ ] `CHANGELOG.md` has a section for the version, in the format of Keep a Changelog, with the headings Added, Changed, Fixed and Removed. Every entry describes something that is in the release, and it is written for people who use Seamerge, not per commit.
 - [ ] `Scripts/release-ready.sh` exits with 0. It checks the changelog section and the upstream branch.
-- [ ] `App/Config/Version.xcconfig` holds the version and the build number is raised if the version is built again.
+- [ ] `App/Config/Version.xcconfig` holds the version, and `CURRENT_PROJECT_VERSION` is one higher than in the previous release. Sparkle compares this build number, so it must rise with every release and never reset.
 
 ## Installation from a clean clone
 
