@@ -32,9 +32,12 @@ public struct Session: Sendable {
   /// In a comparison, the lines leave A and arrive in B, and each end is a changed block of its
   /// own with lines only in its input. Where moved lines also changed, the stretch that stayed
   /// equal under the comparison mode still moves, and the changed lines stay a removal and an
-  /// addition. A run counts only if it is long enough and recurs exactly once. A more lenient
-  /// comparison mode keeps the moves of a stricter one as long as the engine aligns the lines
-  /// alike and each run still holds a line that occurs once on each side; uniqueness comes first.
+  /// addition. In a merge, a side removed lines of the base in one block and added them in
+  /// another; both ends are whole blocks in the pane of that side, and a block counts only if the
+  /// side's whole contribution to it moved unchanged. A run counts only if it is long enough and
+  /// recurs exactly once. A more lenient comparison mode keeps the moves of a stricter one as long
+  /// as the engine aligns the lines alike and each run still holds a line that occurs once on each
+  /// side; uniqueness comes first.
   public let moves: [Move]
 
   /// The files that take part, split into lines as the comparison split them.
@@ -129,7 +132,7 @@ public struct Session: Sendable {
       moves = split.moves
     case .merge:
       blocks = comparison.blocks
-      moves = []
+      moves = try MoveDetection.moves(inMerge: blocks, files: files, mode: options.mode)
     }
     rowLayout = RowLayout(blocks: blocks, files: files)
     var moveIndices: [MoveEnd: Int] = [:]

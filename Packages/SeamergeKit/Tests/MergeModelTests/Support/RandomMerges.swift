@@ -34,6 +34,13 @@ struct RandomMergeInput: CustomStringConvertible {
     b = Self.text(of: Self.edit(baseLines, using: &generator), using: &generator)
   }
 
+  /// The inputs `base`, `a` and `b`.
+  init(base: String?, a: String, b: String) {
+    self.base = base
+    self.a = a
+    self.b = b
+  }
+
   var description: String {
     "base: \(base.debugDescription) a: \(a.debugDescription) b: \(b.debugDescription)"
   }

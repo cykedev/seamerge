@@ -83,6 +83,17 @@ enum EngineAdapter {
       blocks: blocks, lineStarts: [.a: lineStarts(of: diff.a), .b: lineStarts(of: diff.b)])
   }
 
+  /// Whether two texts have the same lines under `mode`, as a comparison of two files decides.
+  static func linesAreEqual(
+    _ first: Data, _ second: Data, mode: ComparisonMode
+  ) throws(MergeModelError) -> Bool {
+    do {
+      return try Diff(first, second, whitespace: Whitespace(mode)).isIdentical
+    } catch {
+      throw MergeModelError(error)
+    }
+  }
+
   /// The runs of lines that two texts share under `mode`, as a comparison of two files finds
   /// them: each the lines of the first text and the lines of the second, in text order.
   static func equalLines(

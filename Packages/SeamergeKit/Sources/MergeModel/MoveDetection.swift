@@ -155,7 +155,7 @@ enum MoveDetection {
   }
 
   /// Whether `text` has at least ``minimumAlphanumericCount`` letters and digits.
-  private static func hasEnoughAlphanumerics(_ text: Data) -> Bool {
+  static func hasEnoughAlphanumerics(_ text: Data) -> Bool {
     var count = 0
     for scalar in String(decoding: text, as: UTF8.self).unicodeScalars
     where scalar.properties.isAlphabetic || scalar.properties.numericType != nil {
