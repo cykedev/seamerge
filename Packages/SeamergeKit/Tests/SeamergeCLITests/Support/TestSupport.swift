@@ -118,6 +118,8 @@ extension Git {
 /// A launcher for an app that runs already: it does nothing.
 struct AppAlreadyRunning: AppLauncher {
   func openApp() async throws {}
+
+  func waitUntilAppQuits(within timeout: Duration) async -> Bool { true }
 }
 
 /// A launcher for an app that cannot be started.
@@ -129,4 +131,6 @@ struct AppThatCannotStart: AppLauncher {
   func openApp() async throws {
     throw LaunchError()
   }
+
+  func waitUntilAppQuits(within timeout: Duration) async -> Bool { true }
 }

@@ -83,24 +83,68 @@ public struct SeamergeCommand: Sendable {
         return reply.exitStatus
       } catch .serverUnreachable {
         Logger.seamergeCLI.info("The app does not listen; opening it")
+      } catch .rejected(.quitting) {
+        Logger.seamergeCLI.info("The app is quitting; opening it again once it has quit")
+        try await waitUntilAppQuits()
       } catch {
         Logger.seamergeCLI.error("The session failed: \(String(describing: error))")
         throw CommandError(error, request: request)
       }
     }
+    let reply = try await performOpeningTheApp(request)
+    Logger.seamergeCLI.info("The session ended: \(String(describing: reply))")
+    return reply.exitStatus
+  }
+
+  /// Opens the app and sends `request`, trying to connect until the timeout of the client has
+  /// passed; opens the app again while it waits, and after a copy that was quitting has gone.
+  ///
+  /// A copy of the app that quits stops listening a moment before it has gone, and refuses
+  /// sessions until then. Opening the app once more starts a new copy as soon as the old one has
+  /// gone, so that the session gets its window instead of an error.
+  private func performOpeningTheApp(_ request: SessionRequest) async throws(CommandError)
+    -> SessionReply
+  {
+    try await openApp()
+    let clock = ContinuousClock()
+    var deadline = clock.now + client.connectionTimeout
+    while true {
+      let attempt = SessionClient(
+        socketURL: client.socketURL,
+        connectionTimeout: min(Self.reopeningInterval, max(.zero, deadline - clock.now)))
+      do {
+        return try await attempt.perform(request)
+      } catch .serverUnreachable where clock.now < deadline {
+        try await openApp()
+      } catch .rejected(.quitting) {
+        Logger.seamergeCLI.info("The app is quitting; opening it again once it has quit")
+        try await waitUntilAppQuits()
+        try await openApp()
+        deadline = clock.now + client.connectionTimeout
+      } catch {
+        Logger.seamergeCLI.error("The session failed: \(String(describing: error))")
+        throw CommandError(error, request: request)
+      }
+    }
+  }
+
+  /// How long the command tries to connect before it opens the app again.
+  private static let reopeningInterval = Duration.seconds(1)
+
+  /// Waits until the copy of the app that quits has gone, at most for the timeout of the client.
+  private func waitUntilAppQuits() async throws(CommandError) {
+    guard await appLauncher.waitUntilAppQuits(within: client.connectionTimeout) else {
+      Logger.seamergeCLI.error("The app did not quit in time")
+      throw .appStillQuitting
+    }
+  }
+
+  private func openApp() async throws(CommandError) {
     do {
       try await appLauncher.openApp()
     } catch {
       Logger.seamergeCLI.error("Cannot open the app: \(String(describing: error))")
       throw .appNotOpened(reason: error.localizedDescription)
-    }
-    do {
-      let reply = try await client.perform(request)
-      Logger.seamergeCLI.info("The session ended: \(String(describing: reply))")
-      return reply.exitStatus
-    } catch {
-      Logger.seamergeCLI.error("The session failed: \(String(describing: error))")
-      throw CommandError(error, request: request)
     }
   }
 

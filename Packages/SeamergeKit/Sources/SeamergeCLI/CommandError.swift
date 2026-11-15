@@ -48,6 +48,9 @@ enum CommandError: Error {
   /// No app answered on the socket in time.
   case appNotAnswering
 
+  /// The app is quitting and has not quit in time, so no copy can open the window.
+  case appStillQuitting
+
   /// The app answered but does not understand the request, so it is another version.
   case appRefusedRequest
 
@@ -76,7 +79,8 @@ enum CommandError: Error {
       .unexpectedArgument, .missingFiles, .emptyFileName, .fileNotFound, .folderInsteadOfFile,
       .fileNotReadable, .outputFolderNotFound:
       2
-    case .appNotOpened, .appNotAnswering, .appRefusedRequest, .connectionNotPossible,
+    case .appNotOpened, .appNotAnswering, .appStillQuitting, .appRefusedRequest,
+      .connectionNotPossible,
       .socketPathTooLong, .socketFolderNotPrivate:
       3
     }
@@ -107,6 +111,8 @@ enum CommandError: Error {
       "Cannot open Seamerge (\(reason.trimmingTrailingPeriod)). "
         + "Open it once from the Finder, then try again."
     case .appNotAnswering: "Seamerge does not answer. Quit Seamerge, then try again."
+    case .appStillQuitting:
+      "Seamerge is still quitting. Wait until it has quit, or force it to quit, then try again."
     case .appRefusedRequest:
       "Seamerge cannot read the request; it may be another version. Quit Seamerge, then try again."
     case .windowNotAvailable(isComparison: true):

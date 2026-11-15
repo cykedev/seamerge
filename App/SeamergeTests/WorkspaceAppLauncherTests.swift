@@ -36,4 +36,41 @@ struct WorkspaceAppLauncherTests {
         == helpers.deletingLastPathComponent().deletingLastPathComponent().resolvingSymlinksInPath()
         .standardizedFileURL)
   }
+
+  @Test(.timeLimit(.minutes(1))) func waitingForAProcessThatEndsSaysItEnded() async throws {
+    let process = try Self.sleep(seconds: "0.2")
+    #expect(
+      await WorkspaceAppLauncher.waitUntilProcessEnds(
+        process.processIdentifier, within: .seconds(20)))
+    process.waitUntilExit()
+  }
+
+  @Test(.timeLimit(.minutes(1))) func waitingForAProcessThatGoesOnEndsAtTheTimeout() async throws {
+    let process = try Self.sleep(seconds: "30")
+    defer { process.terminate() }
+    let clock = ContinuousClock()
+    let start = clock.now
+
+    let hasEnded = await WorkspaceAppLauncher.waitUntilProcessEnds(
+      process.processIdentifier, within: .milliseconds(200))
+
+    #expect(!hasEnded)
+    #expect(clock.now - start < .seconds(10))
+  }
+
+  @Test(.timeLimit(.minutes(1))) func waitingForAProcessThatHasEndedReturnsAtOnce() async throws {
+    let process = try Self.sleep(seconds: "0")
+    process.waitUntilExit()
+    #expect(
+      await WorkspaceAppLauncher.waitUntilProcessEnds(
+        process.processIdentifier, within: .seconds(20)))
+  }
+
+  private static func sleep(seconds: String) throws -> Process {
+    let process = Process()
+    process.executableURL = URL(filePath: "/bin/sleep")
+    process.arguments = [seconds]
+    try process.run()
+    return process
+  }
 }

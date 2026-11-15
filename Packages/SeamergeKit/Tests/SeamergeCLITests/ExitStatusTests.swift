@@ -203,4 +203,6 @@ final class CountingLauncher: AppLauncher {
   func openApp() async throws {
     openings.withLock { $0 += 1 }
   }
+
+  func waitUntilAppQuits(within timeout: Duration) async -> Bool { true }
 }

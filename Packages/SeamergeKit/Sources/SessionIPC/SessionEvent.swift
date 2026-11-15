@@ -61,6 +61,9 @@ public enum SessionRejection: String, Sendable, Hashable, Codable {
 
   /// The app read the request but cannot open a window of its kind.
   case unsupportedRequest
+
+  /// The app is quitting and opens no more windows; once it has quit, a new copy can.
+  case quitting
 }
 
 extension SessionEvent: Codable {

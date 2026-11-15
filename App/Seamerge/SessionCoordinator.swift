@@ -27,6 +27,9 @@ protocol SessionCoordinatorDelegate: AnyObject {
 /// goes on to the next file without waiting for the window. Once that window has closed, the
 /// comparisons of the collection that still come are cancelled without a window. The two folders
 /// of a directory diff become a collection of their own, whose window Git waits for.
+///
+/// While the app quits, the coordinator refuses every new session as `quitting`, so that the
+/// helper opens the app again once this copy has gone, instead of ending without a window.
 @MainActor
 final class SessionCoordinator {
   /// Learns when windows open and close; the coordinator does not retain it.
@@ -90,6 +93,9 @@ final class SessionCoordinator {
   /// Closes every session window, which tells each waiting helper how its session ended: a merge
   /// whether it is saved, a comparison that it was cancelled, so that Git compares no further
   /// files either; then stops listening.
+  ///
+  /// Sessions that come meanwhile are refused as `quitting`, except further comparisons of a run
+  /// whose window closed, which are cancelled with it.
   func finish() async {
     isFinishing = true
     for controller in windowControllers {
@@ -160,6 +166,10 @@ final class SessionCoordinator {
     case .merge, .diff:
       break
     }
+    guard !isFinishing else {
+      await send(.rejected(.quitting), on: connection)
+      return
+    }
     let controller: SessionWindowController
     do {
       controller = try await Self.makeWindow(for: connection.request, settings: settings)
@@ -169,7 +179,7 @@ final class SessionCoordinator {
       return
     }
     guard !isFinishing else {
-      await send(.closed(.cancelled), on: connection)
+      await send(.rejected(.quitting), on: connection)
       return
     }
 
@@ -215,14 +225,19 @@ final class SessionCoordinator {
   /// its own, and answers `accepted` once its files are kept; answers that it was cancelled if
   /// the window of the collection has closed.
   private func serveCollected(_ diff: SessionRequest.Diff, on connection: SessionConnection) async {
-    guard let requestOrigin = diff.origin, !isFinishing else {
+    guard let requestOrigin = diff.origin else {
       await send(.closed(.cancelled), on: connection)
       return
     }
     let origin = CollectionOrigin(requestOrigin)
     collections.removeAll { !$0.files.isReceiving }
     if let joined = collections.first(where: { $0.files.accepts(origin) }) {
+      // While the app quits, this is the run whose window just closed, which cancels the rest.
       await add(CollectedFile(diff), to: joined, on: connection)
+      return
+    }
+    guard !isFinishing else {
+      await send(.rejected(.quitting), on: connection)
       return
     }
     let collection = OpenCollection(
@@ -246,7 +261,7 @@ final class SessionCoordinator {
     }
     guard !isFinishing else {
       end(collection)
-      await send(.closed(.cancelled), on: connection)
+      await send(.rejected(.quitting), on: connection)
       return
     }
     show(controller, kind: .diff) { [weak self] _ in self?.end(collection) }
@@ -304,7 +319,11 @@ final class SessionCoordinator {
     let files = await FolderComparison.files(
       left: folders.left, right: folders.right, workingTree: folders.repository,
       linkFolder: linkFolder)
-    guard !files.isEmpty, !isFinishing else {
+    guard !isFinishing else {
+      await send(.rejected(.quitting), on: connection)
+      return
+    }
+    guard !files.isEmpty else {
       Self.logger.notice("The folders hold no differing files")
       await send(.closed(.saved), on: connection)
       return
@@ -319,7 +338,7 @@ final class SessionCoordinator {
       return
     }
     guard !isFinishing else {
-      await send(.closed(.saved), on: connection)
+      await send(.rejected(.quitting), on: connection)
       return
     }
     await serveWindow(controller, kind: .diff, on: connection) { _ in .saved }

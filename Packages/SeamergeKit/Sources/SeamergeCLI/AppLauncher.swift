@@ -6,8 +6,12 @@ public protocol AppLauncher: Sendable {
   /// Starts the app if it is not running, and brings it to the front.
   ///
   /// This may return before the app listens for sessions; the command keeps trying to connect for
-  /// a while.
+  /// a while. A copy that is quitting counts as running until it has gone.
   ///
   /// - Throws: Any error that says why the app could not be opened.
   func openApp() async throws
+
+  /// Waits until the copy of the app that runs now has quit, at most for `timeout`, and tells
+  /// whether it has; at once if none runs.
+  func waitUntilAppQuits(within timeout: Duration) async -> Bool
 }

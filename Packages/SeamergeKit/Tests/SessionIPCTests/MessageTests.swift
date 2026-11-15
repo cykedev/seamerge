@@ -54,7 +54,7 @@ struct MessageTests {
   @Test(arguments: [
     SessionEvent.opened, .accepted, .closed(.saved), .closed(.cancelled),
     .rejected(.unsupportedVersion),
-    .rejected(.malformedRequest), .rejected(.unsupportedRequest),
+    .rejected(.malformedRequest), .rejected(.unsupportedRequest), .rejected(.quitting),
   ])
   func eventSurvivesEncodingAndDecoding(_ event: SessionEvent) throws {
     #expect(try roundTrip(event) == event)
@@ -97,6 +97,9 @@ struct MessageTests {
     #expect(
       try json(SessionEvent.rejected(.unsupportedRequest))
         == #"{"event":"rejected","reason":"unsupportedRequest","version":2}"#)
+    #expect(
+      try json(SessionEvent.rejected(.quitting))
+        == #"{"event":"rejected","reason":"quitting","version":2}"#)
   }
 
   @Test func requestIsWrittenWithPlainPathsAndNamedFields() throws {
