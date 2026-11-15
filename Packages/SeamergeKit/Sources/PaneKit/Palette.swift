@@ -243,7 +243,7 @@ extension NSColor {
   }
 
   /// This color as it is drawn in `appearance`, converted to sRGB.
-  func resolved(in appearance: NSAppearance) -> NSColor {
+  package func resolved(in appearance: NSAppearance) -> NSColor {
     var resolved = self
     appearance.performAsCurrentDrawingAppearance {
       resolved = usingColorSpace(.sRGB) ?? self
@@ -252,7 +252,7 @@ extension NSColor {
   }
 
   /// This color drawn over the opaque `background`, as an opaque color in sRGB.
-  func over(_ background: NSColor) -> NSColor {
+  package func over(_ background: NSColor) -> NSColor {
     let top = usingColorSpace(.sRGB) ?? self
     let bottom = background.usingColorSpace(.sRGB) ?? background
     let alpha = top.alphaComponent
@@ -263,12 +263,18 @@ extension NSColor {
   }
 
   /// The relative luminance of this color in sRGB, from 0 for black to 1 for white.
-  var luminance: CGFloat {
+  package var luminance: CGFloat {
     let color = usingColorSpace(.sRGB) ?? self
     func linear(_ component: CGFloat) -> CGFloat {
       component <= 0.040_45 ? component / 12.92 : pow((component + 0.055) / 1.055, 2.4)
     }
     return 0.2126 * linear(color.redComponent) + 0.7152 * linear(color.greenComponent)
       + 0.0722 * linear(color.blueComponent)
+  }
+
+  /// The contrast ratio of this opaque color and the opaque `other`, from 1 to 21.
+  package func contrastRatio(with other: NSColor) -> CGFloat {
+    let (lighter, darker) = (max(luminance, other.luminance), min(luminance, other.luminance))
+    return (lighter + 0.05) / (darker + 0.05)
   }
 }

@@ -108,25 +108,45 @@ import Testing
     #expect(fixture.captions == ["Left", "Base (Optional)", "Right"])
   }
 
-  /// The border of an empty field and that of a drop target stand out from the window.
+  /// The border of an empty field and that of a drop target stand out from the window and from
+  /// a filled field on it.
   ///
-  /// The drop target takes the focus color of the system, which follows the accent color the
-  /// user chose; its contrast is measured with the standard accent of macOS, blue, whose focus
-  /// color is the system blue, so that the test does not depend on the setting of the Mac it runs
-  /// on. That the border is that focus color, opaque, holds whatever the accent.
+  /// The drop target starts from the focus color of the system, which follows the accent color
+  /// the user chose; it is measured with each of the accent colors of macOS as the focus color,
+  /// so that the test does not depend on the setting of the Mac it runs on.
   @Test(arguments: Look.all)
-  func bordersStandOutFromTheWindow(look: Look) throws {
+  func bordersStandOutFromTheWindowWhateverTheAccentColor(look: Look) throws {
     let colors = CompareFilesColors(DisplayOptions(increasesContrast: look.increasesContrast))
-    let background = try #require(Contrast.resolve(.windowBackgroundColor, in: look.appearance))
-    let focus = Contrast.resolve(
-      NSColor.keyboardFocusIndicatorColor.withAlphaComponent(1), in: look.appearance)
-    #expect(Contrast.resolve(colors.dropTargetBorder, in: look.appearance) == focus)
-
-    let standardFocus = NSColor.systemBlue
-    for border in [colors.emptyFieldBorder, standardFocus] {
+    let window = try #require(Contrast.resolve(.windowBackgroundColor, in: look.appearance))
+    let field = Contrast.over(Contrast.resolve(colors.filledFieldFill, in: look.appearance), window)
+    let accents: [NSColor] = [
+      .systemBlue, .systemPurple, .systemPink, .systemRed, .systemOrange, .systemYellow,
+      .systemGreen, .systemGray,
+    ]
+    let options = DisplayOptions(increasesContrast: look.increasesContrast)
+    let borders =
+      [colors.emptyFieldBorder]
+      + accents.map { CompareFilesColors(options, focusColor: $0).dropTargetBorder }
+    for (index, border) in borders.enumerated() {
       let resolved = Contrast.resolve(border, in: look.appearance)
-      let ratio = Contrast.ratio(Contrast.over(resolved, background), background)
-      #expect(ratio >= 3, "\(border): \(ratio)")
+      for background in [window, field] {
+        let ratio = Contrast.ratio(Contrast.over(resolved, background), background)
+        #expect(ratio >= 3, "border \(index): \(String(format: "%.2f", ratio))")
+      }
+    }
+  }
+
+  /// A focus color that stands out already keeps its hue and value.
+  @Test func dropTargetKeepsAFocusColorThatStandsOut() throws {
+    let appearance = try #require(NSAppearance(named: .aqua))
+    let dark = NSColor(srgbRed: 0, green: 0.2, blue: 0.6, alpha: 1)
+    let resolved = try #require(
+      Contrast.resolve(
+        CompareFilesColors(DisplayOptions(), focusColor: dark).dropTargetBorder, in: appearance
+      )?.usingColorSpace(.sRGB))
+    let components = [resolved.redComponent, resolved.greenComponent, resolved.blueComponent]
+    for (component, expected) in zip(components, [0, 0.2, 0.6]) {
+      #expect(abs(component - expected) < 0.001)
     }
   }
 
