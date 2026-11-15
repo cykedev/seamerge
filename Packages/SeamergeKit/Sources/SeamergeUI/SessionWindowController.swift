@@ -564,7 +564,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
         menuItem.state = mode == comparisonOptions.mode ? .on : .off
       } else if [
         .toggleScrollSynchronization, .toggleLineAlignment, .toggleSyntaxHighlighting,
-        .toggleLineWrapping,
+        .toggleLineWrapping, .toggleIdenticalFiles,
       ].contains(command) {
         menuItem.state = isSwitchedOn(command) ? .on : .off
       }
@@ -594,6 +594,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
     case .toggleSyntaxHighlighting: highlightsSyntax
     case .toggleLineWrapping: presentation.wrapsLines
     case .toggleLineAlignment: presentation.alignsLines
+    case .toggleIdenticalFiles: fileFilter.showsIdenticalFiles
     default: false
     }
   }
@@ -603,7 +604,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
   func canPerform(_ command: SessionCommand) -> Bool {
     if unavailable != nil || collectionPlaceholder != nil,
       ![
-        .skipRemainingFiles, .toggleFooter, .nextFile, .previousFile,
+        .skipRemainingFiles, .toggleFooter, .nextFile, .previousFile, .toggleIdenticalFiles,
       ].contains(command)
     {
       return false
@@ -618,6 +619,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
       focusablePanes.count > 1
     case .anotherFile(let forward):
       neighborIndex(forward: forward) != nil
+    case .comparedFolders:
+      collection?.folders != nil
     case .noComparisonUnderWay:
       !isSwitchingComparison
     case .basePane:

@@ -90,6 +90,10 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Hides the footer of every session window, or shows it again.
   case toggleFooter
 
+  /// Lists the files of two compared folders that hold the same bytes as well, or leaves them
+  /// out.
+  case toggleIdenticalFiles
+
   /// Makes the text larger.
   case zoomIn
 
@@ -235,6 +239,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "Collapse Unchanged Lines", bundle: .module, comment: "View menu command.")
     case .toggleFooter:
       String(localized: "Hide Footer", bundle: .module, comment: "View menu command.")
+    case .toggleIdenticalFiles:
+      String(
+        localized: "Show Identical Files", bundle: .module,
+        comment: "View menu command, checked while the list of two folders shows equal files too.")
     case .zoomIn: String(localized: "Zoom In", bundle: .module, comment: "View menu command.")
     case .zoomOut: String(localized: "Zoom Out", bundle: .module, comment: "View menu command.")
     case .actualSize:
@@ -462,6 +470,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Close and compare no more files of this run", bundle: .module,
         comment: "Help tag of File > Skip Remaining Files.")
+    case .toggleIdenticalFiles:
+      String(
+        localized: "List the files that are the same in both folders too", bundle: .module,
+        comment: "Help tag of View > Show Identical Files.")
     case .saveAndClose:
       String(
         localized: "Save and close", bundle: .module,
@@ -517,6 +529,7 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .showAllLines: #selector(SessionWindowController.showAllLines(_:))
     case .collapseUnchangedLines: #selector(SessionWindowController.collapseUnchangedLines(_:))
     case .toggleFooter: #selector(SessionWindowController.toggleFooter(_:))
+    case .toggleIdenticalFiles: #selector(SessionWindowController.toggleIdenticalFiles(_:))
     case .zoomIn: #selector(SessionWindowController.zoomIn(_:))
     case .zoomOut: #selector(SessionWindowController.zoomOut(_:))
     case .actualSize: #selector(SessionWindowController.actualSize(_:))

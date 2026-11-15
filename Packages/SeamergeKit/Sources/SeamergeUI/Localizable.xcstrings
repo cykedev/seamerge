@@ -423,6 +423,9 @@
     "Choose two files or two folders." : {
       "comment" : "Compare Files: a file and a folder are chosen, which cannot be compared."
     },
+    "Choose View > Show Identical Files to list them." : {
+      "comment" : "Window of two folders without differences: how to list the files anyway."
+    },
     "Choose…" : {
       "comment" : "Compare Files: the button in an empty field that opens the open panel."
     },
@@ -841,6 +844,9 @@
     "Line up matching lines side by side" : {
       "comment" : "Help tag of the footer toggle of aligned lines while bands connect the changes."
     },
+    "List the files that are the same in both folders too" : {
+      "comment" : "Help tag of View > Show Identical Files."
+    },
     "Mac Roman" : {
       "comment" : "Encoding."
     },
@@ -1134,6 +1140,9 @@
     },
     "Show Footer" : {
       "comment" : "View menu command."
+    },
+    "Show Identical Files" : {
+      "comment" : "View menu command, checked while the list of two folders shows equal files too."
     },
     "Show in Finder" : {
       "comment" : "Context menu of a header."

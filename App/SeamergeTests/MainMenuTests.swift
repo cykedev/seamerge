@@ -230,6 +230,7 @@ import Testing
       Hide Footer ⌘/
       ---
       Show Sidebar ⌃⌘S
+      Show Identical Files
       ---
       Show Toolbar ⌥⌘T
       Customize Toolbar…

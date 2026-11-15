@@ -55,7 +55,7 @@ extension SessionWindowController {
   static func opening(
     _ collection: FileCollection, settings: UserSettings
   ) async throws(SessionLoadingError) -> (loaded: LoadedFile, context: SessionContext) {
-    let filter = FileFilter()
+    let filter = FileFilter(showsIdenticalFiles: settings.showsIdenticalFiles)
     let listed = collection.files.filter(filter.includes)
     guard let file = listed.first else {
       guard let folders = collection.folders else {
@@ -85,6 +85,15 @@ extension SessionWindowController {
   @objc func showPreviousFile(_ sender: Any?) {
     guard canPerform(.previousFile), let index = neighborIndex(forward: false) else { return }
     showFile(at: index)
+  }
+
+  /// Lists the files of two folders that hold the same bytes as well, or leaves them out, and
+  /// remembers the choice for the next such window.
+  @objc func toggleIdenticalFiles(_ sender: Any?) {
+    guard canPerform(.toggleIdenticalFiles) else { return }
+    fileFilter.showsIdenticalFiles.toggle()
+    settings.showsIdenticalFiles = fileFilter.showsIdenticalFiles
+    listFiles(scrolling: true)
   }
 
   /// The index in the collection of the file that Next File, or Previous File if not `forward`,
@@ -132,6 +141,7 @@ extension SessionWindowController {
   /// Sets up the list of the files and follows the collection as it receives more.
   func setUpCollection() {
     guard let collection, let collectionLayout else { return }
+    fileFilter.showsIdenticalFiles = settings.showsIdenticalFiles
     // Files may have come while the window read the first one, some of them before it.
     if let path = context.difftool?.path,
       let index = collection.files.firstIndex(where: { $0.path == path })

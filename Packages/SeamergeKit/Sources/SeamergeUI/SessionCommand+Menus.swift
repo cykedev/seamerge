@@ -42,6 +42,7 @@ extension SessionCommand {
         ],
         [.zoomIn, .zoomOut, .actualSize],
         [.toggleFooter],
+        [.toggleIdenticalFiles],
       ]
     case .go:
       [

@@ -123,6 +123,12 @@ public final class UserSettings {
     didSet { defaults.set(!showsFileList, forKey: Key.hidesFileList) }
   }
 
+  /// Whether a window of two folders lists their identical files too, as the user last chose in
+  /// any of them.
+  var showsIdenticalFiles: Bool {
+    didSet { defaults.set(showsIdenticalFiles, forKey: Key.showsIdenticalFiles) }
+  }
+
   /// The share of the height that the panes above the result took in the last merge window that
   /// closed, or `nil` before the first.
   var sourcesFraction: CGFloat? {
@@ -171,6 +177,7 @@ public final class UserSettings {
     goesToNextConflict = !defaults.bool(forKey: Key.staysOnDecidedConflict)
     showsFooter = !defaults.bool(forKey: Key.hidesFooter)
     showsFileList = !defaults.bool(forKey: Key.hidesFileList)
+    showsIdenticalFiles = defaults.bool(forKey: Key.showsIdenticalFiles)
   }
 
   /// The font of the code at `size` points: the chosen family, or the monospaced system font.
@@ -234,6 +241,7 @@ public final class UserSettings {
     static let staysOnDecidedConflict = "StaysOnDecidedConflict"
     static let hidesFooter = "HidesFooter"
     static let hidesFileList = "HidesFileList"
+    static let showsIdenticalFiles = "ShowsIdenticalFiles"
     static let sourcesFraction = "SourcesFraction"
   }
 }

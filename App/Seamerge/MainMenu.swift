@@ -170,7 +170,7 @@ final class MainMenu {
           Self.item(
             Titles.showSidebar, #selector(NSSplitViewController.toggleSidebar(_:)), key: "s",
             modifiers: [.control, .command])
-        ],
+        ] + commands(.toggleIdenticalFiles),
         [
           Self.item(
             Titles.showToolbar, #selector(NSWindow.toggleToolbarShown(_:)), key: "t",

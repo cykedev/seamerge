@@ -31,6 +31,13 @@ enum CollectionPlaceholder: Equatable {
 
   /// What the window says below the title: the next step, if there is one.
   var message: String? {
-    nil
+    switch self {
+    case .comparing, .noFile:
+      nil
+    case .sameFiles:
+      String(
+        localized: "Choose View > Show Identical Files to list them.", bundle: .module,
+        comment: "Window of two folders without differences: how to list the files anyway.")
+    }
   }
 }

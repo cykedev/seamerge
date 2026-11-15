@@ -12,6 +12,9 @@ extension SessionCommand {
     /// Another file of the window lies in the direction, after or before the one shown.
     case anotherFile(forward: Bool)
 
+    /// Showing identical files needs a window that compares two folders.
+    case comparedFolders
+
     /// Choosing a comparison mode needs no comparison under way.
     case noComparisonUnderWay
 
@@ -102,6 +105,7 @@ extension SessionCommand {
     case .nextFile: .anotherFile(forward: true)
     case .previousFile: .anotherFile(forward: false)
     case .nextPane, .previousPane: .anotherPane
+    case .toggleIdenticalFiles: .comparedFolders
     case .compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace:
       .noComparisonUnderWay
     case .toggleBase: .basePane

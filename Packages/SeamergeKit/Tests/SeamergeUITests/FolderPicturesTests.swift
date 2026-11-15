@@ -3,8 +3,8 @@ import Testing
 
 @testable import SeamergeUI
 
-/// Draws the pictures of comparisons of folders: Compare Files with two folders, the window while
-/// the folders are compared, and in the smallest window.
+/// Draws the pictures of comparisons of folders: Compare Files with two folders, the window with
+/// identical files listed, while the folders are compared, and in the smallest window.
 @MainActor
 @Suite(.serialized, .timeLimit(.minutes(1))) struct FolderPicturesTests {
   @Test(arguments: Look.all)
@@ -24,6 +24,18 @@ import Testing
     #expect(
       fixture.controller.fill(with: [folders.left, folders.left.appending(path: "Notes.txt")]))
     try picture(fixture, look: look, named: "folders-compare-files-mixed-\(look.name)")
+  }
+
+  @Test(arguments: Look.all)
+  func windowWithIdenticalFilesIsPictured(look: Look) async throws {
+    let folders = try SampleFolders()
+    try folders.fillWithProject()
+    let settings = UserSettings.private()
+    settings.showsIdenticalFiles = true
+    let collection = await FileCollection.compared(folders)
+    try await Windows.picture(
+      collection, look: look, options: DisplayOptions(increasesContrast: look.increasesContrast),
+      settings: settings, named: "folders-identical-\(look.name)")
   }
 
   @Test(arguments: [Look.light, .dark])
@@ -75,13 +87,16 @@ import Testing
   @Test func windowIsPicturedWithoutColorAndWithReducedTransparency() async throws {
     let folders = try SampleFolders()
     try folders.fillWithProject()
+    let settings = UserSettings.private()
+    settings.showsIdenticalFiles = true
     let collection = await FileCollection.compared(folders)
     for (name, options) in [
       ("without-color", DisplayOptions(differentiatesWithoutColor: true)),
       ("reduced-transparency", DisplayOptions(reducesTransparency: true)),
     ] {
       try await Windows.picture(
-        collection, look: .light, options: options, named: "folders-\(name)-light")
+        collection, look: .light, options: options, settings: settings,
+        named: "folders-\(name)-light")
     }
   }
 
