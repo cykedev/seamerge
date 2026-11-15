@@ -32,6 +32,11 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
     <img src="Documentation/Images/screenshot-collection-light.png" alt="Several files in one window, with the sidebar listing a new, two changed and a deleted file.">
   </picture>
 - **Compare folders.** File ▸ Compare Folders… compares two folders in one window and lists the files that differ. A filter narrows the list by file name or folder.
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-folders-dark.png">
+    <img src="Documentation/Images/screenshot-folders-light.png" alt="Two folders compared in one window: the sidebar lists the files that differ, says 7 of 12 files differ and has a field to filter by file name; the selected file is shown side by side with bands between the sides.">
+  </picture>
 - **Moved blocks.** A block of lines that moved to another place gets an arrow at both ends that points to the other end; a click on the arrow, or Go ▸ Go to Other End of Move, jumps there.
 - **Updates.** Seamerge checks for new versions with your consent and installs one only when you choose to. See [Updates](#updates).
 - **Decisions per block.** The decision bar takes the text of A, the base, B, or both, or nothing, per block, with the mouse or single keys. A conflict stays open until you decide.
