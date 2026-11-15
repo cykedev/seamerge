@@ -40,6 +40,21 @@ final class PaneScrollView: NSScrollView {
     }
   }
 
+  /// Lays out the pane again as the find bar opens or closes, so that the bars of collapsed runs
+  /// end above it.
+  override var isFindBarVisible: Bool {
+    didSet {
+      guard isFindBarVisible != oldValue else { return }
+      superview?.needsLayout = true
+    }
+  }
+
+  /// Lays out the pane again as the find bar grows or shrinks, as when it shows the replace field.
+  override func findBarViewDidChangeHeight() {
+    super.findBarViewDidChangeHeight()
+    superview?.needsLayout = true
+  }
+
   /// Whether the scroll view is handling an event of the scroll wheel or the trackpad, during
   /// which its text moves because the user scrolls it by hand.
   private(set) var isHandlingScrollWheel = false

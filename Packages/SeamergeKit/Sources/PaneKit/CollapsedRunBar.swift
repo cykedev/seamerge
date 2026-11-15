@@ -161,6 +161,16 @@ final class CollapsedRunBar: NSButton {
 /// The layer above the text and the gutter of a pane that holds the bars of collapsed runs and
 /// lets every other click through to the views below.
 final class CollapsedRunBarLayer: NSView {
+  override init(frame frameRect: NSRect) {
+    super.init(frame: frameRect)
+    // A bar partly below the layer, where the find bar lies, shows only the part above it.
+    clipsToBounds = true
+  }
+
+  required init?(coder: NSCoder) {
+    nil
+  }
+
   override var isFlipped: Bool { true }
 
   override func hitTest(_ point: NSPoint) -> NSView? {

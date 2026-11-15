@@ -59,6 +59,35 @@ struct FindBarTests {
     }
   }
 
+  @Test func barsOfCollapsedRunsStayAboveTheFindBar() async throws {
+    try await FindPasteboard.preserving {
+      let (pane, window) = Self.pane(wrapsLines: false)
+      defer { window.close() }
+      // A bar on every other row, so that bars lie where the find bar opens.
+      pane.collapsedRuns = stride(from: 1, to: 990, by: 3).map { CollapsedRun(rows: $0..<$0 + 2) }
+      pane.layoutSubtreeIfNeeded()
+      Self.perform(.showFindInterface, in: pane)
+      pane.layoutSubtreeIfNeeded()
+      let scrollView = try #require(pane.documentView.enclosingScrollView)
+      let findBar = try #require(scrollView.findBarView)
+      let findBarFrame = pane.convert(findBar.bounds, from: findBar)
+      #expect(findBarFrame.height > 0)
+
+      let bars = CollapsingTests.bars(of: pane)
+      #expect(bars.contains { pane.convert($0.frame, from: $0.superview).maxY > findBarFrame.minY })
+      for bar in bars {
+        #expect(pane.convert(bar.visibleRect, from: bar).maxY <= findBarFrame.minY)
+      }
+      // Clicks on the find bar reach it, also over the gutter.
+      for y in stride(from: findBarFrame.minY + 1, to: findBarFrame.maxY, by: 4) {
+        for x in [2, findBarFrame.midX] {
+          let hit = pane.hitTest(pane.convert(CGPoint(x: x, y: y), to: pane.superview))
+          #expect(!bars.contains { hit?.isDescendant(of: $0) == true }, "at \(x), \(y)")
+        }
+      }
+    }
+  }
+
   private static let length = 300
 
   /// A pane of a thousand lines, each wider than the pane, in a key window with the focus in its

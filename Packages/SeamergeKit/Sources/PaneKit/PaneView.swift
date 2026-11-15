@@ -325,6 +325,15 @@ public final class PaneView: NSView {
   /// position.
   var clipView: NSClipView { scrollView.contentView }
 
+  /// The height of the text in view above the find bar, which lies over its bottom while it is
+  /// open.
+  var heightAboveFindBar: CGFloat {
+    guard scrollView.isFindBarVisible, let findBar = scrollView.findBarView else {
+      return clipView.frame.height
+    }
+    return min(clipView.frame.height, convert(findBar.frame, from: scrollView).minY)
+  }
+
   /// The top left corner of the visible part of the text.
   var scrollOrigin: CGPoint { clipView.bounds.origin }
 
