@@ -65,24 +65,30 @@ import Testing
     let rowHeight = upper.theme.rowHeight
     upper.documentView.scroll(CGPoint(x: 0, y: 30 * rowHeight))
 
-    // The reading line of the upper pane lies at display row 32.5, which is row 231.5; the
-    // result maps it to row 115.75, which it shows at display row 16.75.
-    let upperDisplayRow = (30 * rowHeight + 0.25 * 200) / rowHeight
-    #expect(upperDisplayRow == 32.5)
-    let expected = 16.75 * rowHeight - 0.25 * result.documentView.visibleRect.height
-    #expect(abs(result.documentView.visibleRect.minY - expected) < 0.001)
+    // The reading line of the upper pane lies near display row 32.5, which is row 231.5, as
+    // display row 21 is row 220; the result maps it to row 115.75, which it shows at display row
+    // 16.75, as display row 11 is row 110.
+    let upperDisplayRow = Self.readingLineDisplayRow(of: upper)
+    try #require(upperDisplayRow > 21)
+    let resultDisplayRow = 11 + ((220 + upperDisplayRow - 21) / 2 - 110)
+    #expect(
+      abs(result.documentView.visibleRect.minY - Self.origin(of: result, at: resultDisplayRow))
+        < 0.001)
   }
 
   @Test func placeWithinABarFollowsToTheSameFractionOfTheOtherBar() throws {
     let (upper, result, window, sync) = Self.coupledPanes()
     defer { withExtendedLifetime(sync) { window.close() } }
-    let rowHeight = upper.theme.rowHeight
     // Display row 20.5, half way through the bar of rows 20 to 219, is row 120; the result maps
     // it to row 60, half way through its bar of rows 10 to 109 at display row 10.
-    upper.documentView.scroll(CGPoint(x: 0, y: 20.5 * rowHeight - 0.25 * 200))
+    upper.documentView.scroll(CGPoint(x: 0, y: Self.origin(of: upper, at: 20.5)))
 
-    let expected = 10.5 * rowHeight - 0.25 * result.documentView.visibleRect.height
-    #expect(abs(result.documentView.visibleRect.minY - expected) < 0.001)
+    // The reading line lies near the middle of the bar; the result follows as far through its own.
+    let fraction = Self.readingLineDisplayRow(of: upper) - 20
+    try #require(abs(fraction - 0.5) < 0.1)
+    #expect(
+      abs(result.documentView.visibleRect.minY - Self.origin(of: result, at: 10 + fraction)) < 0.001
+    )
   }
 
   @Test func coupledPanesKeepTheirRowsInPlaceWhileTheirRunsChangeOneAfterTheOther() throws {
@@ -133,6 +139,23 @@ import Testing
     sync.setRowMapping(between: upper, and: result, forward: { $0 / 2 }, backward: { $0 * 2 })
     let window = Rendering.host(host, size: host.frame.size)
     return (upper, result, window, sync)
+  }
+
+  /// The display row, with its fraction, at the reading line of `pane`, a quarter down its
+  /// visible part.
+  ///
+  /// The origin and height are read from the pane, not assumed: a horizontal scroller in the
+  /// legacy style, which the system may switch to while the tests run, takes height from the
+  /// text, and AppKit aligns the origin that a pane scrolls to with the pixels of the screen.
+  private static func readingLineDisplayRow(of pane: PaneView) -> CGFloat {
+    let visible = pane.documentView.visibleRect
+    return (visible.minY + 0.25 * visible.height) / pane.theme.rowHeight
+  }
+
+  /// The vertical origin at which `pane` has `displayRow`, with its fraction, at its reading
+  /// line.
+  private static func origin(of pane: PaneView, at displayRow: CGFloat) -> CGFloat {
+    displayRow * pane.theme.rowHeight - 0.25 * pane.documentView.visibleRect.height
   }
 
   private static func isClose(_ first: NSColor, _ second: NSColor) -> Bool {

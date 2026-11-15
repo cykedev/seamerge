@@ -126,13 +126,14 @@ import Testing
     defer { window.close() }
     let rowHeight = theme.rowHeight
     upper.documentView.scroll(CGPoint(x: 0, y: 100 * rowHeight))
-    // Row 100 plus a quarter of 200 points lies at the reading line of the upper pane.
-    let upperRow = (100 * rowHeight + 0.25 * 200) / rowHeight
-    let expected = upperRow / 2 * rowHeight - 0.25 * result.documentView.visibleRect.height
-    #expect(abs(result.documentView.visibleRect.minY - expected) < 0.001)
+    // Row 100 plus a quarter of the visible height lies at the reading line of the upper pane.
+    let upperRow = Self.readingLineRow(of: upper)
+    #expect(
+      abs(result.documentView.visibleRect.minY - Self.origin(of: result, at: upperRow / 2)) < 0.001)
     result.documentView.scroll(CGPoint(x: 0, y: 40 * rowHeight))
-    let resultRow = (40 * rowHeight + 0.25 * result.documentView.visibleRect.height) / rowHeight
-    #expect(abs(upper.documentView.visibleRect.minY - (resultRow * 2 * rowHeight - 50)) < 0.001)
+    let resultRow = Self.readingLineRow(of: result)
+    #expect(
+      abs(upper.documentView.visibleRect.minY - Self.origin(of: upper, at: resultRow * 2)) < 0.001)
   }
 
   @Test func panesWhoseMappingEndedTakeEachOthersOrigin() throws {
@@ -264,6 +265,21 @@ import Testing
     }
     #expect(!gutterChanged)
     #expect(textChanged)
+  }
+
+  /// The row, with its fraction, at the reading line of `pane`, a quarter down its visible part.
+  ///
+  /// The origin and height are read from the pane, not assumed: a horizontal scroller in the
+  /// legacy style, which the system may switch to while the tests run, takes height from the
+  /// text, and AppKit aligns the origin that a pane scrolls to with the pixels of the screen.
+  private static func readingLineRow(of pane: PaneView) -> CGFloat {
+    let visible = pane.documentView.visibleRect
+    return (visible.minY + 0.25 * visible.height) / pane.theme.rowHeight
+  }
+
+  /// The vertical origin at which `pane` has `row`, with its fraction, at its reading line.
+  private static func origin(of pane: PaneView, at row: CGFloat) -> CGFloat {
+    row * pane.theme.rowHeight - 0.25 * pane.documentView.visibleRect.height
   }
 
   /// The start value of the random scroll sequence; printed with every failure.
