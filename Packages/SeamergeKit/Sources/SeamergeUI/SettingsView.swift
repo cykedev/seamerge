@@ -1,8 +1,8 @@
 import MergeModel
 import SwiftUI
 
-/// The form of the window Settings: how the code is drawn, which every window shows at once,
-/// and how each new window starts.
+/// The form of the page General of Settings: how the code is drawn, which every window shows at
+/// once, and how each new window starts.
 struct SettingsView: View {
   @Bindable var settings: UserSettings
 

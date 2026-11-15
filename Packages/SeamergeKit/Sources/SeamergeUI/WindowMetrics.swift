@@ -115,6 +115,41 @@ enum WindowMetrics {
   /// The width of the window Settings.
   static let settingsWidth: CGFloat = 480
 
+  /// The distance between the edges of a page of Settings that AppKit lays out and its content,
+  /// as far as the grouped form of the page General keeps its groups from the edges.
+  static let settingsInset: CGFloat = 20
+
+  /// The distance between a list of Settings and the buttons below it, and between those and
+  /// the note below them.
+  static let settingsSpacing: CGFloat = 8
+
+  /// The distance between the parts of a page of Settings.
+  static let settingsGroupSpacing: CGFloat = 16
+
+  /// The height of the table of ignore rules: its header and seven rows.
+  static let ignoreRuleTableHeight: CGFloat = 200
+
+  /// The height of the square buttons below a table that add and remove its rows.
+  static let tableButtonHeight: CGFloat = 24
+
+  /// The room on either side of the title of a square button below a table.
+  static let tableButtonPadding: CGFloat = 12
+
+  /// The width of the column of the switches of the ignore rules.
+  static let ignoreRuleSwitchColumnWidth: CGFloat = 24
+
+  /// The width of the column of the names of the ignore rules.
+  static let ignoreRuleNameColumnWidth: CGFloat = 140
+
+  /// The height of the field in which a rule is tried.
+  static let ruleTrialHeight: CGFloat = 112
+
+  /// The distance between the text of the field in which a rule is tried and its edges.
+  static let ruleTrialInset: CGFloat = 4
+
+  /// The distance between the parts of a row of the table of ignore rules.
+  static let ignoreRuleCellSpacing: CGFloat = 4
+
   /// The distance between the parts of the window Keyboard Shortcuts, and between its groups.
   static let shortcutOverviewSpacing: CGFloat = 16
 

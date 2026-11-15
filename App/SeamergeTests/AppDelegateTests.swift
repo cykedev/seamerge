@@ -278,7 +278,7 @@ struct AppDelegateTests {
     let window = try #require(delegate.settingsWindowController?.window)
     defer { window.close() }
     #expect(window.isVisible)
-    #expect(window.title == "Settings")
+    #expect(window.title == "General", "the window takes the name of the page in view")
     delegate.showSettings(item)
     #expect(delegate.settingsWindowController?.window === window)
 

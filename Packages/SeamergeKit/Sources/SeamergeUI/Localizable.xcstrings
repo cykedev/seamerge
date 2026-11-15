@@ -324,11 +324,23 @@
     "✓ Git uses Seamerge for merge." : {
       "comment" : "Compare Files: the line about Git when it uses the app for merges only."
     },
+    "%@ copy" : {
+      "comment" : "Settings: the name of a copy of an ignore rule, such as Timestamps copy."
+    },
     "A" : {
       "comment" : "The badge of the incoming side."
     },
     "Actual Size" : {
       "comment" : "View menu command."
+    },
+    "Add a pattern for text that changes on every build, such as a date." : {
+      "comment" : "Settings: note below the ignore rules while none is the user’s."
+    },
+    "Add a rule of your own" : {
+      "comment" : "Help tag of the + below the ignore rules."
+    },
+    "Add Rule" : {
+      "comment" : "Settings: the + below the ignore rules for VoiceOver, and the Undo menu after it."
     },
     "Add Seamerge to Tower" : {
       "comment" : "Set Up Git Integration: the box that adds the app to Tower's tools."
@@ -404,6 +416,9 @@
     },
     "Change Line Endings" : {
       "comment" : "Undo menu: the line endings of the result were changed."
+    },
+    "Change Rule" : {
+      "comment" : "Undo menu: an ignore rule was renamed, got another pattern, or was switched."
     },
     "Changes" : {
       "comment" : "Toolbar items: the current change and the buttons that go through the changes."
@@ -646,6 +661,15 @@
     "Drop to Use as %@" : {
       "comment" : "Compare Files: below a field that a drop would fill, such as Drop to Use as A."
     },
+    "Duplicate" : {
+      "comment" : "Settings: button and context menu item that copy an ignore rule."
+    },
+    "Duplicate Rule" : {
+      "comment" : "Undo menu: a rule was copied."
+    },
+    "Duplicate this rule to change it" : {
+      "comment" : "Help tag of the name and pattern of an ignore rule that comes with the app."
+    },
     "Each window starts like this. The switches in a window’s footer change only that window." : {
       "comment" : "Settings: note below the group of how a new window starts."
     },
@@ -720,6 +744,9 @@
     },
     "From the base" : {
       "comment" : "VoiceOver: a part of the result taken from the common ancestor."
+    },
+    "General" : {
+      "comment" : "Settings: the page of the font, new windows, merging and updates."
     },
     "Git couldn’t save the settings." : {
       "comment" : "Set Up Git Integration: writing Git's configuration failed."
@@ -855,8 +882,14 @@
     "Ignore Line Endings" : {
       "comment" : "Compare menu command."
     },
+    "Ignore Rules" : {
+      "comment" : "VoiceOver: the table of the ignore rules in Settings."
+    },
     "Ignore Whitespace Changes" : {
       "comment" : "Compare menu command."
+    },
+    "Ignored Text" : {
+      "comment" : "Settings: the page of the ignore rules, and its toolbar item."
     },
     "incoming" : {
       "comment" : "Role: the branch being merged in."
@@ -927,8 +960,14 @@
     "Mac Roman" : {
       "comment" : "Encoding."
     },
+    "Make a copy of the selected rule that you can change" : {
+      "comment" : "Help tag of Duplicate below the ignore rules."
+    },
     "Maximize Result" : {
       "comment" : "View menu command."
+    },
+    "Memory Addresses" : {
+      "comment" : "Settings: an ignore rule that comes with the app, for addresses such as 0x7ff8."
     },
     "Merge" : {
       "comment" : "Compare Files: the default button with three files.\nKeyboard Shortcuts: the shortcuts of a merge.\nMenu bar: the decisions of a merge."
@@ -947,6 +986,9 @@
     },
     "Move Seamerge to the Applications folder first." : {
       "comment" : "Set Up Git Integration: the app runs from a disk image or Downloads."
+    },
+    "Name" : {
+      "comment" : "Settings: the column of the rule names, and the placeholder of a rule without one."
     },
     "Narrow the list to files whose name or folder contains a text" : {
       "comment" : "Help tag of Edit > Find > Filter Files."
@@ -1014,6 +1056,12 @@
     "Paste" : {
       "comment" : "Context menu: paste text."
     },
+    "Paste text to try the selected rule" : {
+      "comment" : "Settings: placeholder of the field in which an ignore rule is tried."
+    },
+    "Pattern" : {
+      "comment" : "Settings: the column of the patterns."
+    },
     "Plain Text" : {
       "comment" : "Syntax menu: color nothing; also the name of a file of no known language."
     },
@@ -1053,6 +1101,9 @@
     "Recent" : {
       "comment" : "Compare Files: the heading of the comparisons opened last."
     },
+    "Regular Expression" : {
+      "comment" : "Settings: placeholder of the pattern of an ignore rule that has none yet."
+    },
     "Reload" : {
       "comment" : "Files that changed on disk: the button of a sheet that offers to show them as they are now, and the step of the Undo menu that did."
     },
@@ -1061,6 +1112,12 @@
     },
     "Remove File" : {
       "comment" : "Compare Files: the button that empties a field."
+    },
+    "Remove Rule" : {
+      "comment" : "Settings: the − below the ignore rules for VoiceOver, the context menu and Undo."
+    },
+    "Remove the selected rule" : {
+      "comment" : "Help tag of the − below the ignore rules."
     },
     "Remove these lines, as %@ did." : {
       "comment" : "Help tag of a toggle that removes the lines, such as Remove these lines, as main did."
@@ -1088,10 +1145,10 @@
     },
     "Reopen All Conflicts" : {
       "comment" : "Merge menu command."
-    },    "Replace All" : {
+    },
+    "Replace All" : {
       "comment" : "Edit > Find: replace every match of the search in the result."
     },
-
     "Replaces the entry and the script of another copy of Seamerge in Tower." : {
       "comment" : "Set Up Git Integration: adding to Tower replaces a copy."
     },
@@ -1205,9 +1262,6 @@
     },
     "Set Up Git Integration…" : {
       "comment" : "Compare Files: the button next to the line about Git."
-    },
-    "Settings" : {
-      "comment" : "Title of the window Settings."
     },
     "SF Mono" : {
       "comment" : "Settings: the monospaced font of the system."
@@ -1361,6 +1415,15 @@
     "The folders have the same files." : {
       "comment" : "Window of two folders: no file differs."
     },
+    "The pattern also matches empty text, so the rule ignores nothing." : {
+      "comment" : "Settings: why an ignore rule takes no effect: its pattern matches empty text."
+    },
+    "The pattern isn’t valid, so the rule ignores nothing." : {
+      "comment" : "Settings: why an ignore rule takes no effect: its pattern does not compile."
+    },
+    "The pattern takes too long to match, so the rule ignores nothing." : {
+      "comment" : "Settings: why an ignore rule takes no effect: matching it takes too long."
+    },
     "The switch discards %lld decisions." : {
       "comment" : "Sheet before switching the comparison, such as The switch discards 3 decisions.",
       "localizations" : {
@@ -1413,6 +1476,9 @@
         }
       }
     },
+    "Timestamps" : {
+      "comment" : "Settings: an ignore rule that comes with the app, for dates and times of day."
+    },
     "Toggle A" : {
       "comment" : "Undo menu: A was switched on or off for a block."
     },
@@ -1442,6 +1508,9 @@
     },
     "Try again. If it fails again, use another tool for these files." : {
       "comment" : "Alert: what to do when the comparison of the files failed."
+    },
+    "Try the selected rule:" : {
+      "comment" : "Settings: label above the field in which an ignore rule is tried."
     },
     "Turn on Highlight Syntax in the View menu to color the code" : {
       "comment" : "Help tag of the syntax pop-up button in the footer while highlighting is off."
@@ -1496,6 +1565,9 @@
     },
     "UTF-32 LE" : {
       "comment" : "Encoding: UTF-32 little-endian."
+    },
+    "UUIDs" : {
+      "comment" : "Settings: an ignore rule that comes with the app, for UUIDs."
     },
     "View" : {
       "comment" : "Menu bar."

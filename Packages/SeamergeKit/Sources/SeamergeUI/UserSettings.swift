@@ -5,10 +5,11 @@ import Observation
 /// The settings of the app and what its windows remember, kept in the user defaults; the only
 /// place that reads or writes them for the windows.
 ///
-/// The settings say how the code is drawn and how each new window starts. The text settings
-/// take effect at once in every open window; the others are where a new window starts, and the
-/// controls of a window change only that window. What a window remembers for every window, its
-/// footer, sidebar, size and split, is kept here as well, without a place in Settings.
+/// The settings say how the code is drawn, how each new window starts, and which text the
+/// comparisons of two files leave out. The text settings and the ignore rules take effect at once
+/// in every open window; the others are where a new window starts, and the controls of a window
+/// change only that window. What a window remembers for every window, its footer, sidebar, size
+/// and split, is kept here as well, without a place in Settings.
 ///
 /// Values that the user defaults hold out of range, or that name what no longer exists, read as
 /// the standard.
@@ -19,6 +20,11 @@ public final class UserSettings {
   /// tab width changed.
   static let textDidChangeNotification = Notification.Name(
     "app.eiden.seamerge.UserSettingsTextDidChange")
+
+  /// Posted, with the settings as the object, after an ignore rule was added, removed or
+  /// changed, or switched on or off.
+  static let ignoreRulesDidChangeNotification = Notification.Name(
+    "app.eiden.seamerge.UserSettingsIgnoreRulesDidChange")
 
   /// Posted, with the settings as the object, after the footer was hidden or shown.
   static let footerVisibilityDidChangeNotification = Notification.Name(
@@ -108,6 +114,40 @@ public final class UserSettings {
     didSet { defaults.set(!goesToNextConflict, forKey: Key.staysOnDecidedConflict) }
   }
 
+  /// The rules that come with the app and are switched on.
+  public var enabledBuiltInIgnoreRules: Set<BuiltInIgnoreRule> {
+    didSet {
+      guard enabledBuiltInIgnoreRules != oldValue else { return }
+      defaults.set(
+        BuiltInIgnoreRule.allCases.filter(enabledBuiltInIgnoreRules.contains).map(\.storedName),
+        forKey: Key.enabledBuiltInIgnoreRules)
+      ignoreRulesDidChange()
+    }
+  }
+
+  /// The user's own ignore rules, in the order Settings lists them.
+  public var customIgnoreRules: [IgnoreRule] {
+    didSet {
+      guard customIgnoreRules != oldValue else { return }
+      defaults.set(
+        customIgnoreRules.map { rule in
+          [
+            RuleKey.name: rule.name, RuleKey.pattern: rule.pattern,
+            RuleKey.isEnabled: rule.isEnabled,
+          ] as [String: Any]
+        }, forKey: Key.customIgnoreRules)
+      ignoreRulesDidChange()
+    }
+  }
+
+  /// Every ignore rule as Settings lists it: those that come with the app, then the user's own.
+  ///
+  /// A comparison uses those that are switched on, while its window uses ignore rules.
+  public var ignoreRules: [IgnoreRule] {
+    BuiltInIgnoreRule.allCases.map { $0.rule(isEnabled: enabledBuiltInIgnoreRules.contains($0)) }
+      + customIgnoreRules
+  }
+
   /// Whether the windows show their footer, as the user last chose in any of them.
   var showsFooter: Bool {
     didSet {
@@ -178,6 +218,16 @@ public final class UserSettings {
     showsFooter = !defaults.bool(forKey: Key.hidesFooter)
     showsFileList = !defaults.bool(forKey: Key.hidesFileList)
     showsIdenticalFiles = defaults.bool(forKey: Key.showsIdenticalFiles)
+    let enabledNames = Set(defaults.stringArray(forKey: Key.enabledBuiltInIgnoreRules) ?? [])
+    enabledBuiltInIgnoreRules = Set(
+      BuiltInIgnoreRule.allCases.filter { enabledNames.contains($0.storedName) })
+    customIgnoreRules = (defaults.array(forKey: Key.customIgnoreRules) ?? []).compactMap { entry in
+      guard let entry = entry as? [String: Any], let pattern = entry[RuleKey.pattern] as? String
+      else { return nil }
+      return IgnoreRule(
+        name: entry[RuleKey.name] as? String ?? "", pattern: pattern,
+        isEnabled: entry[RuleKey.isEnabled] as? Bool ?? true)
+    }
   }
 
   /// The font of the code at `size` points: the chosen family, or the monospaced system font.
@@ -219,6 +269,10 @@ public final class UserSettings {
   /// The weight of a regular font in the scale of the font manager.
   private static let regularWeight = 5
 
+  private func ignoreRulesDidChange() {
+    NotificationCenter.default.post(name: Self.ignoreRulesDidChangeNotification, object: self)
+  }
+
   private func textDidChange() {
     NotificationCenter.default.post(name: Self.textDidChangeNotification, object: self)
   }
@@ -243,6 +297,16 @@ public final class UserSettings {
     static let hidesFileList = "HidesFileList"
     static let showsIdenticalFiles = "ShowsIdenticalFiles"
     static let sourcesFraction = "SourcesFraction"
+    static let enabledBuiltInIgnoreRules = "EnabledBuiltInIgnoreRules"
+    static let customIgnoreRules = "IgnoreRules"
+  }
+
+  /// The names of the values of one of the user's own ignore rules, a dictionary in the array of
+  /// ``Key/customIgnoreRules``.
+  private enum RuleKey {
+    static let name = "Name"
+    static let pattern = "Pattern"
+    static let isEnabled = "Enabled"
   }
 }
 
