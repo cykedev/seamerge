@@ -237,14 +237,15 @@ final class RowLayoutFragment: NSTextLayoutFragment {
       }
       top += height
     }
+    let carets = textLineFragments.map(LineCarets.init)
     for run in painting.runs {
-      for rect in runRects(run.range, fullHeight: false, painting) {
+      for rect in runRects(run.range, fullHeight: false, painting, carets: carets) {
         context.setFillColor(run.fill.cgColor)
         context.fill(rect.offsetBy(dx: point.x, dy: point.y))
       }
     }
     for selection in painting.selections {
-      for rect in runRects(selection.range, fullHeight: true, painting) {
+      for rect in runRects(selection.range, fullHeight: true, painting, carets: carets) {
         context.setFillColor(selection.fill.cgColor)
         context.fill(rect.offsetBy(dx: point.x, dy: point.y))
       }
@@ -260,7 +261,7 @@ final class RowLayoutFragment: NSTextLayoutFragment {
       fillRoundedRect(mark, color: removal.color, in: context)
     }
     if let invisibles = painting.invisibles {
-      drawInvisibles(invisibles, at: point, in: context)
+      drawInvisibles(invisibles, at: point, in: context, carets: carets)
     }
   }
 
@@ -294,7 +295,9 @@ final class RowLayoutFragment: NSTextLayoutFragment {
   ///
   /// A range that reaches past the end of a line includes its line feed and reaches to the right
   /// edge of the pane, as a selection of whole lines does.
-  private func runRects(_ range: Range<Int>, fullHeight: Bool, _ painting: Painting) -> [CGRect] {
+  private func runRects(
+    _ range: Range<Int>, fullHeight: Bool, _ painting: Painting, carets: [LineCarets]
+  ) -> [CGRect] {
     textLineFragments.enumerated().compactMap { lineIndex, line in
       let lineRange = line.characterRange
       let text = line.attributedString.string as NSString
@@ -307,11 +310,11 @@ final class RowLayoutFragment: NSTextLayoutFragment {
       let end = min(range.upperBound - paragraphStart, textEnd)
       let reachesEnd = range.upperBound - paragraphStart > textEnd
       guard start < end || (reachesEnd && start <= end) else { return nil }
-      let left = line.typographicBounds.minX + line.locationForCharacter(at: start).x
+      let left = line.typographicBounds.minX + carets[lineIndex].x(at: start)
       let right =
         reachesEnd
         ? rowsBounds(painting.extent).maxX
-        : line.typographicBounds.minX + line.locationForCharacter(at: end).x
+        : line.typographicBounds.minX + carets[lineIndex].x(at: end)
       let height = fullHeight ? rowHeight : painting.textBandHeight
       let top = CGFloat(lineIndex) * rowHeight + (rowHeight - height) / 2
       return CGRect(x: left, y: top, width: right - left, height: height)

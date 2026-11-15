@@ -6,7 +6,9 @@ extension RowLayoutFragment {
   ///
   /// The symbols are drawn only, never part of the text, so that they are neither copied nor
   /// read by VoiceOver.
-  func drawInvisibles(_ invisibles: Invisibles, at point: CGPoint, in context: CGContext) {
+  func drawInvisibles(
+    _ invisibles: Invisibles, at point: CGPoint, in context: CGContext, carets: [LineCarets]
+  ) {
     // The symbols take the font of the text around them.
     guard
       let text = textLineFragments.first(where: { $0.attributedString.length > 0 })?
@@ -27,7 +29,7 @@ extension RowLayoutFragment {
       let range = line.characterRange
       let baseline = point.y + CGFloat(lineIndex) * rowHeight + invisibles.baseline
       func cellStart(_ index: Int) -> CGFloat {
-        point.x + line.typographicBounds.minX + line.locationForCharacter(at: index).x
+        point.x + line.typographicBounds.minX + carets[lineIndex].x(at: index)
       }
       var end = range.upperBound
       if end > range.lowerBound && text.character(at: end - 1) == Self.lineFeed {

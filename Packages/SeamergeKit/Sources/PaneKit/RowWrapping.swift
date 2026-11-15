@@ -44,26 +44,26 @@ struct RowWrapping {
     return theme.continuationIndent(afterIndentationOf: columns)
   }
 
-  /// The rows among `rows` of `text`, whose rows `grid` knows, that take more than one line.
-  func wrappedRows(_ rows: Range<Int>, of text: NSString, grid: RowGrid) -> [WrappedRows.Entry] {
+  /// The rows among `rows` of `text`, whose rows `grid` knows, that take more than one line;
+  /// the rows of `wholeRows` count whole even where they are too long to show whole.
+  func wrappedRows(_ rows: Range<Int>, of text: NSString, grid: RowGrid, wholeRows: IndexSet)
+    -> [WrappedRows.Entry]
+  {
     rows.compactMap { row in
-      let lines = lines(ofRow: row, of: text, grid: grid)
+      let lines = lines(ofRow: row, of: text, grid: grid, isWhole: wholeRows.contains(row))
       return lines > 1 ? WrappedRows.Entry(row: row, lines: lines) : nil
     }
   }
 
-  /// The number of screen lines that `row` of `text` takes.
-  func lines(ofRow row: Int, of text: NSString, grid: RowGrid) -> Int {
+  /// The number of screen lines that `row` of `text` takes, the whole row if `isWhole`.
+  func lines(ofRow row: Int, of text: NSString, grid: RowGrid, isWhole: Bool) -> Int {
     if let columns = grid.exactColumns(ofRow: row), columns <= fittingColumns {
       return 1
     }
     let offsets = grid.offsets(ofRow: row)
-    var length = offsets.count
-    if length > 0 && text.character(at: offsets.upperBound - 1) == Self.lineFeed {
-      length -= 1
-    }
     return typesetLines(
-      of: text.substring(with: NSRange(location: offsets.lowerBound, length: length)))
+      of: isWhole
+        ? LongLine.wholeText(of: text, in: offsets) : LongLine.shownText(of: text, in: offsets))
   }
 
   /// The number of lines that Core Text, which TextKit typesets with, breaks `line` into.
@@ -82,5 +82,4 @@ struct RowWrapping {
     return max(lines, 1)
   }
 
-  private static let lineFeed: unichar = 0x0A
 }

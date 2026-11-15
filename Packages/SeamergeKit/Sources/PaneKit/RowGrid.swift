@@ -92,7 +92,8 @@ struct RowGrid {
   /// Measures the rows of `scalars` and returns the columns of the widest; `rowMeasured` learns
   /// each row, the last one too.
   private static func measure(
-    _ scalars: some Sequence<Unicode.Scalar>, tabWidth: Int, rowMeasured: (MeasuredRow) -> Void
+    _ scalars: some Sequence<Unicode.Scalar>, tabWidth: Int, cutsLongRows: Bool = true,
+    rowMeasured: (MeasuredRow) -> Void
   ) -> Int {
     var length = 0
     var columns = 0
@@ -105,7 +106,9 @@ struct RowGrid {
           columns: isExact ? Int32(clamping: columns) : -Int32(clamping: max(columns, 1))))
       widestRowColumns = max(widestRowColumns, columns)
     }
+    var isCut = false
     for scalar in scalars {
+      let isShown = !cutsLongRows || length < PaneView.maximumShownLineLength
       length += scalar.utf16.count
       switch scalar {
       case "\n":
@@ -113,6 +116,14 @@ struct RowGrid {
         length = 0
         columns = 0
         isExact = true
+        isCut = false
+      case _ where !isShown:
+        // A pane cuts a line that is too long to show whole and shows one column, an ellipsis,
+        // in place of the rest.
+        if !isCut {
+          columns += 1
+          isCut = true
+        }
       case "\t":
         columns += tabWidth - columns % tabWidth
       default:
@@ -122,6 +133,15 @@ struct RowGrid {
     }
     endRow(withLineFeed: false)
     return widestRowColumns
+  }
+
+  /// The columns that all of `row` of `text` takes, with tabs expanded, also where a pane cuts
+  /// it.
+  func wholeColumns(of text: NSString, inRow row: Int) -> Int {
+    Self.measure(
+      text.substring(with: NSRange(offsets(ofRow: row))).unicodeScalars, tabWidth: tabWidth,
+      cutsLongRows: false
+    ) { _ in }
   }
 
   /// The columns that `row` takes, with tabs expanded, or `nil` if it holds a character whose

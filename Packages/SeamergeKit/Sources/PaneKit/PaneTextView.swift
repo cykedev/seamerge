@@ -78,6 +78,10 @@ final class PaneTextView: NSTextView {
   /// The selection as the fragments last drew it.
   private var drawnSelection: [NSValue] = []
 
+  /// The rows of lines too long to show whole that the pane shows whole all the same, because
+  /// the insertion point or the selection lies in them, with the columns of the widest.
+  var wholeRows = (rows: IndexSet(), columns: 0)
+
   /// The edits that the text is about to undergo, in order, which its changes are checked
   /// against.
   var announcements: [Announcement] = []
@@ -293,6 +297,16 @@ final class PaneTextView: NSTextView {
   /// A collapsed run that the change reached into is expanded: its rows are no longer unchanged.
   func takeOver(_ change: RowChange, replacing range: Range<Int>, length: Int, text: String) {
     content.takeOver(change, replacing: range, length: length, text: text)
+    // A line that is typed in stays whole until the selection says where it is now.
+    var whole = IndexSet()
+    for row in wholeRows.rows {
+      if change.oldRows.contains(row) {
+        whole.insert(integersIn: change.newRows)
+      } else {
+        whole.insert(change.newBoundary(of: row))
+      }
+    }
+    wholeRows.rows = whole
     textVersion.increment()
     let runs = displayRows.runs.compactMap { run -> CollapsedRun? in
       guard !run.rows.overlaps(change.oldRows) else { return nil }
@@ -389,11 +403,23 @@ final class PaneTextView: NSTextView {
     return true
   }
 
+  /// Counts the screen lines of `row` of `text` again, after it changed between cut and whole.
+  func rewrap(row: Int, of text: NSString) {
+    let change = RowChange(oldRows: row..<row + 1, newRows: row..<row + 1)
+    let rewritten = wrappedRows(in: row..<row + 1, of: text).entries
+    ownWrappedRows.takeOver(change, rewritten: rewritten)
+    var wrappedRows = displayRows.wrappedRows
+    wrappedRows.takeOver(change, rewritten: rewritten)
+    displayRows = DisplayRows(
+      runs: displayRows.runs, rowCount: grid.rowCount, wrappedRows: wrappedRows)
+  }
+
   /// The rows among `rows` of `text` that wrap at the width of the lines, none while lines do
   /// not wrap.
   private func wrappedRows(in rows: Range<Int>, of text: NSString) -> WrappedRows {
     guard let lineWrapping else { return .none }
-    return WrappedRows(lineWrapping.wrappedRows(rows, of: text, grid: grid))
+    return WrappedRows(
+      lineWrapping.wrappedRows(rows, of: text, grid: grid, wholeRows: wholeRows.rows))
   }
 
   private func makeLineWrapping(width: CGFloat) -> RowWrapping {
@@ -421,7 +447,8 @@ final class PaneTextView: NSTextView {
   /// The width that the widest row needs, known before TextKit lays it out, so that the scroll
   /// range does not grow while the user scrolls.
   var textWidth: CGFloat {
-    (CGFloat(grid.widestRowColumns) * theme.characterWidth + 2 * Theme.textInset).rounded(.up)
+    (CGFloat(max(grid.widestRowColumns, wholeRows.columns)) * theme.characterWidth
+      + 2 * Theme.textInset).rounded(.up)
   }
 
   /// The origin of the text, fixed by the inset.
@@ -537,6 +564,7 @@ final class PaneTextView: NSTextView {
   }
 
   @objc private func selectionDidChange(_ notification: Notification) {
+    showWholeTheLongLinesOfTheSelection()
     redraw(selections: drawnSelection + selectedRanges)
     drawnSelection = selectedRanges
     interaction?.selectionDidChange()
@@ -709,7 +737,8 @@ final class PaneTextView: NSTextView {
     for row in rows {
       guard let blockIndex = content.blockIndex(atRow: row) else { continue }
       let style = content.blocks[blockIndex].style
-      let rowOffsets = grid.paragraphOffsets(ofRows: row..<row + 1)
+      // A line that is too long to show whole shows no change beyond its cut.
+      let rowOffsets = shownOffsets(ofParagraph: grid.paragraphOffsets(ofRows: row..<row + 1))
       let fill = theme.runFill(for: style, isCurrent: blockIndex == currentBlock)
       let highlights = highlights(forBlock: blockIndex)
       // The runs are sorted, so those of the row follow each other.
@@ -766,7 +795,8 @@ extension PaneTextView: @MainActor NSTextLayoutManagerDelegate {
 
 extension PaneTextView: @MainActor NSTextContentStorageDelegate {
   /// Indents the lines after the first of the paragraph in `range` beyond its own indentation,
-  /// so that a wrapped row goes on below its own text; the text itself stays as it is.
+  /// so that a wrapped row goes on below its own text, and cuts a line that is too long to show
+  /// whole; the text itself stays as it is.
   ///
   /// The indent takes effect only where a row wraps, so paragraphs need not be made again when
   /// wrapping is turned on or off.
@@ -774,16 +804,19 @@ extension PaneTextView: @MainActor NSTextContentStorageDelegate {
     _ textContentStorage: NSTextContentStorage, textParagraphWith range: NSRange
   ) -> NSTextParagraph? {
     guard let textStorage = textContentStorage.textStorage, range.length > 0 else { return nil }
-    let text = textStorage.attributedSubstring(from: range)
-    guard
-      let style = text.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle,
-      let indented = style.mutableCopy() as? NSMutableParagraphStyle
-    else { return nil }
-    indented.headIndent = RowWrapping.continuationIndent(
-      of: text.string as NSString, theme: theme)
-    let paragraph = NSMutableAttributedString(attributedString: text)
-    paragraph.addAttribute(
-      .paragraphStyle, value: indented, range: NSRange(location: 0, length: paragraph.length))
+    let paragraph = NSMutableAttributedString(
+      attributedString: textStorage.attributedSubstring(from: range))
+    if let style = paragraph.attribute(.paragraphStyle, at: 0, effectiveRange: nil)
+      as? NSParagraphStyle, let indented = style.mutableCopy() as? NSMutableParagraphStyle
+    {
+      indented.headIndent = RowWrapping.continuationIndent(
+        of: paragraph.string as NSString, theme: theme)
+      paragraph.addAttribute(
+        .paragraphStyle, value: indented, range: NSRange(location: 0, length: paragraph.length))
+    }
+    if !wholeRows.rows.contains(grid.row(containingOffset: range.location)) {
+      cutLongLine(paragraph)
+    }
     return NSTextParagraph(attributedString: paragraph)
   }
 
