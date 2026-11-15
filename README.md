@@ -13,7 +13,10 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
 
 - **Git integration.** Set up once from the app, Seamerge runs as `git mergetool` and `git difftool`; Remove restores the Git configuration as it was.
 
-  <img src="Documentation/Images/git-integration-offer-light.png" width="320" alt="The sheet that sets up Git to use Seamerge.">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-git-setup-dark.png">
+    <img src="Documentation/Images/screenshot-git-setup-light.png" width="480" alt="The sheet that sets up Git to use Seamerge, with the box Add Seamerge to Tower.">
+  </picture>
 
 - **Tower integration.** When Tower is installed, the same set-up adds Seamerge to Tower's diff and merge tools. In Tower, Seamerge also opens directory diffs.
 - **Whitespace modes.** Compare exactly, ignore line endings, ignore changes in the amount of whitespace, or ignore all whitespace, chosen in the footer.
@@ -36,24 +39,14 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
   </picture>
 
 - **Collapsed unchanged lines.** Long stretches without changes fold into a bar that opens where you need it.
-
-  <img src="Documentation/Images/collapsed-light.png" width="320" alt="A run of unchanged lines folded into a bar that can be expanded.">
-
 - **Syntax colors with a language choice.** Common languages are highlighted, and you choose the language in the footer or switch the highlighting off.
 - **Line wrapping.** Wrap long lines in all panes, with the rows kept aligned.
 - **Connected sides.** View ▸ Align Lines (`⌥⌘A`) joins the panes with bands that show which lines belong together, in a comparison and in a merge. Each side flows as continuous text with its own line numbers, and the bands connect the blocks that belong together.
-
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/connected-dark.png">
-    <img src="Documentation/Images/connected-light.png" alt="A merge with its sides connected by bands in the seams between the panes.">
-  </picture>
 - **Encoding and line endings of the result.** Choose the encoding and the line endings the result is saved with.
 - **Settings.** Choose the font, size, line spacing and tab width of the code, and how each new window starts. See [Settings](#settings).
 - **Accessibility.** VoiceOver rotors for conflicts and changes, a window of all keyboard shortcuts, and support for Reduce Motion and Increase Contrast. See [Accessibility](#accessibility).
 
 The toolbar counts the open conflicts or changes and moves between them.
-
-  <img src="Documentation/Images/toolbar-light.png" width="520" alt="The toolbar with the count of open conflicts and the navigation controls.">
 
 Seamerge also keeps the panes aligned row by row and gives an editable result, where undo and redo cover text and decisions together.
 
@@ -103,7 +96,10 @@ Seamerge does not change your Git configuration until you ask it to:
 
 Seamerge then writes the entries for `merge.tool` and `diff.tool` to your global Git configuration. Git keeps the values it replaces, so **Remove** in the same sheet restores the configuration as it was.
 
-![The Git integration sheet in its offer state](Documentation/Images/git-integration-offer-light.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-git-setup-dark.png">
+  <img src="Documentation/Images/screenshot-git-setup-light.png" width="560" alt="The Git integration sheet in its offer state.">
+</picture>
 
 If Tower is installed, the sheet also has **Add Seamerge to Tower**. Tick it before you click **Set Up**. Then restart Tower, and in Tower's settings, under Git Config, choose Seamerge as the diff tool and as the merge tool. To compare folders in Tower, turn on **Perform directory diff**.
 
@@ -150,8 +146,8 @@ Each window opens where the last window of its kind was closed, with the size it
 - **Keyboard.** The menus show the shortcut of each command that has one, and **Help ▸ Keyboard Shortcuts** lists them in one window. The keys without Command or Option, such as `N` and `1`, work in a pane above the result, so you can read and decide without leaving the text.
 
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/keyboard-shortcuts-merge-dark.png">
-    <img src="Documentation/Images/keyboard-shortcuts-merge-light.png" width="520" alt="The Keyboard Shortcuts window of a merge, with the commands in two columns, grouped by menu.">
+    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-shortcuts-dark.png">
+    <img src="Documentation/Images/screenshot-shortcuts-light.png" width="560" alt="The Keyboard Shortcuts window of a merge, with the commands in two columns, grouped by menu.">
   </picture>
 - **Reduce Motion.** With Reduce Motion turned on in System Settings, a preview turns into text at once, without a transition.
 - **Contrast.** The colors of the text, the bands and the borders are checked against their backgrounds in light and dark mode, with and without Increase Contrast. The border of a file field in Compare Files that accepts a drop stays visible with any accent color.
