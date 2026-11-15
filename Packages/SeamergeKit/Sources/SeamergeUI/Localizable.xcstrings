@@ -369,6 +369,9 @@
         }
       }
     },
+    "Check for Updates Automatically" : {
+      "comment" : "Settings: whether the app asks once a day whether a new version exists."
+    },
     "Check that the file exists and that you may read it, then try again." : {
       "comment" : "Alert: what to do when a file cannot be read."
     },
@@ -1021,6 +1024,9 @@
     "Scroll the panes together" : {
       "comment" : "Help tag of the footer toggle of synchronized scrolling while it is off."
     },
+    "Seamerge asks www.seamerge.app once a day whether a new version exists." : {
+      "comment" : "Settings: what checking for updates sends where."
+    },
     "Seamerge at %@" : {
       "comment" : "Set Up Git Integration: another copy of the app, such as Seamerge at /Volumes/A.app."
     },
@@ -1287,6 +1293,9 @@
     },
     "Typing" : {
       "comment" : "Undo menu: text typed in the result."
+    },
+    "Updates" : {
+      "comment" : "Settings: heading of the group of updates."
     },
     "Use %@" : {
       "comment" : "Button of the sheet of a binary file: take this side as a whole, such as Use main."

@@ -9,6 +9,9 @@ struct SettingsView: View {
   /// The families of fonts of fixed width to choose from, besides the font of the system.
   let fontFamilies: [String]
 
+  /// Whether the app checks for updates by itself, if it checks for updates at all.
+  var updates: (any AutomaticUpdateSetting)?
+
   var body: some View {
     Form {
       textSection
@@ -51,6 +54,23 @@ struct SettingsView: View {
         }
       } header: {
         Text("Merging", bundle: .module, comment: "Settings: heading of the merge group.")
+      }
+      if let updateSelection {
+        Section {
+          Toggle(isOn: updateSelection) {
+            Text(
+              "Check for Updates Automatically", bundle: .module,
+              comment: "Settings: whether the app asks once a day whether a new version exists.")
+            // Plain text, so that the name of the server reads as a statement, not as a link.
+            Text(
+              String(
+                localized:
+                  "Seamerge asks www.seamerge.app once a day whether a new version exists.",
+                bundle: .module, comment: "Settings: what checking for updates sends where."))
+          }
+        } header: {
+          Text("Updates", bundle: .module, comment: "Settings: heading of the group of updates.")
+        }
       }
     }
     .formStyle(.grouped)
@@ -118,6 +138,16 @@ struct SettingsView: View {
   /// The width of a tab chosen in the menu.
   var tabWidthSelection: Binding<Int> {
     $settings.tabWidth
+  }
+
+  /// Whether the app checks for updates by itself, as the switch shows and changes it; none if
+  /// the app does not check for updates.
+  var updateSelection: Binding<Bool>? {
+    updates.map { updates in
+      Binding(
+        get: { updates.checksAutomatically },
+        set: { updates.checksAutomatically = $0 })
+    }
   }
 
   /// The name of a size in the menu, such as 13 pt.

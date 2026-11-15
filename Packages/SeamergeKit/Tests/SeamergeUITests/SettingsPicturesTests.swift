@@ -8,7 +8,8 @@ import Testing
 @Suite(.serialized) struct SettingsPicturesTests {
   @Test(arguments: Look.all)
   func settingsArePictured(look: Look) throws {
-    let controller = SettingsWindowController(settings: .private())
+    let controller = SettingsWindowController(
+      settings: .private(), updates: UpdateSettingDouble(checksAutomatically: true))
     let window = try #require(controller.window)
     defer { window.close() }
     window.colorSpace = .sRGB

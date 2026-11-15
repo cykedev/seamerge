@@ -90,7 +90,8 @@ final class AppDelegate: NSObject {
 
   /// Shows the window Settings in front, made the first time it is needed.
   @objc func showSettings(_ sender: Any?) {
-    let controller = settingsWindowController ?? SettingsWindowController(settings: settings)
+    let controller =
+      settingsWindowController ?? SettingsWindowController(settings: settings, updates: updater)
     settingsWindowController = controller
     controller.showWindow(sender)
   }

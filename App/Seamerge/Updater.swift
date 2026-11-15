@@ -1,4 +1,5 @@
 import AppKit
+import SeamergeUI
 import Sparkle
 import os
 
@@ -40,7 +41,7 @@ protocol SoftwareUpdater: AnyObject {
 /// ended. While a helper waits, the app does not relaunch: the update installs when the app quits.
 @MainActor
 @Observable
-final class Updater: NSObject {
+final class Updater: NSObject, AutomaticUpdateSetting {
   /// Whether the app asks once a day whether a new version exists, as Sparkle keeps it.
   var checksAutomatically: Bool {
     get { automaticChecks }
