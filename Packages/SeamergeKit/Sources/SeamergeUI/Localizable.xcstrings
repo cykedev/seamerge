@@ -1,12 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@ (%@: %@)" : {
-      "comment" : "Help tag of a file in the sidebar that cannot be read: its path, the state and the reason, such as Logs (Can’t Read: You don’t have permission.)."
-    },
-    "%@ of %@ files differ" : {
-      "comment" : "Sidebar and VoiceOver: how many files of two compared folders differ, such as 12 of 340 files differ."
-    },
     "“%@” can’t be saved in %@." : {
       "comment" : "Sheet: the result holds characters the encoding lacks, such as in ISO 8859-1.",
       "localizations" : {
@@ -32,6 +26,9 @@
     },
     "%@ · %@" : {
       "comment" : "The name of a commit followed by its branch, such as 1a2b3c4 Fix typo · main."
+    },
+    "%@ (%@: %@)" : {
+      "comment" : "Help tag of a file in the sidebar that cannot be read: its path, the state and the reason, such as Logs (Can’t Read: You don’t have permission.)."
     },
     "%@ (%@)" : {
       "comment" : "Help tag of a file in the sidebar: its path and what happened, such as Sources/App.swift (Modified)."
@@ -85,6 +82,9 @@
         }
       }
     },
+    "%@ of %@ files differ" : {
+      "comment" : "Sidebar and VoiceOver: how many files of two compared folders differ, such as 12 of 340 files differ."
+    },
     "%@ or %@" : {
       "comment" : "Keyboard Shortcuts: two single keys that do the same, such as “1 or ←”."
     },
@@ -98,7 +98,7 @@
       "comment" : "Sheet after saving failed: the reason, then what still holds."
     },
     "%@, %@" : {
-      "comment" : "VoiceOver: a pane, such as A, feature/login."
+      "comment" : "VoiceOver, Keyboard Shortcuts: a command and its shortcut or single keys.\nVoiceOver: a pane, such as A, feature/login."
     },
     "%@, %@, %@" : {
       "comment" : "VoiceOver: a pane with its name and role in the order the header shows them, such as A, feature/login, incoming or A, your commit, 1a2b3c4 Fix typo."
@@ -325,17 +325,17 @@
     "Base, optional" : {
       "comment" : "VoiceOver: the role of the empty middle field of Compare Files."
     },
-    "Cancel" : {
-      "comment" : "Button: close the sheet and do nothing."
-    },
     "Can’t Read" : {
       "comment" : "A file or folder in the sidebar of which a side cannot be read."
+    },
+    "Cancel" : {
+      "comment" : "Button: close the sheet and do nothing."
     },
     "Change" : {
       "comment" : "Sheet Change Files: the default button, which shows the files in the window."
     },
     "Change %lld of %lld" : {
-      "comment" : "Toolbar: the current change of a comparison, such as Change 4 of 12."
+      "comment" : "Toolbar: the current change of a comparison, such as Change 4 of 12.\nVoiceOver: an item of the rotor of changes, such as “Change 2 of 9”."
     },
     "Change Comparison" : {
       "comment" : "Undo menu: the switch to another comparison mode or merge strategy."
@@ -480,7 +480,7 @@
       "comment" : "Settings: lines close together."
     },
     "Compare" : {
-      "comment" : "Compare Files: the default button with two files."
+      "comment" : "Compare Files: the default button with two files.\nMenu bar: the comparison modes."
     },
     "Compare %@ with %@" : {
       "comment" : "VoiceOver: a recent comparison, with the names of the left and the right file."
@@ -501,10 +501,10 @@
       "comment" : "Sidebar: the files of two folders are being paired, and it is not known how many."
     },
     "Comparing…" : {
-      "comment" : "Toolbar: the files are being compared anew."
+      "comment" : "Toolbar: the files are being compared anew.\nWindow of two folders: no file is shown yet while the folders are compared."
     },
     "Comparison" : {
-      "comment" : "The choice of the comparison mode: a toolbar item and the pop-up button of the footer."
+      "comment" : "Keyboard Shortcuts: the shortcuts of a comparison of two files.\nThe choice of the comparison mode: a toolbar item and the pop-up button of the footer."
     },
     "Conflict %lld of %lld, open" : {
       "comment" : "VoiceOver: an item of the rotor of conflicts that awaits a decision."
@@ -621,7 +621,7 @@
       "comment" : "Compare menu: compare every byte."
     },
     "File" : {
-      "comment" : "Details of a side: where the file was read from."
+      "comment" : "Details of a side: where the file was read from.\nMenu bar."
     },
     "File %lld of %lld" : {
       "comment" : "Subtitle: which file of a git difftool run is compared, such as File 3 of 12."
@@ -719,7 +719,7 @@
       "comment" : "Set Up Git Integration: Git stops keeping backups of merged files."
     },
     "Go" : {
-      "comment" : "Button: jump to the line."
+      "comment" : "Button: jump to the line.\nMenu bar."
     },
     "Go back to the change before this one" : {
       "comment" : "Help tag of Previous Change."
@@ -866,7 +866,7 @@
       "comment" : "View menu command."
     },
     "Merge" : {
-      "comment" : "Compare Files: the default button with three files."
+      "comment" : "Compare Files: the default button with three files.\nKeyboard Shortcuts: the shortcuts of a merge.\nMenu bar: the decisions of a merge."
     },
     "Merge %@ and %@ with the base %@" : {
       "comment" : "VoiceOver: a recent merge, with the names of A, B and the base."
@@ -1162,14 +1162,14 @@
     "Show Identical Files" : {
       "comment" : "View menu command, checked while the list of two folders shows equal files too."
     },
+    "Show Ignored Changes" : {
+      "comment" : "View menu command: highlights where lines differ in ignored ways."
+    },
     "Show in Finder" : {
       "comment" : "Context menu of a header."
     },
     "Show invisible characters (no lines to show)" : {
       "comment" : "Help tag of the footer toggle of invisibles in a window without lines."
-    },
-    "Show Ignored Changes" : {
-      "comment" : "View menu command: highlights where lines differ in ignored ways."
     },
     "Show Invisibles" : {
       "comment" : "View menu command."
