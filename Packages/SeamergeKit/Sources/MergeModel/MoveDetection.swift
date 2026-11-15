@@ -89,6 +89,71 @@ enum MoveDetection {
     return runs
   }
 
+  /// The blocks of a comparison with each of `runs` in a block of its own, and the moves between
+  /// those blocks.
+  ///
+  /// A changed block that holds runs is cut at their bounds. The lines between the runs stay
+  /// changed and pair up in order: the lines of A before its first run with the lines of B before
+  /// its first run, and so on. Where one side has no runs left, its lines pair line by line with
+  /// those of the other side between its runs, and the last change takes the rest. Every block is
+  /// numbered anew by its position, and the blocks still cover both files without a gap.
+  ///
+  /// - Precondition: `runs` are the runs of `blocks`, ordered by their lines in A.
+  static func splitting(_ blocks: [Block], at runs: [Run]) -> (blocks: [Block], moves: [Move]) {
+    let runsInA = Dictionary(grouping: runs, by: \.blockInA)
+    let runsInB = Dictionary(grouping: runs, by: \.blockInB).mapValues { runs in
+      runs.sorted { $0.b.lowerBound < $1.b.lowerBound }
+    }
+    var split: [Block] = []
+    var sources: [Run: Int] = [:]
+    var destinations: [Run: Int] = [:]
+    func append(kind: Block.Kind = .changed, base: Range<Int> = 0..<0, a: Range<Int>, b: Range<Int>)
+    {
+      split.append(Block(id: split.count, kind: kind, base: base, a: a, b: b))
+    }
+    for (index, block) in blocks.enumerated() {
+      let inA = runsInA[index] ?? []
+      let inB = runsInB[index] ?? []
+      guard !inA.isEmpty || !inB.isEmpty else {
+        append(kind: block.kind, base: block.base, a: block.a, b: block.b)
+        continue
+      }
+      var a = block.a.lowerBound
+      var b = block.b.lowerBound
+      for position in 0...max(inA.count, inB.count) {
+        var endOfA = position < inA.count ? inA[position].a.lowerBound : block.a.upperBound
+        var endOfB = position < inB.count ? inB[position].b.lowerBound : block.b.upperBound
+        // A side without runs left keeps lines for the changes after the other side's next run.
+        if position < inA.count, position >= inB.count { endOfB = min(endOfB, b + endOfA - a) }
+        if position < inB.count, position >= inA.count { endOfA = min(endOfA, a + endOfB - b) }
+        if a < endOfA || b < endOfB {
+          append(a: a..<endOfA, b: b..<endOfB)
+          a = endOfA
+          b = endOfB
+        }
+        if position < inA.count {
+          sources[inA[position]] = split.count
+          append(a: inA[position].a, b: b..<b)
+          a = inA[position].a.upperBound
+        }
+        if position < inB.count {
+          destinations[inB[position]] = split.count
+          append(a: a..<a, b: inB[position].b)
+          b = inB[position].b.upperBound
+        }
+      }
+    }
+    let moves = runs.map { run in
+      guard let source = sources[run], let destination = destinations[run] else {
+        preconditionFailure("A run lies in the blocks it names")
+      }
+      return Move(
+        source: Move.End(block: source, role: .a, lines: run.a),
+        destination: Move.End(block: destination, role: .b, lines: run.b))
+    }
+    return (split, moves)
+  }
+
   /// Whether `text` has at least ``minimumAlphanumericCount`` letters and digits.
   private static func hasEnoughAlphanumerics(_ text: Data) -> Bool {
     var count = 0

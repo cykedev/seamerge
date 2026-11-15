@@ -29,16 +29,25 @@ public struct Session: Sendable {
 
   /// The runs of lines that moved, in the order of their sources.
   ///
-  /// In a comparison, the lines leave A and arrive in B. Where moved lines also changed, the
-  /// stretch that stayed equal under the comparison mode still moves, and the changed lines stay
-  /// a removal and an addition. A run counts only if it is long enough and recurs exactly once. A
-  /// more lenient comparison mode keeps the moves of a stricter one as long as the engine aligns
-  /// the lines alike and each run still holds a line that occurs once on each side; uniqueness
-  /// comes first.
+  /// In a comparison, the lines leave A and arrive in B, and each end is a changed block of its
+  /// own with lines only in its input. Where moved lines also changed, the stretch that stayed
+  /// equal under the comparison mode still moves, and the changed lines stay a removal and an
+  /// addition. A run counts only if it is long enough and recurs exactly once. A more lenient
+  /// comparison mode keeps the moves of a stricter one as long as the engine aligns the lines
+  /// alike and each run still holds a line that occurs once on each side; uniqueness comes first.
   public let moves: [Move]
 
   /// The files that take part, split into lines as the comparison split them.
   let files: [Role: ComparedFile]
+
+  /// The position in ``moves`` of the move that ends in each block on the pane of each input.
+  private let moveIndices: [MoveEnd: Int]
+
+  /// A block on the pane of an input.
+  private struct MoveEnd: Sendable, Hashable {
+    var block: Int
+    var role: Role
+  }
 
   /// Merges the changes from `base` to `a` and from `base` to `b`, or merges `a` and `b` as if
   /// their base were empty when there is none.
@@ -112,18 +121,34 @@ public struct Session: Sendable {
     self.kind = kind
     self.options = options
     self.files = files
-    blocks = comparison.blocks
-    rowLayout = RowLayout(blocks: comparison.blocks, files: files)
-    moves =
-      switch kind {
-      case .diff:
-        try MoveDetection.runs(in: comparison.blocks, files: files, mode: options.mode).map { run in
-          Move(
-            source: Move.End(block: run.blockInA, role: .a, lines: run.a),
-            destination: Move.End(block: run.blockInB, role: .b, lines: run.b))
-        }
-      case .merge: []
+    switch kind {
+    case .diff:
+      let runs = try MoveDetection.runs(in: comparison.blocks, files: files, mode: options.mode)
+      let split = MoveDetection.splitting(comparison.blocks, at: runs)
+      blocks = split.blocks
+      moves = split.moves
+    case .merge:
+      blocks = comparison.blocks
+      moves = []
+    }
+    rowLayout = RowLayout(blocks: blocks, files: files)
+    var moveIndices: [MoveEnd: Int] = [:]
+    for (index, move) in moves.enumerated() {
+      for end in [move.source, move.destination] {
+        moveIndices[MoveEnd(block: end.block, role: end.role)] = index
       }
+    }
+    self.moveIndices = moveIndices
+  }
+
+  /// The move that ends in `block` on the pane of `role`, or `nil` if none does.
+  ///
+  /// - Parameter origin: The side a comparison reads from, the one on the left. Read from B, as
+  ///   after Swap Sides, the lines leave B and arrive in A. `nil` reads a comparison from A; a
+  ///   merge reads its moves one way only.
+  public func move(endingIn block: Block, on role: Role, readingFrom origin: Role? = nil) -> Move? {
+    guard let index = moveIndices[MoveEnd(block: block.id, role: role)] else { return nil }
+    return kind == .diff && origin == .b ? moves[index].reversed() : moves[index]
   }
 
   /// The inputs that take part, in the order base, A, B.

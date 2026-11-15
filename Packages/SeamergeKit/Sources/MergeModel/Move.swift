@@ -25,4 +25,9 @@ public struct Move: Sendable, Hashable {
   /// The place the lines arrived at.
   public let destination: End
 
+  /// The move read the other way round: the lines leave its destination and arrive at its
+  /// source.
+  func reversed() -> Move {
+    Move(source: destination, destination: source)
+  }
 }
