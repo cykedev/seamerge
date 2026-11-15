@@ -37,9 +37,13 @@ build=.build/install
 log=$build/build.log
 mkdir -p "$build"
 
+# Packages come from a cache of the repository, and the keychain is never asked
+# for credentials of GitHub, so that no dialog stops the build.
 echo "Building Seamerge (Release)…"
 if ! xcodebuild -project App/Seamerge.xcodeproj -scheme Seamerge -configuration Release \
-  -derivedDataPath "$build/DerivedData" build > "$log" 2>&1; then
+  -derivedDataPath "$build/DerivedData" -packageCachePath "$root/.build/package-cache" \
+  -packageAuthorizationProvider netrc -onlyUsePackageVersionsFromResolvedFile \
+  build > "$log" 2>&1; then
   grep -E 'error:' "$log" | head -20 >&2 || true
   echo "error: the build failed; the full log is $log" >&2
   exit 1

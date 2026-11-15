@@ -11,12 +11,14 @@
 		5EA300000000000000000102 /* SessionIPC in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000902 /* SessionIPC */; };
 		5EA300000000000000000103 /* GitSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000903 /* GitSupport */; };
 		5EA300000000000000000104 /* MergeModel in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000904 /* MergeModel */; };
+		5EA300000000000000000105 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000905 /* Sparkle */; };
 		5EA300000000000000000111 /* SeamergeCLI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000911 /* SeamergeCLI */; };
 		5EA300000000000000000121 /* SeamergeUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000921 /* SeamergeUI */; };
 		5EA300000000000000000122 /* SessionIPC in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000922 /* SessionIPC */; };
 		5EA300000000000000000123 /* GitSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000923 /* GitSupport */; };
 		5EA300000000000000000124 /* MergeModel in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000924 /* MergeModel */; };
 		5EA300000000000000000125 /* SeamergeCLI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000925 /* SeamergeCLI */; };
+		5EA300000000000000000126 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000926 /* Sparkle */; };
 		5EA300000000000000000131 /* seamerge in Embed Helper */ = {isa = PBXBuildFile; fileRef = 5EA300000000000000000302 /* seamerge */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -87,14 +89,14 @@
 			path = SeamergeTool;
 			sourceTree = "<group>";
 		};
-		5EA300000000000000000404 /* Shared */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Shared;
-			sourceTree = "<group>";
-		};
 		5EA300000000000000000403 /* SeamergeTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = SeamergeTests;
+			sourceTree = "<group>";
+		};
+		5EA300000000000000000404 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -108,6 +110,7 @@
 				5EA300000000000000000102 /* SessionIPC in Frameworks */,
 				5EA300000000000000000103 /* GitSupport in Frameworks */,
 				5EA300000000000000000104 /* MergeModel in Frameworks */,
+				5EA300000000000000000105 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -128,6 +131,7 @@
 				5EA300000000000000000123 /* GitSupport in Frameworks */,
 				5EA300000000000000000124 /* MergeModel in Frameworks */,
 				5EA300000000000000000125 /* SeamergeCLI in Frameworks */,
+				5EA300000000000000000126 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -176,6 +180,7 @@
 				5EA300000000000000000512 /* Frameworks */,
 				5EA300000000000000000513 /* Resources */,
 				5EA300000000000000000514 /* Embed Helper */,
+				5EA300000000000000000516 /* Keep English Only in Sparkle */,
 			);
 			buildRules = (
 			);
@@ -192,6 +197,7 @@
 				5EA300000000000000000902 /* SessionIPC */,
 				5EA300000000000000000903 /* GitSupport */,
 				5EA300000000000000000904 /* MergeModel */,
+				5EA300000000000000000905 /* Sparkle */,
 			);
 			productName = Seamerge;
 			productReference = 5EA300000000000000000301 /* Seamerge.app */;
@@ -245,6 +251,7 @@
 				5EA300000000000000000923 /* GitSupport */,
 				5EA300000000000000000924 /* MergeModel */,
 				5EA300000000000000000925 /* SeamergeCLI */,
+				5EA300000000000000000926 /* Sparkle */,
 			);
 			productName = SeamergeTests;
 			productReference = 5EA300000000000000000303 /* SeamergeTests.xctest */;
@@ -271,6 +278,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */,
+				5EA300000000000000000A02 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5EA300000000000000000003 /* Products */;
@@ -300,6 +308,30 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		5EA300000000000000000516 /* Keep English Only in Sparkle */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Sparkle.framework",
+			);
+			name = "Keep English Only in Sparkle";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Sparkle brings its own translations, which would show its windows in the language of the system\n# in an app that speaks English only. Base.lproj holds its English texts. Xcode signs the\n# framework after this phase.\nframework=\"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Sparkle.framework\"\nfind \"${framework}/Versions/B/Resources\" -maxdepth 1 -name '*.lproj' ! -name Base.lproj \\\n  -exec rm -rf {} +\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		5EA300000000000000000511 /* Sources */ = {
@@ -512,6 +544,17 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		5EA300000000000000000A02 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = exactVersion;
+				version = 2.10.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		5EA300000000000000000901 /* SeamergeUI */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -532,6 +575,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
 			productName = MergeModel;
+		};
+		5EA300000000000000000905 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A02 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 		5EA300000000000000000911 /* SeamergeCLI */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -562,6 +610,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
 			productName = SeamergeCLI;
+		};
+		5EA300000000000000000926 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A02 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

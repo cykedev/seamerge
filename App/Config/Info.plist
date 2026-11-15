@@ -17,5 +17,15 @@
 			</array>
 		</dict>
 	</array>
+	<key>SUAllowsAutomaticUpdates</key>
+	<false/>
+	<key>SUEnableSystemProfiling</key>
+	<false/>
+	<key>SUFeedURL</key>
+	<string>https://www.seamerge.app/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>CzC9DFRSgidOhefEywKZlD9m8JMU5OrAqVpoVCGCNdQ=</string>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>

@@ -175,8 +175,12 @@ for manifest in Packages/*/Package.swift; do
 done
 
 if [ -d App ]; then
+  # Packages come from a cache of the repository, and the keychain is never
+  # asked for credentials of GitHub, so that no dialog stops the check.
   xcode=(xcodebuild -project App/Seamerge.xcodeproj -scheme Seamerge
-    -destination platform=macOS -derivedDataPath "$log_dir/xcode")
+    -destination platform=macOS -derivedDataPath "$log_dir/xcode"
+    -packageCachePath "$root/$log_dir/package-cache" -packageAuthorizationProvider netrc
+    -onlyUsePackageVersionsFromResolvedFile)
   if $quick; then
     run_step "xcodebuild build" "${xcode[@]}" -quiet build
   else
