@@ -105,6 +105,12 @@ import Testing
                   surface: surface, minimum: Self.text))
             }
           }
+          // The outline of a match of the search says where the match is, on any surface.
+          pairs.append(
+            Pair(
+              description: "outline of a search match on \(surfaceName) of \(place)",
+              foreground: Contrast.over(resolve(theme.searchMatchColor), surface),
+              surface: surface, minimum: Self.sign))
           // The spaces and tabs in a place of an ignored change say what differs there.
           if surfaceName == "place of an ignored change" {
             pairs.append(

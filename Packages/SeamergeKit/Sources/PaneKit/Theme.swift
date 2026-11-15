@@ -150,6 +150,12 @@ public struct Theme {
   /// band to turn, and a target for dragging the divider below it.
   public static let seamWidth: CGFloat = 28
 
+  /// The width of the outline of a match of the search in the text.
+  static let searchMatchOutlineWidth: CGFloat = 1.5
+
+  /// The corner radius of the outline of a match of the search in the text.
+  static let searchMatchCornerRadius: CGFloat = 3
+
   /// The width of the overview bar.
   static let overviewBarWidth: CGFloat = 12
 

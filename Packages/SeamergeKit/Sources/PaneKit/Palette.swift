@@ -182,6 +182,11 @@ enum Palette {
   static let invisibleCharacterOpacity = AppearanceValues<CGFloat>(
     light: 0.46, dark: 0.53, lightHighContrast: 0.60, darkHighContrast: 0.60)
 
+  /// The opacity of the label color for the outline of a match of the search: at least 3:1
+  /// against every row tint, as a mark that says something.
+  static let searchMatchOpacity = AppearanceValues<CGFloat>(
+    light: 0.70, dark: 0.72, lightHighContrast: 0.85, darkHighContrast: 0.85)
+
   /// The opacity of the label color behind the marks of the overview bar.
   static let overviewBackgroundOpacity = AppearanceValues<CGFloat>(
     light: 0.03, dark: 0.04, lightHighContrast: 0.05, darkHighContrast: 0.06)

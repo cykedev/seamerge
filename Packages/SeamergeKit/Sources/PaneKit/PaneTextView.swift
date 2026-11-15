@@ -54,6 +54,18 @@ final class PaneTextView: NSTextView {
   /// view the way a jump does.
   var isPerformingFindAction = false
 
+  /// The search over several panes that this view hands its find commands to, if it is among
+  /// its sections.
+  weak var search: PaneSearch?
+
+  /// The matches of a search that the view marks, as ranges of its text, sorted and apart.
+  var searchMatches: [Range<Int>] = [] {
+    didSet {
+      guard searchMatches != oldValue else { return }
+      redraw(ranges: oldValue + searchMatches)
+    }
+  }
+
   /// Whether spaces, tabs and line endings show as symbols.
   var showsInvisibles = false {
     didSet {
@@ -901,7 +913,9 @@ extension PaneTextView: RowPainter {
       rowFills: rows.map(rowFill(atRow:)), paddingFills: rows.map(paddingFill(atRow:)),
       edges: rows.map(edges(atRow:)),
       background: Theme.backgroundColor,
-      textBandHeight: theme.textBandHeight, runs: changes.runs, selections: selections,
+      textBandHeight: theme.textBandHeight, runs: changes.runs,
+      matches: searchMatchRuns(in: paragraph),
+      selections: selections,
       removals: changes.removals,
       invisibles: invisibles(inRows: rows))
   }

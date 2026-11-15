@@ -177,6 +177,12 @@
     "Removed text": {
       "comment": "VoiceOver: the mark where a side removed text within a line."
     },
+    "Replace": {
+      "comment": "The name of the step of undo that replaced a match of the search, as in Undo Replace."
+    },
+    "Replace All": {
+      "comment": "The name of the step of undo that replaced every match of the search, as in Undo Replace All."
+    },
     "Reset Block": {
       "comment": "VoiceOver: the arrow that resets a block to how it was loaded."
     },

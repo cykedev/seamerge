@@ -27,12 +27,18 @@ extension PaneTextView {
   }
 
   override func performTextFinderAction(_ sender: Any?) {
+    if let search {
+      return search.performTextFinderAction(sender)
+    }
     isPerformingFindAction = true
     defer { isPerformingFindAction = false }
     super.performTextFinderAction(sender)
   }
 
   override func performFindPanelAction(_ sender: Any?) {
+    if let search {
+      return search.performTextFinderAction(sender)
+    }
     isPerformingFindAction = true
     defer { isPerformingFindAction = false }
     super.performFindPanelAction(sender)

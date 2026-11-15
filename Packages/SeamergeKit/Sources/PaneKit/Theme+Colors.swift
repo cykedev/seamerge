@@ -83,6 +83,15 @@ extension Theme {
     }
   }
 
+  /// The color of the mark of a match of the search in the text: the label color, so that the
+  /// shape of the mark, not a color of its own, tells it from the tints and the selection.
+  public var searchMatchColor: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.searchMatchOpacity[appearance])
+    }
+  }
+
   /// The tone behind the marks of the overview bar, drawn over the text background.
   public var overviewBackgroundTone: NSColor {
     color { appearance, nsAppearance in

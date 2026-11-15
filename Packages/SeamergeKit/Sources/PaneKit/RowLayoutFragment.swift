@@ -65,6 +65,8 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     var textBandHeight: CGFloat
     /// The changed runs within the fragment's lines.
     var runs: [Run]
+    /// The matches of a search within the fragment's lines, with the color of their mark.
+    var matches: [Run]
     /// The selected runs within the fragment's lines, with the fill of the selection.
     var selections: [Run]
     /// The places within the fragment's lines where text was removed.
@@ -277,6 +279,11 @@ final class RowLayoutFragment: NSTextLayoutFragment {
         context.fill(rect.offsetBy(dx: point.x, dy: point.y))
       }
     }
+    for match in painting.matches {
+      for rect in runRects(match.range, fullHeight: false, painting, carets: carets) {
+        drawMatch(rect.offsetBy(dx: point.x, dy: point.y), color: match.fill, in: context)
+      }
+    }
     for selection in painting.selections {
       for rect in runRects(selection.range, fullHeight: true, painting, carets: carets) {
         context.setFillColor(selection.fill.cgColor)
@@ -352,6 +359,20 @@ final class RowLayoutFragment: NSTextLayoutFragment {
       let top = CGFloat(lineIndex) * rowHeight + (rowHeight - height) / 2
       return CGRect(x: left, y: top, width: right - left, height: height)
     }
+  }
+
+  /// Draws the mark of a match of the search around `rect`, the text band of its characters: a
+  /// rounded outline, which tells it from the tints and the selection by its shape.
+  private func drawMatch(_ rect: CGRect, color: NSColor, in context: CGContext) {
+    let width = Theme.searchMatchOutlineWidth
+    context.setStrokeColor(color.cgColor)
+    context.setLineWidth(width)
+    context.addPath(
+      CGPath(
+        roundedRect: rect.insetBy(dx: -width / 2, dy: -width / 2),
+        cornerWidth: Theme.searchMatchCornerRadius, cornerHeight: Theme.searchMatchCornerRadius,
+        transform: nil))
+    context.strokePath()
   }
 
   private func fillRoundedRect(_ rect: CGRect, color: NSColor, in context: CGContext) {
