@@ -276,6 +276,13 @@ import Testing
             foreground: Contrast.over(outline, surface), surface: surface, minimum: Self.sign))
       }
     }
+    // The stroke of a match lies above the marks of the blocks, on a seam in the tone of the
+    // bar, so it stands on the bar wherever it lies.
+    pairs.append(
+      Pair(
+        description: "stroke of a search match on the bar",
+        foreground: Contrast.over(resolve(theme.overviewMatchColor), bar), surface: bar,
+        minimum: Self.sign))
     // The frame lies above the marks: within it, its fill tones down mark and bar alike.
     let fill = resolve(theme.visibleRegionFill(emphasized: true))
     let within = { (color: NSColor) in Contrast.over(fill, color) }

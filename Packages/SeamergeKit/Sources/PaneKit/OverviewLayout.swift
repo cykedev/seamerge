@@ -1,4 +1,4 @@
-import CoreGraphics
+import Foundation
 
 /// The marks of the overview bar as they are drawn and hit: each at least as high as the
 /// smallest mark, neighbors of the same kind merged where they touch, open conflicts on top.
@@ -24,13 +24,20 @@ struct OverviewLayout {
   /// The place of each mark on its own, before merging, in the order of the marks.
   let markRects: [CGRect]
 
-  /// Lays out `marks` of a grid with `rowCount` rows of `rowHeight` in `area`: the rows from its
-  /// top down, the placements across its width.
+  /// The vertical extents of the strokes of matches, from the top down, strokes that touch
+  /// merged.
+  let matchSpans: [Range<CGFloat>]
+
+  /// Lays out `marks` and the strokes of matches on `matchRows` of a grid with `rowCount` rows
+  /// of `rowHeight` in `area`: the rows from its top down, the placements across its width.
   ///
   /// The rows fill the height of the area, but none takes more height than in the text: the
   /// marks of a text that fits beside the bar stand beside their rows, and the rest of the bar
-  /// stays empty.
-  init(marks: [OverviewMark], rowCount: Int, rowHeight: CGFloat, area: CGRect) {
+  /// stays empty. A stroke lies across the middle of its row.
+  init(
+    marks: [OverviewMark], matchRows: IndexSet = [], rowCount: Int, rowHeight: CGFloat,
+    area: CGRect
+  ) {
     let scale = min(area.height / CGFloat(max(rowCount, 1)), rowHeight)
     let partialWidth = area.width * 2 / 3
     var markRects: [CGRect] = []
@@ -71,6 +78,18 @@ struct OverviewLayout {
     }
     self.shapes = shapes.filter { !$0.isOpenConflict } + shapes.filter(\.isOpenConflict)
     self.markRects = markRects
+    var matchSpans: [Range<CGFloat>] = []
+    let height = Theme.overviewMatchHeight
+    for row in matchRows {
+      let middle = area.minY + (CGFloat(row) + 0.5) * scale
+      let top = min(max(middle - height / 2, area.minY), area.maxY - height)
+      if let last = matchSpans.last, last.upperBound + Self.mergeDistance >= top {
+        matchSpans[matchSpans.count - 1] = last.lowerBound..<max(last.upperBound, top + height)
+      } else {
+        matchSpans.append(top..<top + height)
+      }
+    }
+    self.matchSpans = matchSpans
   }
 
   /// The block whose mark lies at height `y`, preferring open conflicts, or `nil` if no mark is

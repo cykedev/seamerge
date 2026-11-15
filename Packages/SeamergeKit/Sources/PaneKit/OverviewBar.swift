@@ -30,6 +30,15 @@ public final class OverviewBar: NSScroller {
     didSet { invalidateLayout() }
   }
 
+  /// The rows of the grid that hold a match of the search, each marked with a stroke across the
+  /// bar, above the marks of the blocks; strokes that touch merge.
+  ///
+  /// Like marks, the rows name rows of the grid; a row behind a collapsed run is marked on its
+  /// bar.
+  public var matchRows = IndexSet() {
+    didSet { invalidateLayout() }
+  }
+
   /// The index of the current block, whose mark the triangle points at, or `nil` if there is
   /// none.
   public var currentBlock: Int? {
@@ -142,6 +151,9 @@ public final class OverviewBar: NSScroller {
     for shape in layout.shapes where shape.rect.intersects(dirtyRect) {
       drawMark(shape)
     }
+    for span in layout.matchSpans where span.overlaps(dirtyRect.minY..<dirtyRect.maxY) {
+      drawMatchStroke(span)
+    }
     drawVisibleRegion()
     drawCurrentBlockIndicator(layout)
   }
@@ -231,9 +243,13 @@ public final class OverviewBar: NSScroller {
       shown.rows = displayRows.lines(ofRows: mark.rows)
       return shown
     }
+    var matchLines = IndexSet()
+    for row in matchRows where row < displayRows.rowCount {
+      matchLines.insert(displayRows.lines(ofRows: row..<row + 1).lowerBound)
+    }
     let layout = OverviewLayout(
-      marks: shownMarks, rowCount: displayRows.lineCount, rowHeight: theme.rowHeight,
-      area: markArea)
+      marks: shownMarks, matchRows: matchLines, rowCount: displayRows.lineCount,
+      rowHeight: theme.rowHeight, area: markArea)
     cachedLayout = layout
     return layout
   }
@@ -269,6 +285,24 @@ public final class OverviewBar: NSScroller {
         width: Theme.conflictNotchWidth, height: Theme.overviewMarkMinimumHeight
       ).fill()
     }
+  }
+
+  /// Draws the stroke of the matches within `span` of the bar's height, across the bar.
+  ///
+  /// A seam in the tone of the bar keeps the stroke clear where it crosses a mark of a similar
+  /// lightness, as the marks of removed text have in the text.
+  private func drawMatchStroke(_ span: Range<CGFloat>) {
+    let hairline = Self.hairline(in: self)
+    let stroke = CGRect(
+      x: hairline, y: span.lowerBound, width: bounds.width - hairline,
+      height: span.upperBound - span.lowerBound)
+    let seam = stroke.insetBy(dx: 0, dy: -Theme.markSeam)
+    Theme.backgroundColor.setFill()
+    seam.fill()
+    theme.overviewBackgroundTone.setFill()
+    seam.fill(using: .sourceOver)
+    theme.overviewMatchColor.setFill()
+    stroke.fill(using: .sourceOver)
   }
 
   /// Draws the visible part as a frame across the bar, above the marks: a light fill, so that

@@ -92,6 +92,15 @@ extension Theme {
     }
   }
 
+  /// The color of the stroke of a match in the overview bar: the label color, above the marks
+  /// of the blocks.
+  public var overviewMatchColor: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.overviewMatchOpacity[appearance])
+    }
+  }
+
   /// The tone behind the marks of the overview bar, drawn over the text background.
   public var overviewBackgroundTone: NSColor {
     color { appearance, nsAppearance in

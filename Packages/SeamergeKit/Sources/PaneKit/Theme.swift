@@ -156,6 +156,9 @@ public struct Theme {
   /// The corner radius of the outline of a match of the search in the text.
   static let searchMatchCornerRadius: CGFloat = 3
 
+  /// The height of the stroke of a match in the overview bar.
+  static let overviewMatchHeight: CGFloat = 2
+
   /// The width of the overview bar.
   static let overviewBarWidth: CGFloat = 12
 
