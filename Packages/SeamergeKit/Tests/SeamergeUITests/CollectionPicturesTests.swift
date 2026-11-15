@@ -73,7 +73,9 @@ import Testing
     let selection = Contrast.over(
       Contrast.resolve(.unemphasizedSelectedContentBackgroundColor, in: look.appearance), window)
     let folder = Contrast.resolve(CompareFilesColors(options).quietText, in: look.appearance)
-    let signs = [CollectedFile.Change.modified, .added, .deleted].map {
+    let signs = [
+      CollectedFile.Change.modified, .added, .deleted, .identical, .unreadable(reason: ""),
+    ].map {
       Contrast.resolve($0.presentation.color(in: theme), in: look.appearance)
     }
 

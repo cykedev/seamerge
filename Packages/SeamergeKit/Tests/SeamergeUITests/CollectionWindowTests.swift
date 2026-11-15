@@ -79,7 +79,7 @@ import Testing
       title: "", action: #selector(NSSplitViewController.toggleSidebar(_:)), keyEquivalent: "")
     #expect(layout.sidebarItem.isCollapsed)
     #expect(!layout.validateUserInterfaceItem(toggle))
-    #expect(!layout.fileList.receivingLine.isHidden)
+    #expect(!layout.fileList.statusLine.isHidden)
 
     collection.add(files[1])
 
@@ -90,7 +90,7 @@ import Testing
 
     collection.add(files[2])
 
-    #expect(layout.fileList.receivingLine.isHidden)
+    #expect(layout.fileList.statusLine.isHidden)
     #expect(layout.fileList.tableView.selectedRow == 0)
   }
 

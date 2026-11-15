@@ -96,11 +96,13 @@ final class CompareFilesRecorder: CompareFilesWindowControllerDelegate {
 final class PanelRecorder: CompareFilesPanels {
   var files: [URL] = []
   private(set) var roles: [String] = []
+  private(set) var fileChoices: [FileChoice] = []
   private(set) var failures: [String] = []
   private let (choices, choiceSink) = AsyncStream.makeStream(of: Void.self)
 
-  func chooseFile(for role: String, in window: NSWindow) async -> URL? {
+  func chooseFile(_ choice: FileChoice, for role: String, in window: NSWindow) async -> URL? {
     roles.append(role)
+    fileChoices.append(choice)
     defer { choiceSink.yield() }
     return files.isEmpty ? nil : files.removeFirst()
   }

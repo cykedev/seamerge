@@ -20,19 +20,38 @@ extension CollectedFile.Change {
       colorRole.map(theme.symbolColor(for:)) ?? .secondaryLabelColor
     }
 
-    /// The help tag of a row: the whole path and what happened.
+    /// Why a side cannot be read, for a file whose sides cannot be compared.
+    let reason: String?
+
+    /// Whether the sign is the small dot of an ordinary change rather than a whole symbol.
+    let isSmall: Bool
+
+    /// The help tag of a row: the whole path and what happened, and why where a side cannot be
+    /// read.
     func toolTip(for path: String) -> String {
-      String(
-        localized: "\(path) (\(word))", bundle: .module,
+      guard let reason else {
+        return String(
+          localized: "\(path) (\(word))", bundle: .module,
+          comment:
+            "Help tag of a file in the sidebar: its path and what happened, such as Sources/App.swift (Modified)."
+        )
+      }
+      return String(
+        localized: "\(path) (\(word): \(reason))", bundle: .module,
         comment:
-          "Help tag of a file in the sidebar: its path and what happened, such as Sources/App.swift (Modified)."
+          "Help tag of a file in the sidebar that cannot be read: its path, the state and the reason, such as Logs (Can’t Read: You don’t have permission.)."
       )
     }
 
-    fileprivate init(symbolName: String, word: String, colorRole: ColorRole?) {
+    fileprivate init(
+      symbolName: String, word: String, colorRole: ColorRole?, reason: String? = nil,
+      isSmall: Bool = false
+    ) {
       self.symbolName = symbolName
       self.word = word
       self.colorRole = colorRole
+      self.reason = reason
+      self.isSmall = isSmall
     }
   }
 
@@ -45,7 +64,7 @@ extension CollectedFile.Change {
         word: String(
           localized: "Modified", bundle: .module,
           comment: "A file in the sidebar whose two sides differ."),
-        colorRole: nil)
+        colorRole: nil, isSmall: true)
     case .added:
       Presentation(
         symbolName: "plus.circle",
@@ -60,6 +79,20 @@ extension CollectedFile.Change {
           localized: "Deleted", bundle: .module,
           comment: "A file in the sidebar that has no later side."),
         colorRole: .a)
+    case .identical:
+      Presentation(
+        symbolName: "equal.circle",
+        word: String(
+          localized: "Identical", bundle: .module,
+          comment: "A file in the sidebar whose two sides hold the same bytes."),
+        colorRole: nil)
+    case .unreadable(let reason):
+      Presentation(
+        symbolName: "exclamationmark.circle",
+        word: String(
+          localized: "Can’t Read", bundle: .module,
+          comment: "A file or folder in the sidebar of which a side cannot be read."),
+        colorRole: nil, reason: reason)
     }
   }
 }

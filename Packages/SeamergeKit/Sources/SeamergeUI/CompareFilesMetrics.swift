@@ -26,6 +26,9 @@ enum CompareFilesMetrics {
   /// The length of the dashes and gaps of the border of an optional field.
   static let dashLength: CGFloat = 4
 
+  /// The opacity of a field that takes no file, as the base while folders are chosen.
+  static let disabledFieldAlpha: CGFloat = 0.4
+
   /// The width of the border of a field that a drop would fill.
   static let dropTargetBorderWidth: CGFloat = 3
 

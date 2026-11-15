@@ -12,13 +12,14 @@ public protocol CompareFilesWindowControllerDelegate: AnyObject {
     _ controller: CompareFilesWindowController, open comparison: FileComparison) async throws
 }
 
-/// The window Compare Files: the start window of the app and the window of File > Compare Files….
+/// The window Compare Files: the start window of the app and the window of File > Compare Files…
+/// and File > Compare Folders….
 ///
 /// It has three fields in the order of the panes, Left, Base and Right. Two outer files are
-/// compared, three are merged; the button below says which and opens them in exactly the roles
-/// shown. Once the session window shows, the window closes and lists the files among the
-/// comparisons opened last; if they cannot be opened, it says why and keeps them. The window
-/// never opens anything by itself.
+/// compared, three are merged, two outer folders are compared file by file; the button below says
+/// which and opens them in exactly the roles shown. Once the session window shows, the window
+/// closes and lists the files among the comparisons opened last; if they cannot be opened, it says
+/// why and keeps them. The window never opens anything by itself.
 @MainActor
 public final class CompareFilesWindowController: NSWindowController {
   /// Opens the sessions of the window; the window does not retain it, and opens nothing
@@ -88,6 +89,10 @@ public final class CompareFilesWindowController: NSWindowController {
 
   /// The sheet Set Up Git Integration while it is shown.
   var integrationSheet: GitIntegrationSheet?
+
+  /// The note beside the buttons that says why the fields cannot be opened, while they do not go
+  /// together.
+  let problemLabel = NSTextField(labelWithString: "")
 
   private let heading: NSTextField
   private let recentSection: NSStackView
@@ -211,7 +216,9 @@ public final class CompareFilesWindowController: NSWindowController {
     let fieldsRow = NSStackView(views: columns)
     fieldsRow.spacing = CompareFilesMetrics.fieldSpacing
     fieldsRow.alignment = .top
-    let buttonRow = NSStackView(views: [NSView(), cancelButton, openButton])
+    problemLabel.lineBreakMode = .byTruncatingTail
+    problemLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    let buttonRow = NSStackView(views: [problemLabel, NSView(), cancelButton, openButton])
     buttonRow.distribution = .fill
     recentSection.orientation = .vertical
     recentSection.alignment = .leading
@@ -267,15 +274,29 @@ public final class CompareFilesWindowController: NSWindowController {
   }
 
   /// Puts `urls` in the fields as if they were dropped on the window and tells whether the
-  /// window took them; it takes no folders and no more than three files.
+  /// window took them; it takes no more than three files, or two folders.
   @discardableResult
   public func fill(with urls: [URL]) -> Bool {
-    guard
-      urls.allSatisfy({ !$0.hasDirectoryPath }),
-      let places = selection.places(for: urls, droppedOn: nil)
-    else { return false }
+    // A folder is known as one by its directory path; whatever cannot be looked at counts as a
+    // file, which opening then reports.
+    let entries = urls.map { FileDrop.entry(at: $0) ?? $0 }
+    guard let places = places(for: entries, droppedOn: nil) else { return false }
     fill(places)
     return true
+  }
+
+  /// Empties the fields and lets the user choose the left folder, as File > Compare Folders…
+  /// does.
+  public func compareFolders() {
+    selection = FileSelection()
+    selectionDidChange()
+    showWindow(nil)
+    choose(.folder, for: .left)
+  }
+
+  /// Whether the fields take folders, which only a window that opens a session of its own does.
+  var acceptsFolders: Bool {
+    purpose == .compare
   }
 
   /// Swaps the files of the outer fields.
@@ -339,12 +360,11 @@ public final class CompareFilesWindowController: NSWindowController {
   func fill(_ places: [FileSlot: URL]) {
     selection.fill(places)
     selectionDidChange()
-    let hasBase = selection.hasBase
     announce(
       FileSlot.allCases.compactMap { slot in
         places[slot].map { url in
           String(
-            localized: "\(url.lastPathComponent) added as \(slot.title(hasBase: hasBase))",
+            localized: "\(url.lastPathComponent) added as \(selection.title(of: slot))",
             bundle: .module,
             comment: "VoiceOver: a file was put in a field, such as LoginView.swift added as Base.")
         }
@@ -353,7 +373,7 @@ public final class CompareFilesWindowController: NSWindowController {
 
   func clear(_ slot: FileSlot) {
     guard let url = selection[slot] else { return }
-    let role = slot.title(hasBase: selection.hasBase)
+    let role = selection.title(of: slot)
     selection[slot] = nil
     selectionDidChange()
     announce(
@@ -363,20 +383,22 @@ public final class CompareFilesWindowController: NSWindowController {
   }
 
   func announceSwap(of first: FileSlot, and second: FileSlot) {
-    let hasBase = selection.hasBase
     announce(
       String(
-        localized: "Swapped \(first.title(hasBase: hasBase)) and \(second.title(hasBase: hasBase))",
+        localized: "Swapped \(selection.title(of: first)) and \(selection.title(of: second))",
         bundle: .module, comment: "VoiceOver: two fields swapped their files."))
   }
 
   /// Shows the files of the fields, the roles they have now and what the button would open.
   func selectionDidChange() {
     let hasBase = selection.hasBase
+    fields[.base]?.isEnabled = !selection.hasFolder || hasBase
     for slot in FileSlot.allCases {
-      fields[slot]?.update(url: selection[slot], hasBase: hasBase)
+      fields[slot]?.update(
+        url: selection[slot], hasBase: hasBase, isFolder: selection.namesFolder(slot))
     }
     showDropTargets()
+    problemLabel.stringValue = selection.problem?.message ?? ""
     switch purpose {
     case .compare:
       openButton.title =
@@ -392,17 +414,17 @@ public final class CompareFilesWindowController: NSWindowController {
       openButton.title = String(
         localized: "Change", bundle: .module,
         comment: "Sheet Change Files: the default button, which shows the files in the window.")
-      openButton.isEnabled = !isOpening && selection.comparison?.kind == kind
+      openButton.isEnabled =
+        !isOpening && selection.comparison.map { $0.kind == kind && !$0.comparesFolders } ?? false
     }
   }
 
   /// Says below each field its role, or the role a drop would give it while one would fill it,
   /// next to the border of the field.
   private func showDropTargets() {
-    let hasBase = selection.hasBase
     for slot in FileSlot.allCases {
       fields[slot]?.isDropTarget = dropTargets[slot] != nil
-      captions[slot]?.stringValue = dropTargets[slot] ?? slot.title(hasBase: hasBase)
+      captions[slot]?.stringValue = dropTargets[slot] ?? selection.title(of: slot)
     }
   }
 
@@ -415,6 +437,7 @@ public final class CompareFilesWindowController: NSWindowController {
       caption.textColor = colors.quietText
     }
     heading.textColor = colors.quietText
+    problemLabel.textColor = colors.quietText
     gitStatusLabel.textColor = colors.quietText
     recentList.quietTextColor = colors.quietText
   }

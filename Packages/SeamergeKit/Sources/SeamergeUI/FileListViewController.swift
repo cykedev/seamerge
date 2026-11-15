@@ -4,13 +4,15 @@ import PaneKit
 /// Learns which file the user chose in the list of a window that compares several files.
 @MainActor
 protocol FileListDelegate: AnyObject {
-  /// The user selected the file at `index`.
-  func fileList(_ fileList: FileListViewController, didSelectFileAt index: Int)
+  /// The user selected the file in row `row` of the list.
+  func fileList(_ fileList: FileListViewController, didSelectRow row: Int)
 }
 
 /// The list of the files of a window that compares several, in its sidebar: one row for each
-/// file with the sign of what happened to it, its name and its folder; below the rows, while
-/// files still come, how many have come.
+/// file with the sign of what happened to it, its name and its folder.
+///
+/// Below the rows stands a quiet line while files come or folders are compared, and what a
+/// comparison of folders found once it is done.
 @MainActor
 final class FileListViewController: NSViewController {
   /// Learns which file the user chose; the list does not retain it.
@@ -26,17 +28,22 @@ final class FileListViewController: NSViewController {
 
   /// The color of the folders, quieter than the names yet readable.
   var folderColor: NSColor {
-    didSet { tableView.reloadData() }
+    didSet {
+      tableView.reloadData()
+      statusLabel.textColor = folderColor
+    }
   }
 
   /// The table of the files.
   let tableView = NSTableView()
 
-  /// The line below the rows that tells how many files have come while more are coming.
-  let receivingLine = NSStackView()
+  /// The line below the rows that says how many files have come, how far the comparison of
+  /// folders is, or what it found.
+  let statusLine = NSStackView()
 
-  private let receivingLabel = NSTextField(labelWithString: "")
-  private let receivingIndicator = NSProgressIndicator()
+  private let statusLabel = NSTextField(labelWithString: "")
+  private let statusIndicator = NSProgressIndicator()
+  private var statusHeight: NSLayoutConstraint?
   private var isSelectingFromCode = false
 
   /// Creates the list with the colors of `theme` and `folderColor`.
@@ -57,7 +64,7 @@ final class FileListViewController: NSViewController {
     tableView.headerView = nil
     tableView.style = .sourceList
     tableView.rowSizeStyle = .default
-    tableView.allowsEmptySelection = false
+    tableView.allowsEmptySelection = true
     tableView.allowsMultipleSelection = false
     tableView.dataSource = self
     tableView.delegate = self
@@ -68,86 +75,85 @@ final class FileListViewController: NSViewController {
     scrollView.drawsBackground = false
     scrollView.translatesAutoresizingMaskIntoConstraints = false
 
-    receivingIndicator.style = .spinning
-    receivingIndicator.controlSize = .small
-    receivingIndicator.isDisplayedWhenStopped = false
-    receivingLabel.font = .preferredFont(forTextStyle: .subheadline)
-    receivingLabel.textColor = folderColor
-    receivingLabel.lineBreakMode = .byTruncatingTail
-    receivingLine.setViews([receivingIndicator, receivingLabel], in: .leading)
-    receivingLine.spacing = WindowMetrics.headerSpacing
-    receivingLine.edgeInsets = NSEdgeInsets(
+    statusIndicator.style = .spinning
+    statusIndicator.controlSize = .small
+    statusIndicator.isDisplayedWhenStopped = false
+    statusLabel.font = .preferredFont(forTextStyle: .subheadline)
+    statusLabel.textColor = folderColor
+    statusLabel.lineBreakMode = .byTruncatingTail
+    statusLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    statusLine.setViews([statusIndicator, statusLabel], in: .leading)
+    statusLine.spacing = WindowMetrics.headerSpacing
+    statusLine.edgeInsets = NSEdgeInsets(
       top: 0, left: WindowMetrics.headerInset, bottom: 0, right: WindowMetrics.headerInset)
-    receivingLine.translatesAutoresizingMaskIntoConstraints = false
-    receivingLine.isHidden = true
-    receivingLine.setAccessibilityElement(true)
-    receivingLine.setAccessibilityRole(.staticText)
+    statusLine.translatesAutoresizingMaskIntoConstraints = false
+    statusLine.isHidden = true
+    statusLine.setAccessibilityElement(true)
+    statusLine.setAccessibilityRole(.staticText)
 
     // The split view gives the sidebar the width its view has when it first shows.
     let container = NSView(
       frame: CGRect(x: 0, y: 0, width: WindowMetrics.sidebarWidth, height: 400))
     container.addSubview(scrollView)
-    container.addSubview(receivingLine)
-    let receivingHeight = receivingLine.heightAnchor.constraint(
-      equalToConstant: WindowMetrics.footerHeight)
+    container.addSubview(statusLine)
+    let statusHeight = statusLine.heightAnchor.constraint(equalToConstant: 0)
     NSLayoutConstraint.activate([
       scrollView.topAnchor.constraint(equalTo: container.topAnchor),
       scrollView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
       scrollView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-      scrollView.bottomAnchor.constraint(equalTo: receivingLine.topAnchor),
-      receivingLine.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-      receivingLine.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-      receivingLine.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-      receivingHeight,
+      scrollView.bottomAnchor.constraint(equalTo: statusLine.topAnchor),
+      statusLine.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+      statusLine.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+      statusLine.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+      statusHeight,
     ])
-    self.receivingHeight = receivingHeight
+    self.statusHeight = statusHeight
     view = container
   }
 
-  private var receivingHeight: NSLayoutConstraint?
-
-  /// Shows `files`, keeping the selection on the file it is on.
-  func show(_ files: [CollectedFile], selecting selection: Int) {
+  /// Shows `files` with the row `selection` selected, or none; with `scrolling`, the selected
+  /// row comes into view.
+  func show(_ files: [CollectedFile], selecting selection: Int?, scrolling: Bool) {
     loadViewIfNeeded()
     self.files = files
+    isSelectingFromCode = true
     tableView.reloadData()
-    select(selection)
-  }
-
-  /// Shows that the file at `index` came, below or between the rows there are, keeping the
-  /// selection on the file it is on.
-  func insert(_ file: CollectedFile, at index: Int, selecting selection: Int) {
-    loadViewIfNeeded()
-    files.insert(file, at: index)
-    isSelectingFromCode = true
-    tableView.insertRows(at: IndexSet(integer: index))
     isSelectingFromCode = false
-    select(selection)
+    select(selection, scrolling: scrolling)
   }
 
-  /// Selects the row of the file at `index` without telling the delegate, and scrolls it into
-  /// view.
-  func select(_ index: Int) {
-    guard files.indices.contains(index) else { return }
+  /// Selects row `row`, or none, without telling the delegate; with `scrolling`, the row comes
+  /// into view.
+  func select(_ row: Int?, scrolling: Bool = true) {
     isSelectingFromCode = true
-    tableView.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
-    isSelectingFromCode = false
-    tableView.scrollRowToVisible(index)
-  }
-
-  /// Shows below the rows that `count` files of `expectedCount`, if known, have come, or hides
-  /// the line once no more come.
-  func showReceiving(_ count: Int, of expectedCount: Int?, isReceiving: Bool) {
-    loadViewIfNeeded()
-    receivingLine.isHidden = !isReceiving
-    receivingHeight?.constant = isReceiving ? WindowMetrics.footerHeight : 0
-    if isReceiving {
-      receivingIndicator.startAnimation(nil)
-    } else {
-      receivingIndicator.stopAnimation(nil)
+    defer { isSelectingFromCode = false }
+    guard let row, files.indices.contains(row) else {
+      tableView.deselectAll(nil)
+      return
     }
-    receivingLabel.stringValue = Self.receivingText(count, of: expectedCount)
-    receivingLine.setAccessibilityLabel(receivingLabel.stringValue)
+    tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+    if scrolling {
+      tableView.scrollRowToVisible(row)
+    }
+  }
+
+  /// Shows `text` below the rows, with the spinning indicator while `isBusy`, or hides the line
+  /// for `nil`.
+  func showStatus(_ text: String?, isBusy: Bool) {
+    loadViewIfNeeded()
+    statusLine.isHidden = text == nil
+    statusHeight?.constant = text == nil ? 0 : WindowMetrics.footerHeight
+    // A stopped indicator keeps its room in the line unless it is hidden.
+    statusIndicator.isHidden = !isBusy || text == nil
+    if statusIndicator.isHidden {
+      statusIndicator.stopAnimation(nil)
+    } else {
+      statusIndicator.startAnimation(nil)
+    }
+    statusLabel.stringValue = text ?? ""
+    // The sidebar may be too narrow for the whole line.
+    statusLine.toolTip = text
+    statusLine.setAccessibilityLabel(text)
   }
 
   /// What the line below the rows says while files come.
@@ -167,6 +173,33 @@ final class FileListViewController: NSViewController {
     String(
       localized: "All \(count) files received", bundle: .module,
       comment: "VoiceOver: every file of a run has come, such as All 40 files received.")
+  }
+
+  /// What the line below the rows says while two folders are compared: how many of how many
+  /// files, once every entry is paired.
+  static func comparingText(_ count: Int, of pairedCount: Int?) -> String {
+    guard let pairedCount else {
+      return String(
+        localized: "Comparing Files…", bundle: .module,
+        comment: "Sidebar: the files of two folders are being paired, and it is not known how many."
+      )
+    }
+    return String(
+      localized: "Comparing \(count.formatted()) of \(pairedCount.formatted()) Files…",
+      bundle: .module,
+      comment:
+        "Sidebar: how many files of two folders are compared, such as Comparing 1,200 of 5,000 Files…."
+    )
+  }
+
+  /// What the line below the rows says, and VoiceOver once, when two folders are compared: how
+  /// many of their files differ.
+  static func differingText(_ count: Int, of fileCount: Int) -> String {
+    String(
+      localized: "\(count.formatted()) of \(fileCount.formatted()) files differ", bundle: .module,
+      comment:
+        "Sidebar and VoiceOver: how many files of two compared folders differ, such as 12 of 340 files differ."
+    )
   }
 
   private static var listName: String {
@@ -195,7 +228,7 @@ extension FileListViewController: NSTableViewDataSource, NSTableViewDelegate {
 
   func tableViewSelectionDidChange(_ notification: Notification) {
     guard !isSelectingFromCode, tableView.selectedRow >= 0 else { return }
-    delegate?.fileList(self, didSelectFileAt: tableView.selectedRow)
+    delegate?.fileList(self, didSelectRow: tableView.selectedRow)
   }
 }
 
@@ -255,7 +288,7 @@ final class FileListCell: NSTableCellView {
     sign.image = NSImage(
       systemSymbolName: presentation.symbolName, accessibilityDescription: nil)?
       .withSymbolConfiguration(
-        NSImage.SymbolConfiguration(scale: file.change == .modified ? .small : .medium))
+        NSImage.SymbolConfiguration(scale: presentation.isSmall ? .small : .medium))
     sign.contentTintColor = presentation.color(in: theme)
     toolTip = presentation.toolTip(for: file.path)
     setAccessibilityLabel(

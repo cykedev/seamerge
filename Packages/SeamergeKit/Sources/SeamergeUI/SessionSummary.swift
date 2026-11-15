@@ -12,10 +12,12 @@ struct SessionSummary: Equatable {
   let title: String
 
   /// The parts of the subtitle in the order they stand; the operation is the first to go when
-  /// the window is narrow, then where the file stands among the files of the Git command.
+  /// the window is narrow, then the folders compared, then where the file stands among the files
+  /// of the window.
   let changes: String
   let operation: String?
   let fileProgress: String?
+  let folders: String?
 
   /// Summarizes `changes` in `context`, with the sides of a comparison where `arrangement` puts
   /// them, and names the comparison mode where it differs from `startMode`, that of a new window.
@@ -57,11 +59,13 @@ struct SessionSummary: Equatable {
         comment: "Subtitle: which file of a git difftool run is compared, such as File 3 of 12.")
     }
     fileProgress = remainingFiles ?? filePosition
+    // Without a file in view, the title names the folders already.
+    folders = context.difftool == nil ? nil : context.folders?.title
   }
 
   /// The whole subtitle, as the help tag and VoiceOver give it.
   var fullSubtitle: String {
-    Self.joined([changes, operation, fileProgress])
+    Self.joined([changes, operation, fileProgress, folders])
   }
 
   /// The parts that are there, with the separator between them.
@@ -88,9 +92,12 @@ struct SessionSummary: Equatable {
   }
 
   /// The longest subtitle that fits in `width` points in `font`: the whole one, then without the
-  /// operation, then the changes alone.
+  /// operation, then without the folders, then the changes alone.
   func subtitle(fittingWidth width: CGFloat, font: NSFont) -> String {
-    let candidates = [fullSubtitle, Self.joined([changes, fileProgress]), changes]
+    let candidates = [
+      fullSubtitle, Self.joined([changes, fileProgress, folders]),
+      Self.joined([changes, fileProgress]), changes,
+    ]
     return candidates.first { candidate in
       (candidate as NSString).size(withAttributes: [.font: font]).width <= width
     } ?? changes

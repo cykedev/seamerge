@@ -126,13 +126,17 @@ final class SessionCoordinator {
   }
 
   /// Opens a window for the files of `comparison` in their roles and returns once it shows: a
-  /// merge with a base, a comparison without one.
+  /// merge with a base, a comparison without one, or the files of two folders.
   ///
   /// Such a session has no file to save to and no Git behind it. While the app quits, nothing
   /// opens.
   ///
   /// - Throws: Why the files cannot be opened.
   func open(_ comparison: FileComparison) async throws(SessionLoadingError) {
+    if let folders = comparison.folders {
+      try await open(folders)
+      return
+    }
     let file = { (url: URL) in SessionFile(url: url, label: url.lastPathComponent) }
     let session =
       if let base = comparison.base {
@@ -147,6 +151,33 @@ final class SessionCoordinator {
       session: session, context: SessionContext(), undoManager: UndoManager(), settings: settings)
     guard !isFinishing else { return }
     show(controller, kind: session.kind) { _ in }
+  }
+
+  /// Opens a window that compares the files of `folders` and returns once it shows, while the
+  /// comparison goes on; the targets of links that it writes go when the window closes.
+  ///
+  /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the window can be made.
+  private func open(_ folders: FolderPair) async throws(SessionLoadingError) {
+    let linkFolder = cache.makeFolder()
+    let collection = FileCollection(comparing: folders, linkFolder: linkFolder)
+    let end = { [cache] in
+      collection.dismiss()
+      cache.remove(linkFolder)
+    }
+    let controller: SessionWindowController
+    do {
+      controller = try await SessionWindowController(
+        collection: collection, undoManager: UndoManager(), settings: settings)
+    } catch {
+      end()
+      throw error
+    }
+    guard !isFinishing else {
+      end()
+      return
+    }
+    show(controller, kind: .diff) { _ in end() }
+    collection.startComparing()
   }
 
   /// Serves the request of one helper until its window closes or the helper goes away.

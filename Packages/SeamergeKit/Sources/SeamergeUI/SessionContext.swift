@@ -16,6 +16,9 @@ public struct SessionContext: Sendable, Hashable {
   /// each side is, and which file of the run it is.
   public var difftool: DifftoolContext?
 
+  /// The folders whose files the window compares, if it compares two folders.
+  public var folders: FolderPair?
+
   /// Who waits for the end of a merge and hears how it ended, if anyone does.
   ///
   /// Words about what Git does with the file stand only where Git waits; files that lie in a
@@ -25,12 +28,13 @@ public struct SessionContext: Sendable, Hashable {
   /// Creates a context; without arguments, one that knows nothing beyond the files.
   public init(
     resultURL: URL? = nil, git: GitContext? = nil, difftool: DifftoolContext? = nil,
-    waitingCaller: WaitingCaller? = nil
+    waitingCaller: WaitingCaller? = nil, folders: FolderPair? = nil
   ) {
     self.resultURL = resultURL
     self.git = git
     self.difftool = difftool
     self.waitingCaller = waitingCaller
+    self.folders = folders
   }
 }
 

@@ -1,6 +1,12 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ (%@: %@)" : {
+      "comment" : "Help tag of a file in the sidebar that cannot be read: its path, the state and the reason, such as Logs (Can’t Read: You don’t have permission.)."
+    },
+    "%@ of %@ files differ" : {
+      "comment" : "Sidebar and VoiceOver: how many files of two compared folders differ, such as 12 of 340 files differ."
+    },
     "“%@” can’t be saved in %@." : {
       "comment" : "Sheet: the result holds characters the encoding lacks, such as in ISO 8859-1.",
       "localizations" : {
@@ -322,6 +328,9 @@
     "Cancel" : {
       "comment" : "Button: close the sheet and do nothing."
     },
+    "Can’t Read" : {
+      "comment" : "A file or folder in the sidebar of which a side cannot be read."
+    },
     "Change" : {
       "comment" : "Sheet Change Files: the default button, which shows the files in the window."
     },
@@ -381,6 +390,9 @@
     "Choose" : {
       "comment" : "The button of the open panel of a field."
     },
+    "Choose a file or folder, or drop one here" : {
+      "comment" : "VoiceOver hint of an outer field of Compare Files."
+    },
     "Choose a file, or drop one here" : {
       "comment" : "VoiceOver hint of a field of Compare Files."
     },
@@ -396,8 +408,20 @@
     "Choose the file for %@." : {
       "comment" : "Open panel of a field of Compare Files, such as Choose the file for Left."
     },
+    "Choose the file or folder for %@." : {
+      "comment" : "Open panel of an outer field of Compare Files, such as Choose the file or folder for Left."
+    },
+    "Choose the folder for %@." : {
+      "comment" : "Open panel of Compare Folders, such as Choose the folder for Left Folder."
+    },
     "Choose the language the code is colored as" : {
       "comment" : "Help tag of the syntax pop-up button in the footer."
+    },
+    "Choose two different folders." : {
+      "comment" : "Compare Files: the same folder is chosen twice."
+    },
+    "Choose two files or two folders." : {
+      "comment" : "Compare Files: a file and a folder are chosen, which cannot be compared."
     },
     "Choose…" : {
       "comment" : "Compare Files: the button in an empty field that opens the open panel."
@@ -461,8 +485,17 @@
     "Compare Files" : {
       "comment" : "The title of the window that puts files together to compare or merge."
     },
+    "Compare the folder %@ with %@" : {
+      "comment" : "VoiceOver: a recent comparison of two folders, with their names."
+    },
     "Compared exactly" : {
       "comment" : "Subtitle: the comparison counts every byte, whitespace and line endings too."
+    },
+    "Comparing %@ of %@ Files…" : {
+      "comment" : "Sidebar: how many files of two folders are compared, such as Comparing 1,200 of 5,000 Files…."
+    },
+    "Comparing Files…" : {
+      "comment" : "Sidebar: the files of two folders are being paired, and it is not known how many."
     },
     "Comparing…" : {
       "comment" : "Toolbar: the files are being compared anew."
@@ -548,6 +581,9 @@
     "Drop a File" : {
       "comment" : "Compare Files: an empty field, which takes a file dragged onto it."
     },
+    "Drop a File or Folder" : {
+      "comment" : "Compare Files: an empty outer field, which takes a file or a folder."
+    },
     "Drop to Swap" : {
       "comment" : "Compare Files: below two fields while one is dragged onto the other."
     },
@@ -592,6 +628,9 @@
     },
     "First Change" : {
       "comment" : "Go menu command."
+    },
+    "Folders are compared without a base." : {
+      "comment" : "Compare Files: help tag of the base field, and the note below the fields, while folders are chosen."
     },
     "Font" : {
       "comment" : "Settings: the font of the code."
@@ -721,6 +760,9 @@
     "Highlight Syntax" : {
       "comment" : "View menu command."
     },
+    "Identical" : {
+      "comment" : "A file in the sidebar whose two sides hold the same bytes."
+    },
     "If you don’t save, your decisions are lost and Git keeps the file unresolved." : {
       "comment" : "Sheet before closing a merge that Git waits for: what follows."
     },
@@ -745,6 +787,9 @@
     "ISO 8859-1" : {
       "comment" : "Encoding: ISO Latin 1."
     },
+    "It is neither a file, a folder nor a link." : {
+      "comment" : "Why an entry of a comparison of folders, such as a socket, is not compared."
+    },
     "Keep My Version" : {
       "comment" : "Button: keep the result of the window and ignore the change on disk."
     },
@@ -768,6 +813,9 @@
     },
     "Left" : {
       "comment" : "Compare Files: the role of a field."
+    },
+    "Left Folder" : {
+      "comment" : "Compare Files: the role of the left field once a folder is chosen."
     },
     "Let each pane scroll on its own" : {
       "comment" : "Help tag of the footer toggle of synchronized scrolling while it is on."
@@ -846,6 +894,9 @@
     },
     "No Conflicts" : {
       "comment" : "Toolbar: the merge had no conflict."
+    },
+    "No File Selected" : {
+      "comment" : "Window of two folders: the list holds files, but none is shown."
     },
     "Nothing taken" : {
       "comment" : "VoiceOver: a part of the result that takes no lines."
@@ -999,6 +1050,9 @@
     },
     "Right" : {
       "comment" : "Compare Files: the role of a field."
+    },
+    "Right Folder" : {
+      "comment" : "Compare Files: the role of the right field once a folder is chosen."
     },
     "Save" : {
       "comment" : "File menu command."
@@ -1206,6 +1260,9 @@
         }
       }
     },
+    "The folders have the same files." : {
+      "comment" : "Window of two folders: no file differs."
+    },
     "The switch discards %lld decisions." : {
       "comment" : "Sheet before switching the comparison, such as The switch discards 3 decisions.",
       "localizations" : {
@@ -1362,6 +1419,9 @@
     },
     "Wrap long lines at the width of the panes" : {
       "comment" : "Help tag of the footer toggle of line wrapping while lines run on."
+    },
+    "You don’t have permission to read it." : {
+      "comment" : "Why a file or folder of a comparison of folders cannot be read."
     },
     "Your changes will be lost if you don’t save them." : {
       "comment" : "Sheet before closing a merge of files with unsaved changes: what follows."

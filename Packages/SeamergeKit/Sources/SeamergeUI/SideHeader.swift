@@ -147,7 +147,8 @@ struct SideHeader: Equatable {
   }
 
   /// What the side `role` of a comparison is, if its name `name` is also the name of the other
-  /// side: the working copy, or else the earlier or the later version.
+  /// side: the folder it comes from in a comparison of folders, the working copy, or else the
+  /// earlier or the later version.
   private static func comparisonRole(
     of role: Role, named name: String, session: Session, context: SessionContext
   ) -> String? {
@@ -156,6 +157,10 @@ struct SideHeader: Equatable {
     guard session.file(for: other) != nil,
       Self.name(of: other, session: session, context: context) == name
     else { return nil }
+    if let folders = context.folders {
+      let names = folders.distinctNames
+      return singleLine(role == .a ? names.left : names.right)
+    }
     let diffRole =
       context.difftool.map { role == .a ? $0.leftRole : $0.rightRole }
       ?? (role == .a ? .before : .after)

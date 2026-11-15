@@ -115,13 +115,27 @@ public final class SessionWindowController: NSWindowController {
   /// The index of the file the window shows among the files of its collection.
   var fileIndex = 0
 
+  /// The file of the collection the window shows, or `nil` while it shows none, as before the
+  /// first file of two folders is known.
+  var shownFile: CollectedFile?
+
+  /// Which files of the collection the list shows.
+  var fileFilter = FileFilter()
+
+  /// The indices of the files of the collection that the list shows, in order.
+  var listedIndices: [Int] = []
+
+  /// What the window says in place of the lines while it shows no file of its collection.
+  var collectionPlaceholder: CollectionPlaceholder?
+
   /// The place in each file of the collection that the window showed, by path, which it shows
   /// again when the user comes back to the file.
   var filePlaces: [String: FilePlace] = [:]
 
-  /// The files of the collection that the window has read, by path: the one it shows and those
-  /// beside it.
-  var loadedFiles: [String: LoadedFile] = [:]
+  /// The files of the collection that the window has read: the one it shows and those beside it.
+  ///
+  /// A file whose sides or change differ since is another file, which is read anew.
+  var loadedFiles: [CollectedFile: LoadedFile] = [:]
 
   /// The reading of the file the window is about to show, while it runs.
   var fileLoad: Task<Void, Never>?
@@ -391,7 +405,7 @@ public final class SessionWindowController: NSWindowController {
       return .conflicts(
         open: presentation.navigation.openConflictCount,
         hadAny: changes.blocks.contains { $0.kind == .conflict })
-    case .diff where unavailable != nil || binaryMerge != nil:
+    case .diff where unavailable != nil || binaryMerge != nil || collectionPlaceholder != nil:
       return .nothing
     case .diff:
       return .changes(current: presentation.currentBlock, total: changes.blocks.count)
@@ -587,8 +601,10 @@ extension SessionWindowController: NSUserInterfaceValidations {
   /// Whether `command` can have an effect now; while the window cannot show the lines of its
   /// files, only skipping the remaining files can.
   func canPerform(_ command: SessionCommand) -> Bool {
-    if unavailable != nil,
-      ![.skipRemainingFiles, .toggleFooter, .nextFile, .previousFile].contains(command)
+    if unavailable != nil || collectionPlaceholder != nil,
+      ![
+        .skipRemainingFiles, .toggleFooter, .nextFile, .previousFile,
+      ].contains(command)
     {
       return false
     }
@@ -601,7 +617,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
     case .anotherPane:
       focusablePanes.count > 1
     case .anotherFile(let forward):
-      collection.map { $0.files.indices.contains(fileIndex + (forward ? 1 : -1)) } ?? false
+      neighborIndex(forward: forward) != nil
     case .noComparisonUnderWay:
       !isSwitchingComparison
     case .basePane:

@@ -17,20 +17,26 @@ protocol FileDropDelegate: AnyObject {
 
 /// Reads the files of a drop.
 enum FileDrop {
-  /// The files on `pasteboard`, or `nil` if it holds none or a folder among them, which the
-  /// window does not take.
+  /// The files and folders on `pasteboard`, each folder as a directory path, or `nil` if it
+  /// holds none or something that is not there.
   @MainActor
   static func files(on pasteboard: NSPasteboard) -> [URL]? {
     let objects = pasteboard.readObjects(
       forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true])
     guard let urls = objects as? [URL], !urls.isEmpty else { return nil }
-    for url in urls {
-      var isDirectory: ObjCBool = false
-      let exists = FileManager.default.fileExists(
-        atPath: url.path(percentEncoded: false), isDirectory: &isDirectory)
-      guard exists, !isDirectory.boolValue else { return nil }
+    let entries = urls.map(entry(at:))
+    return entries.contains(nil) ? nil : entries.compactMap(\.self)
+  }
+
+  /// `url` as the window takes it: a folder as a directory path, a file as it is; `nil` if
+  /// nothing is there.
+  static func entry(at url: URL) -> URL? {
+    var isDirectory: ObjCBool = false
+    let path = url.path(percentEncoded: false)
+    guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+      return nil
     }
-    return urls
+    return URL(filePath: path, directoryHint: isDirectory.boolValue ? .isDirectory : .notDirectory)
   }
 }
 

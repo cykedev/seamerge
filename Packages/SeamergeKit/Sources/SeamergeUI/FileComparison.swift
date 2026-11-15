@@ -2,7 +2,7 @@ import Foundation
 import MergeModel
 
 /// Files that the user put together in the window Compare Files, each in its role: two to compare,
-/// or three to merge.
+/// three to merge, or two folders to compare file by file.
 public struct FileComparison: Sendable, Hashable {
   /// The file on the left: the older one of a comparison, A of a merge.
   public var left: URL
@@ -13,11 +13,31 @@ public struct FileComparison: Sendable, Hashable {
   /// The file on the right: the newer one of a comparison, B of a merge.
   public var right: URL
 
+  /// Whether `left` and `right` are folders, whose files are compared with each other.
+  public let comparesFolders: Bool
+
   /// Puts files together in their roles; with a base, they are merged.
   public init(left: URL, base: URL? = nil, right: URL) {
     self.left = left
     self.base = base
     self.right = right
+    comparesFolders = false
+  }
+
+  /// Puts the two folders of `folders` together, to compare their files.
+  public init(folders: FolderPair) {
+    let folder = { (url: URL) in
+      URL(filePath: url.path(percentEncoded: false), directoryHint: .isDirectory)
+    }
+    left = folder(folders.left)
+    base = nil
+    right = folder(folders.right)
+    comparesFolders = true
+  }
+
+  /// The folders compared, if the comparison is one of two folders.
+  public var folders: FolderPair? {
+    comparesFolders ? FolderPair(left: left, right: right) : nil
   }
 
   /// Whether the files are merged or compared.
@@ -52,6 +72,11 @@ public struct FileComparison: Sendable, Hashable {
   /// What VoiceOver says for the comparison in a list.
   var accessibilityTitle: String {
     let names = files.map(\.lastPathComponent)
+    if comparesFolders {
+      return String(
+        localized: "Compare the folder \(names[0]) with \(names[1])", bundle: .module,
+        comment: "VoiceOver: a recent comparison of two folders, with their names.")
+    }
     return names.count == 3
       ? String(
         localized: "Merge \(names[0]) and \(names[2]) with the base \(names[1])", bundle: .module,

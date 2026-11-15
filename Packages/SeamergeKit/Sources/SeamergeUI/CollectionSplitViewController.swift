@@ -3,8 +3,8 @@ import AppKit
 /// The content of a window that compares several files: the list of the files in a sidebar, and
 /// beside it the panes and footer of the chosen file.
 ///
-/// The sidebar shows once the window has two files, unless the user hid it, which every such
-/// window remembers in the settings; before that, Show Sidebar does nothing.
+/// The sidebar shows once the window has a list, unless the user hid it, which every such window
+/// remembers in the settings; before that, Show Sidebar does nothing.
 @MainActor
 final class CollectionSplitViewController: NSSplitViewController {
   /// The list of the files.
@@ -13,11 +13,11 @@ final class CollectionSplitViewController: NSSplitViewController {
   /// The item of the sidebar.
   let sidebarItem: NSSplitViewItem
 
-  /// Whether the window has files enough for a list, two or more.
-  var hasSeveralFiles = false {
+  /// Whether the window has a list: from two files on, and always for two folders.
+  var hasList = false {
     didSet {
-      guard hasSeveralFiles != oldValue else { return }
-      sidebarItem.isCollapsed = !(hasSeveralFiles && settings.showsFileList)
+      guard hasList != oldValue else { return }
+      sidebarItem.isCollapsed = !(hasList && settings.showsFileList)
       sidebarDidChange()
     }
   }
@@ -57,7 +57,7 @@ final class CollectionSplitViewController: NSSplitViewController {
 
   /// Hides the list, or shows it again, and remembers the choice for every such window.
   override func toggleSidebar(_ sender: Any?) {
-    guard hasSeveralFiles else { return }
+    guard hasList else { return }
     let shows = sidebarItem.isCollapsed
     super.toggleSidebar(sender)
     settings.showsFileList = shows
@@ -66,7 +66,7 @@ final class CollectionSplitViewController: NSSplitViewController {
 
   override func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
     let isValid = super.validateUserInterfaceItem(item)
-    return item.action == #selector(toggleSidebar(_:)) ? isValid && hasSeveralFiles : isValid
+    return item.action == #selector(toggleSidebar(_:)) ? isValid && hasList : isValid
   }
 }
 

@@ -35,13 +35,27 @@ final class FileField: NSView {
     didSet { needsDisplay = true }
   }
 
+  /// Whether the field takes a file, which it does not while folders are chosen for the base; a
+  /// field that takes none is dimmed, says why in its help tag, and is skipped by Tab.
+  var isEnabled = true {
+    didSet {
+      guard isEnabled != oldValue else { return }
+      alphaValue = isEnabled ? 1 : CompareFilesMetrics.disabledFieldAlpha
+      chooseButton.isEnabled = isEnabled
+      update(url: url, hasBase: hasBase, isFolder: isFolder)
+    }
+  }
+
   /// The colors the field draws with.
   var colors: CompareFilesColors {
     didSet { applyColors() }
   }
 
   private var roleTitle = ""
+  private var hasBase = false
+  private var isFolder = false
   private let invitation: NSTextField
+  private let chooseButton: NSButton
   private let emptyContent: NSStackView
   private let filledContent: NSStackView
   private let iconView = NSImageView()
@@ -55,11 +69,15 @@ final class FileField: NSView {
     self.slot = slot
     self.colors = colors
     invitation = NSTextField(
-      labelWithString: String(
-        localized: "Drop a File", bundle: .module,
-        comment: "Compare Files: an empty field, which takes a file dragged onto it."))
+      labelWithString: slot == .base
+        ? String(
+          localized: "Drop a File", bundle: .module,
+          comment: "Compare Files: an empty field, which takes a file dragged onto it.")
+        : String(
+          localized: "Drop a File or Folder", bundle: .module,
+          comment: "Compare Files: an empty outer field, which takes a file or a folder."))
     invitation.alignment = .center
-    let chooseButton = NSButton(
+    chooseButton = NSButton(
       title: String(
         localized: "Choose…", bundle: .module,
         comment: "Compare Files: the button in an empty field that opens the open panel."),
@@ -150,23 +168,26 @@ final class FileField: NSView {
   }
 
   /// Shows `url`, or invites a file when it is `nil`, in the role the field has with or without
-  /// a base.
-  func update(url: URL?, hasBase: Bool) {
+  /// a base, named for a folder if `isFolder`.
+  func update(url: URL?, hasBase: Bool, isFolder: Bool = false) {
     self.url = url
-    roleTitle = slot.accessibilityTitle(hasBase: hasBase)
+    self.hasBase = hasBase
+    self.isFolder = isFolder
+    roleTitle = slot.accessibilityTitle(hasBase: hasBase, isFolder: isFolder)
     emptyContent.isHidden = url != nil
     filledContent.isHidden = url == nil
     clearButton.isHidden = url == nil
     if let url {
       let path = url.path(percentEncoded: false)
       iconView.image = NSWorkspace.shared.icon(
-        for: UTType(filenameExtension: url.pathExtension) ?? .data)
+        for: url.hasDirectoryPath
+          ? .folder : UTType(filenameExtension: url.pathExtension) ?? .data)
       nameLabel.stringValue = url.lastPathComponent
       folderLabel.stringValue = Self.folderName(of: url)
       toolTip = path
     } else {
       iconView.image = nil
-      toolTip = nil
+      toolTip = isEnabled ? nil : FileSlot.foldersWithoutBase
     }
     needsDisplay = true
   }
@@ -224,9 +245,9 @@ final class FileField: NSView {
     outline.fill()
   }
 
-  override var acceptsFirstResponder: Bool { true }
+  override var acceptsFirstResponder: Bool { isEnabled }
 
-  override var canBecomeKeyView: Bool { true }
+  override var canBecomeKeyView: Bool { isEnabled }
 
   override func keyDown(with event: NSEvent) {
     let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
@@ -249,6 +270,7 @@ final class FileField: NSView {
   }
 
   override func mouseDown(with event: NSEvent) {
+    guard isEnabled else { return }
     window?.makeFirstResponder(self)
     mouseDownEvent = event
     if event.clickCount == 2 {
@@ -285,6 +307,8 @@ final class FileField: NSView {
 
   override func accessibilityRole() -> NSAccessibility.Role? { .button }
 
+  override func isAccessibilityEnabled() -> Bool { isEnabled }
+
   override func accessibilityLabel() -> String? { roleTitle }
 
   override func accessibilityValue() -> Any? {
@@ -298,14 +322,20 @@ final class FileField: NSView {
   }
 
   override func accessibilityHelp() -> String? {
-    String(
-      localized: "Choose a file, or drop one here", bundle: .module,
-      comment: "VoiceOver hint of a field of Compare Files.")
+    guard isEnabled else { return FileSlot.foldersWithoutBase }
+    return slot == .base
+      ? String(
+        localized: "Choose a file, or drop one here", bundle: .module,
+        comment: "VoiceOver hint of a field of Compare Files.")
+      : String(
+        localized: "Choose a file or folder, or drop one here", bundle: .module,
+        comment: "VoiceOver hint of an outer field of Compare Files.")
   }
 
   override func accessibilityChildren() -> [Any]? { nil }
 
   override func accessibilityPerformPress() -> Bool {
+    guard isEnabled else { return false }
     delegate?.fileFieldDidAskToChoose(self)
     return true
   }

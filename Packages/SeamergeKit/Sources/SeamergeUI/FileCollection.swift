@@ -1,16 +1,23 @@
 import Foundation
 import GitSupport
 
-/// The files that the calls of one origin hand over to one window, in the order of the run.
+/// The files that one window compares: those that the calls of one origin hand over, in the
+/// order of the run, or those of two folders, by path.
 ///
 /// A collection receives files while calls of its origin may still come: with the numbers that
 /// Git gives, until every number up to the count is there or the run of Git ends; without them,
-/// or without the run, also until a quiet period has passed since the last file. The window that shows the files may close
-/// first; the collection is then dismissed, and the calls that still come find it so.
+/// or without the run, also until a quiet period has passed since the last file. The window that
+/// shows the files may close first; the collection is then dismissed, and the calls that still
+/// come find it so.
+///
+/// A collection of two folders receives files while it compares them.
 @MainActor
 public final class FileCollection {
   /// The origin of the calls, or `nil` for the files of a comparison of two folders.
   public let origin: CollectionOrigin?
+
+  /// The folders whose files the collection compares, or `nil` for the files of calls.
+  public let folders: FolderPair?
 
   /// The files, in the order of Git where it numbers them, else by path.
   public private(set) var files: [CollectedFile] = []
@@ -24,13 +31,23 @@ public final class FileCollection {
   /// Whether the window of the collection has closed.
   public private(set) var isDismissed = false
 
-  /// Learns of every change: a file that came, at its index, or the end of receiving.
+  /// How many files of two folders are compared, while the collection compares them.
+  public private(set) var comparedCount = 0
+
+  /// How many files the two folders hold together, once every entry is paired.
+  public private(set) var pairedCount: Int?
+
+  /// Learns of every change: a file that came, at its index, files of folders that were compared
+  /// or changed on disk, or the end of receiving.
   var onChange: ((Change) -> Void)?
 
   /// A change of a collection.
   enum Change: Equatable {
     /// A file came and stands at the index.
     case inserted(Int)
+
+    /// Files of folders came or changed.
+    case updated
 
     /// No more files come.
     case complete
@@ -39,6 +56,7 @@ public final class FileCollection {
   private let quietPeriod: Duration
   private var quietTimer: Timer?
   private var runSource: (any DispatchSourceProcess)?
+  private var folderRun: FolderComparisonRun?
 
   /// Creates a collection that receives the files of the calls of `origin`, of which Git hands
   /// over `expectedCount`, if it tells.
@@ -47,6 +65,7 @@ public final class FileCollection {
   /// file; with a run, it ends when that process ends.
   public init(origin: CollectionOrigin, expectedCount: Int?, quietPeriod: Duration = .seconds(3)) {
     self.origin = origin
+    folders = nil
     self.expectedCount = expectedCount
     self.quietPeriod = quietPeriod
     isReceiving = true
@@ -58,10 +77,41 @@ public final class FileCollection {
   /// Creates a collection of `files` that are all there.
   public init(files: [CollectedFile]) {
     origin = nil
+    folders = nil
     expectedCount = files.count
     quietPeriod = .zero
     isReceiving = false
     self.files = files.sorted { $0.precedes($1) }
+  }
+
+  /// Creates a collection for the files of `folders`, which it compares once it starts; the
+  /// targets of links go as text into `linkFolder`, which the caller removes once the collection
+  /// is dismissed.
+  public convenience init(comparing folders: FolderPair, linkFolder: URL) {
+    self.init(comparer: FolderComparer(folders: folders, linkFolder: linkFolder))
+  }
+
+  /// Creates a collection for two folders that compares them with `comparer` once it starts.
+  init(comparer: FolderComparer) {
+    origin = nil
+    folders = comparer.folders
+    expectedCount = nil
+    quietPeriod = .zero
+    isReceiving = true
+    folderRun = FolderComparisonRun(comparer: comparer) { [weak self] event in
+      self?.take(event)
+    }
+  }
+
+  /// Starts comparing the folders away from the main thread; what the comparison finds comes
+  /// in as it goes.
+  public func startComparing() {
+    folderRun?.start()
+  }
+
+  /// Waits until every file of the folders is compared once.
+  func waitUntilCompared() async {
+    await folderRun?.waitUntilCompared()
   }
 
   /// Whether a call of `origin` belongs to this collection: it comes from the same origin while
@@ -101,10 +151,53 @@ public final class FileCollection {
     onChange?(.complete)
   }
 
-  /// Notes that the window of the collection closed.
+  /// Notes that the window of the collection closed, and stops comparing folders.
   public func dismiss() {
     isDismissed = true
     onChange = nil
+    folderRun?.stop()
+    folderRun = nil
+  }
+
+  /// Takes in what the comparison of the folders found.
+  func take(_ event: FolderComparisonRun.Event) {
+    guard !isDismissed else { return }
+    switch event {
+    case .listed(let known, let waiting):
+      files = known
+      comparedCount = known.count
+      pairedCount = known.count + waiting
+      onChange?(.updated)
+    case .compared(let compared):
+      files = Self.merging(compared, into: files)
+      comparedCount += compared.count
+      onChange?(.updated)
+    case .finished:
+      comparedCount = files.count
+      pairedCount = files.count
+      endReceiving()
+    }
+  }
+
+  /// `files` and `others`, each in the order of the list, merged into one list in that order.
+  private static func merging(
+    _ others: [CollectedFile], into files: [CollectedFile]
+  ) -> [CollectedFile] {
+    var merged: [CollectedFile] = []
+    merged.reserveCapacity(files.count + others.count)
+    var (index, otherIndex) = (files.startIndex, others.startIndex)
+    while index < files.endIndex, otherIndex < others.endIndex {
+      if others[otherIndex].precedes(files[index]) {
+        merged.append(others[otherIndex])
+        otherIndex += 1
+      } else {
+        merged.append(files[index])
+        index += 1
+      }
+    }
+    merged += files[index...]
+    merged += others[otherIndex...]
+    return merged
   }
 
   private func restartQuietPeriod() {

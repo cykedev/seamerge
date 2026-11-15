@@ -58,16 +58,18 @@ import Testing
     #expect(fixture.controller.operation(forDrag: DragInTest(files: [first]), onto: nil) == [])
   }
 
-  @Test func foldersAndMoreThanThreeFilesAreRefused() throws {
+  @Test func moreThanThreeFilesAndFoldersOnTheBaseAreRefused() throws {
     let files = try SampleFiles()
     let fixture = try CompareFilesFixture()
     let four = try (1...4).map { try files.file("\($0).txt") }
     let folder = try files.subfolder("folder")
 
-    for urls in [four, [folder], [four[0], folder]] {
+    for (urls, slot) in [
+      (four, FileSlot.left), ([folder], .base), ([four[0], four[1], folder], .left),
+    ] {
       let drag = DragInTest(files: urls)
-      #expect(fixture.controller.operation(forDrag: drag, onto: .left) == [])
-      #expect(!fixture.controller.acceptDrop(drag, onto: .left))
+      #expect(fixture.controller.operation(forDrag: drag, onto: slot) == [])
+      #expect(!fixture.controller.acceptDrop(drag, onto: slot))
     }
     #expect(!fixture.controller.fill(with: four))
     #expect(fixture.controller.selection.isEmpty)

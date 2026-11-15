@@ -24,57 +24,105 @@ struct LoadedFile {
 }
 
 extension SessionWindowController {
-  /// Opens a window for `collection`: the list of its files in the sidebar, once there are two,
-  /// and the first file beside it, drawn and started as `settings` say.
+  /// Opens a window for `collection`: the list of its files in the sidebar, once there are two
+  /// or the collection compares folders, and the first file beside it, drawn and started as
+  /// `settings` say.
   ///
-  /// The window keeps showing files as the collection receives them.
+  /// The window keeps showing files as the collection receives them. Before the first file of
+  /// two folders is known, it says that it compares them, and shows the first file that differs
+  /// once there is one.
   ///
-  /// - Precondition: The collection has a file.
   /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the headers of the first file
   ///   can be made.
   public convenience init(
     collection: FileCollection, undoManager: UndoManager, settings: UserSettings
   ) async throws(SessionLoadingError) {
-    guard let file = collection.files.first else {
-      preconditionFailure("A window of a collection needs a file to show")
-    }
-    let loaded = try await Self.load(file, mode: settings.comparisonMode)
+    let opening = try await Self.opening(collection, settings: settings)
     self.init(
-      session: loaded.session, context: Self.context(of: file, at: 0, in: collection),
-      undoManager: undoManager, displayOptions: .current(in: .shared), pasteboard: .general,
+      session: opening.loaded.session, context: opening.context, undoManager: undoManager,
+      displayOptions: .current(in: .shared), pasteboard: .general,
       workspace: NSWorkspace.shared, prompts: SessionSheets(), doneStyle: .standard,
       settings: settings, syntaxChoices: .shared, window: SessionWindow(),
-      unavailable: loaded.unavailable, collection: collection)
+      unavailable: opening.loaded.unavailable, collection: collection)
     observeDisplayOptions()
   }
 
-  /// Shows the file after the one in view.
-  @objc func showNextFile(_ sender: Any?) {
-    guard canPerform(.nextFile) else { return }
-    showFile(at: fileIndex + 1)
+  /// What a window of `collection` opens with: its first file that the list shows, read in the
+  /// comparison mode of `settings`, or the empty comparison of its two folders while no such file
+  /// is known.
+  ///
+  /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the headers can be made.
+  static func opening(
+    _ collection: FileCollection, settings: UserSettings
+  ) async throws(SessionLoadingError) -> (loaded: LoadedFile, context: SessionContext) {
+    let filter = FileFilter()
+    let listed = collection.files.filter(filter.includes)
+    guard let file = listed.first else {
+      guard let folders = collection.folders else {
+        preconditionFailure("A window of a collection needs a file to show")
+      }
+      return (
+        LoadedFile(session: try await emptySession(of: folders), unavailable: nil),
+        SessionContext(folders: folders)
+      )
+    }
+    var difftool = file.difftool
+    difftool.filePosition = FilePosition(
+      number: 1, count: max(collection.expectedCount ?? 0, listed.count))
+    return (
+      try await load(file, mode: settings.comparisonMode),
+      SessionContext(difftool: difftool, folders: collection.folders)
+    )
   }
 
-  /// Shows the file before the one in view.
+  /// Shows the file after the one in view in the list.
+  @objc func showNextFile(_ sender: Any?) {
+    guard canPerform(.nextFile), let index = neighborIndex(forward: true) else { return }
+    showFile(at: index)
+  }
+
+  /// Shows the file before the one in view in the list.
   @objc func showPreviousFile(_ sender: Any?) {
-    guard canPerform(.previousFile) else { return }
-    showFile(at: fileIndex - 1)
+    guard canPerform(.previousFile), let index = neighborIndex(forward: false) else { return }
+    showFile(at: index)
+  }
+
+  /// The index in the collection of the file that Next File, or Previous File if not `forward`,
+  /// shows: the next one the list shows after the file in view, wherever that file stands in
+  /// the order, even if the list leaves it out.
+  func neighborIndex(forward: Bool) -> Int? {
+    guard shownFile != nil else { return nil }
+    let row = listedIndices.partitioningIndex { $0 >= fileIndex }
+    if forward {
+      let next =
+        listedIndices.indices.contains(row) && listedIndices[row] == fileIndex ? row + 1 : row
+      return listedIndices.indices.contains(next) ? listedIndices[next] : nil
+    }
+    return row > 0 ? listedIndices[row - 1] : nil
   }
 
   /// Shows the file at `index` of the collection, once it is read, where the window left it, or
   /// at its first change; the focus stays where it is.
   func showFile(at index: Int) {
-    guard let collection, collection.files.indices.contains(index), index != fileIndex else {
-      return
+    guard let collection, collection.files.indices.contains(index),
+      index != fileIndex || shownFile == nil
+    else { return }
+    if let shownFile {
+      filePlaces[shownFile.path] = currentPlace
     }
-    let shown = collection.files[fileIndex]
-    filePlaces[shown.path] = currentPlace
-    fileIndex = index
-    collectionLayout?.fileList.select(index)
     let file = collection.files[index]
+    fileIndex = index
+    shownFile = file
+    collectionLayout?.fileList.select(listedRow(of: index))
+    load(file)
+  }
+
+  /// Reads `file`, the file the window is about to show, and shows it.
+  private func load(_ file: CollectedFile) {
     fileLoad?.cancel()
     fileLoad = Task { [weak self] in
       guard let self, let loaded = await self.loaded(file), !Task.isCancelled,
-        collection.files.indices.contains(fileIndex), collection.files[fileIndex] == file
+        shownFile == file
       else { return }
       show(loaded, of: file)
       await readAhead(after: file)
@@ -85,54 +133,171 @@ extension SessionWindowController {
   func setUpCollection() {
     guard let collection, let collectionLayout else { return }
     // Files may have come while the window read the first one, some of them before it.
-    fileIndex = collection.files.firstIndex { $0.path == context.difftool?.path } ?? 0
-    collectionLayout.fileList.delegate = self
-    collectionLayout.sidebarDidChange = { [weak self] in self?.updateMinimumSize() }
-    collectionLayout.fileList.show(collection.files, selecting: fileIndex)
-    collection.onChange = { [weak self] change in self?.collectionDidChange(change) }
-    if collection.files.indices.contains(fileIndex) {
-      loadedFiles[collection.files[fileIndex].path] = LoadedFile(
+    if let path = context.difftool?.path,
+      let index = collection.files.firstIndex(where: { $0.path == path })
+    {
+      fileIndex = index
+      shownFile = collection.files[index]
+      loadedFiles[collection.files[index]] = LoadedFile(
         session: presentation.changes.session, unavailable: unavailable)
     }
-    showReceiving()
+    collectionLayout.fileList.delegate = self
+    collectionLayout.sidebarDidChange = { [weak self] in self?.updateMinimumSize() }
+    collection.onChange = { [weak self] change in self?.collectionDidChange(change) }
+    listFiles(scrolling: true)
+    showStatus()
   }
 
   private func collectionDidChange(_ change: FileCollection.Change) {
-    guard let collection, let fileList = collectionLayout?.fileList else { return }
+    guard let collection else { return }
     switch change {
     case .inserted(let index):
-      if index <= fileIndex, collection.files.count > 1 {
+      if shownFile != nil, index <= fileIndex, collection.files.count > 1 {
         fileIndex += 1
       }
-      fileList.insert(collection.files[index], at: index, selecting: fileIndex)
+    case .updated:
+      followShownFile()
     case .complete:
-      if collection.files.count > 1 {
+      if let summary = differingSummary {
+        presentation.announce(summary)
+      } else if collection.files.count > 1 {
         presentation.announce(FileListViewController.receivedText(collection.files.count))
       }
     }
-    showReceiving()
-    context.difftool?.filePosition = Self.position(of: fileIndex, in: collection)
+    listFiles(scrolling: false)
+    showStatus()
+  }
+
+  /// Finds the file in view again after the files of folders changed: reads it anew if its sides
+  /// changed or it became readable or unreadable, and shows the next file of the list in its
+  /// place if it went.
+  ///
+  /// A change of the bytes of the file in view, the window reloads by itself as it watches the
+  /// file.
+  private func followShownFile() {
+    guard let collection, let shown = shownFile else { return }
+    if let index = collection.files.firstIndex(where: { $0.path == shown.path }) {
+      fileIndex = index
+      let file = collection.files[index]
+      shownFile = file
+      let isUnreadable = { (file: CollectedFile) in
+        if case .unreadable = file.change { true } else { false }
+      }
+      if file.old.url != shown.old.url || file.new.url != shown.new.url
+        || isUnreadable(file) != isUnreadable(shown)
+      {
+        filePlaces[file.path] = currentPlace
+        load(file)
+      }
+      return
+    }
+    // The file went from both folders; the next file in the order takes its place.
+    let next = collection.files.firstIndex { !$0.precedes(shown) }
+    shownFile = nil
+    fileIndex = 0
+    listFiles(scrolling: false)
+    let index =
+      next.flatMap { next in listedIndices.first { $0 >= next } } ?? listedIndices.last
+    if let index {
+      showFile(at: index)
+    }
+  }
+
+  /// Lists the files that the filter lets through, keeps the file in view selected if the list
+  /// shows it, and shows the first file of two folders once the list has one; with `scrolling`,
+  /// the selected row comes into view.
+  func listFiles(scrolling: Bool) {
+    guard let collection, let collectionLayout else { return }
+    let filter = fileFilter
+    listedIndices = collection.files.indices.filter { filter.includes(collection.files[$0]) }
+    collectionLayout.fileList.show(
+      listedIndices.map { collection.files[$0] },
+      selecting: shownFile.flatMap { _ in
+        listedRow(of: fileIndex)
+      }, scrolling: scrolling)
+    let hasList = collection.folders != nil || collection.files.count > 1
+    collectionLayout.hasList = hasList
+    toolbar.showsSidebarButton(hasList)
+    if shownFile == nil, let first = listedIndices.first {
+      showFile(at: first)
+      presentation.announce(
+        collection.files[first].change.presentation.toolTip(
+          for: collection.files[first].path))
+    }
+    showPlaceholderIfNeeded()
+    context.difftool?.filePosition = filePosition
     sessionDidChange()
     stateDidChange()
   }
 
-  /// Shows below the list how many files have come while more come, and the list itself once
-  /// there are two.
-  private func showReceiving() {
-    guard let collection, let collectionLayout else { return }
-    let hasSeveralFiles = collection.files.count > 1
-    collectionLayout.fileList.showReceiving(
-      collection.files.count, of: collection.expectedCount, isReceiving: collection.isReceiving)
-    collectionLayout.hasSeveralFiles = hasSeveralFiles
-    toolbar.showsSidebarButton(hasSeveralFiles)
+  /// The row of the list that shows the file at `index` of the collection, if the list shows it.
+  func listedRow(of index: Int) -> Int? {
+    let row = listedIndices.partitioningIndex { $0 >= index }
+    return listedIndices.indices.contains(row) && listedIndices[row] == index ? row : nil
+  }
+
+  /// Where the file in view stands in the list: among as many files as Git announced or the list
+  /// holds; `nil` if the list leaves the file out.
+  private var filePosition: FilePosition? {
+    guard shownFile != nil, let row = listedRow(of: fileIndex) else { return nil }
+    return FilePosition(
+      number: row + 1, count: max(collection?.expectedCount ?? 0, listedIndices.count))
+  }
+
+  /// Says in place of the lines why no file of two folders is shown, while none is.
+  private func showPlaceholderIfNeeded() {
+    guard let collection, shownFile == nil else { return }
+    let placeholder: CollectionPlaceholder =
+      if collection.isReceiving {
+        .comparing
+      } else if collection.files.allSatisfy({ $0.change == .identical }) {
+        .sameFiles
+      } else {
+        .noFile
+      }
+    guard placeholder != collectionPlaceholder else { return }
+    collectionPlaceholder = placeholder
+    layout.showInPlaceOfTheLines(
+      UnavailableComparisonView(title: placeholder.title, message: placeholder.message))
+  }
+
+  /// Shows below the list how many files have come while more come, how far the comparison of
+  /// two folders is, or what it found.
+  private func showStatus() {
+    guard let collection, let fileList = collectionLayout?.fileList else { return }
+    if collection.folders != nil {
+      fileList.showStatus(
+        differingSummary
+          ?? FileListViewController.comparingText(
+            collection.comparedCount, of: collection.pairedCount),
+        isBusy: collection.isReceiving)
+    } else {
+      fileList.showStatus(
+        collection.isReceiving
+          ? FileListViewController.receivingText(
+            collection.files.count, of: collection.expectedCount) : nil,
+        isBusy: true)
+    }
+  }
+
+  /// How many files of two compared folders differ, once they are compared.
+  private var differingSummary: String? {
+    guard let collection, collection.folders != nil, !collection.isReceiving else { return nil }
+    let differing = collection.files.count { file in
+      [.modified, .added, .deleted].contains(file.change)
+    }
+    return FileListViewController.differingText(differing, of: collection.files.count)
   }
 
   /// Shows `loaded`, the comparison of `file`, in place of the file in view.
   private func show(_ loaded: LoadedFile, of file: CollectedFile) {
-    guard let collection else { return }
-    context = Self.context(of: file, at: fileIndex, in: collection)
+    guard collection != nil else { return }
+    var difftool = file.difftool
+    difftool.filePosition = filePosition
+    context = SessionContext(difftool: difftool, folders: collection?.folders)
     let session = loaded.session
     unavailable = loaded.unavailable
+    collectionPlaceholder = nil
     if let unavailable {
       layout.showInPlaceOfTheLines(
         UnavailableComparisonView(
@@ -193,12 +358,12 @@ extension SessionWindowController {
   /// read now; `nil` if it cannot even be shown as a file that cannot be compared.
   private func loaded(_ file: CollectedFile) async -> LoadedFile? {
     let mode = comparisonOptions.mode
-    if let loaded = loadedFiles[file.path], loaded.session.options.mode == mode {
+    if let loaded = loadedFiles[file], loaded.session.options.mode == mode {
       return loaded
     }
     do {
       let loaded = try await Self.load(file, mode: mode)
-      loadedFiles[file.path] = loaded
+      loadedFiles[file] = loaded
       return loaded
     } catch {
       Self.logger.error("Cannot show \(file.path, privacy: .public): \(error, privacy: .public)")
@@ -206,15 +371,15 @@ extension SessionWindowController {
     }
   }
 
-  /// Reads the file after `file` ahead, and forgets the files that are not beside the one in
-  /// view.
+  /// Reads the file after `file` in the list ahead, and forgets the files that are not beside
+  /// the one in view.
   private func readAhead(after file: CollectedFile) async {
     guard let collection else { return }
-    let neighbors = [fileIndex - 1, fileIndex, fileIndex + 1].filter(
-      collection.files.indices.contains)
-    let kept = Set(neighbors.map { collection.files[$0].path })
+    let next = neighborIndex(forward: true)
+    let neighbors = [neighborIndex(forward: false), fileIndex, next].compactMap(\.self)
+    let kept = Set(neighbors.map { collection.files[$0] })
     loadedFiles = loadedFiles.filter { kept.contains($0.key) }
-    if neighbors.last.map({ $0 > fileIndex }) == true, let next = neighbors.last {
+    if let next {
       _ = await loaded(collection.files[next])
     }
   }
@@ -237,25 +402,28 @@ extension SessionWindowController {
     }
   }
 
-  /// What the window knows about `file`, the file at `index` of `collection`.
-  static func context(
-    of file: CollectedFile, at index: Int, in collection: FileCollection
-  ) -> SessionContext {
-    var difftool = file.difftool
-    difftool.filePosition = position(of: index, in: collection)
-    return SessionContext(difftool: difftool)
-  }
-
-  /// The position of the file at `index` among the files of `collection`, counted from 1, among
-  /// as many as Git announced or have come.
-  private static func position(of index: Int, in collection: FileCollection) -> FilePosition {
-    FilePosition(
-      number: index + 1, count: max(collection.expectedCount ?? 0, collection.files.count))
+  /// The empty comparison of `folders`, which gives the window its headers before it shows a
+  /// file of them.
+  ///
+  /// - Throws: ``SessionLoadingError/comparisonFailed`` if even that fails.
+  private static func emptySession(of folders: FolderPair) async throws(SessionLoadingError)
+    -> Session
+  {
+    let names = folders.distinctNames
+    do {
+      return try await Session.diff(
+        old: SourceFile(bytes: Data(), label: names.left),
+        new: SourceFile(bytes: Data(), label: names.right),
+        mode: .windowDefault)
+    } catch {
+      throw .comparisonFailed
+    }
   }
 }
 
 extension SessionWindowController: FileListDelegate {
-  func fileList(_ fileList: FileListViewController, didSelectFileAt index: Int) {
-    showFile(at: index)
+  func fileList(_ fileList: FileListViewController, didSelectRow row: Int) {
+    guard listedIndices.indices.contains(row) else { return }
+    showFile(at: listedIndices[row])
   }
 }

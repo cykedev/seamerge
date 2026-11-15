@@ -4,19 +4,23 @@ import AppKit
 /// says so and a message with the reason and the next step, centered on the background of text.
 @MainActor
 final class UnavailableComparisonView: NSView {
-  /// Creates the view with `title` above `message`.
-  init(title: String, message: String) {
+  /// Creates the view with `title` above `message`, if there is one.
+  init(title: String, message: String?) {
     super.init(frame: .zero)
     let titleField = NSTextField(wrappingLabelWithString: title)
     titleField.font = .preferredFont(forTextStyle: .title3)
-    let messageField = NSTextField(wrappingLabelWithString: message)
-    messageField.font = .preferredFont(forTextStyle: .body)
-    for field in [titleField, messageField] {
+    var fields = [titleField]
+    if let message {
+      let messageField = NSTextField(wrappingLabelWithString: message)
+      messageField.font = .preferredFont(forTextStyle: .body)
+      fields.append(messageField)
+    }
+    for field in fields {
       field.alignment = .center
       field.textColor = .labelColor
       field.isSelectable = false
     }
-    let stack = NSStackView(views: [titleField, messageField])
+    let stack = NSStackView(views: fields)
     stack.orientation = .vertical
     stack.spacing = WindowMetrics.unavailableSpacing
     stack.translatesAutoresizingMaskIntoConstraints = false
