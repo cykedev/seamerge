@@ -5,8 +5,8 @@
 Seamerge shows two files side by side, or a three-way merge with its base, and lets you choose what goes into the result block by block.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/hero-merge-dark.png">
-  <img src="Documentation/Images/hero-merge-light.png" alt="A merge in Seamerge: the two sources and the base above, the result below, with the conflicts marked in the gutter and a decision column between the panes.">
+  <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-merge-dark.png">
+  <img src="Documentation/Images/screenshot-merge-light.png" alt="A merge in Seamerge: the two sources and the base above, the result below, with bands between the panes that join the blocks that belong together, folded runs of unchanged lines, and a decision bar for each block of the result.">
 </picture>
 
 ### Features
@@ -19,18 +19,21 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
 - **Whitespace modes.** Compare exactly, ignore line endings, ignore changes in the amount of whitespace, or ignore all whitespace, chosen in the footer.
 
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/hero-whitespace-dark.png">
-    <img src="Documentation/Images/hero-whitespace-light.png" alt="A comparison with the whitespace mode chosen in the footer.">
+    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-whitespace-dark.png">
+    <img src="Documentation/Images/screenshot-whitespace-light.png" alt="A comparison with Ignore Whitespace Changes chosen in the footer, the sides joined by bands.">
   </picture>
 - **Several files in one window.** When Git or Tower compares several files of one run, Seamerge shows them in one window with a sidebar. `git difftool --dir-diff` compares two folders the same way.
 
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/hero-collection-dark.png">
-    <img src="Documentation/Images/hero-collection-light.png" alt="Several files in one window, with the sidebar listing the files.">
+    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-collection-dark.png">
+    <img src="Documentation/Images/screenshot-collection-light.png" alt="Several files in one window, with the sidebar listing a new, two changed and a deleted file.">
   </picture>
 - **Decisions per block.** The decision bar takes the text of A, the base, B, or both, or nothing, per block, with the mouse or single keys. A conflict stays open until you decide.
 
-  <img src="Documentation/Images/decisions-light.png" width="320" alt="The decision column between the panes, with a decision bar for each block.">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-decisions-dark.png">
+    <img src="Documentation/Images/screenshot-decisions-light.png" alt="A merge with six conflicts left: a resolved conflict that takes both sides, a block taken from A on its own, and an open conflict ringed in red.">
+  </picture>
 
 - **Collapsed unchanged lines.** Long stretches without changes fold into a bar that opens where you need it.
 
@@ -131,8 +134,8 @@ The [user guide](Documentation/UserGuide.md#resolving-a-conflict) explains each 
 Choose **Seamerge ▸ Settings…** (`⌘,`) to change how the code looks and how new windows start. Changes to the text apply at once to every open window.
 
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/settings-dark.png">
-    <img src="Documentation/Images/settings-light.png" width="420" alt="The Settings window with the groups Text, New Windows and Merging.">
+    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-settings-dark.png">
+    <img src="Documentation/Images/screenshot-settings-light.png" width="480" alt="The Settings window with the groups Text, New Windows and Merging.">
   </picture>
 
 - **Text:** the font of the code (SF Mono, or another monospaced font installed on the Mac), its size from 9 to 24 pt, the line spacing (compact, standard or spacious) and the tab width from 2 to 8 spaces. A window keeps the zoom you chose until the size in Settings changes.
