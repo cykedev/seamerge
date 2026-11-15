@@ -459,6 +459,32 @@ final class PaneTextView: NSTextView {
     NSPoint(x: textContainerInset.width, y: textContainerInset.height)
   }
 
+  /// The rectangle on screen of the characters in `range`, or of the insertion point for an
+  /// empty range, which input methods put their candidates next to.
+  ///
+  /// The text view finds no rectangle for the insertion point on an empty last row, whose line
+  /// the pane moved down to the row; the line's place gives it.
+  override func firstRect(forCharacterRange range: NSRange, actualRange: NSRangePointer?)
+    -> NSRect
+  {
+    guard range.length == 0, grid.endsWithEmptyRow, range.location == grid.textLength,
+      let manager = textLayoutManager,
+      let location = manager.location(manager.documentRange.location, offsetBy: range.location)
+    else { return super.firstRect(forCharacterRange: range, actualRange: actualRange) }
+    var place: CGRect?
+    manager.enumerateTextSegments(in: NSTextRange(location: location), type: .standard) {
+      _, frame, _, _ in
+      place = frame
+      return false
+    }
+    guard let place, let window else {
+      return super.firstRect(forCharacterRange: range, actualRange: actualRange)
+    }
+    actualRange?.pointee = range
+    let inView = place.offsetBy(dx: textContainerOrigin.x, dy: textContainerOrigin.y)
+    return window.convertToScreen(convert(inView, to: nil))
+  }
+
   override func mouseDown(with event: NSEvent) {
     let row = row(at: convert(event.locationInWindow, from: nil))
     // The text view tracks the mouse until the button goes up.

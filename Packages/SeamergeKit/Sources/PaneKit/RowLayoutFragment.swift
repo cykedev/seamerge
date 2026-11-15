@@ -128,6 +128,33 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     place.rows
   }
 
+  /// The lines that TextKit laid out, with the line of an empty last row moved to the first
+  /// screen line of that row.
+  ///
+  /// TextKit puts that line right below the text of the row before it. Where a neighbor wraps
+  /// the row before into more screen lines, the row takes them too, and the insertion point on
+  /// the empty last row would stand among them.
+  override var textLineFragments: [NSTextLineFragment] {
+    let lines = super.textLineFragments
+    guard rows.count > 1, let last = lines.last, rowIndex(of: last) == 1, let painter else {
+      return lines
+    }
+    let firstRow = rows.lowerBound..<rows.lowerBound + 1
+    let top =
+      CGFloat(MainActor.assumeIsolated { painter.lines(ofRows: firstRow).count }) * rowHeight
+    guard abs(last.typographicBounds.minY - top) > 0.5 else { return lines }
+    if let moved = movedLine, moved.original === last, moved.line.typographicBounds.minY == top {
+      return lines.dropLast() + [moved.line]
+    }
+    // TextKit finds lines again by identity, so the moved line stays the same object.
+    let moved = EmptyRowLineFragment(last, top: top)
+    movedLine = (last, moved)
+    return lines.dropLast() + [moved]
+  }
+
+  /// The line of the empty last row as TextKit laid it out, and as the fragment moved it.
+  private var movedLine: (original: NSTextLineFragment, line: NSTextLineFragment)?
+
   /// Where the fragment's paragraph starts and the rows it lays out.
   ///
   /// TextKit keeps the fragments of paragraphs that an edit does not touch and moves their
@@ -406,5 +433,25 @@ final class TextVersion {
   /// Counts a change of the text.
   func increment() {
     value += 1
+  }
+}
+
+/// The line of an empty last row at the top of the row's first screen line.
+private final class EmptyRowLineFragment: NSTextLineFragment {
+  private let bounds: CGRect
+
+  init(_ line: NSTextLineFragment, top: CGFloat) {
+    var bounds = line.typographicBounds
+    bounds.origin.y = top
+    self.bounds = bounds
+    super.init(attributedString: line.attributedString, range: line.characterRange)
+  }
+
+  required init?(coder: NSCoder) {
+    nil
+  }
+
+  override var typographicBounds: CGRect {
+    bounds
   }
 }
