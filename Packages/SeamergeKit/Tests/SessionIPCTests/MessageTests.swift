@@ -72,12 +72,24 @@ struct MessageTests {
   }
 
   @Test func foldersSurviveEncodingAndDecoding() throws {
-    let request = SessionRequest.folders(
-      .init(
-        left: URL(filePath: "/tmp/git-difftool.x/left"),
-        right: URL(filePath: "/tmp/git-difftool.x/right"), repository: URL(filePath: "/repo")))
+    for isFromGit in [true, false] {
+      let request = SessionRequest.folders(
+        .init(
+          left: URL(filePath: "/tmp/git-difftool.x/left"),
+          right: URL(filePath: "/tmp/git-difftool.x/right"), repository: URL(filePath: "/repo"),
+          isFromGit: isFromGit))
 
-    #expect(try roundTrip(request) == request)
+      #expect(try roundTrip(request) == request)
+    }
+  }
+
+  @Test func foldersOfAHelperThatDoesNotTellCountAsNamedByTheUser() throws {
+    let folders = try JSONDecoder().decode(
+      SessionRequest.Folders.self,
+      from: Data(#"{"left":"/a","right":"/b","repository":"/repo"}"#.utf8))
+
+    #expect(!folders.isFromGit)
+    #expect(folders.repository == URL(filePath: "/repo"))
   }
 
   @Test func acceptedEndsWithSuccess() throws {

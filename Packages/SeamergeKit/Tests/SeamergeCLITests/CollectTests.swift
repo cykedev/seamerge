@@ -63,12 +63,16 @@ struct CollectTests {
     }
   }
 
-  /// Tower passes the folders of its directory diff with an empty path, or, with the script
-  /// of an earlier setup, without `--collect` and without a path.
+  /// Git passes the folders of its directory diff with `--collect` and an empty path, Tower
+  /// with `--collect` alone, a setup made before `--collect` with `--path`; two folders named
+  /// without either are the user's.
   @Test(arguments: [
-    ["diff", "--collect", "--path", "", "--", "left", "right"], ["diff", "--", "left", "right"],
+    (["diff", "--collect", "--path", "", "--", "left", "right"], true),
+    (["diff", "--collect", "--", "left", "right"], true),
+    (["diff", "--path", "", "--", "left", "right"], true),
+    (["diff", "--", "left", "right"], false), (["left", "right"], false),
   ])
-  func twoFoldersAreADirectoryDiff(arguments: [String]) async throws {
+  func twoFoldersAreADirectoryDiff(arguments: [String], isFromGit: Bool) async throws {
     try await withSandbox { sandbox in
       var app = try ScriptedApp(at: sandbox.socketURL, ending: .close(.saved))
       try sandbox.makeFile("left/a.txt")
@@ -83,6 +87,7 @@ struct CollectTests {
       }
       #expect(folders.left.lastPathComponent == "left")
       #expect(folders.right.lastPathComponent == "right")
+      #expect(folders.isFromGit == isFromGit)
       await app.stop()
     }
   }

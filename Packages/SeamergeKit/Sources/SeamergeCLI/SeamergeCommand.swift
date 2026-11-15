@@ -174,12 +174,15 @@ public struct SeamergeCommand: Sendable {
   private static func request(
     for arguments: DiffArguments, in directory: URL, environment: [String: String]
   ) throws(CommandError) -> SessionRequest {
-    // Two folders are those of `git difftool --dir-diff`, also from a setup made before
-    // `--collect` existed.
+    // Two folders are those of `git difftool --dir-diff` where the setup of Git or Tower runs
+    // the helper, with `--collect`, or with `--path` from a setup made before `--collect`
+    // existed; otherwise the user named two folders.
     if let folders = try FileCheck.folders(arguments.left, arguments.right, in: directory) {
       let repository = Git(environment: environment).topLevel(of: directory)
       return .folders(
-        SessionRequest.Folders(left: folders.left, right: folders.right, repository: repository))
+        SessionRequest.Folders(
+          left: folders.left, right: folders.right, repository: repository,
+          isFromGit: arguments.isCollecting || arguments.path != nil))
     }
     var diff = try Self.diff(for: arguments, in: directory, environment: environment)
     // A run that compares one file has nothing to collect, and Git waits for its window as before.
