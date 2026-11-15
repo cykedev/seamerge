@@ -131,4 +131,33 @@ import Testing
     #expect(!controller.handleKeyDown(try event("n", in: window)))
     #expect(!controller.handleKeyDown(try event("\r", in: window)))
   }
+
+  /// The finder writes to the find pasteboard of the system as the find bar opens; the test puts
+  /// back what it held.
+  @Test func typingInTheFindBarOfTheResultTypesAndCarriesOutNoCommand() async throws {
+    try await FindPasteboard.preserving {
+      let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
+      let window = try #require(controller.window)
+      defer { window.close() }
+      let result = try controller.mergeResult
+      let current = controller.presentation.currentBlock
+      let text = result.documentView.string
+      window.makeFirstResponder(result.documentView)
+      let item = NSMenuItem(
+        title: "", action: #selector(NSTextView.performTextFinderAction(_:)), keyEquivalent: "")
+      item.tag = NSTextFinder.Action.showFindInterface.rawValue
+      result.documentView.performTextFinderAction(item)
+      let field = try #require(window.firstResponder as? NSText)
+      #expect(field.isDescendant(of: result))
+      #expect(!controller.isInBlockMode)
+      #expect(!controller.isInTextMode)
+      // In block mode, "n" and "2" jump to the next conflict and take B; the others do nothing.
+      for key in ["n", "2", " ", "x"] {
+        try press(key, in: controller)
+      }
+      #expect(field.string == "n2 x")
+      #expect(controller.presentation.currentBlock == current)
+      #expect(result.documentView.string == text)
+    }
+  }
 }
