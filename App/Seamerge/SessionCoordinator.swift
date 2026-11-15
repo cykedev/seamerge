@@ -108,6 +108,11 @@ final class SessionCoordinator {
     cache.removeAll()
   }
 
+  /// Whether a helper is being served: it waits for a window or for its answer.
+  var isServingHelper: Bool {
+    servingCount > 0
+  }
+
   /// Waits until no helper is being served: every helper has had its answer or has gone away.
   func waitUntilIdle() async {
     if servingCount > 0 {

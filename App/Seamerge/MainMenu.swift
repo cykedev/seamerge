@@ -70,7 +70,10 @@ final class MainMenu {
     return Self.menu(
       Titles.app,
       [
-        [Self.item(Titles.about, #selector(NSApplication.orderFrontStandardAboutPanel(_:)))],
+        [
+          Self.item(Titles.about, #selector(NSApplication.orderFrontStandardAboutPanel(_:))),
+          Self.item(Titles.checkForUpdates, #selector(AppDelegate.checkForUpdates(_:))),
+        ],
         [
           Self.item(Titles.settings, #selector(AppDelegate.showSettings(_:)), key: ","),
           Self.item(

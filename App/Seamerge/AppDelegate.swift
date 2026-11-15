@@ -27,6 +27,9 @@ final class AppDelegate: NSObject {
   /// The settings of the app, which every session window draws and starts with.
   let settings: UserSettings
 
+  /// Finds and installs new versions of the app.
+  let updater: Updater
+
   /// The window Compare Files, once it has appeared.
   private(set) var compareFilesWindowController: CompareFilesWindowController?
 
@@ -49,12 +52,14 @@ final class AppDelegate: NSObject {
 
   /// Creates the delegate of an app started with `arguments`, which keeps its settings and
   /// recent comparisons in `defaults`, listens for the helper at `socketURL`, keeps the copies of
-  /// collected files in `collectionCache`, shows alerts and hides with `presenter`, and sets up
-  /// Git and Tower in `integrationStore`.
+  /// collected files in `collectionCache`, shows alerts and hides with `presenter`, sets up Git
+  /// and Tower in `integrationStore`, and updates itself with the updater that
+  /// `makeSoftwareUpdater` makes.
   init(
     arguments: [String], defaults: UserDefaults, socketURL: URL,
     collectionCache: CollectionCache = .standard, presenter: any AppPresenter,
-    integrationStore: SystemIntegrationStore
+    integrationStore: SystemIntegrationStore,
+    makeSoftwareUpdater: @MainActor (Updater) -> any SoftwareUpdater = Updater.sparkle
   ) {
     isLaunchedForSession = arguments.contains(HelperLaunch.argument)
     self.presenter = presenter
@@ -69,6 +74,7 @@ final class AppDelegate: NSObject {
       [weak presenter] error in
       presenter?.present(error)
     }
+    updater = Updater(helpers: coordinator, makeSoftwareUpdater: makeSoftwareUpdater)
     super.init()
     coordinator.delegate = self
     recentComparisonsMenu.onOpen = { [weak self] in self?.open($0) }
@@ -87,6 +93,11 @@ final class AppDelegate: NSObject {
     let controller = settingsWindowController ?? SettingsWindowController(settings: settings)
     settingsWindowController = controller
     controller.showWindow(sender)
+  }
+
+  /// Looks for a new version at once and shows the result.
+  @objc func checkForUpdates(_ sender: Any?) {
+    updater.checkForUpdates()
   }
 
   /// Shows the window Keyboard Shortcuts in front, made the first time it is needed with the
@@ -139,10 +150,27 @@ final class AppDelegate: NSObject {
     }
   }
 
-  /// Gives the commands the keys and names of the kind of window in front.
+  /// Gives the commands the keys and names of the kind of window in front, and tells the updater
+  /// whether a session window is in front.
+  ///
+  /// A sheet or a child window that becomes key belongs to the window it hangs on.
   @objc private func windowDidBecomeKey(_ notification: Notification) {
-    guard let window = notification.object as? NSWindow else { return }
-    mainMenu.update(for: coordinator.kind(of: window) ?? .merge)
+    guard var window = notification.object as? NSWindow else { return }
+    while let owner = window.sheetParent ?? window.parent {
+      window = owner
+    }
+    let kind = coordinator.kind(of: window)
+    mainMenu.update(for: kind ?? .merge)
+    updater.windowDidBecomeKey(showsSession: kind != nil)
+  }
+
+  /// The bundle identifier of the app that sent the request to quit that is being handled, if
+  /// another app sent it.
+  private var senderOfQuitRequest: String? {
+    guard let event = NSAppleEventManager.shared().currentAppleEvent,
+      let sender = event.attributeDescriptor(forKeyword: keySenderPIDAttr)
+    else { return nil }
+    return NSRunningApplication(processIdentifier: sender.int32Value)?.bundleIdentifier
   }
 }
 
@@ -165,6 +193,7 @@ extension AppDelegate: NSApplicationDelegate {
     if !isLaunchedForSession {
       showCompareFiles(nil)
     }
+    updater.start()
   }
 
   func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
@@ -187,7 +216,12 @@ extension AppDelegate: NSApplicationDelegate {
   /// Asks for each merge with unsaved changes whether to save it, then closes every session
   /// window, which tells each waiting helper how its session ended, before the app quits; a
   /// window the user keeps open keeps the app running.
+  ///
+  /// Sparkle's request to quit for installing is refused while a helper waits.
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+    if updater.refusesQuit(requestedBy: senderOfQuitRequest) {
+      return .terminateCancel
+    }
     Task {
       guard await coordinator.closeUnsavedWindowsAskingFirst() else {
         sender.reply(toApplicationShouldTerminate: false)
@@ -202,10 +236,16 @@ extension AppDelegate: NSApplicationDelegate {
 
 extension AppDelegate: NSMenuItemValidation {
   /// Set Up Git Integration… works while Git is not known to be missing and its sheet is not
-  /// shown; the other commands of the app always work.
+  /// shown, Check for Updates… while no check runs; the other commands of the app always work.
   func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-    guard menuItem.action == #selector(showGitIntegration(_:)) else { return true }
-    return compareFilesWindowController?.validateUserInterfaceItem(menuItem) ?? true
+    switch menuItem.action {
+    case #selector(showGitIntegration(_:)):
+      compareFilesWindowController?.validateUserInterfaceItem(menuItem) ?? true
+    case #selector(checkForUpdates(_:)):
+      updater.canCheckForUpdates
+    default:
+      true
+    }
   }
 }
 

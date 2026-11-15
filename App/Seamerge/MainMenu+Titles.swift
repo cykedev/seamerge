@@ -5,6 +5,8 @@ extension MainMenu {
   enum Titles {
     static let app = String(localized: "Seamerge", comment: "Menu bar: the app menu.")
     static let about = String(localized: "About Seamerge", comment: "App menu.")
+    static let checkForUpdates = String(
+      localized: "Check for Updates…", comment: "App menu: look for a new version of the app.")
     static let settings = String(localized: "Settings…", comment: "App menu.")
     static let setUpGitIntegration = String(
       localized: "Set Up Git Integration…", comment: "App menu: make Git use Seamerge.")

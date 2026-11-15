@@ -266,6 +266,7 @@ struct AppDelegateTests {
     AppDelegate(
       arguments: arguments, defaults: sandbox.defaults, socketURL: sandbox.socketURL,
       collectionCache: sandbox.collectionCache, presenter: sandbox.presenter,
-      integrationStore: sandbox.integrationStore)
+      integrationStore: sandbox.integrationStore,
+      makeSoftwareUpdater: { _ in SoftwareUpdaterDouble() })
   }
 }

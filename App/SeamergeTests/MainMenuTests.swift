@@ -125,6 +125,7 @@ import Testing
   private static let expectedOutline = """
     Seamerge ▸
       About Seamerge
+      Check for Updates…
       ---
       Settings… ⌘,
       Set Up Git Integration…

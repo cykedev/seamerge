@@ -10,6 +10,9 @@
     "Bring All to Front": {
       "comment": "Window menu."
     },
+    "Check for Updates…": {
+      "comment": "App menu: look for a new version of the app."
+    },
     "Clear Menu": {
       "comment": "File > Open Recent: forget the recent comparisons."
     },
