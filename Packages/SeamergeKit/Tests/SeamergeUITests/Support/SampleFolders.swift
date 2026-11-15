@@ -91,12 +91,13 @@ struct SampleFolders: ~Copyable {
 }
 
 extension FileCollection {
-  /// A collection that has compared `folders` once.
+  /// A collection that compares `folders` and gathers changes on disk quickly, compared once.
   @MainActor
   static func compared(_ folders: borrowing SampleFolders) async -> FileCollection {
     let collection = FileCollection(
       comparer: FolderComparer(
-        folders: folders.pair, linkFolder: folders.folder.appending(path: "links")))
+        folders: folders.pair, linkFolder: folders.folder.appending(path: "links")),
+      latency: .milliseconds(50))
     collection.startComparing()
     await collection.waitUntilCompared()
     return collection

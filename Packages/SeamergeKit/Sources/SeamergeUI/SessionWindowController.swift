@@ -137,6 +137,10 @@ public final class SessionWindowController: NSWindowController {
   /// A file whose sides or change differ since is another file, which is read anew.
   var loadedFiles: [CollectedFile: LoadedFile] = [:]
 
+  /// How often the files of the folders changed on disk since the window opened; a reading that
+  /// started before the last change is out of date when it ends.
+  var diskGeneration = 0
+
   /// The reading of the file the window is about to show, while it runs.
   var fileLoad: Task<Void, Never>?
 

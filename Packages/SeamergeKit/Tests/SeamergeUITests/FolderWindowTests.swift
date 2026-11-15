@@ -4,7 +4,7 @@ import Testing
 @testable import SeamergeUI
 
 /// The window of two folders: it opens before they are compared, lists identical files only on
-/// request and says what it found.
+/// request, says what it found, follows the folders on disk and keeps the selection.
 @MainActor
 @Suite(.serialized, .timeLimit(.minutes(1))) struct FolderWindowTests {
   @Test func windowOpensAtOnceSaysItComparesAndShowsTheFirstFileThatDiffers() async throws {
@@ -105,5 +105,161 @@ import Testing
     #expect(
       controller.collectionLayout?.fileList.statusLine.accessibilityLabel()
         == "0 of 1 files differ")
+  }
+
+  @Test func changeOnDiskUpdatesTheListAndKeepsTheSelection() async throws {
+    let folders = try SampleFolders()
+    try folders.fillWithProject()
+    let collection = await FileCollection.compared(folders)
+    let controller = try await Windows.controller(for: collection)
+    let readme = try #require(collection.files.firstIndex { $0.path == "README.md" })
+    controller.showFile(at: readme)
+    await controller.fileLoad?.value
+    let table = try #require(controller.collectionLayout?.fileList.tableView)
+
+    try folders.write("Sources/Orders/Invoice.swift", left: nil, right: "struct Invoice {}\n")
+    try folders.write("1.1\n", to: folders.left.appending(path: "VERSION"))
+    try FileManager.default.removeItem(at: folders.left.appending(path: "prices.txt"))
+    await Self.wait(for: collection) {
+      $0.files.contains { $0.path == "Sources/Orders/Invoice.swift" }
+        && $0.files.first { $0.path == "VERSION" }?.change == .identical
+        && !$0.files.contains { $0.path == "prices.txt" }
+    }
+
+    let listed = (0..<table.numberOfRows).compactMap {
+      controller.collectionLayout?.fileList.files[$0].path
+    }
+    #expect(listed.contains("Sources/Orders/Invoice.swift"))
+    #expect(!listed.contains("VERSION"))
+    #expect(controller.shownFile?.path == "README.md")
+    #expect(listed.indices.contains(table.selectedRow) && listed[table.selectedRow] == "README.md")
+  }
+
+  @Test func fileThatWentFromBothFoldersGivesWayToTheNextOne() async throws {
+    let folders = try SampleFolders()
+    try folders.fillWithProject()
+    let collection = await FileCollection.compared(folders)
+    let controller = try await Windows.controller(for: collection)
+    let readme = try #require(collection.files.firstIndex { $0.path == "README.md" })
+    controller.showFile(at: readme)
+    await controller.fileLoad?.value
+
+    for root in [folders.left, folders.right] {
+      try FileManager.default.removeItem(at: root.appending(path: "README.md"))
+    }
+    await Self.wait(for: collection) { !$0.files.contains { $0.path == "README.md" } }
+    await controller.fileLoad?.value
+
+    #expect(
+      controller.shownFile?.path
+        == "Resources/Configuration/Environments/Production/prices-and-discounts-for-every-region.json"
+    )
+  }
+
+  /// Thousands of changes at once, as a checkout makes them, are compared away from the main
+  /// thread; beyond the limit of changes kept apart, everything is compared again.
+  @Test(arguments: [1000, FolderComparisonRun.changeLimit + 1000])
+  func thousandsOfChangesComeIntoTheList(count: Int) async throws {
+    let folders = try SampleFolders()
+    try folders.fillWithProject()
+    let collection = await FileCollection.compared(folders)
+    let controller = try await Windows.controller(for: collection)
+    let generated = folders.right.appending(path: "Generated", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(at: generated, withIntermediateDirectories: true)
+
+    for index in 0..<count {
+      try Data("\(index)\n".utf8).write(to: generated.appending(path: "File\(index).swift"))
+    }
+    await Self.wait(for: collection) {
+      $0.files.count { $0.path.hasPrefix("Generated/") } == count
+    }
+
+    #expect(controller.collectionLayout?.fileList.tableView.numberOfRows == 6 + count)
+  }
+
+  @Test func nextFileShowsWhatChangedOnDiskSinceItWasReadAhead() async throws {
+    let folders = try SampleFolders()
+    try folders.fillWithProject()
+    let collection = await FileCollection.compared(folders)
+    let controller = try await Windows.controller(for: collection)
+    // The system may still report the files written before the comparison; once a file
+    // written now is in the list, it has reported everything before it.
+    try folders.write("zz-marker.txt", left: nil, right: "marker\n")
+    await Self.wait(for: collection) { $0.files.contains { $0.path == "zz-marker.txt" } }
+    let readme = try #require(collection.files.firstIndex { $0.path == "README.md" })
+    controller.showFile(at: readme)
+    await controller.fileLoad?.value
+    let next = try #require(controller.neighborIndex(forward: true))
+    let path = collection.files[next].path
+    #expect(controller.loadedFiles.keys.contains(collection.files[next]), "Read ahead")
+
+    try folders.write("{\n  \"retries\": 7\n}\n", to: folders.right.appending(path: path))
+    var changes = 0
+    await Self.wait(for: collection) { _ in
+      changes += 1
+      return changes > 1
+    }
+    controller.showNextFile(nil)
+    await controller.fileLoad?.value
+
+    #expect(controller.shownFile?.path == path)
+    let right = controller.presentation.changes.session.file(for: .b)?.text
+    #expect(right?.contains("7") == true)
+  }
+
+  /// A reading that began before a change on disk and ends after it is not kept; this follows
+  /// the order of the two without waiting for a reading.
+  @Test func readingThatStartedBeforeAChangeOnDiskIsNotKept() async throws {
+    let folders = try SampleFolders()
+    try folders.fillWithProject()
+    let collection = await FileCollection.compared(folders)
+    let controller = try await Windows.controller(for: collection)
+    let next = try #require(controller.neighborIndex(forward: true))
+    let file = collection.files[next]
+    let loaded = try await SessionWindowController.load(file, mode: .windowDefault)
+    let generation = controller.diskGeneration
+
+    collection.take(.replaced(collection.files))
+    controller.keep(loaded, of: file, readIn: generation)
+
+    #expect(controller.loadedFiles[file] == nil)
+    controller.keep(loaded, of: file, readIn: controller.diskGeneration)
+    #expect(controller.loadedFiles[file] != nil)
+  }
+
+  @Test func fileInViewThatCannotBeReadAnyMoreSaysWhy() async throws {
+    let folders = try SampleFolders()
+    try folders.write("notes.txt", left: "abc\n", right: "abd\n")
+    let collection = await FileCollection.compared(folders)
+    let controller = try await Windows.controller(for: collection)
+    #expect(controller.shownFile?.path == "notes.txt")
+    #expect(controller.unavailable == nil)
+
+    try FileManager.default.setAttributes(
+      [.posixPermissions: 0], ofItemAtPath: folders.right.appending(path: "notes.txt").path)
+    await Self.wait(for: collection) {
+      if case .unreadable = $0.files.first?.change { true } else { false }
+    }
+    await controller.fileLoad?.value
+
+    #expect(controller.unavailable != nil)
+  }
+
+  /// Waits until `condition` holds for `collection`, looking each time the collection changes;
+  /// gives up when the test is cancelled.
+  static func wait(
+    for collection: FileCollection, until condition: (FileCollection) -> Bool
+  ) async {
+    let (changes, sink) = AsyncStream.makeStream(of: Void.self)
+    let window = collection.onChange
+    collection.onChange = { change in
+      window?(change)
+      sink.yield()
+    }
+    defer { collection.onChange = window }
+    var iterator = changes.makeAsyncIterator()
+    while !condition(collection) {
+      guard await iterator.next() != nil else { return }
+    }
   }
 }

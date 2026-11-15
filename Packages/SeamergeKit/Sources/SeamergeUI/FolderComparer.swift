@@ -30,8 +30,8 @@ struct FolderComparer: Sendable {
   init(folders: FolderPair, linkFolder: URL) {
     self.folders = folders
     self.linkFolder = linkFolder
-    // The real path, which resolving the links of the URL is not: it drops the /private of /var
-    // and /tmp.
+    // The real path, as the file system reports changes; resolving the links of the URL would
+    // drop the /private of /var and /tmp.
     let root = { (url: URL) in
       let path = url.path(percentEncoded: false)
       return URL(
@@ -51,6 +51,12 @@ struct FolderComparer: Sendable {
       Self.logger.error("Cannot tell whether names differ by case: \(error, privacy: .public)")
       isCaseSensitive = false
     }
+  }
+
+  /// The tops of the folders from the root of the file system, links in their paths resolved,
+  /// as the file system reports changes in them.
+  var roots: (left: String, right: String) {
+    (left.absolutePath(of: ""), right.absolutePath(of: ""))
   }
 
   /// The form of `path` in which paths of both folders pair.

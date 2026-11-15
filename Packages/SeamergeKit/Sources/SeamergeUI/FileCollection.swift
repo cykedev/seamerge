@@ -10,7 +10,8 @@ import GitSupport
 /// shows the files may close first; the collection is then dismissed, and the calls that still
 /// come find it so.
 ///
-/// A collection of two folders receives files while it compares them.
+/// A collection of two folders receives files while it compares them, and afterwards follows
+/// what changes in them until it is dismissed.
 @MainActor
 public final class FileCollection {
   /// The origin of the calls, or `nil` for the files of a comparison of two folders.
@@ -46,7 +47,7 @@ public final class FileCollection {
     /// A file came and stands at the index.
     case inserted(Int)
 
-    /// Files of folders came or changed.
+    /// Files of folders came, changed or went.
     case updated
 
     /// No more files come.
@@ -84,27 +85,28 @@ public final class FileCollection {
     self.files = files.sorted { $0.precedes($1) }
   }
 
-  /// Creates a collection for the files of `folders`, which it compares once it starts; the
-  /// targets of links go as text into `linkFolder`, which the caller removes once the collection
-  /// is dismissed.
+  /// Creates a collection for the files of `folders`, which it compares and follows once it
+  /// starts; the targets of links go as text into `linkFolder`, which the caller removes once
+  /// the collection is dismissed.
   public convenience init(comparing folders: FolderPair, linkFolder: URL) {
     self.init(comparer: FolderComparer(folders: folders, linkFolder: linkFolder))
   }
 
-  /// Creates a collection for two folders that compares them with `comparer` once it starts.
-  init(comparer: FolderComparer) {
+  /// Creates a collection for two folders that compares them with `comparer` once it starts,
+  /// and gathers the changes on disk of every `latency` before it compares them anew.
+  init(comparer: FolderComparer, latency: Duration = .milliseconds(300)) {
     origin = nil
     folders = comparer.folders
     expectedCount = nil
     quietPeriod = .zero
     isReceiving = true
-    folderRun = FolderComparisonRun(comparer: comparer) { [weak self] event in
-      self?.take(event)
-    }
+    folderRun = FolderComparisonRun(
+      comparer: comparer, latency: latency, files: { [weak self] in self?.files ?? [] },
+      onEvent: { [weak self] event in self?.take(event) })
   }
 
-  /// Starts comparing the folders away from the main thread; what the comparison finds comes
-  /// in as it goes.
+  /// Starts comparing the folders away from the main thread, and following them afterwards;
+  /// what the comparison finds comes in as it goes.
   public func startComparing() {
     folderRun?.start()
   }
@@ -151,7 +153,7 @@ public final class FileCollection {
     onChange?(.complete)
   }
 
-  /// Notes that the window of the collection closed, and stops comparing folders.
+  /// Notes that the window of the collection closed, and stops comparing and watching folders.
   public func dismiss() {
     isDismissed = true
     onChange = nil
@@ -176,11 +178,16 @@ public final class FileCollection {
       comparedCount = files.count
       pairedCount = files.count
       endReceiving()
+    case .replaced(let replacement):
+      files = replacement
+      comparedCount = files.count
+      pairedCount = files.count
+      onChange?(.updated)
     }
   }
 
   /// `files` and `others`, each in the order of the list, merged into one list in that order.
-  private static func merging(
+  nonisolated static func merging(
     _ others: [CollectedFile], into files: [CollectedFile]
   ) -> [CollectedFile] {
     var merged: [CollectedFile] = []

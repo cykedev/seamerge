@@ -166,6 +166,12 @@ extension SessionWindowController {
         fileIndex += 1
       }
     case .updated:
+      if !collection.isReceiving {
+        // Files changed on disk; those read ahead may be out of date even where their entry in
+        // the list reads the same. The window watches the file in view itself.
+        loadedFiles = loadedFiles.filter { $0.key == shownFile }
+        diskGeneration += 1
+      }
       followShownFile()
     case .complete:
       if let summary = differingSummary {
@@ -371,14 +377,22 @@ extension SessionWindowController {
     if let loaded = loadedFiles[file], loaded.session.options.mode == mode {
       return loaded
     }
+    let generation = diskGeneration
     do {
       let loaded = try await Self.load(file, mode: mode)
-      loadedFiles[file] = loaded
+      keep(loaded, of: file, readIn: generation)
       return loaded
     } catch {
       Self.logger.error("Cannot show \(file.path, privacy: .public): \(error, privacy: .public)")
       return nil
     }
+  }
+
+  /// Keeps `loaded`, the comparison of `file` read since the change on disk of `generation`,
+  /// unless the files changed on disk again meanwhile.
+  func keep(_ loaded: LoadedFile, of file: CollectedFile, readIn generation: Int) {
+    guard generation == diskGeneration else { return }
+    loadedFiles[file] = loaded
   }
 
   /// Reads the file after `file` in the list ahead, and forgets the files that are not beside
