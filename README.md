@@ -31,6 +31,9 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
     <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-collection-dark.png">
     <img src="Documentation/Images/screenshot-collection-light.png" alt="Several files in one window, with the sidebar listing a new, two changed and a deleted file.">
   </picture>
+- **Compare folders.** File ▸ Compare Folders… compares two folders in one window and lists the files that differ. A filter narrows the list by file name or folder.
+- **Moved blocks.** A block of lines that moved to another place gets an arrow at both ends that points to the other end; a click on the arrow, or Go ▸ Go to Other End of Move, jumps there.
+- **Updates.** Seamerge checks for new versions with your consent and installs one only when you choose to. See [Updates](#updates).
 - **Decisions per block.** The decision bar takes the text of A, the base, B, or both, or nothing, per block, with the mouse or single keys. A conflict stays open until you decide.
 
   <picture>
@@ -59,7 +62,7 @@ Seamerge also keeps the panes aligned row by row and gives an editable result, w
 
 ### Release download
 
-Download the latest release from [GitHub Releases](https://github.com/cykedev/seamerge/releases) and move `Seamerge.app` into your Applications folder. The app is signed and notarized.
+Download the latest release from [GitHub Releases](https://github.com/cykedev/seamerge/releases) and move `Seamerge.app` into your Applications folder. The app is signed and notarized. Later versions can be installed from within the app; see [Updates](#updates).
 
 ### Build from source
 
@@ -73,6 +76,16 @@ Scripts/install.sh
 ```
 
 `Scripts/install.sh` builds the app in the Release configuration and copies it into `/Applications`. Add `--to <folder>` to install it somewhere else. The build needs Xcode 27 with `xcodebuild`; the Command Line Tools alone are not enough.
+
+## Updates
+
+Seamerge can check for new versions. The check needs your consent: after its second start, Seamerge asks whether it should check automatically. You can change the answer at any time in **Seamerge ▸ Settings…** under **Updates**, with **Check for Updates Automatically**. **Seamerge ▸ Check for Updates…** checks at once.
+
+When a new version is found, Seamerge shows it and installs it only when you choose **Install and Relaunch**. The question waits while a comparison or merge started by Git is in front. While a Git command waits for Seamerge, the app does not restart; an update is then installed when you quit.
+
+Updates are downloaded from GitHub. The [privacy policy](https://www.seamerge.app/about.html) describes what is sent.
+
+Users of version 0.2.0 have no update check, so they download version 0.3.0 once from [GitHub Releases](https://github.com/cykedev/seamerge/releases).
 
 ## Building and checking
 
@@ -137,6 +150,7 @@ Choose **Seamerge ▸ Settings…** (`⌘,`) to change how the code looks and ho
 - **Text:** the font of the code (SF Mono, or another monospaced font installed on the Mac), its size from 9 to 24 pt, the line spacing (compact, standard or spacious) and the tab width from 2 to 8 spaces. A window keeps the zoom you chose until the size in Settings changes.
 - **New Windows:** how each new window starts: the comparison mode, and whether it highlights syntax, wraps lines, aligns the sides, shows invisible characters and shows the base. The switches in a window's footer change only that window.
 - **Merging:** **Go to Next Conflict After Choosing**: whether a choice on an open conflict moves on to the next open conflict.
+- **Updates:** **Check for Updates Automatically**, see [Updates](#updates).
 
 Each window opens where the last window of its kind was closed, with the size it had and, for a merge, the split above the result. Hiding the footer and the sidebar applies to all windows.
 
@@ -168,6 +182,7 @@ Each window opens where the last window of its kind was closed, with the size it
 | Next or previous pane | ⌃Tab, ⇧⌃Tab |
 | Undo, redo | ⌘Z, ⇧⌘Z |
 | Next or previous file in a collection | ⌥⌘→, ⌥⌘← |
+| Filter the list of files | ⇧⌘F |
 | Show or hide the sidebar | ⌃⌘S |
 | Go to a line | ⌘L |
 | Save | ⌘S |
@@ -190,8 +205,10 @@ The diff and merge engine is built on the Perforce Helix Core (p4) source, relea
 
 Seamerge is licensed under the [MIT License](LICENSE). The vendored Perforce code is third-party code under its own license, found in [its license file](Packages/MergeEngine/Sources/CMergeEngine/Vendor/Perforce/LICENSE).
 
+Seamerge checks for new versions with [Sparkle](https://sparkle-project.org), only after you agree; Sparkle is used under the MIT License, and its license is in the app's About window.
+
 ## Status and limits
 
-The current release is Seamerge 0.2.0. It runs on macOS 27 only.
+The current release is Seamerge 0.3.0. It runs on macOS 27 only.
 
 Read [CHANGELOG.md](CHANGELOG.md) for what changed in each release, and [CONTRIBUTING.md](CONTRIBUTING.md) if you want to work on the code. The [user guide](Documentation/UserGuide.md) describes the window in more detail, and [Documentation/Architecture.md](Documentation/Architecture.md) describes how the code is organized.

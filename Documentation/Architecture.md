@@ -17,7 +17,7 @@ The packages require Swift tools 6.2 and macOS 27.0. Warnings are errors in ever
 | Module | Depends on | Responsibility |
 |---|---|---|
 | `TextIO` | nothing | Reading and writing text files with their encoding and line endings. |
-| `MergeModel` | `MergeEngine`, `TextIO` | The model of a session, its blocks, the result document and its editing rules. |
+| `MergeModel` | `MergeEngine`, `TextIO` | The model of a session, its blocks, the lines that moved, the ignore rules, the single-column layout, the result document and its editing rules. |
 | `GitSupport` | nothing | Running `git`, reading the context of a merge or comparison, and writing the Git and Tower configuration. |
 | `SessionIPC` | nothing | The socket between the command and the app: requests, events, the client and the server. |
 | `SyntaxKit` | nothing | Language descriptions and lexers for syntax highlighting. |
@@ -84,6 +84,8 @@ The panes (`PaneKit`) show the inputs side by side, aligned on a row grid. The g
 
 The overview bar, the gutter marks and the decision column read the same grid. The grid applies to the aligned layout only; the connected layout below does without it.
 
+The tint of a changed row runs under the gutter as well. `RowShading` describes the fill and the hairlines of a row, and `PaneTextView.shading(atRow:)` is the only place that decides them. `RowLayoutFragment` and `GutterView` both draw from it, so the text and the gutter cannot disagree.
+
 Ignored differences are marked in the panes only. `IgnoredDifferences.places(in:of:)` in `MergeModel` finds the places in each differing line by comparing tokens. `PaneContent.ignoredDifferencePlaces` passes them to the panes, which fill them with `Theme.ignoredDifferenceFill`. `SessionCommand.toggleIgnoredChanges` is in the View menu only, and it is enabled while there are places.
 
 Lines longer than 20,000 UTF-16 units are cut for display by `LongLine` (`PaneKit`) at a character boundary, followed by an ellipsis. A line is shown whole while the insertion point or a selection lies in it. The cut affects display only: the text, copying and saving use the whole line. Row widths and wrap counts use the part that is shown.
@@ -108,6 +110,54 @@ The text views use TextKit 2. Points that differ from a plain `NSTextView`:
 - `RowLayoutFragment` (`PaneKit/RowLayoutFragment.swift`) draws each row: the full-width fill, the highlights of changed runs, the text and the marks of removed text. TextKit keeps fragments across layout changes, so the fragment asks its painter what to draw at each draw, and the pane redraws the rows after a change.
 - The selection is drawn by the fragment, translucent and above the row fills, because AppKit's own selection is opaque and would hide the row tints.
 - A change of row heights that leaves the text as it is, such as turning Wrap Lines on or off or a row growing beside a neighbor's wrap, must discard the paragraph elements from the first changed row on (`PaneTextView.setWrappedRows`, `PaneContentStorage.discardElements`, located by `WrappedRows.firstRow(differingFrom:)`). Invalidating the layout is not enough: TextKit keeps the frames of the fragments above, and far down a long file it then looks for the visible rows at the wrong place, and the panes show nothing.
+## Moved lines
+
+The engine reports a moved run as a removal in one place and an insertion in another, so `MergeModel` finds moves after each engine run and leaves the engine unchanged.
+
+- `MoveDetection.swift` finds the moves of a comparison. It splits a changed block at the edges of each moved run, so that a moved run is a block of its own.
+- `MoveDetection+Merge.swift` finds, for each side of a merge, the contributions to a block that moved against the base. Merge blocks are never split, because decisions attach to them.
+- Equality is the engine's. `EngineAdapter.equalLines(_:_:mode:)` and `EngineAdapter.linesAreEqual(_:_:mode:)` are the only definitions of equal lines. A checksum index per comparison mode only selects candidates; the engine must find both runs equal, and an equal stretch counts only with a unique anchor line.
+- A run is a move only if it occurs once on each side and has at least twenty letters and digits, counted as Unicode letters and digits. A run that occurs twice is no move.
+- `Session` computes the moves when it is built, so a change of mode and a reload compute them again. `Session.moves` lists them by source block. `Session.move(endingIn:on:readingFrom:)` returns the move that ends in a block on a pane, reversed when the sides are swapped.
+- `Move` has two ends (`Move.source` and `Move.destination`), each with its block, its pane role and its lines.
+
+- PaneKit shows an end of a move as a mark in the gutter (`MoveMark`), an arrow typed in the code font that points up or down to the other end, with its help text and VoiceOver name in `MarkHelp`. A click on the mark reaches the window through the pane's delegate.
+- In SeamergeUI, `SessionChanges` counts each end as a change, and the command Go to Other End of Move (`SessionCommand`) makes the other end the current block. The panes take the marks from `Session.move(endingIn:on:readingFrom:)`, so swapping the sides needs no rule of its own.
+
+## Ignore rules
+
+Ignore rules (`IgnoreRule.swift`) are patterns whose matches the comparison disregards. They work by masking, so the engine is not changed. `IgnoreMask` builds a masked copy of each file, line by line, and the engine compares the masked copies. `ComparedFile` keeps the real text for display and the masked text for comparison, and move detection reads only the masked text.
+
+- `RuleMatcher` finds the matches per line with a time limit of one second per rule and file. A rule that is too slow has no effect on that file, and `Session.ignoreRuleProblems` reports why a rule had no effect.
+- Lines that a rule matches entirely are removed from the edges of changed blocks and become unchanged blocks (`EntirelyMatchedLines.swift`). `IgnoredDifferences` marks the matched places for the panes.
+- `Session.diff(old:new:mode:ignoring:)` takes the rules. `Session.merge` takes none, so a merge compares all text. No window offers the rules yet.
+
+## Single-column layout
+
+`SingleColumnLayout` (`MergeModel/SingleColumnLayout.swift`) arranges a comparison in one column. An unchanged pair of lines appears once, with the text of the second side. A changed block shows the lines of the first side, then those of the second. The layout is derived from `Session.blocks`, and it maps rows to blocks and lines in both directions by binary search (`place(atRow:)`, `row(ofLine:in:)`).
+
+`PaneKit` draws two line-number columns for it (`SideLineNumbers`) and the second part of a block as its own `PaneBlockPart`. No window shows the layout yet.
+
+## Search across panes
+
+The find bar of a pane uses `NSTextFinder`. The window still has one find bar per pane.
+
+`PaneSearch` (`PaneKit`) runs one finder over several pane views. Its owner gives the sections and their order. Each row is a part of its own, so a match cannot reach across a row or a pane, and filler rows and previews are not searched.
+
+`SearchText` is an immutable snapshot of a pane's text, guarded by a lock, which the finder reads on its own thread. The snapshot is renewed on the main thread at the next request. Replacing goes through `PaneEditingDelegate` of the pane that is editable, and a replace-all forms one undo step. `OverviewBar.matchRows` marks the matches in the overview bar. No window uses `PaneSearch` yet.
+
+## Updates
+
+Seamerge checks for updates with Sparkle, which only the app target links. The packages and the `seamerge` command do not import it.
+
+- `SparkleUpdater` (`App/Seamerge/SparkleUpdater.swift`) owns the `SPUUpdater`. It uses a subclass of `SPUStandardUserDriver`, which hands a found version or the consent question to `QuestionGate`. The gate holds them while `Updater` reports that a session window is in front.
+- `Updater` (`App/Seamerge/Updater.swift`) holds the rules. It starts with the app, also when Git starts the app. It shows a held question or version when a window without a session becomes key. While a `seamerge` helper waits for the app (`SessionCoordinator.isServingHelper`), it does not relaunch, and an installation waits until the app quits. Sparkle's request to quit is refused only while a helper waits.
+- `SoftwareUpdater` is the part of Sparkle that `Updater` uses. Tests replace it with `SoftwareUpdaterDouble`.
+- `AutomaticUpdateSetting` (`SeamergeUI`) is the setting that the settings window edits. The Updates group is the last group of its form.
+- `App/Config/Info.plist` holds the feed URL, `https://www.seamerge.app/appcast.xml`, and the public key. The feed is the `appcast.xml` attached to the latest GitHub release, and the website redirects to it. Automatic installation is off.
+- The build phase "Keep English Only in Sparkle" removes the translations of Sparkle. The script sandbox allows only declared paths, so its outputs are listed in `App/Config/SparkleTranslations.xcfilelist`.
+- `Scripts/release.sh` builds from `git archive HEAD`, signs Sparkle from the inside out, notarizes the app, and writes the appcast with `generate_appcast`, taking the release notes from `CHANGELOG.md`.
+
 ## Git and Tower
 
 `GitSupport` runs `git` with an argument list and never through a shell (`Git.swift`). Each command has a time limit.
