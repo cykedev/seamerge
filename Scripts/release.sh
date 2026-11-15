@@ -3,14 +3,25 @@
 # Builds, signs and notarizes a release of Seamerge, packs it for download and
 # writes the feed of updates.
 #
-# Usage: Scripts/release.sh <keychain-profile>
+# Usage: Scripts/release.sh <keychain-profile> [--tap <tap-folder>]
+#        Scripts/release.sh --cask [--tap <tap-folder>]
 #
 #   <keychain-profile>  The profile that `xcrun notarytool store-credentials`
 #                       saved in the keychain; the script reads only its name.
+#   --tap <tap-folder>  A clone of the Homebrew tap cykedev/homebrew-tap, in
+#                       which the script writes Casks/seamerge.rb for the
+#                       version; committing and pushing it is left to the user.
+#   --cask              Builds nothing and only describes the cask of the zip
+#                       that an earlier run of the version left in
+#                       .build/release/<version>/.
 #
 # Needs the certificate "Developer ID Application" of the team named in
 # App/Config/Signing.xcconfig and the private EdDSA key of the updates in the
 # keychain; Sparkle's generate_appcast reads the key, the script never does.
+#
+# The build number CURRENT_PROJECT_VERSION must be higher than every build
+# number in the feed online, since Sparkle compares build numbers; the script
+# checks that before it builds.
 #
 # The script builds the commit that is checked out, from an export of it, and
 # refuses to run while the working tree has changes. It builds the app in the
@@ -27,14 +38,48 @@
 # .build/release/<version>/. Uploading them is left to the user: the zip, the
 # disk image and appcast.xml go together to the GitHub release v<version>,
 # which is published as the latest release.
+#
+# Last, the script prints the version and the SHA-256 checksum of the zip for
+# the Homebrew cask, and with --tap writes the cask: its version, checksum and
+# download URL at the GitHub release, the app, the seamerge command, the
+# update by Sparkle itself, and the files that `brew uninstall --zap` removes.
 
 set -euo pipefail
 
-if [ $# -ne 1 ] || [ -z "$1" ]; then
-  echo "usage: Scripts/release.sh <keychain-profile>" >&2
+usage() {
+  echo "usage: Scripts/release.sh <keychain-profile> [--tap <tap-folder>]" >&2
+  echo "       Scripts/release.sh --cask [--tap <tap-folder>]" >&2
   exit 2
+}
+
+profile=
+cask_only=false
+tap=
+while [ $# -gt 0 ]; do
+  case $1 in
+    --cask) cask_only=true ;;
+    --tap)
+      [ $# -ge 2 ] && [ -n "$2" ] || usage
+      tap=$2
+      shift
+      ;;
+    -*) usage ;;
+    *)
+      [ -z "$profile" ] && [ -n "$1" ] || usage
+      profile=$1
+      ;;
+  esac
+  shift
+done
+if $cask_only; then
+  [ -z "$profile" ] || usage
+else
+  [ -n "$profile" ] || usage
 fi
-profile=$1
+if [ -n "$tap" ]; then
+  [ -d "$tap" ] || { echo "error: the tap folder $tap does not exist" >&2; exit 1; }
+  tap=$(cd "$tap" && pwd)
+fi
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
@@ -43,9 +88,67 @@ setting() {
   sed -n "s/^$1 = //p" "$2"
 }
 version=$(setting MARKETING_VERSION App/Config/Version.xcconfig)
+build=$(setting CURRENT_PROJECT_VERSION App/Config/Version.xcconfig)
 team=$(setting DEVELOPMENT_TEAM App/Config/Signing.xcconfig)
 if [ -z "$version" ] || [ -z "$team" ]; then
   echo "error: no version in Version.xcconfig or no team in Signing.xcconfig" >&2
+  exit 1
+fi
+out=.build/release/$version
+zip=$out/Seamerge-$version.zip
+
+# Prints the version and the checksum of the zip for the Homebrew cask, and
+# writes the cask into the tap if there is one.
+describe_cask() {
+  local checksum cask
+  checksum=$(shasum -a 256 "$zip" | cut -d ' ' -f 1)
+  echo "Homebrew cask: version $version, sha256 $checksum"
+  [ -n "$tap" ] || return 0
+  cask=$tap/Casks/seamerge.rb
+  mkdir -p "$tap/Casks"
+  cat > "$cask" << CASK
+cask "seamerge" do
+  version "$version"
+  sha256 "$checksum"
+
+  url "https://github.com/cykedev/seamerge/releases/download/v#{version}/Seamerge-#{version}.zip"
+  name "Seamerge"
+  desc "Diff and merge tool built for Git"
+  homepage "https://www.seamerge.app"
+
+  livecheck do
+    url :url
+    strategy :github_latest
+  end
+
+  auto_updates true
+  depends_on macos: ">= :golden_gate"
+
+  app "Seamerge.app"
+  binary "#{appdir}/Seamerge.app/Contents/Helpers/seamerge"
+
+  zap trash: [
+    "~/Library/Application Support/Seamerge",
+    "~/Library/Caches/app.eiden.seamerge",
+    "~/Library/Caches/Seamerge",
+    "~/Library/HTTPStorages/app.eiden.seamerge",
+    "~/Library/Preferences/app.eiden.seamerge.plist",
+  ]
+end
+CASK
+  echo "Wrote $cask; commit and push it in the tap."
+}
+
+if $cask_only; then
+  [ -f "$zip" ] || {
+    echo "error: there is no $zip; run the release first" >&2
+    exit 1
+  }
+  describe_cask
+  exit 0
+fi
+if ! [[ $build =~ ^[0-9]+$ ]]; then
+  echo "error: CURRENT_PROJECT_VERSION in Version.xcconfig is no build number" >&2
   exit 1
 fi
 
@@ -72,7 +175,6 @@ if [ -z "$(printf '%s' "$notes_section" | tr -d '[:space:]')" ]; then
   exit 1
 fi
 
-out=.build/release/$version
 rm -rf "$out"
 mkdir -p "$out"
 log=$out/release.log
@@ -87,6 +189,32 @@ step() {
   echo "$1"
   printf '\n==> %s\n' "$1" >> "$log"
 }
+
+# Sparkle offers an update only if its build number is higher than the one of
+# the running app, so a release must top every build number in the feed. The
+# feed URL redirects to the latest GitHub release, which has no feed before the
+# first release with one.
+step "Checking the build number against the feed"
+feed_copy=$out/feed.xml
+answer=$(curl --silent --show-error --location --output "$feed_copy" \
+  --write-out '%{http_code}' "$feed" 2>> "$log") || fail "the feed $feed could not be fetched"
+case $answer in
+  200)
+    latest=$(grep -oE '<sparkle:version>[0-9]+</sparkle:version>' "$feed_copy" \
+      | grep -oE '[0-9]+' | sort -n | tail -1 || true)
+    [ -n "$latest" ] \
+      || fail "the feed $feed names no build number in <sparkle:version>, so the new build number cannot be checked"
+    if [ "$build" -le "$latest" ]; then
+      fail "the build number $build is not higher than $latest in the feed; raise CURRENT_PROJECT_VERSION in Version.xcconfig"
+    fi
+    echo "Build $build follows build $latest of the feed." >> "$log"
+    ;;
+  404)
+    rm "$feed_copy"
+    echo "The latest release has no feed yet; starting a new one."
+    ;;
+  *) fail "the feed $feed answered with $answer" ;;
+esac
 
 step "Checking the certificate of team $team"
 identities=$out/identities.txt
@@ -195,7 +323,6 @@ grep -q "^source=Notarized Developer ID$" "$assessment" \
   || fail "Gatekeeper does not accept the app as notarized"
 
 step "Packing Seamerge-$version.zip"
-zip=$out/Seamerge-$version.zip
 ditto -c -k --keepParent "$app" "$zip"
 
 step "Packing, signing and notarizing Seamerge-$version.dmg"
@@ -218,22 +345,14 @@ grep -q "^source=Notarized Developer ID$" "$assessment" \
   || fail "Gatekeeper does not accept the disk image as notarized"
 
 # The feed lists the zip at the GitHub release of the version. It builds on the
-# current feed, so that it keeps the earlier versions, and holds no deltas. The
-# feed URL redirects to the latest GitHub release, which has no feed before the
-# first release with one.
+# feed fetched at the start, so that it keeps the earlier versions, and holds no
+# deltas.
 step "Writing the feed of updates"
 updates=$out/updates
 mkdir "$updates"
-answer=$(curl --silent --show-error --location --output "$updates/appcast.xml" \
-  --write-out '%{http_code}' "$feed" 2>> "$log") || fail "the feed $feed could not be fetched"
-case $answer in
-  200) ;;
-  404)
-    rm "$updates/appcast.xml"
-    echo "The latest release has no feed yet; starting a new one."
-    ;;
-  *) fail "the feed $feed answered with $answer" ;;
-esac
+if [ -f "$feed_copy" ]; then
+  cp "$feed_copy" "$updates/appcast.xml"
+fi
 cp "$zip" "$updates/"
 printf '%s\n' "$notes_section" > "$updates/Seamerge-$version.md"
 generate_appcast=$out/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast
@@ -255,3 +374,4 @@ step "Done"
 (cd "$out" && shasum -a 256 "Seamerge-$version.zip" "Seamerge-$version.dmg")
 echo "The files are in $out/. Attach Seamerge-$version.zip, Seamerge-$version.dmg and"
 echo "appcast.xml to the GitHub release v$version and publish it as the latest release."
+describe_cask
