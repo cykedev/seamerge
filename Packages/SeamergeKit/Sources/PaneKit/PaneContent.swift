@@ -251,6 +251,10 @@ public struct PaneBlock: Sendable, Hashable {
   /// The mark of a conflict, shown on the base pane, or on B while the base is hidden.
   public var conflict: ConflictMarker?
 
+  /// The arrow to the other end, if the block is an end of a move; it takes the place of
+  /// ``marker``, which still says how the side changed the block.
+  public var move: MoveMark?
+
   /// The rows of the second file below those of the first, in a pane that shows both files of
   /// a comparison in one column, with a tint and a mark of their own; `nil` where the block has
   /// one tint.
@@ -264,7 +268,7 @@ public struct PaneBlock: Sendable, Hashable {
   /// - Precondition: `lowerPart` starts below the first row of the block and within it.
   public init(
     rows: Range<Int>, style: BlockStyle, marker: Marker? = nil, conflict: ConflictMarker? = nil,
-    lowerPart: PaneBlockPart? = nil
+    move: MoveMark? = nil, lowerPart: PaneBlockPart? = nil
   ) {
     precondition(
       lowerPart.map { rows.dropFirst().contains($0.firstRow) } ?? true,
@@ -273,6 +277,7 @@ public struct PaneBlock: Sendable, Hashable {
     self.style = style
     self.marker = marker
     self.conflict = conflict
+    self.move = move
     self.lowerPart = lowerPart
   }
 

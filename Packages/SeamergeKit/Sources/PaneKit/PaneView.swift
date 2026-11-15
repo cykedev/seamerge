@@ -642,6 +642,10 @@ extension PaneView: RowInteraction {
     delegate?.pane(self, didClick: hit(atRow: row))
   }
 
+  func moveArrowWasPressed(ofBlock index: Int, atRow row: Int) {
+    delegate?.pane(self, didClick: PaneHit(row: row, block: index, isOnMoveArrow: true))
+  }
+
   func menu(forRow row: Int) -> NSMenu? {
     delegate?.pane(self, menuFor: hit(atRow: row))
   }

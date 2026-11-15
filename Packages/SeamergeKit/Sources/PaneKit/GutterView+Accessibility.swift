@@ -15,14 +15,16 @@ extension GutterView {
   }
 
   /// One element for each mark beside the visible rows: change markers, warning signs, rings of
-  /// ignored differences and marks of removed text, each named with the line it stands at; in a
-  /// single column also one for each visible row, which names its side and its lines.
+  /// ignored differences and marks of removed text, each named with the line it stands at, and a
+  /// button for each arrow of a move; in a single column also one for each visible row, which
+  /// names its side and its lines.
   override func accessibilityChildren() -> [Any]? {
     let rows = visibleRows
     var children: [NSAccessibilityElement] = []
     for row in rows {
       let rowRect = rect(ofRow: row)
       for (index, entry) in marks(ofRow: row).enumerated() {
+        if case .move = entry.mark { continue }
         children.append(
           element(
             named: Self.name(of: entry.mark), help: entry.help, atRow: row,
@@ -30,10 +32,14 @@ extension GutterView {
       }
     }
     for mark in boundaryMarks {
+      if case .move = mark.mark { continue }
       children.append(
         element(
           named: Self.name(of: mark.mark), help: mark.help,
           place: placeDescription(ofBoundary: mark.boundary), frame: mark.slot))
+    }
+    for arrow in moveArrows {
+      children.append(moveElement(ofBlock: arrow.block, atRow: arrow.row, frame: arrow.target))
     }
     if let sides = content.sideLineNumbers {
       for row in rows {
@@ -72,11 +78,33 @@ extension GutterView {
     return element
   }
 
+  /// The button of the arrow of the move at the block at `index`, which goes to the other end:
+  /// named with where the lines went or came from, beside the first row of the block or on the
+  /// boundary before `row` where the block has none.
+  private func moveElement(ofBlock index: Int, atRow row: Int, frame: CGRect)
+    -> NSAccessibilityElement
+  {
+    let block = content.blocks[index]
+    let element = GutterButtonElement { [weak self] in
+      self?.interaction?.moveArrowWasPressed(ofBlock: index, atRow: row)
+    }
+    element.setAccessibilityRole(.button)
+    if let move = block.move {
+      element.setAccessibilityLabel(MarkHelp.move(move))
+    }
+    element.setAccessibilityHelp(MarkHelp.followMove)
+    element.setAccessibilityValue(
+      block.rows.isEmpty ? placeDescription(ofBoundary: row) : placeDescription(ofRow: row))
+    element.setAccessibilityParent(self)
+    element.setAccessibilityFrameInParentSpace(frame)
+    return element
+  }
+
   /// The button that collapses the expanded run at `index` again, found beside the run's first
   /// row whether or not the pointer shows its sign.
   private func collapseElement(ofRun index: Int) -> NSAccessibilityElement {
     let run = expandedRuns[index]
-    let element = CollapseRunElement { [weak self] in self?.interaction?.askToCollapse(run) }
+    let element = GutterButtonElement { [weak self] in self?.interaction?.askToCollapse(run) }
     element.setAccessibilityRole(.button)
     element.setAccessibilityHelp(MarkHelp.collapseRun)
     element.setAccessibilityLabel(
@@ -149,6 +177,7 @@ extension GutterView {
   private static func name(of mark: GutterMark) -> String {
     switch mark {
     case .marker(let marker, _): marker.accessibilityName
+    case .move(let move, _, _): MarkHelp.move(move)
     case .conflict(let conflict): name(of: conflict)
     case .ignoredDifference:
       String(
@@ -171,20 +200,20 @@ extension GutterView {
   }
 }
 
-/// The element that VoiceOver finds for the sign that collapses an expanded run, which presses
-/// it.
-private final class CollapseRunElement: NSAccessibilityElement {
-  private let collapse: @MainActor @Sendable () -> Void
+/// The element that VoiceOver finds for a sign in the gutter that does something when pressed:
+/// the sign that collapses an expanded run, or the arrow of a move.
+private final class GutterButtonElement: NSAccessibilityElement {
+  private let press: @MainActor @Sendable () -> Void
 
-  init(collapse: @escaping @MainActor @Sendable () -> Void) {
-    self.collapse = collapse
+  init(press: @escaping @MainActor @Sendable () -> Void) {
+    self.press = press
     super.init()
   }
 
   override func accessibilityPerformPress() -> Bool {
-    let collapse = collapse
+    let press = press
     // VoiceOver presses elements on the main thread.
-    MainActor.assumeIsolated { collapse() }
+    MainActor.assumeIsolated { press() }
     return true
   }
 }

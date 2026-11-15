@@ -162,7 +162,7 @@ final class GutterView: NSView {
     if let blockIndex = content.blockIndex(atRow: row) {
       let block = content.blocks[blockIndex]
       if block.rows.lowerBound == row {
-        marks = Self.marks(of: block)
+        marks = Self.marks(of: block, at: blockIndex)
       } else if let part = block.lowerPart, part.firstRow == row, let marker = part.marker {
         marks = [(.marker(marker, part.style), MarkHelp.marker(marker))]
       }
@@ -173,10 +173,19 @@ final class GutterView: NSView {
     return marks
   }
 
-  /// The marks of `block` from the trailing edge on: how its side changed it, then its conflict.
-  private static func marks(of block: PaneBlock) -> [(mark: GutterMark, help: String)] {
+  /// The marks of `block`, the block at `index`, from the trailing edge on: how its side changed
+  /// it, or in its place the arrow to the other end of a move, then its conflict.
+  private static func marks(
+    of block: PaneBlock, at index: Int
+  ) -> [(mark: GutterMark, help: String)] {
     var marks: [(mark: GutterMark, help: String)] = []
-    if let marker = block.marker {
+    if let move = block.move {
+      marks.append(
+        (
+          .move(move, pointsDown: move.pointsDown(fromBlock: index), block.style),
+          MarkHelp.move(move)
+        ))
+    } else if let marker = block.marker {
       marks.append((.marker(marker, block.style), MarkHelp.marker(marker)))
     }
     if let conflict = block.conflict {
@@ -193,7 +202,7 @@ final class GutterView: NSView {
     guard let first = rows.first, let last = rows.last else { return [] }
     var marks: [(mark: GutterMark, help: String, slot: CGRect, boundary: Int)] = []
     let start = content.blocks.partitioningIndex(where: { $0.rows.upperBound >= first })
-    for block in content.blocks[start...] {
+    for (index, block) in zip(start..., content.blocks[start...]) {
       guard block.rows.lowerBound <= last + 1 else { break }
       guard block.rows.isEmpty, !displayRows.isHidden(row: min(block.rows.lowerBound, last))
       else { continue }
@@ -201,12 +210,48 @@ final class GutterView: NSView {
       let y = CGFloat(lines.lowerBound) * theme.rowHeight - scrollOffset
       let rowRect = CGRect(
         x: 0, y: y - theme.rowHeight / 2, width: bounds.width, height: theme.rowHeight)
-      for (index, entry) in Self.marks(of: block).enumerated() {
+      for (slot, entry) in Self.marks(of: block, at: index).enumerated() {
         marks.append(
-          (entry.mark, entry.help, markerSlot(index, in: rowRect), block.rows.lowerBound))
+          (entry.mark, entry.help, markerSlot(slot, in: rowRect), block.rows.lowerBound))
       }
     }
     return marks
+  }
+
+  /// The arrows of moves in view, each with its block, the row beside it or the boundary before
+  /// which it lies, and the area that a click on it takes, as large as the smallest target of a
+  /// click.
+  var moveArrows: [(block: Int, row: Int, target: CGRect)] {
+    var arrows: [(block: Int, row: Int, target: CGRect)] = []
+    for row in visibleRows {
+      guard let blockIndex = content.blockIndex(atRow: row),
+        content.blocks[blockIndex].rows.lowerBound == row
+      else { continue }
+      let rowRect = rect(ofRow: row)
+      for (index, entry) in marks(ofRow: row).enumerated() {
+        if case .move = entry.mark {
+          arrows.append((blockIndex, row, clickTarget(of: markerSlot(index, in: rowRect))))
+        }
+      }
+    }
+    for mark in boundaryMarks {
+      if case .move = mark.mark,
+        let blockIndex = content.markedBlockIndex(atBoundary: mark.boundary)
+      {
+        arrows.append((blockIndex, mark.boundary, clickTarget(of: mark.slot)))
+      }
+    }
+    return arrows
+  }
+
+  /// The area that a click on the mark in `slot` takes: centered on it, at least as large as the
+  /// smallest target of a click, and within the gutter at its trailing edge.
+  private func clickTarget(of slot: CGRect) -> CGRect {
+    let width = max(slot.width, Theme.decisionControlSize)
+    let height = max(slot.height, Theme.decisionControlSize)
+    return CGRect(
+      x: min(slot.midX - width / 2, bounds.width - width), y: slot.midY - height / 2,
+      width: width, height: height)
   }
 
   /// Gives each mark in view, and the sign that collapses a run, an area of its own for a help
@@ -215,20 +260,26 @@ final class GutterView: NSView {
     removeAllToolTips()
     for row in visibleRows {
       let rowRect = rect(ofRow: row)
-      for index in marks(ofRow: row).indices {
+      for (index, entry) in marks(ofRow: row).enumerated() {
+        if case .move = entry.mark { continue }
         addToolTip(markerSlot(index, in: rowRect), owner: self, userData: nil)
       }
     }
     for mark in boundaryMarks {
+      if case .move = mark.mark { continue }
       addToolTip(mark.slot, owner: self, userData: nil)
+    }
+    // The help tag of an arrow covers all that a click on it takes.
+    for arrow in moveArrows {
+      addToolTip(arrow.target, owner: self, userData: nil)
     }
     if let hoveredRun {
       addToolTip(collapseSignRect(ofRun: hoveredRun), owner: self, userData: nil)
     }
   }
 
-  /// Gives the pane the focus, then collapses the run whose sign is clicked, or else tells which
-  /// row the click is beside.
+  /// Gives the pane the focus, then collapses the run whose sign is clicked, goes to the other
+  /// end of the move whose arrow is clicked, or else tells which row the click is beside.
   override func mouseDown(with event: NSEvent) {
     interaction?.takeFocus()
     let point = convert(event.locationInWindow, from: nil)
@@ -236,6 +287,10 @@ final class GutterView: NSView {
       isShowingCollapseSign(ofRun: $0) && collapseSignRect(ofRun: $0).contains(point)
     }) {
       interaction?.askToCollapse(expandedRuns[index])
+      return
+    }
+    if let arrow = moveArrows.first(where: { $0.target.contains(point) }) {
+      interaction?.moveArrowWasPressed(ofBlock: arrow.block, atRow: arrow.row)
       return
     }
     interaction?.rowWasClicked(row(at: point))
@@ -475,6 +530,10 @@ final class GutterView: NSView {
         Self.conflictCharacter, color: color ?? theme.color(for: conflict), centeredIn: slot)
     case .ignoredDifference:
       drawRing(centeredIn: slot, color: color)
+    case .move(_, let pointsDown, let style):
+      drawCharacter(
+        Self.arrowCharacter(pointsDown: pointsDown), color: color ?? theme.markerColor(for: style),
+        centeredIn: slot)
     }
   }
 
@@ -555,6 +614,11 @@ final class GutterView: NSView {
 
   /// The typed mark of a conflict.
   private static let conflictCharacter = "!"
+
+  /// The typed arrow of an end of a move, down or up to the other end.
+  private static func arrowCharacter(pointsDown: Bool) -> String {
+    pointsDown ? "\u{2193}" : "\u{2191}"
+  }
 }
 
 /// A mark in the gutter.
@@ -565,6 +629,8 @@ enum GutterMark {
   case conflict(ConflictMarker)
   /// The hollow ring of a line whose difference the comparison ignores, drawn as a symbol.
   case ignoredDifference
+  /// The arrow of an end of a move, in the color of its style, up or down to the other end.
+  case move(MoveMark, pointsDown: Bool, BlockStyle)
 }
 
 extension GutterView: NSViewToolTipOwner {
@@ -575,6 +641,11 @@ extension GutterView: NSViewToolTipOwner {
   ) -> String {
     if let hoveredRun, collapseSignRect(ofRun: hoveredRun).contains(point) {
       return MarkHelp.collapseRun
+    }
+    if let arrow = moveArrows.first(where: { $0.target.contains(point) }),
+      let move = content.blocks[arrow.block].move
+    {
+      return MarkHelp.move(move)
     }
     if let mark = boundaryMarks.first(where: { $0.slot.contains(point) }) {
       return mark.help

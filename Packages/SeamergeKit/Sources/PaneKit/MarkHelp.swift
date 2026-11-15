@@ -21,6 +21,29 @@ enum MarkHelp {
     }
   }
 
+  /// What the arrow of an end of a move means: where the lines went, or where they came from,
+  /// by the line of the other end in its file.
+  static func move(_ move: MoveMark) -> String {
+    let line = move.otherLine + 1
+    return switch move.end {
+    case .source:
+      String(
+        localized: "Moved to line \(line)", bundle: .module,
+        comment: "Help tag and VoiceOver: the arrow where lines left; the line where they are now.")
+    case .destination:
+      String(
+        localized: "Moved here from line \(line)", bundle: .module,
+        comment: "Help tag and VoiceOver: the arrow where lines arrived; the line they came from.")
+    }
+  }
+
+  /// What pressing the arrow of a move does, as VoiceOver reads it.
+  static var followMove: String {
+    String(
+      localized: "Goes to the other end of the move", bundle: .module,
+      comment: "VoiceOver: the help of the arrow of a move, which jumps to where the lines are.")
+  }
+
   /// What the mark of a conflict means.
   static func conflict(_ conflict: ConflictMarker) -> String {
     switch conflict {

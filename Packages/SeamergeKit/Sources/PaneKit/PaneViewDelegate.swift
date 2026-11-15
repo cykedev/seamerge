@@ -5,7 +5,8 @@ import AppKit
 @MainActor
 public protocol PaneViewDelegate: AnyObject {
   /// Tells the delegate that the user clicked `hit` in the text or the gutter of `pane`, after
-  /// the pane has handled the click.
+  /// the pane has handled the click; or that the user pressed the arrow of a move in the gutter,
+  /// with a click or with VoiceOver, which ``PaneHit/isOnMoveArrow`` tells.
   func pane(_ pane: PaneView, didClick hit: PaneHit)
 
   /// The context menu for a secondary click on `hit`, or `nil` for no menu.

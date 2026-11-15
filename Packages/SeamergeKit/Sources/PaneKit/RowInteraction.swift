@@ -10,6 +10,10 @@ protocol RowInteraction: AnyObject {
   /// Tells that the user clicked `row`, after the click has been handled.
   func rowWasClicked(_ row: Int)
 
+  /// Tells that the user pressed the arrow of the move at the block at `index`, beside `row` or
+  /// on the boundary before it, with a click or with VoiceOver.
+  func moveArrowWasPressed(ofBlock index: Int, atRow row: Int)
+
   /// Gives the pane the keyboard focus, for a click in a part of it other than the text.
   func takeFocus()
 

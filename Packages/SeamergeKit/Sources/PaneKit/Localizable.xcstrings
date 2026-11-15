@@ -150,6 +150,9 @@
     "Edited by hand": {
       "comment": "VoiceOver: a block whose text the user typed or changed."
     },
+    "Goes to the other end of the move": {
+      "comment": "VoiceOver: the help of the arrow of a move, which jumps to where the lines are."
+    },
     "Holds lines that you typed or changed": {
       "comment": "Help tag of a block whose text the user typed or changed."
     },
@@ -164,6 +167,12 @@
     },
     "Line %lld on the left, line %lld on the right": {
       "comment": "VoiceOver: where a row of a single column is that both files share."
+    },
+    "Moved here from line %lld": {
+      "comment": "Help tag and VoiceOver: the arrow where lines arrived; the line they came from."
+    },
+    "Moved to line %lld": {
+      "comment": "Help tag and VoiceOver: the arrow where lines left; the line where they are now."
     },
     "Nothing taken": {
       "comment": "VoiceOver: a block that takes no lines from any input."
