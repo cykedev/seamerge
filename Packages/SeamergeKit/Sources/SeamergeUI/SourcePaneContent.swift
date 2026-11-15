@@ -138,7 +138,8 @@ extension PaneContent {
         rows: alignsLines ? layout.rows(of: block) : block.lines(in: role),
         style: changes.style(of: role, in: block, conflictIsOpen: isOpen),
         marker: changes.marker(of: role, in: block),
-        conflict: carriesConflictMark ? (isOpen ? .open : .resolved) : nil)
+        conflict: carriesConflictMark ? (isOpen ? .open : .resolved) : nil,
+        move: changes.moveMark(of: role, in: block))
     }
   }
 

@@ -4,7 +4,15 @@ import PaneKit
 extension SessionPresentation: PaneViewDelegate {
   /// A click on a row of a changed block makes the block current; the click still places the
   /// insertion point and selects text as in any text.
+  ///
+  /// A click on the arrow of a move jumps to the other end of the move instead.
   func pane(_ pane: PaneView, didClick hit: PaneHit) {
+    if hit.isOnMoveArrow, let block = hit.block,
+      let otherEnd = changes.otherEndOfMove(fromBlock: block)
+    {
+      jump(to: otherEnd)
+      return
+    }
     select(hit, in: pane)
   }
 

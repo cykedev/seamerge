@@ -745,6 +745,12 @@
     "Go to Next Conflict After Choosing" : {
       "comment" : "Settings: whether Use A and the like go on to the next open conflict."
     },
+    "Go to Other End of Move" : {
+      "comment" : "Go menu command: jump from lines that moved to where they came from or went."
+    },
+    "Go to where these lines moved to or came from" : {
+      "comment" : "Help tag of Go to Other End of Move."
+    },
     "Hide Base" : {
       "comment" : "View menu command."
     },

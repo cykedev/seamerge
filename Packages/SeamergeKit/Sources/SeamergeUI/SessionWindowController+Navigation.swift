@@ -31,6 +31,12 @@ extension SessionWindowController {
     jump(.lastChange)
   }
 
+  /// Jumps from the current block, an end of a move, to the other end.
+  @objc func goToOtherEndOfMove(_ sender: Any?) {
+    guard let block = presentation.otherEndOfMove else { return }
+    presentation.jump(to: block)
+  }
+
   private func jump(_ jump: BlockNavigation.Jump) {
     guard let block = presentation.navigation.target(of: jump) else { return }
     presentation.jump(to: block)

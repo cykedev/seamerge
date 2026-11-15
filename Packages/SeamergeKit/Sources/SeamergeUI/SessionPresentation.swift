@@ -285,6 +285,11 @@ final class SessionPresentation {
       current: currentBlock)
   }
 
+  /// The block at the other end of the move that the current block is an end of, if it is one.
+  var otherEndOfMove: Int? {
+    currentBlock.flatMap { changes.otherEndOfMove(fromBlock: $0) }
+  }
+
   /// Makes `block` the current block in every pane and both overview bars.
   func setCurrentBlock(_ block: Int?) {
     guard block != currentBlock else { return }

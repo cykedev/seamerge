@@ -17,7 +17,7 @@ extension SessionCommand {
     case .previousConflict: return kind == .merge ? (Self.upArrow, jumps) : nil
     case .nextChange: return (Self.downArrow, changeJumps)
     case .previousChange: return (Self.upArrow, changeJumps)
-    case .firstChange, .lastChange, .compareExactly, .ignoreLineEndings,
+    case .firstChange, .lastChange, .goToOtherEndOfMove, .compareExactly, .ignoreLineEndings,
       .ignoreWhitespaceChanges, .ignoreAllWhitespace, .toggleSyntaxHighlighting, .toggleInvisibles,
       .toggleIgnoredChanges, .copyBlock:
       return nil

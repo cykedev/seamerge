@@ -17,6 +17,9 @@ struct SessionChanges {
   /// Whether the merge has a base; without one, the panes compare A with B.
   let hasBase: Bool
 
+  /// The index of each changed block among ``blocks``, by the ID of the block.
+  private let blockIndices: [Int: Int]
+
   /// The side that the changes of a comparison read from, the one on the left; `nil` for a
   /// merge.
   let origin: Role?
@@ -32,6 +35,8 @@ struct SessionChanges {
     hasBase = session.file(for: .base) != nil
     let unchangedKinds: Set<Block.Kind> = hasBase ? [.unchanged] : [.unchanged, .changedInBoth]
     blocks = session.blocks.filter { !unchangedKinds.contains($0.kind) }
+    blockIndices = Dictionary(
+      uniqueKeysWithValues: blocks.enumerated().map { ($0.element.id, $0.offset) })
   }
 
   /// The inputs that changed `block`, as the headers and the subtitle count changes.
@@ -95,6 +100,28 @@ struct SessionChanges {
     case (_, 0): return .removed
     default: return .changed
     }
+  }
+
+  /// The arrow in the gutter of `role` at `block`, if the block is an end of a move on that side:
+  /// it points to the other end, by its index among the changed blocks.
+  func moveMark(of role: Role, in block: Block) -> MoveMark? {
+    guard let move = session.move(endingIn: block, on: role, readingFrom: origin) else {
+      return nil
+    }
+    let isSource = move.source.block == block.id && move.source.role == role
+    let other = isSource ? move.destination : move.source
+    guard let otherBlock = blockIndices[other.block] else { return nil }
+    return MoveMark(
+      end: isSource ? .source : .destination, otherBlock: otherBlock,
+      otherLine: other.lines.lowerBound)
+  }
+
+  /// The index of the block at the other end of the move that the block at `index` is an end
+  /// of, on the side that moved the lines; in a merge where both sides moved lines out of or
+  /// into the block, the move of A.
+  func otherEndOfMove(fromBlock index: Int) -> Int? {
+    [Role.a, .b].lazy.compactMap { self.moveMark(of: $0, in: self.blocks[index])?.otherBlock }
+      .first
   }
 
   /// The pane that carries the mark of a conflict: the base, or B where there is no base or

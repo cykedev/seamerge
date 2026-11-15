@@ -620,6 +620,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
     return switch command.requirement {
     case .jumpTarget(let jump):
       presentation.navigation.target(of: jump) != nil
+    case .moveEnd:
+      presentation.otherEndOfMove != nil
     case .anotherPane:
       focusablePanes.count > 1
     case .anotherFile(let forward):

@@ -248,6 +248,7 @@ import Testing
       Previous Change ⌥⇧⌘↑
       First Change
       Last Change
+      Go to Other End of Move
       ---
       Next File
       Previous File

@@ -6,6 +6,9 @@ extension SessionCommand {
     /// A jump needs a block to land on.
     case jumpTarget(BlockNavigation.Jump)
 
+    /// Going to the other end of a move needs a current block that is an end of one.
+    case moveEnd
+
     /// Moving the focus needs another pane in view.
     case anotherPane
 
@@ -122,6 +125,7 @@ extension SessionCommand {
     case .copyBlock: .blockText
     case .toggleResultMaximized: .resultPane
     case .swapSides: .swappableSides
+    case .goToOtherEndOfMove: .moveEnd
     case .skipRemainingFiles: .remainingFiles
     case .save, .saveAs, .saveAndClose: .result
     case .leaveUnresolved: .waitingCaller
