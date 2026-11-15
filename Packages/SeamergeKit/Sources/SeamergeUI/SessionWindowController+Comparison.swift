@@ -99,6 +99,9 @@ extension SessionWindowController {
 
   /// Shows `session` with `result`, the result of a merge, in place of what the window shows
   /// now, with the headers of its files, as a step of undo named `name` that shows that again.
+  ///
+  /// The language of the code is recognized anew, since a file read again may start with
+  /// another first line.
   func show(_ session: Session, result: ResultState?, named name: String) {
     let previous = (presentation.changes.session, presentation.result)
     typingRun = nil
@@ -108,6 +111,8 @@ extension SessionWindowController {
         uniqueKeysWithValues: session.roles.map { role in
           (role, SideHeader(role: role, session: session, context: context))
         }))
+    detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
+    presentation.colorSyntax(as: syntaxLanguage)
     sessionDidChange()
     sessionUndoManager.registerUndo(withTarget: self) { controller in
       MainActor.assumeIsolated { controller.show(previous.0, result: previous.1, named: name) }

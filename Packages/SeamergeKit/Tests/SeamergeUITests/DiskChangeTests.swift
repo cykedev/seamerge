@@ -1,6 +1,7 @@
 import AppKit
 import GitSupport
 import MergeModel
+import SyntaxKit
 import Testing
 
 @testable import SeamergeUI
@@ -84,6 +85,20 @@ struct DiskChangeTests {
     fixture.undoManager.undo()
     #expect(fixture.text(of: .a) == Self.a)
     #expect(fixture.conflictState == .chosen)
+  }
+
+  @Test func sourceReloadedWithAnotherFirstLineIsColoredAsTheLanguageItNamesNow() async throws {
+    let fixture = try await Fixture()
+    let plain = fixture.controller.detectedLanguage
+    let firstLine = "#!/bin/zsh"
+    try Data((firstLine + "\n" + Self.b).utf8).write(to: fixture.url("b.txt"))
+
+    await fixture.controller.reloadChangedFiles()
+
+    let script = LanguageDescription(fileName: fixture.url("b.txt").path, firstLine: firstLine)
+    #expect(script != plain)
+    #expect(fixture.controller.detectedLanguage == script)
+    #expect(fixture.controller.presentation.syntax.language == script)
   }
 
   @Test func sourceReplacedAtomicallyThatLosesADecisionAsksFirstAndOnlyOnce() async throws {
