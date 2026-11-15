@@ -180,15 +180,18 @@ import Testing
     #expect(controller.collectionLayout?.fileList.tableView.numberOfRows == 6 + count)
   }
 
+  /// The change on disk comes in as the comparison reports it, handed over by the test, so that
+  /// the file read ahead stays read ahead until then, however late the system reports the files
+  /// written before.
   @Test func nextFileShowsWhatChangedOnDiskSinceItWasReadAhead() async throws {
     let folders = try SampleFolders()
     try folders.fillWithProject()
-    let collection = await FileCollection.compared(folders)
+    let comparer = FolderComparer(
+      folders: folders.pair, linkFolder: folders.folder.appending(path: "links"))
+    let collection = FileCollection(comparer: comparer)
+    collection.take(.listed(Self.files(of: comparer), waiting: 0))
+    collection.take(.finished)
     let controller = try await Windows.controller(for: collection)
-    // The system may still report the files written before the comparison; once a file
-    // written now is in the list, it has reported everything before it.
-    try folders.write("zz-marker.txt", left: nil, right: "marker\n")
-    await Self.wait(for: collection) { $0.files.contains { $0.path == "zz-marker.txt" } }
     let readme = try #require(collection.files.firstIndex { $0.path == "README.md" })
     controller.showFile(at: readme)
     await controller.fileLoad?.value
@@ -197,11 +200,7 @@ import Testing
     #expect(controller.loadedFiles.keys.contains(collection.files[next]), "Read ahead")
 
     try folders.write("{\n  \"retries\": 7\n}\n", to: folders.right.appending(path: path))
-    var changes = 0
-    await Self.wait(for: collection) { _ in
-      changes += 1
-      return changes > 1
-    }
+    collection.take(.replaced(Self.files(of: comparer)))
     controller.showNextFile(nil)
     await controller.fileLoad?.value
 
@@ -246,6 +245,12 @@ import Testing
     await controller.fileLoad?.value
 
     #expect(controller.unavailable != nil)
+  }
+
+  /// The files of the folders of `comparer` as comparing them now finds them, in the order of
+  /// the list.
+  static func files(of comparer: FolderComparer) -> [CollectedFile] {
+    comparer.pairs(at: "").map { comparer.file(for: $0, change: comparer.change(of: $0)) }
   }
 
   /// Waits until `condition` holds for `collection`, looking each time the collection changes;
