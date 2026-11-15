@@ -7,7 +7,6 @@ final class PaneScrollView: NSScrollView {
     super.init(frame: frameRect)
     hasVerticalScroller = false
     hasHorizontalScroller = false
-    autohidesScrollers = false
     borderType = .noBorder
     drawsBackground = true
     backgroundColor = Theme.backgroundColor
@@ -17,6 +16,28 @@ final class PaneScrollView: NSScrollView {
     // A find bar above the text would push its rows down against those of the neighbors.
     findBarPosition = .belowContent
     contentView.postsBoundsChangedNotifications = true
+  }
+
+  /// The style of the scrollers, which the system sets when the user changes when scroll bars
+  /// show, and once more shortly after the app starts, when it knows which pointing devices are
+  /// connected.
+  override var scrollerStyle: NSScroller.Style {
+    didSet {
+      guard scrollerStyle != oldValue else { return }
+      // The scroller takes on its new style without the size and place of its knob, and takes
+      // them only when they change: it would show the least knob at its end until the user
+      // scrolls sideways. Changing both and back hands them over.
+      if let scroller = horizontalScroller {
+        let proportion = scroller.knobProportion
+        let value = scroller.doubleValue
+        scroller.knobProportion = proportion < 1 ? 1 : 0
+        scroller.doubleValue = value < 1 ? 1 : 0
+        scroller.knobProportion = proportion
+        scroller.doubleValue = value
+      }
+      // A legacy scroller takes its height from the text, an overlay scroller lies above it.
+      superview?.needsLayout = true
+    }
   }
 
   /// Whether the scroll view is handling an event of the scroll wheel or the trackpad, during
