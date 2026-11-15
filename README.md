@@ -193,6 +193,6 @@ Seamerge is licensed under the [MIT License](LICENSE). The vendored Perforce cod
 
 ## Status and limits
 
-Seamerge 0.1.0 is the first release. It runs on macOS 27 only.
+The current release is Seamerge 0.2.0. It runs on macOS 27 only.
 
 Read [CHANGELOG.md](CHANGELOG.md) for what changed in each release, and [CONTRIBUTING.md](CONTRIBUTING.md) if you want to work on the code. The [user guide](Documentation/UserGuide.md) describes the window in more detail, and [Documentation/Architecture.md](Documentation/Architecture.md) describes how the code is organized.
