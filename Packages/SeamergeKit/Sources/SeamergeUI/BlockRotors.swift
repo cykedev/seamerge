@@ -59,9 +59,14 @@ final class BlockRotors: NSObject, @MainActor NSAccessibilityCustomRotorItemSear
         || Self.name(of: kind, at: position, among: blocks, in: presentation)
           .localizedStandardContains(filter)
     }
-    let currentPosition = searchParameters.currentItem
-      .flatMap { blocksOfItems.object(forKey: $0)?.intValue }
-      .flatMap { blocks.firstIndex(of: $0) }
+    // VoiceOver hands back the item it was given; should it hand back a copy, the item's range
+    // still tells where it is, unless blocks without rows share it.
+    let currentPosition = searchParameters.currentItem.flatMap { item in
+      blocksOfItems.object(forKey: item).flatMap { blocks.firstIndex(of: $0.intValue) }
+        ?? blocks.firstIndex {
+          pane.textRange(ofRows: pane.content.blocks[$0].rows) == item.targetRange
+        }
+    }
     let position =
       switch searchParameters.searchDirection {
       case .previous: candidates.last { $0 < currentPosition ?? blocks.count }

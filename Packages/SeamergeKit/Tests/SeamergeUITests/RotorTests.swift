@@ -55,6 +55,12 @@ import Testing
     #expect(
       Self.search(rotor, after: second, direction: .previous)?.customLabel == first.customLabel)
 
+    // An item that the rotor did not give out is found by its range.
+    let copy = NSAccessibilityCustomRotor.ItemResult(targetElement: result.documentView)
+    copy.targetRange = first.targetRange
+    #expect(Self.search(rotor, after: copy)?.customLabel == second.customLabel)
+    #expect(Self.search(rotor, after: copy, direction: .previous) == nil)
+
     controller.resolveOpenConflicts(with: [.a])
     #expect(Self.search(rotor, after: nil)?.customLabel == "Conflict 1 of 2, resolved")
   }
