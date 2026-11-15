@@ -206,6 +206,7 @@ extension SessionWindowController {
       height: size.height + max(titlebarHeight ?? 0, 0))
   }
 
-  /// The sizes of the code that Zoom In and Zoom Out step through.
-  static let fontSizes: [CGFloat] = [10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32]
+  /// The sizes of the code that Zoom In and Zoom Out step through, within the sizes that the
+  /// settings offer.
+  static let fontSizes: [CGFloat] = [9, 10, 11, 12, 13, 14, 16, 18, 20, 24]
 }

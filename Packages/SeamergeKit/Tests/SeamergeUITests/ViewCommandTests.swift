@@ -200,8 +200,21 @@ import Testing
     while controller.canPerform(.zoomOut) {
       controller.zoomOut(nil)
     }
-    #expect(controller.fontSize == 10)
+    #expect(controller.fontSize == 9)
     #expect(abs(lineAtReadingLine(of: b) - line) <= 1)
+  }
+
+  @Test func zoomStaysWithinTheSizesThatTheSettingsOffer() async throws {
+    let controller = try Windows.controller(for: try await SampleMerges.helloWorld())
+    defer { controller.window?.close() }
+    while controller.canPerform(.zoomIn) {
+      controller.zoomIn(nil)
+    }
+    #expect(controller.fontSize == UserSettings.fontSizes.upperBound)
+    while controller.canPerform(.zoomOut) {
+      controller.zoomOut(nil)
+    }
+    #expect(controller.fontSize == UserSettings.fontSizes.lowerBound)
   }
 
   @Test func goToLineExpandsItsRunAndPutsItAtTheReadingLine() async throws {
