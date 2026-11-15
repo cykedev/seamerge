@@ -885,6 +885,9 @@
     "Ignore Rules" : {
       "comment" : "VoiceOver: the table of the ignore rules in Settings."
     },
+    "Ignore rules applied" : {
+      "comment" : "Subtitle: ignore rules left out text in which the files differ."
+    },
     "Ignore Whitespace Changes" : {
       "comment" : "Compare menu command."
     },
@@ -917,6 +920,9 @@
     },
     "Later Version" : {
       "comment" : "Role: the file after the change, shown when both sides have the same name."
+    },
+    "Leave out the text that the rules in Settings match" : {
+      "comment" : "Help tag of Compare > Use Ignore Rules."
     },
     "Leave “%@” unresolved?" : {
       "comment" : "Sheet before leaving a merge unresolved that has decisions."
@@ -974,6 +980,9 @@
     },
     "Merge %@ and %@ with the base %@" : {
       "comment" : "VoiceOver: a recent merge, with the names of A, B and the base."
+    },
+    "Merges always compare all text." : {
+      "comment" : "Help tag of Compare > Use Ignore Rules in a merge, where it is unavailable."
     },
     "Merging" : {
       "comment" : "Settings: heading of the merge group."
@@ -1538,6 +1547,9 @@
     },
     "Use Base" : {
       "comment" : "Merge menu command."
+    },
+    "Use Ignore Rules" : {
+      "comment" : "Compare menu, checked while the comparison leaves out what the rules match."
     },
     "Use None" : {
       "comment" : "Merge menu command."

@@ -58,7 +58,7 @@ extension SessionCommand {
     case .compare:
       [
         [.compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace],
-        [.swapSides],
+        [.toggleIgnoreRules], [.swapSides],
       ]
     case .merge:
       [

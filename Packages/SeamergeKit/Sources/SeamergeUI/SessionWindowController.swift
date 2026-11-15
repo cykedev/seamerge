@@ -150,6 +150,10 @@ public final class SessionWindowController: NSWindowController {
   /// Whether the files are being compared anew.
   var isSwitchingComparison = false
 
+  /// Whether a comparison of two files leaves out the text that the ignore rules of Settings
+  /// match; every window starts with it, since whoever writes rules wants them.
+  var usesIgnoreRules = true
+
   /// Whether the toolbar says that the files are being compared anew, which it does once the
   /// comparison has taken a moment.
   var showsComparisonProgress = false
@@ -334,7 +338,7 @@ public final class SessionWindowController: NSWindowController {
     }
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: arrangement,
-      startMode: settings.comparisonMode)
+      startMode: settings.comparisonMode, ignoredDifferences: presentation.ignoredDifferences)
     saving = presentation.result.map {
       ResultSaving(result: $0, session: session, url: context.resultURL)
     }
@@ -391,6 +395,7 @@ public final class SessionWindowController: NSWindowController {
     observeStepsOfUndo()
     observeFooterVisibility()
     observeTextSettings()
+    observeIgnoreRules()
     setUpCollection()
     stateDidChange()
     watchFiles()
@@ -454,7 +459,7 @@ public final class SessionWindowController: NSWindowController {
   func sessionDidChange() {
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: presentation.arrangement,
-      startMode: settings.comparisonMode)
+      startMode: settings.comparisonMode, ignoredDifferences: presentation.ignoredDifferences)
     window?.title = summary.title
     window?.setAccessibilityTitle([summary.title, summary.fullSubtitle].joined(separator: ", "))
     updateSubtitle()
@@ -579,6 +584,13 @@ extension SessionWindowController: NSUserInterfaceValidations {
       ].contains(command) {
         menuItem.state = isSwitchedOn(command) ? .on : .off
       }
+      if command == .toggleIgnoreRules {
+        // The window's own state, as with every checked item, also while the command can have
+        // no effect; a merge never uses the rules.
+        menuItem.state =
+          usesIgnoreRules && presentation.changes.session.kind == .diff ? .on : .off
+        menuItem.toolTip = ignoreRulesHelp
+      }
       if let alternateTitle = command.alternateTitle {
         menuItem.title = isSwitchedOn(command) ? alternateTitle : command.title
       }
@@ -643,6 +655,9 @@ extension SessionWindowController: NSUserInterfaceValidations {
       presentation.search.showsReplaceField && presentation.search.hasFoundMatches
     case .noComparisonUnderWay:
       !isSwitchingComparison
+    case .ignoreRules:
+      presentation.changes.session.kind == .diff && hasEffectiveIgnoreRule
+        && !isSwitchingComparison
     case .basePane:
       presentation.changes.hasBase && !layout.maximizesResult
     case .collapsedRows:

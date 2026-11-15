@@ -17,6 +17,41 @@ extension SessionWindowController {
   /// does nothing.
   public func switchComparison(to options: ComparisonOptions) async {
     guard options != comparisonOptions, !isSwitchingComparison else { return }
+    await whileComparingAnew {
+      let switched: Session
+      do throws(MergeModelError) {
+        switched = try await presentation.changes.session.recomputed(options: options)
+      } catch {
+        await comparisonFailed(error)
+        return
+      }
+      guard let result = presentation.result else {
+        show(switched, result: nil, named: Self.switchName)
+        return
+      }
+      let modeSwitch = result.document.planSwitching(to: switched, text: result.text)
+      if modeSwitch.discardedDecisionCount > 0 {
+        guard let window,
+          await prompts.confirmDiscarding(modeSwitch.discardedDecisionCount, in: window)
+        else { return }
+      }
+      var document = result.document
+      _ = document.apply(modeSwitch.plan, replacedTexts: [result.text])
+      show(
+        document.session,
+        result: ResultState(
+          document: document, text: modeSwitch.plan.replacements.map(\.text).joined()),
+        named: Self.switchName)
+    }
+  }
+
+  /// Carries out `body`, which compares the files anew, as the one comparison under way: the
+  /// toolbar says so once it takes a moment, and afterwards the window looks at what changed
+  /// meanwhile, its files and the ignore rules of Settings.
+  ///
+  /// - Precondition: No other comparison is under way.
+  func whileComparingAnew(_ body: () async -> Void) async {
+    precondition(!isSwitchingComparison, "One comparison runs at a time")
     isSwitchingComparison = true
     let progressTimer = Timer(timeInterval: Self.progressDelay, repeats: false) { [weak self] _ in
       // Timers of the main run loop fire on the main thread.
@@ -26,38 +61,13 @@ extension SessionWindowController {
       }
     }
     RunLoop.main.add(progressTimer, forMode: .common)
-    defer {
-      progressTimer.invalidate()
-      isSwitchingComparison = false
-      showsComparisonProgress = false
-      stateDidChange()
-      lookAtFilesAgainIfAsked()
-    }
-    let session = presentation.changes.session
-    let switched: Session
-    do {
-      switched = try await session.recomputed(options: options)
-    } catch {
-      await comparisonFailed(error)
-      return
-    }
-    guard let result = presentation.result else {
-      show(switched, result: nil, named: Self.switchName)
-      return
-    }
-    let modeSwitch = result.document.planSwitching(to: switched, text: result.text)
-    if modeSwitch.discardedDecisionCount > 0 {
-      guard let window,
-        await prompts.confirmDiscarding(modeSwitch.discardedDecisionCount, in: window)
-      else { return }
-    }
-    var document = result.document
-    _ = document.apply(modeSwitch.plan, replacedTexts: [result.text])
-    show(
-      document.session,
-      result: ResultState(
-        document: document, text: modeSwitch.plan.replacements.map(\.text).joined()),
-      named: Self.switchName)
+    await body()
+    progressTimer.invalidate()
+    isSwitchingComparison = false
+    showsComparisonProgress = false
+    stateDidChange()
+    lookAtFilesAgainIfAsked()
+    followIgnoreRules()
   }
 
   /// Compares lines byte for byte.
@@ -98,12 +108,14 @@ extension SessionWindowController {
   }
 
   /// Shows `session` with `result`, the result of a merge, in place of what the window shows
-  /// now, with the headers of its files, as a step of undo named `name` that shows that again.
+  /// now, with the headers of its files, as a step of undo named `name` that shows that again,
+  /// or as no step of undo without a name.
   ///
-  /// The language of the code is recognized anew, since a file read again may start with
-  /// another first line.
-  func show(_ session: Session, result: ResultState?, named name: String) {
-    let previous = (presentation.changes.session, presentation.result)
+  /// Undo brings back whether the window used ignore rules as well, and then compares anew if
+  /// the rules of Settings changed meanwhile. The language of the code is recognized anew, since
+  /// a file read again may start with another first line.
+  func show(_ session: Session, result: ResultState?, named name: String?) {
+    let previous = (presentation.changes.session, presentation.result, usesIgnoreRules)
     typingRun = nil
     presentation.show(session, result: result)
     presentation.show(
@@ -114,17 +126,23 @@ extension SessionWindowController {
     detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
     presentation.colorSyntax(as: syntaxLanguage)
     sessionDidChange()
-    sessionUndoManager.registerUndo(withTarget: self) { controller in
-      MainActor.assumeIsolated { controller.show(previous.0, result: previous.1, named: name) }
+    if let name {
+      sessionUndoManager.registerUndo(withTarget: self) { controller in
+        MainActor.assumeIsolated {
+          controller.show(previous.0, result: previous.1, named: name)
+          controller.usesIgnoreRules = previous.2
+          controller.followIgnoreRules()
+        }
+      }
+      sessionUndoManager.setActionName(name)
     }
-    sessionUndoManager.setActionName(name)
     showResultFormat()
     watchFiles()
     stateDidChange()
   }
 
   /// What Undo calls the switch to another comparison mode.
-  private static var switchName: String {
+  static var switchName: String {
     String(
       localized: "Change Comparison", bundle: .module,
       comment: "Undo menu: the switch to another comparison mode or merge strategy.")

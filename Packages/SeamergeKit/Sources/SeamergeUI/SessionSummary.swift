@@ -20,24 +20,34 @@ struct SessionSummary: Equatable {
   let folders: String?
 
   /// Summarizes `changes` in `context`, with the sides of a comparison where `arrangement` puts
-  /// them, and names the comparison mode where it differs from `startMode`, that of a new window.
+  /// them, and names the comparison mode where it differs from `startMode`, that of a new window,
+  /// and the ignore rules if they passed over a difference, as `ignoredDifferences` tell.
   init(
     changes: SessionChanges, context: SessionContext, arrangement: PaneArrangement,
-    startMode: ComparisonMode
+    startMode: ComparisonMode, ignoredDifferences: IgnoredDifferences?
   ) {
     let session = changes.session
-    let modeNote = Self.modeNote(for: session.options.mode, startMode: startMode)
+    // A rule that empties a whole file leaves no change; the note says why.
+    let rulesNote =
+      ignoredDifferences?.includesDifferencesThatRulesIgnore == true
+      ? String(
+        localized: "Ignore rules applied", bundle: .module,
+        comment: "Subtitle: ignore rules left out text in which the files differ.")
+      : nil
+    let modeNote = [Self.modeNote(for: session.options.mode, startMode: startMode), rulesNote]
+      .compactMap(\.self).joined(separator: Self.separator)
+    let modeNotes = modeNote.isEmpty ? nil : modeNote
     if arrangement.showsResult {
       let file = session.file(for: .b)
       title =
         context.resultURL?.lastPathComponent ?? file?.url?.lastPathComponent ?? file?.label ?? ""
-      self.changes = [Self.changeCounts(of: changes), modeNote].compactMap(\.self)
+      self.changes = [Self.changeCounts(of: changes), modeNotes].compactMap(\.self)
         .joined(separator: Self.separator)
     } else {
       title =
         context.difftool?.path
         ?? Self.title(of: arrangement.sourceRoles.compactMap(session.file(for:)))
-      self.changes = modeNote ?? ""
+      self.changes = modeNote
     }
     operation = context.git?.rebaseProgress.map { progress in
       String(

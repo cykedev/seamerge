@@ -56,6 +56,10 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Compares lines without any of their whitespace.
   case ignoreAllWhitespace
 
+  /// Leaves out the text that the ignore rules of Settings match from the comparison of the
+  /// window, or compares all text again.
+  case toggleIgnoreRules
+
   /// Puts the two files of a comparison the other way round.
   case swapSides
 
@@ -238,6 +242,10 @@ public enum SessionCommand: CaseIterable, Sendable {
         localized: "Ignore Whitespace Changes", bundle: .module, comment: "Compare menu command.")
     case .ignoreAllWhitespace:
       String(localized: "Ignore All Whitespace", bundle: .module, comment: "Compare menu command.")
+    case .toggleIgnoreRules:
+      String(
+        localized: "Use Ignore Rules", bundle: .module,
+        comment: "Compare menu, checked while the comparison leaves out what the rules match.")
     case .swapSides:
       String(
         localized: "Swap Sides", bundle: .module,
@@ -505,6 +513,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Treat “a  b” and “ab” as equal", bundle: .module,
         comment: "Help tag of Compare > Ignore All Whitespace, with an example.")
+    case .toggleIgnoreRules:
+      String(
+        localized: "Leave out the text that the rules in Settings match", bundle: .module,
+        comment: "Help tag of Compare > Use Ignore Rules.")
     case .swapSides:
       String(
         localized: "Show the right file on the left and the left file on the right",
@@ -571,6 +583,7 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .ignoreLineEndings: #selector(SessionWindowController.ignoreLineEndings(_:))
     case .ignoreWhitespaceChanges: #selector(SessionWindowController.ignoreWhitespaceChanges(_:))
     case .ignoreAllWhitespace: #selector(SessionWindowController.ignoreAllWhitespace(_:))
+    case .toggleIgnoreRules: #selector(SessionWindowController.toggleIgnoreRules(_:))
     case .swapSides: #selector(SessionWindowController.swapSides(_:))
     case .toggleBase: #selector(SessionWindowController.toggleBase(_:))
     case .toggleResultMaximized: #selector(SessionWindowController.toggleResultMaximized(_:))

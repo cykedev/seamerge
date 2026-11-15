@@ -136,8 +136,9 @@ extension SessionWindowController {
     }
   }
 
-  /// The comparison of `files` in the kind and with the options of `session`, or `nil` if they
-  /// cannot be compared, such as after one became binary; the window then keeps what it shows.
+  /// The comparison of `files` in the kind and with the options and ignore rules of `session`,
+  /// or `nil` if they cannot be compared, such as after one became binary; the window then keeps
+  /// what it shows.
   private func compare(_ files: [Role: SourceFile], as session: Session) async -> Session? {
     guard let a = files[.a], let b = files[.b] else { return nil }
     do {
@@ -145,7 +146,8 @@ extension SessionWindowController {
       case .merge:
         return try await Session.merge(base: files[.base], a: a, b: b, options: session.options)
       case .diff:
-        return try await Session.diff(old: a, new: b, mode: session.options.mode)
+        return try await Session.diff(
+          old: a, new: b, mode: session.options.mode, ignoring: session.ignoreRules)
       }
     } catch {
       Self.logger.notice("The changed files cannot be compared: \(error, privacy: .public)")

@@ -107,7 +107,8 @@ import Testing
     let window = try #require(controller.window)
     let summary = SessionSummary(
       changes: controller.presentation.changes, context: context,
-      arrangement: controller.presentation.arrangement, startMode: .windowDefault)
+      arrangement: controller.presentation.arrangement, startMode: .windowDefault,
+      ignoredDifferences: nil)
     window.setContentSize(CGSize(width: 1280, height: 800))
     #expect(window.subtitle == summary.fullSubtitle)
     window.setContentSize(CGSize(width: 900, height: 800))

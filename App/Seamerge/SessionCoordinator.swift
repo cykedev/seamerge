@@ -145,7 +145,8 @@ final class SessionCoordinator {
           mode: settings.comparisonMode)
       } else {
         try await Session.loadDiff(
-          old: file(comparison.left), new: file(comparison.right), mode: settings.comparisonMode)
+          old: file(comparison.left), new: file(comparison.right), mode: settings.comparisonMode,
+          ignoring: settings.ignoreRules)
       }
     let controller = SessionWindowController(
       session: session, context: SessionContext(), undoManager: UndoManager(), settings: settings)
@@ -450,7 +451,8 @@ final class SessionCoordinator {
       let (old, new) = (file(diff.left, diff.leftLabel), file(diff.right, diff.rightLabel))
       let context = SessionContext(difftool: DifftoolContext(diff))
       do {
-        let session = try await Session.loadDiff(old: old, new: new, mode: settings.comparisonMode)
+        let session = try await Session.loadDiff(
+          old: old, new: new, mode: settings.comparisonMode, ignoring: settings.ignoreRules)
         return SessionWindowController(
           session: session, context: context, undoManager: UndoManager(), settings: settings)
       } catch {

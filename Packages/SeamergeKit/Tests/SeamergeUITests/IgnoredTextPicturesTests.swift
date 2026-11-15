@@ -4,8 +4,9 @@ import Testing
 
 @testable import SeamergeUI
 
-/// Draws the page Ignored Text of Settings for the visual review: in every look, with a rule
-/// selected and tried on a sample, and with a long and an invalid pattern.
+/// Draws the page Ignored Text of Settings for the visual review, in every look, with a rule
+/// selected and tried on a sample and with a long and an invalid pattern; and a comparison that
+/// uses the rules.
 @MainActor
 @Suite(.serialized, .timeLimit(.minutes(1)))
 struct IgnoredTextPicturesTests {
@@ -26,6 +27,25 @@ struct IgnoredTextPicturesTests {
   @Test(arguments: [Look.light, .dark])
   func ignoredTextWithoutOwnRulesIsPictured(look: Look) async throws {
     try await picture(settings: .private(), look: look, named: "ignored-text-empty-\(look.name)")
+  }
+
+  /// A comparison of two logs whose times the rule for timestamps leaves out, with Show Ignored
+  /// Changes on: the subtitle names the rules, and the times show as places of ignored changes.
+  @Test(arguments: Look.all)
+  func comparisonWithIgnoreRulesIsPictured(look: Look) async throws {
+    let settings = UserSettings.private()
+    settings.enabledBuiltInIgnoreRules = [.timestamps]
+    let session = try await Session.diff(
+      old: SourceFile(bytes: Data(IgnoreRulesWindowTests.old.utf8), label: "build.log"),
+      new: SourceFile(bytes: Data(IgnoreRulesWindowTests.new.utf8), label: "build.log"),
+      mode: .windowDefault, ignoring: settings.ignoreRules)
+    try Windows.picture(
+      session, context: SessionContext(), look: look,
+      options: DisplayOptions(increasesContrast: look.increasesContrast), settings: settings,
+      size: CGSize(width: 900, height: 360), named: "comparison-ignore-rules-\(look.name)"
+    ) { controller in
+      controller.perform(.toggleIgnoredChanges)
+    }
   }
 
   @Test func generalPageIsPictured() throws {

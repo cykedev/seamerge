@@ -99,7 +99,8 @@ import Testing
       options: ComparisonOptions(mode: .windowDefault))
     let summary = SessionSummary(
       changes: SessionChanges(session: inDefaultMode), context: .init(),
-      arrangement: PaneArrangement(session: inDefaultMode), startMode: .windowDefault)
+      arrangement: PaneArrangement(session: inDefaultMode), startMode: .windowDefault,
+      ignoredDifferences: nil)
     #expect(summary.changes == "3 changes from A · 1 from B")
     #expect(ComparisonMode.windowDefault == .ignoreWhitespaceAmount)
   }
@@ -110,7 +111,8 @@ import Testing
     let other = try await session.recomputed(options: ComparisonOptions(mode: mode))
     let summary = SessionSummary(
       changes: SessionChanges(session: other), context: .init(),
-      arrangement: PaneArrangement(session: other), startMode: .windowDefault)
+      arrangement: PaneArrangement(session: other), startMode: .windowDefault,
+      ignoredDifferences: nil)
     let note =
       switch mode {
       case .exact: "Compared exactly"
@@ -126,7 +128,8 @@ import Testing
     let (session, context) = try await scenario.load()
     let summary = SessionSummary(
       changes: SessionChanges(session: session), context: context,
-      arrangement: PaneArrangement(session: session), startMode: .windowDefault)
+      arrangement: PaneArrangement(session: session), startMode: .windowDefault,
+      ignoredDifferences: nil)
     let font = NSFont.preferredFont(forTextStyle: .subheadline)
     #expect(summary.fullSubtitle == "1 change from A · 1 from B · Rebase onto main · Commit 2 of 3")
     #expect(summary.subtitle(fittingWidth: 1000, font: font) == summary.fullSubtitle)
@@ -142,7 +145,8 @@ import Testing
     let (session, context) = try await scenario.load()
     let summary = SessionSummary(
       changes: SessionChanges(session: session), context: context,
-      arrangement: PaneArrangement(session: session), startMode: .windowDefault)
+      arrangement: PaneArrangement(session: session), startMode: .windowDefault,
+      ignoredDifferences: nil)
     #expect(summary.fullSubtitle == "1 change from A · 1 from B · 11 more files with conflicts")
   }
 

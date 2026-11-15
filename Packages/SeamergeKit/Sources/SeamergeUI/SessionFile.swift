@@ -39,17 +39,18 @@ extension Session {
   }
 
   /// Reads the files and compares the older file `old` with the newer file `new` in the
-  /// comparison mode `mode`, away from the main actor.
+  /// comparison mode `mode`, without the text that the enabled rules of `rules` match, away from
+  /// the main actor.
   ///
   /// - Throws: ``SessionLoadingError`` with the file that cannot be read or is not text, or why
   ///   the files cannot be compared.
   @concurrent
   public static func loadDiff(
-    old: SessionFile, new: SessionFile, mode: ComparisonMode
+    old: SessionFile, new: SessionFile, mode: ComparisonMode, ignoring rules: [IgnoreRule] = []
   ) async throws(SessionLoadingError) -> Session {
     let (oldFile, newFile) = (try read(old), try read(new))
     do {
-      return try await diff(old: oldFile, new: newFile, mode: mode)
+      return try await diff(old: oldFile, new: newFile, mode: mode, ignoring: rules)
     } catch {
       throw SessionLoadingError(error, files: [.a: old, .b: new])
     }

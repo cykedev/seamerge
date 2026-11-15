@@ -34,6 +34,10 @@ extension SessionCommand {
     /// Choosing a comparison mode needs no comparison under way.
     case noComparisonUnderWay
 
+    /// Using ignore rules needs a comparison of two files, not a merge, a rule in Settings that
+    /// is switched on and can take effect, and no comparison under way.
+    case ignoreRules
+
     /// Hiding or showing the base needs a base and the panes above the result in view.
     case basePane
 
@@ -130,6 +134,7 @@ extension SessionCommand {
     case .useSelectionForFind: .search(.setSearchString)
     case .compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace:
       .noComparisonUnderWay
+    case .toggleIgnoreRules: .ignoreRules
     case .toggleBase: .basePane
     case .showAllLines: .collapsedRows
     case .collapseUnchangedLines: .collapsibleRows

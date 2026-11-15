@@ -218,7 +218,8 @@ import Testing
     let controller = try await Windows.controller(for: collection)
     let next = try #require(controller.neighborIndex(forward: true))
     let file = collection.files[next]
-    let loaded = try await SessionWindowController.load(file, mode: .windowDefault)
+    let loaded = try await SessionWindowController.load(
+      file, mode: .windowDefault, ignoring: [])
     let generation = controller.diskGeneration
 
     collection.take(.replaced(collection.files))

@@ -265,6 +265,8 @@ import Testing
       Ignore Whitespace Changes
       Ignore All Whitespace
       ---
+      Use Ignore Rules
+      ---
       Swap Sides ⌥⌘S
     Merge ▸
       Use A ⌘1

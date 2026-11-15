@@ -48,8 +48,8 @@ extension SessionWindowController {
   }
 
   /// What a window of `collection` opens with: its first file that the list shows, read in the
-  /// comparison mode of `settings`, or the empty comparison of its two folders while no such file
-  /// is known.
+  /// comparison mode and with the ignore rules of `settings`, or the empty comparison of its two
+  /// folders while no such file is known.
   ///
   /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the headers can be made.
   static func opening(
@@ -70,7 +70,7 @@ extension SessionWindowController {
     difftool.filePosition = FilePosition(
       number: 1, count: max(collection.expectedCount ?? 0, listed.count))
     return (
-      try await load(file, mode: settings.comparisonMode),
+      try await load(file, mode: settings.comparisonMode, ignoring: settings.ignoreRules),
       SessionContext(difftool: difftool, folders: collection.folders)
     )
   }
@@ -381,16 +381,20 @@ extension SessionWindowController {
     pane.scroll(toPlaceRowAtReadingLine: place.row, fraction: place.fraction, motion: .cut)
   }
 
-  /// The comparison of `file` in the comparison mode of the window, from those read already or
-  /// read now; `nil` if it cannot even be shown as a file that cannot be compared.
+  /// The comparison of `file` in the comparison mode and with the ignore rules of the window,
+  /// from those read already or read now; `nil` if it cannot even be shown as a file that cannot
+  /// be compared.
   private func loaded(_ file: CollectedFile) async -> LoadedFile? {
     let mode = comparisonOptions.mode
-    if let loaded = loadedFiles[file], loaded.session.options.mode == mode {
+    let rules = requestedIgnoreRules
+    if let loaded = loadedFiles[file], loaded.session.options.mode == mode,
+      loaded.unavailable != nil || Self.haveTheSameEffect(loaded.session.ignoreRules, rules)
+    {
       return loaded
     }
     let generation = diskGeneration
     do {
-      let loaded = try await Self.load(file, mode: mode)
+      let loaded = try await Self.load(file, mode: mode, ignoring: rules)
       keep(loaded, of: file, readIn: generation)
       return loaded
     } catch {
@@ -419,17 +423,19 @@ extension SessionWindowController {
     }
   }
 
-  /// Reads both sides of `file` and compares them in `mode`; a file that cannot be compared,
+  /// Reads both sides of `file` and compares them in `mode` without the text that the enabled
+  /// rules of `rules` match; a file that cannot be compared,
   /// such as an image, gets an empty comparison that names it, and the reason.
   ///
   /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the empty comparison can be
   ///   made.
   static func load(
-    _ file: CollectedFile, mode: ComparisonMode
+    _ file: CollectedFile, mode: ComparisonMode, ignoring rules: [IgnoreRule]
   ) async throws(SessionLoadingError) -> LoadedFile {
     do {
       return LoadedFile(
-        session: try await Session.loadDiff(old: file.old, new: file.new, mode: mode),
+        session: try await Session.loadDiff(
+          old: file.old, new: file.new, mode: mode, ignoring: rules),
         unavailable: nil)
     } catch {
       let unavailable = UnavailableComparison(old: file.old, new: file.new, reason: error)
