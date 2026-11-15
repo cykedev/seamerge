@@ -1,6 +1,89 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ is a link to %@. Seamerge doesn’t replace it." : {
+      "comment" : "Install the seamerge Command: a link of someone else is where the link goes.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is a link to %2$@. Seamerge doesn’t replace it."
+          }
+        }
+      }
+    },
+    "Adds a link at %@ so that you can compare files in Terminal, for example seamerge old.txt new.txt. macOS asks for an administrator’s name and password." : {
+      "comment" : "Install the seamerge Command: what installing does; the path of the link."
+    },
+    "Another file is at %@. Seamerge doesn’t replace it." : {
+      "comment" : "Install the seamerge Command: a file of someone else is where the link goes."
+    },
+    "Another file is in the way." : {
+      "comment" : "Install the seamerge Command: a file appeared where the link goes."
+    },
+    "Command" : {
+      "comment" : "VoiceOver: the command to type in Install the seamerge Command."
+    },
+    "Copy the command to paste it into Terminal" : {
+      "comment" : "Tooltip of the button Copy in Install the seamerge Command."
+    },
+    "Homebrew installed the seamerge command." : {
+      "comment" : "Install the seamerge Command: Homebrew made the link."
+    },
+    "If Terminal doesn’t find seamerge, add %@ to the PATH of your shell." : {
+      "comment" : "Install the seamerge Command: below the commands; the folder of the link."
+    },
+    "Install" : {
+      "comment" : "Install the seamerge Command: the button that makes the link."
+    },
+    "Install the seamerge Command" : {
+      "comment" : "Install the seamerge Command: the title of the offer."
+    },
+    "macOS didn’t allow the change." : {
+      "comment" : "Install the seamerge Command: the dialog for the password was cancelled."
+    },
+    "OK" : {
+      "comment" : "Install the seamerge Command: the button that closes the sheet."
+    },
+    "Seamerge wants to install the seamerge command in %@." : {
+      "comment" : "The dialog of macOS that asks for an administrator's password; a folder."
+    },
+    "Seamerge wants to remove the seamerge command from %@." : {
+      "comment" : "The dialog of macOS that asks for an administrator's password; a folder."
+    },
+    "Seamerge wants to update the seamerge command in %@." : {
+      "comment" : "The dialog of macOS that asks for an administrator's password; a folder."
+    },
+    "Show Command" : {
+      "comment" : "Install the seamerge Command: the triangle that shows the command to type."
+    },
+    "The link couldn’t be changed." : {
+      "comment" : "Install the seamerge Command: changing the link failed for another reason."
+    },
+    "The seamerge Command Is Installed" : {
+      "comment" : "Install the seamerge Command: the title once the command is installed."
+    },
+    "The seamerge command is installed." : {
+      "comment" : "VoiceOver: the link of the command was made or updated."
+    },
+    "The seamerge command is removed." : {
+      "comment" : "VoiceOver: the link of the command was removed."
+    },
+    "The seamerge command points to a copy of Seamerge that has moved. Updating points it to this copy. macOS asks for an administrator’s name and password." : {
+      "comment" : "Install the seamerge Command: the link names another copy of the app."
+    },
+    "Update" : {
+      "comment" : "Install the seamerge Command: the button that points the link to this copy."
+    },
+    "Update the seamerge Command" : {
+      "comment" : "Install the seamerge Command: the title when the link names a moved copy."
+    },
+    "Waiting for macOS" : {
+      "comment" : "VoiceOver: the change waits for the dialog of macOS that asks for a password."
+    },
+    "You can compare files in Terminal, for example seamerge old.txt new.txt. Removing deletes the link at %@. macOS asks for an administrator’s name and password." : {
+      "comment" : "Install the seamerge Command: what removing does; the path of the link."
+    },
     "“%@” can’t be saved in %@." : {
       "comment" : "Sheet: the result holds characters the encoding lacks, such as in ISO 8859-1.",
       "localizations" : {
