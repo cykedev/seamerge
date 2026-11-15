@@ -449,7 +449,7 @@ public final class PaneView: NSView {
     textView.setFrameSize(
       CGSize(
         width: visibleWidth + range,
-        height: max(CGFloat(displayRows.lineCount) * rowHeight, clipView.bounds.height)))
+        height: max(textView.rowsHeight, clipView.bounds.height)))
     textDidScroll()
   }
 

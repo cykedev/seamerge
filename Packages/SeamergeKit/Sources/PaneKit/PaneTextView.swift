@@ -545,7 +545,19 @@ final class PaneTextView: NSTextView {
     }
   }
 
+  /// The height of the rows, screen lines of wrapped rows and bars of collapsed runs included.
+  var rowsHeight: CGFloat {
+    CGFloat(displayRows.lineCount) * theme.rowHeight
+  }
+
+  /// Takes `newSize`, but never less high than the rows.
+  ///
+  /// The pane sets the size of the view as it lays itself out. The view also fits itself to its
+  /// clip view whenever that changes its size, as it does when the find bar opens or closes
+  /// below the text; that would cut the text down to the height of the clip view, and nothing
+  /// below it could be scrolled to.
   override func setFrameSize(_ newSize: NSSize) {
+    let newSize = NSSize(width: newSize.width, height: max(newSize.height, rowsHeight))
     let widthChanged = newSize.width != frame.width
     super.setFrameSize(newSize)
     // The fragments in view lay out again, so that their rendering surfaces take the new width;
