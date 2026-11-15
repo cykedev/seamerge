@@ -244,6 +244,26 @@ public final class PaneView: NSView {
     textView.grid.row(containingOffset: offset)
   }
 
+  /// The range of the text of `rows` in the document view, without the line feed of the last,
+  /// such as VoiceOver moves to; an empty range at the start of the first row if they hold no
+  /// text.
+  ///
+  /// - Precondition: The rows lie within the rows of the content.
+  public func textRange(ofRows rows: Range<Int>) -> NSRange {
+    let grid = textView.grid
+    precondition(rows.upperBound <= grid.rowCount, "Rows reach beyond the \(grid.rowCount) rows")
+    guard rows.lowerBound < grid.rowCount else {
+      return NSRange(location: grid.textLength, length: 0)
+    }
+    let start = grid.offsets(ofRow: rows.lowerBound).lowerBound
+    guard let last = rows.last else { return NSRange(location: start, length: 0) }
+    let lastRow = grid.offsets(ofRow: last)
+    let text = textView.string as NSString
+    let endsWithLineFeed = !lastRow.isEmpty && text.character(at: lastRow.upperBound - 1) == 10
+    let end = max(start, lastRow.upperBound - (endsWithLineFeed ? 1 : 0))
+    return NSRange(location: start, length: end - start)
+  }
+
   /// The narrowest the pane gets: room for the gutter, a short line of code and the overview
   /// bar, so that its neighbors and the dividers between them stay usable.
   public var minimumWidth: CGFloat {

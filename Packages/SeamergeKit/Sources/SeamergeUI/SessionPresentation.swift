@@ -78,6 +78,9 @@ final class SessionPresentation {
     didSet { decisionColumn?.navigatesWithKeyboard = displayOptions.navigatesWithKeyboard }
   }
 
+  /// The rotors of VoiceOver through the conflicts and the changes, which every pane offers.
+  private var blockRotors: BlockRotors?
+
   /// The observer of the selection of the result, which makes the block of the insertion point
   /// current.
   private var selectionObserver: (any NSObjectProtocol)?
@@ -170,6 +173,11 @@ final class SessionPresentation {
     connectPanes()
     syntax.onLexed = { [weak self] in self?.showSyntax() }
     showSession()
+    let blockRotors = BlockRotors(presentation: self)
+    self.blockRotors = blockRotors
+    for pane in allPanes {
+      pane.documentView.setAccessibilityCustomRotors(blockRotors.rotors)
+    }
     if let resultPane = layout.resultPane {
       resultPane.editingDelegate = self
       selectionObserver = NotificationCenter.default.addObserver(

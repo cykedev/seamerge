@@ -441,6 +441,12 @@
     "Comparison" : {
       "comment" : "The choice of the comparison mode: a toolbar item and the pop-up button of the footer."
     },
+    "Conflict %lld of %lld, open" : {
+      "comment" : "VoiceOver: an item of the rotor of conflicts that awaits a decision."
+    },
+    "Conflict %lld of %lld, resolved" : {
+      "comment" : "VoiceOver: an item of the rotor of conflicts that was decided."
+    },
     "Conflicts" : {
       "comment" : "Toolbar items: the count of the open conflicts and the buttons that go through them."
     },
