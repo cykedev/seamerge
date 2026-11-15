@@ -302,11 +302,46 @@ struct AppDelegateTests {
     #expect(delegate.shortcutOverviewWindowController?.window === window)
   }
 
+  @Test func commandLineToolShowsItsSheetOnCompareFilesAndIsNamedByWhatItOffers() throws {
+    let sandbox = try AppSandbox()
+    let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
+    let item = NSMenuItem(
+      title: "", action: #selector(AppDelegate.showCommandLineTool(_:)), keyEquivalent: "")
+    #expect(delegate.validateMenuItem(item))
+    #expect(item.title == "Install Command Line Tool…")
+
+    delegate.showCommandLineTool(item)
+
+    let window = try #require(delegate.compareFilesWindowController?.window)
+    defer { window.close() }
+    let sheet = try #require(window.attachedSheet)
+    #expect(window.isVisible)
+    #expect(sheet.accessibilityTitle() == "Install the seamerge Command")
+    #expect(!delegate.validateMenuItem(item))
+    let gitItem = NSMenuItem(
+      title: "", action: #selector(AppDelegate.showGitIntegration(_:)), keyEquivalent: "")
+    #expect(!delegate.validateMenuItem(gitItem))
+    sheet.windowController?.cancelOperation(nil)
+    #expect(window.attachedSheet == nil)
+    #expect(delegate.validateMenuItem(item))
+    #expect(delegate.validateMenuItem(gitItem))
+
+    try FileManager.default.createDirectory(
+      at: sandbox.folder.appending(path: "bin"), withIntermediateDirectories: true)
+    try FileManager.default.createSymbolicLink(
+      at: sandbox.folder.appending(path: "bin/seamerge"),
+      withDestinationURL: Bundle.main.bundleURL.appending(path: "Contents/Helpers/seamerge"))
+
+    #expect(delegate.validateMenuItem(item))
+    #expect(item.title == "Remove Command Line Tool…")
+  }
+
   private func makeDelegate(in sandbox: AppSandbox, arguments: [String]) -> AppDelegate {
     AppDelegate(
       arguments: arguments, defaults: sandbox.defaults, socketURL: sandbox.socketURL,
       collectionCache: sandbox.collectionCache, presenter: sandbox.presenter,
       integrationStore: sandbox.integrationStore,
+      commandLineTool: sandbox.commandLineTool,
       makeSoftwareUpdater: { _ in SoftwareUpdaterDouble() })
   }
 }

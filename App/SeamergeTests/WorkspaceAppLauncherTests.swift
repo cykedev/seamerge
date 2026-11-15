@@ -37,6 +37,40 @@ struct WorkspaceAppLauncherTests {
         .standardizedFileURL)
   }
 
+  @Test(.timeLimit(.minutes(1))) func helperOfTheBuiltAppRunsThroughALinkElsewhere() throws {
+    let folder = FileManager.default.temporaryDirectory.appending(
+      path: "Launcher-\(UUID().uuidString)/usr local/bin", directoryHint: .isDirectory)
+    defer {
+      do {
+        try FileManager.default.removeItem(at: folder.deletingLastPathComponent())
+      } catch {
+        Issue.record(error, "The folder of the test could not be removed")
+      }
+    }
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    let app = Bundle(for: AppDelegate.self).bundleURL.deletingLastPathComponent()
+      .appending(path: "Seamerge.app")
+    let link = folder.appending(path: "seamerge")
+    try FileManager.default.createSymbolicLink(
+      at: link, withDestinationURL: app.appending(path: "Contents/Helpers/seamerge"))
+    let process = Process()
+    process.executableURL = link
+    process.arguments = ["--version"]
+    let output = Pipe()
+    process.standardOutput = output
+    process.standardInput = FileHandle.nullDevice
+
+    try process.run()
+    let printed = String(
+      decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+    process.waitUntilExit()
+
+    let version = try #require(
+      Bundle(url: app)?.infoDictionary?["CFBundleShortVersionString"] as? String)
+    #expect(process.terminationStatus == 0)
+    #expect(printed.contains(version))
+  }
+
   @Test(.timeLimit(.minutes(1))) func waitingForAProcessThatEndsSaysItEnded() async throws {
     let process = try Self.sleep(seconds: "0.2")
     #expect(

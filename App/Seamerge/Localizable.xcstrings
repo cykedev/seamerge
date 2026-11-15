@@ -67,6 +67,9 @@
     "Hide Seamerge": {
       "comment": "App menu."
     },
+    "Install Command Line Tool…": {
+      "comment": "App menu: put the seamerge command into Terminal's PATH."
+    },
     "Jump to Selection": {
       "comment": "Edit > Find."
     },
@@ -93,6 +96,9 @@
     },
     "Redo": {
       "comment": "Edit menu."
+    },
+    "Remove Command Line Tool…": {
+      "comment": "App menu: take the seamerge command out of Terminal's PATH."
     },
     "Seamerge": {
       "comment": "Menu bar: the app menu."

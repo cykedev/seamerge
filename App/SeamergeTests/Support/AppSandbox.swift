@@ -44,6 +44,14 @@ final class AppSandbox {
       bundle: Bundle.main.bundleURL, home: folder, environment: environment)
   }
 
+  /// The seamerge command of the app in the test, with its link and Homebrew inside the
+  /// sandbox.
+  var commandLineTool: CommandLineTool {
+    CommandLineTool(
+      bundle: Bundle.main.bundleURL, link: folder.appending(path: "bin/seamerge"),
+      homebrewPrefixes: [folder.appending(path: "homebrew")])
+  }
+
   /// Where the app in the test keeps the copies of collected files.
   var collectionCache: CollectionCache {
     CollectionCache(folder: folder.appending(path: "Collections", directoryHint: .isDirectory))

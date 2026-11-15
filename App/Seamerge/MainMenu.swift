@@ -78,6 +78,8 @@ final class MainMenu {
           Self.item(Titles.settings, #selector(AppDelegate.showSettings(_:)), key: ","),
           Self.item(
             Titles.setUpGitIntegration, #selector(AppDelegate.showGitIntegration(_:))),
+          Self.item(
+            Titles.installCommandLineTool, #selector(AppDelegate.showCommandLineTool(_:))),
         ],
         [services],
         [

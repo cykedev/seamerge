@@ -198,6 +198,7 @@ struct UpdaterTests {
       arguments: ["Seamerge", HelperLaunch.argument], defaults: sandbox.defaults,
       socketURL: sandbox.socketURL, collectionCache: sandbox.collectionCache,
       presenter: sandbox.presenter, integrationStore: sandbox.integrationStore,
+      commandLineTool: sandbox.commandLineTool,
       makeSoftwareUpdater: { _ in softwareUpdater })
   }
 

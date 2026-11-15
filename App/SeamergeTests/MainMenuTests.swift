@@ -130,6 +130,7 @@ import Testing
       ---
       Settings… ⌘,
       Set Up Git Integration…
+      Install Command Line Tool…
       ---
       Services ▸
       ---

@@ -481,13 +481,14 @@ public final class CompareFilesWindowController: NSWindowController {
 extension CompareFilesWindowController: NSWindowDelegate {}
 
 extension CompareFilesWindowController: NSUserInterfaceValidations {
-  /// Swap Sides needs a file in an outer field, and Set Up Git Integration… needs Git; the other
-  /// commands of the window always work.
+  /// Swap Sides needs a file in an outer field, and Set Up Git Integration… needs Git and no
+  /// sheet on the window; the other commands of the window always work.
   public func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
     switch item.action {
     case #selector(swapSides(_:)): selection[.left] != nil || selection[.right] != nil
     case #selector(openComparison(_:)): openButton.isEnabled
-    case #selector(showGitIntegration(_:)): canSetUpGitIntegration && integrationSheet == nil
+    case #selector(showGitIntegration(_:)):
+      canSetUpGitIntegration && integrationSheet == nil && window?.attachedSheet == nil
     default: true
     }
   }

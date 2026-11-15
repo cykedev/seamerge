@@ -49,22 +49,26 @@ final class AppDelegate: NSObject {
   /// The settings of Git and Tower that the window Compare Files reads and writes.
   private let integrationStore: SystemIntegrationStore
 
+  /// The seamerge command in Terminal, whose sheet the window Compare Files shows.
+  private let commandLineTool: CommandLineTool
+
   private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "App")
 
   /// Creates the delegate of an app started with `arguments`, which keeps its settings and
   /// recent comparisons in `defaults`, listens for the helper at `socketURL`, keeps the copies of
   /// collected files in `collectionCache`, shows alerts and hides with `presenter`, sets up Git
-  /// and Tower in `integrationStore`, and updates itself with the updater that
-  /// `makeSoftwareUpdater` makes.
+  /// and Tower in `integrationStore`, installs the seamerge command with `commandLineTool`, and
+  /// updates itself with the updater that `makeSoftwareUpdater` makes.
   init(
     arguments: [String], defaults: UserDefaults, socketURL: URL,
     collectionCache: CollectionCache = .standard, presenter: any AppPresenter,
-    integrationStore: SystemIntegrationStore,
+    integrationStore: SystemIntegrationStore, commandLineTool: CommandLineTool,
     makeSoftwareUpdater: @MainActor (Updater) -> any SoftwareUpdater = Updater.sparkle
   ) {
     isLaunchedForSession = arguments.contains(HelperLaunch.argument)
     self.presenter = presenter
     self.integrationStore = integrationStore
+    self.commandLineTool = commandLineTool
     settings = UserSettings(defaults: defaults)
     recentComparisons = RecentComparisons(defaults: defaults)
     recentComparisonsMenu = RecentComparisonsMenu(recentComparisons: recentComparisons)
@@ -121,6 +125,12 @@ final class AppDelegate: NSObject {
   /// Shows the window Compare Files and on it the sheet Set Up Git Integration.
   @objc func showGitIntegration(_ sender: Any?) {
     compareFiles().showGitIntegration(sender)
+  }
+
+  /// Shows the window Compare Files and on it the sheet that installs, updates or removes the
+  /// seamerge command.
+  @objc func showCommandLineTool(_ sender: Any?) {
+    compareFiles().showCommandLineTool(commandLineTool)
   }
 
   /// Puts `urls` in the fields of the window Compare Files and shows it, and tells whether the
@@ -243,16 +253,30 @@ extension AppDelegate: NSApplicationDelegate {
 
 extension AppDelegate: NSMenuItemValidation {
   /// Set Up Git Integration… works while Git is not known to be missing and its sheet is not
-  /// shown, Check for Updates… while no check runs; the other commands of the app always work.
+  /// shown, Install Command Line Tool… while no sheet hangs on the window Compare Files, and is
+  /// called Remove Command Line Tool… once the command of this copy is installed; Check for
+  /// Updates… works while no check runs; the other commands of the app always work.
   func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
     switch menuItem.action {
     case #selector(showGitIntegration(_:)):
       compareFilesWindowController?.validateUserInterfaceItem(menuItem) ?? true
+    case #selector(showCommandLineTool(_:)):
+      validateCommandLineTool(menuItem)
     case #selector(checkForUpdates(_:)):
       updater.canCheckForUpdates
     default:
       true
     }
+  }
+}
+
+extension AppDelegate {
+  /// Names the item of the seamerge command by what it offers, and tells whether it works.
+  private func validateCommandLineTool(_ menuItem: NSMenuItem) -> Bool {
+    menuItem.title =
+      commandLineTool.isInstalled
+      ? MainMenu.Titles.removeCommandLineTool : MainMenu.Titles.installCommandLineTool
+    return compareFilesWindowController?.canShowCommandLineTool(commandLineTool) ?? true
   }
 }
 

@@ -10,6 +10,12 @@ extension MainMenu {
     static let settings = String(localized: "Settings…", comment: "App menu.")
     static let setUpGitIntegration = String(
       localized: "Set Up Git Integration…", comment: "App menu: make Git use Seamerge.")
+    static let installCommandLineTool = String(
+      localized: "Install Command Line Tool…",
+      comment: "App menu: put the seamerge command into Terminal's PATH.")
+    static let removeCommandLineTool = String(
+      localized: "Remove Command Line Tool…",
+      comment: "App menu: take the seamerge command out of Terminal's PATH.")
     static let services = String(localized: "Services", comment: "App menu.")
     static let hide = String(localized: "Hide Seamerge", comment: "App menu.")
     static let hideOthers = String(localized: "Hide Others", comment: "App menu.")
