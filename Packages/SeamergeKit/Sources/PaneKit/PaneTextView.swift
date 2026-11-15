@@ -658,21 +658,24 @@ final class PaneTextView: NSTextView {
     mark(self)
   }
 
-  /// The fill of `row`, or `nil` if it stays on the text background.
-  private func rowFill(atRow row: Int) -> NSColor? {
+  /// How `row` is shaded across the pane, the one place that the text and the gutter both ask.
+  ///
+  /// The row is filled in the tint of its block, preview or own tint, or stays on the text
+  /// background; the screen lines below its text, where the row wraps less than in a pane it
+  /// lines up with, are as quiet as a filler row.
+  func shading(atRow row: Int) -> RowShading {
     let blockIndex = content.blockIndex(atRow: row)
-    return theme.rowFill(
-      for: style(ofRow: row), isFiller: content.isFiller(row: row),
-      isCurrent: blockIndex != nil && blockIndex == currentBlock)
+    let isCurrent = blockIndex != nil && blockIndex == currentBlock
+    let style = style(ofRow: row)
+    return RowShading(
+      fill: theme.rowFill(for: style, isFiller: content.isFiller(row: row), isCurrent: isCurrent),
+      paddingFill: theme.rowFill(for: style, isFiller: true, isCurrent: isCurrent),
+      edges: edges(atRow: row), style: style)
   }
 
-  /// The fill of the screen lines of `row` below its text, where the row wraps less than in a
-  /// pane it lines up with: as quiet as the fill of a filler row, or `nil` on the background.
-  private func paddingFill(atRow row: Int) -> NSColor? {
-    let blockIndex = content.blockIndex(atRow: row)
-    return theme.rowFill(
-      for: style(ofRow: row), isFiller: true,
-      isCurrent: blockIndex != nil && blockIndex == currentBlock)
+  /// The number of screen lines that the text of `row` takes at the width of the pane.
+  func textLines(ofRow row: Int) -> Int {
+    ownWrappedRows.lines(ofRow: row)
   }
 
   /// The hairlines at the edges of changed blocks in `row`: at the top of the first row of a
@@ -687,7 +690,7 @@ final class PaneTextView: NSTextView {
   /// Rows with a tint of their own have edges where the tint changes, within a block or outside
   /// every block; between rows typed by hand and tinted rows, the hairline is the only boundary,
   /// as there is no marker.
-  private func edges(atRow row: Int) -> RowLayoutFragment.Edges {
+  private func edges(atRow row: Int) -> RowShading.Edges {
     var edges = blockEdges(atRow: row)
     // The hairline of a block without rows is the only sign of it in the text, so it takes the
     // place of any other edge there.
@@ -708,7 +711,7 @@ final class PaneTextView: NSTextView {
   }
 
   /// The hairlines at the edges of the changed block that `row` belongs to, if any.
-  private func blockEdges(atRow row: Int) -> RowLayoutFragment.Edges {
+  private func blockEdges(atRow row: Int) -> RowShading.Edges {
     guard let block = content.blockIndex(atRow: row) else { return tintEdges(atRow: row) }
     let rows = content.blocks[block].rows
     var edges = tintEdges(atRow: row)
@@ -742,9 +745,9 @@ final class PaneTextView: NSTextView {
   /// own and the row itself is tinted; a row with a tint of its own above a row outside every
   /// block has one at its bottom. Between rows typed by hand and tinted rows, the hairline is the
   /// only boundary. The edges of blocks, drawn after these, take precedence.
-  private func tintEdges(atRow row: Int) -> RowLayoutFragment.Edges {
+  private func tintEdges(atRow row: Int) -> RowShading.Edges {
     let tints = content.rowTints
-    var edges = RowLayoutFragment.Edges()
+    var edges = RowShading.Edges()
     guard !tints.isEmpty else { return edges }
     let hasTint = tints[row] != nil
     if row > 0, hasTint || tints[row - 1] != nil {
@@ -895,7 +898,7 @@ extension PaneTextView: RowPainter {
     RowLayoutFragment.Extent(
       containerInset: textContainerOrigin.x, width: bounds.width, textLift: theme.textLift,
       removalMarkWidth: Theme.removalMarkWidth, removalMarkSeam: Theme.markSeam,
-      hairline: 1 / (window?.backingScaleFactor ?? 2))
+      hairline: RowShading.hairline(in: window))
   }
 
   func painting(forRows rows: Range<Int>) -> RowLayoutFragment.Painting {
@@ -910,8 +913,7 @@ extension PaneTextView: RowPainter {
     return RowLayoutFragment.Painting(
       extent: extent, isCollapsed: displayRows.runIndex(containingRow: rows.lowerBound) != nil,
       rowLines: rows.map { displayRows.lines(ofRows: $0..<$0 + 1).count },
-      rowFills: rows.map(rowFill(atRow:)), paddingFills: rows.map(paddingFill(atRow:)),
-      edges: rows.map(edges(atRow:)),
+      shadings: rows.map(shading(atRow:)),
       background: Theme.backgroundColor,
       textBandHeight: theme.textBandHeight, runs: changes.runs,
       matches: searchMatchRuns(in: paragraph),

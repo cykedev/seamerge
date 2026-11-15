@@ -52,7 +52,8 @@ import Testing
     let ground = expectedFill(.unchanged, isFiller: false)
     func cell(_ isEmphasized: Bool) -> NSColor {
       Contrast.over(
-        Contrast.resolve(Theme.currentCellFill(isEmphasized: isEmphasized), in: appearance),
+        Contrast.resolve(
+          theme.currentCellFill(for: .tinted(.b), isEmphasized: isEmphasized), in: appearance),
         ground)
     }
 
@@ -61,7 +62,7 @@ import Testing
     try expectColor(in: bitmap, at: CGPoint(x: 290, y: row(0)), current, "current text area")
     try expectColor(in: bitmap, at: CGPoint(x: 2, y: row(0)), cell(false), "cell without focus")
     try expectColor(in: bitmap, at: CGPoint(x: 290, y: row(2)), plain)
-    try expectColor(in: bitmap, at: CGPoint(x: 2, y: row(2)), ground, "gutter of another block")
+    try expectColor(in: bitmap, at: CGPoint(x: 2, y: row(2)), plain, "gutter of another block")
 
     window.makeFirstResponder(pane.documentView)
     bitmap = try Rendering.bitmap(of: pane)
@@ -70,7 +71,7 @@ import Testing
     pane.currentBlock = 1
     bitmap = try Rendering.bitmap(of: pane)
     try expectColor(in: bitmap, at: CGPoint(x: 290, y: row(0)), plain, "former current block")
-    try expectColor(in: bitmap, at: CGPoint(x: 2, y: row(0)), ground, "former current cell")
+    try expectColor(in: bitmap, at: CGPoint(x: 2, y: row(0)), plain, "former current cell")
     try expectColor(in: bitmap, at: CGPoint(x: 290, y: row(2)), current)
     try expectColor(in: bitmap, at: CGPoint(x: 2, y: row(2)), cell(true), "new current cell")
   }

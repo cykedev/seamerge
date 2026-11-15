@@ -88,6 +88,41 @@ enum Palette {
     light: 0xFFCC00, dark: symbol(of: .base).dark, lightHighContrast: 0xFFCC00,
     darkHighContrast: symbol(of: .base).darkHighContrast)
 
+  /// The fill of the line-number cells of the current block of each role while the pane has no
+  /// focus, as 0xRRGGBB in sRGB: a clearly stronger step of the role's tint.
+  ///
+  /// In light appearances the step is a stronger tint; in dark ones it is darker and more
+  /// saturated than the tint, so that numbers in the label color keep at least 4.5:1. Each cell
+  /// stands apart from the stronger tint of the current block beside it by about 1.5:1, the cell
+  /// of an open conflict in dark appearances less, since a darker red would fall below the text
+  /// background.
+  static func currentCell(of role: ColorRole) -> AppearanceValues<UInt32> {
+    switch role {
+    case .a:
+      AppearanceValues(
+        light: 0x87B0E8, dark: 0x1C3450, lightHighContrast: 0x73A3E4, darkHighContrast: 0x29384A)
+    case .base:
+      AppearanceValues(
+        light: 0xCFB85C, dark: 0x362F0D, lightHighContrast: 0xC8AF48, darkHighContrast: 0x423A1A)
+    case .b:
+      AppearanceValues(
+        light: 0x76C0A8, dark: 0x0F3F33, lightHighContrast: 0x62B79B, darkHighContrast: 0x214239)
+    case .conflict:
+      AppearanceValues(
+        light: 0xE19590, dark: 0x361311, lightHighContrast: 0xDC827C, darkHighContrast: 0x2D1817)
+    }
+  }
+
+  /// The opacity of the label color for the line-number cells of the current block without
+  /// focus on a pane that the block leaves untinted.
+  static let quietCellOpacity = AppearanceValues<CGFloat>(
+    light: 0.24, dark: 0.22, lightHighContrast: 0.26, darkHighContrast: 0.24)
+
+  /// The opacity of the label color for the line-number cells of the current block without
+  /// focus on text typed by hand into the result.
+  static let handwrittenCellOpacity = AppearanceValues<CGFloat>(
+    light: 0.28, dark: 0.30, lightHighContrast: 0.32, darkHighContrast: 0.33)
+
   private static func lightSurface(of role: ColorRole) -> UInt32 {
     switch role {
     case .a: 0x1464D2

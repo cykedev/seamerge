@@ -1,12 +1,15 @@
 import AppKit
 
 /// The left margin of a pane: the line numbers, the markers of the blocks and the filled cells of
-/// the current block.
+/// the current block, on the tint of each row.
 ///
 /// The gutter sits beside the scroll view and draws the visible rows itself, each at its display
-/// row times the row height, minus the scroll offset of the text. The bars of collapsed runs
-/// cover their rows across the gutter; it leaves them empty. While the pointer is over the rows
-/// of a run that the user expanded, a quiet sign beside its first row collapses it again.
+/// row times the row height, minus the scroll offset of the text. It shades each row as the text
+/// does, from the same source, so that the tint of a block and its hairlines run on from the left
+/// edge of the pane to the text; the filled cells of the current block lie on top and end the
+/// hairlines, which they take the place of. The bars of collapsed runs cover their rows across
+/// the gutter; it leaves them empty. While the pointer is over the rows of a run that the user
+/// expanded, a quiet sign beside its first row collapses it again.
 final class GutterView: NSView {
   var theme = Theme() {
     didSet {
@@ -83,6 +86,13 @@ final class GutterView: NSView {
   /// current block then show in the accent color, as a focused selection does.
   var hasFocus: () -> Bool = { false }
 
+  /// How a row is shaded, which the text knows: the same fills and hairlines as beside it.
+  var shading: (Int) -> RowShading = { _ in .plain }
+
+  /// The number of screen lines that the text of a row takes, which the text knows; the lines of
+  /// the row below them take the quieter fill of padding.
+  var textLines: (Int) -> Int = { _ in 1 }
+
   /// The rows that are visible beside the text, without those behind bars.
   var visibleRows: [Int] {
     rows(in: bounds)
@@ -103,12 +113,14 @@ final class GutterView: NSView {
     }
   }
 
-  /// The rectangle of `row` across the gutter, all of its screen lines.
+  /// The rectangle of `row` across the gutter, all of its screen lines, on whole pixels of the
+  /// screen as the clip view puts the text, so that fills and hairlines meet those of the text.
   func rect(ofRow row: Int) -> CGRect {
     let lines = displayRows.lines(ofRows: row..<row + 1)
+    let top = pixelAligned(
+      CGPoint(x: 0, y: CGFloat(lines.lowerBound) * theme.rowHeight - scrollOffset))
     return CGRect(
-      x: 0, y: CGFloat(lines.lowerBound) * theme.rowHeight - scrollOffset,
-      width: bounds.width, height: CGFloat(lines.count) * theme.rowHeight)
+      x: 0, y: top.y, width: bounds.width, height: CGFloat(lines.count) * theme.rowHeight)
   }
 
   /// The slot of the marker `index` places from the trailing edge beside the first screen line
@@ -330,15 +342,15 @@ final class GutterView: NSView {
     let hasFocus = hasFocus()
     let numberAttributes = lineNumberAttributes(color: theme.lineNumberColor)
     let currentColor = Theme.currentCellContentColor(isEmphasized: hasFocus)
-    let currentNumberAttributes = lineNumberAttributes(color: currentColor)
+    // Without focus the cell has the color of its side, on which the numbers stand semibold.
+    let currentNumberAttributes: [NSAttributedString.Key: Any] = [
+      .font: hasFocus ? theme.lineNumberFont : theme.currentLineNumberFont,
+      .foregroundColor: currentColor,
+    ]
     for row in rows {
       let rowRect = rect(ofRow: row)
-      let blockIndex = content.blockIndex(atRow: row)
-      let isCurrent = blockIndex != nil && blockIndex == currentBlock
-      if isCurrent {
-        Theme.currentCellFill(isEmphasized: hasFocus).setFill()
-        rowRect.fill()
-      }
+      let isCurrent = isInCurrentBlock(row)
+      drawGround(ofRow: row, in: rowRect, hasFocus: hasFocus)
       let lineNumber = content.lineNumbers[row]
       if lineNumber >= 0 {
         drawLineNumber(
@@ -352,11 +364,36 @@ final class GutterView: NSView {
     }
   }
 
+  /// Whether `row` belongs to the current block.
+  private func isInCurrentBlock(_ row: Int) -> Bool {
+    let blockIndex = content.blockIndex(atRow: row)
+    return blockIndex != nil && blockIndex == currentBlock
+  }
+
+  /// Draws what lies below the number and the marks of `row` at `rowRect`: the filled cell of the
+  /// current block, or else the row's tint and hairlines as the text beside it draws them.
+  private func drawGround(ofRow row: Int, in rowRect: CGRect, hasFocus: Bool) {
+    let shading = shading(row)
+    if isInCurrentBlock(row) {
+      theme.currentCellFill(for: shading.style, isEmphasized: hasFocus).setFill()
+      rowRect.fill(using: .sourceOver)
+      return
+    }
+    guard let context = NSGraphicsContext.current?.cgContext else { return }
+    shading.draw(
+      in: rowRect, textLines: textLines(row), rowHeight: theme.rowHeight,
+      hairline: RowShading.hairline(in: window), context: context)
+  }
+
   /// The width of the widest line number of `content`, with room for a few digits at least.
   private static func numberColumnWidth(of content: PaneContent, theme: Theme) -> CGFloat {
     let largest = content.lineNumbers.max().map { Int($0) + 1 } ?? 0
     let digits = max(String(largest).count, Theme.minimumLineNumberDigits)
-    let digitWidth = ("0" as NSString).size(withAttributes: [.font: theme.lineNumberFont]).width
+    // The semibold numbers of the current block take the same column.
+    let digitWidth =
+      [theme.lineNumberFont, theme.currentLineNumberFont].map {
+        ("0" as NSString).size(withAttributes: [.font: $0]).width
+      }.max() ?? 0
     return CGFloat(digits) * digitWidth
   }
 
@@ -402,86 +439,70 @@ final class GutterView: NSView {
     case .marker(let marker, let style):
       drawCharacter(
         Self.character(for: marker), color: color ?? theme.markerColor(for: style),
-        centeredIn: slot, withSeam: color == nil)
+        centeredIn: slot)
     case .conflict(let conflict):
       drawCharacter(
-        Self.conflictCharacter, color: color ?? theme.color(for: conflict), centeredIn: slot,
-        withSeam: color == nil)
+        Self.conflictCharacter, color: color ?? theme.color(for: conflict), centeredIn: slot)
     case .ignoredDifference:
       drawRing(centeredIn: slot, color: color)
     }
   }
 
-  /// Draws a typed mark in the code font, on the baseline of the code beside it, within a seam of
-  /// background color if `withSeam`.
-  ///
-  /// The seam cannot be seen on the plain gutter; it keeps a mark in its own color as clear as
-  /// there wherever a fill lies behind it.
-  private func drawCharacter(
-    _ character: String, color: NSColor, centeredIn slot: CGRect, withSeam: Bool
-  ) {
+  /// Draws a typed mark in the code font, on the baseline of the code beside it, straight on the
+  /// tint of its row, against which its color is measured.
+  private func drawCharacter(_ character: String, color: NSColor, centeredIn slot: CGRect) {
     let text = NSAttributedString(
       string: character, attributes: [.font: theme.font, .foregroundColor: color])
     let origin = pixelAligned(
       CGPoint(
         x: slot.midX - text.size().width / 2, y: slot.minY + theme.baseline - theme.font.ascender))
-    if withSeam {
-      // The stroke is centered on the outline of the glyph, so half of it lies outside.
-      let strokeWidth = 2 * Theme.markSeam / theme.font.pointSize * 100
-      NSAttributedString(
-        string: character,
-        attributes: [
-          .font: theme.font, .strokeColor: Theme.backgroundColor, .strokeWidth: strokeWidth,
-        ]
-      ).draw(at: origin)
-    }
     text.draw(at: origin)
   }
 
-  /// Draws the hollow ring of a line whose difference the comparison ignores, in `color` or, on a
-  /// plain cell, in the secondary color within a seam of background color like the typed marks.
+  /// Draws the hollow ring of a line whose difference the comparison ignores, in `color` or, for
+  /// `nil`, in the secondary color.
   private func drawRing(centeredIn slot: CGRect, color: NSColor?) {
-    let ring = NSImage(systemSymbolName: "circle", accessibilityDescription: nil)
     guard
-      let image = ring?.withSymbolConfiguration(
-        theme.ringSymbolConfiguration.applying(
-          NSImage.SymbolConfiguration(paletteColors: [color ?? Theme.secondaryMarkColor]))),
-      let seam = ring?.withSymbolConfiguration(
-        theme.ringSymbolConfiguration.applying(
-          NSImage.SymbolConfiguration(paletteColors: [Theme.backgroundColor])))
+      let image = NSImage(systemSymbolName: "circle", accessibilityDescription: nil)?
+        .withSymbolConfiguration(
+          theme.ringSymbolConfiguration.applying(
+            NSImage.SymbolConfiguration(paletteColors: [color ?? Theme.secondaryMarkColor])))
     else { return }
     let size = image.size
     let rect = CGRect(
       origin: pixelAligned(CGPoint(x: slot.midX - size.width / 2, y: slot.midY - size.height / 2)),
       size: size)
-    // The ring drawn once more, a seam wider on either side, lies below it; a ring in the color
-    // of selected content stands on a filled cell and needs none.
-    if color == nil {
-      for inset in [-Theme.markSeam, 0, Theme.markSeam] {
-        seam.draw(in: rect.insetBy(dx: inset, dy: inset))
-      }
-    }
     image.draw(in: rect)
   }
 
   /// Draws the sign that collapses the expanded run under the pointer beside its first row, in
   /// the color of the line numbers like the bar of a collapsed run, in place of a ring that may
-  /// stand there.
+  /// stand there, on the same ground as the row without the pointer; on a filled cell of the
+  /// current block it takes the color of the number there.
   private func drawCollapseSign(in dirtyRect: CGRect) {
     guard let hoveredRun else { return }
     let signRect = collapseSignRect(ofRun: hoveredRun)
-    let rowRect = rect(ofRow: expandedRuns[hoveredRun].rows.lowerBound)
+    let row = expandedRuns[hoveredRun].rows.lowerBound
+    let rowRect = rect(ofRow: row)
+    let hasFocus = hasFocus()
+    let color =
+      isInCurrentBlock(row)
+      ? Theme.currentCellContentColor(isEmphasized: hasFocus) : theme.lineNumberColor
     guard signRect.intersects(dirtyRect), bounds.intersects(rowRect),
       let symbol = NSImage(
         systemSymbolName: "arrow.down.and.line.horizontal.and.arrow.up",
         accessibilityDescription: nil)?
         .withSymbolConfiguration(
           NSImage.SymbolConfiguration(pointSize: theme.lineNumberFont.pointSize, weight: .medium)
-            .applying(NSImage.SymbolConfiguration(paletteColors: [theme.lineNumberColor])))
+            .applying(NSImage.SymbolConfiguration(paletteColors: [color])))
     else { return }
     let slot = markerSlot(0, in: rowRect)
+    NSGraphicsContext.saveGraphicsState()
+    defer { NSGraphicsContext.restoreGraphicsState() }
+    slot.clip()
     Theme.backgroundColor.setFill()
     slot.fill()
+    drawGround(ofRow: row, in: rowRect, hasFocus: hasFocus)
     let size = symbol.size
     let origin = CGPoint(x: slot.midX - size.width / 2, y: slot.midY - size.height / 2)
     symbol.draw(in: CGRect(origin: pixelAligned(origin), size: size))

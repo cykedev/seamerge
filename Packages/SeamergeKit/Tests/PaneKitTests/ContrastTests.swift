@@ -59,6 +59,77 @@ import Testing
     try Rendering.writeText(lines.joined(separator: "\n"), named: "overview-contrast")
   }
 
+  /// The cells of the current block without focus stand apart from the stronger tint of the
+  /// rows beside them by at least 1.4:1, so that the cell reads as a step of its own.
+  ///
+  /// Two cells in dark appearances fall short: the open conflict, whose cell would fall below
+  /// the text background if it were darker, and text typed by hand with increased contrast,
+  /// whose gray cell would leave the numbers below 4.5:1 if it were lighter.
+  @Test(arguments: Look.all)
+  func cellsWithoutFocusStandApartFromTheTintBesideThem(look: Look) {
+    let theme = Theme(increasesContrast: look.increasesContrast)
+    let resolve = { (color: NSColor?) in Contrast.resolve(color, in: look.appearance) }
+    let ground = Contrast.over(resolve(.textBackgroundColor), .white)
+    let shortfalls: [String: CGFloat] = [
+      "dark \(BlockStyle.tinted(.conflict))": 1.35,
+      "dark-increased-contrast \(BlockStyle.handwritten)": 1.35,
+    ]
+    for style in Self.styles {
+      let cell = Contrast.over(
+        resolve(theme.currentCellFill(for: style, isEmphasized: false)), ground)
+      let tint = Contrast.over(
+        resolve(theme.rowFill(for: style, isFiller: false, isCurrent: true)), ground)
+      let minimum = shortfalls["\(look.name) \(style)"] ?? 1.4
+      #expect(
+        Contrast.ratio(cell, tint) >= minimum,
+        "\(style): \(String(format: "%.2f", Contrast.ratio(cell, tint))) < \(minimum)")
+    }
+  }
+
+  /// Writes down the contrast of what stands in the gutter on the tint of each row, and of the
+  /// filled cell of the current block against the stronger tint of its rows beside it.
+  @Test func contrastOfTheGutterIsWrittenDown() throws {
+    var lines: [String] = []
+    for look in Look.all {
+      let theme = Theme(increasesContrast: look.increasesContrast)
+      let resolve = { (color: NSColor?) in Contrast.resolve(color, in: look.appearance) }
+      let ground = Contrast.over(resolve(.textBackgroundColor), .white)
+      func ratio(_ color: NSColor, on surface: NSColor) -> String {
+        String(format: "%.2f", Contrast.ratio(Contrast.over(resolve(color), surface), surface))
+      }
+      let rows = Self.styles.map { style in
+        let tint = Contrast.over(
+          resolve(theme.rowFill(for: style, isFiller: false, isCurrent: false)), ground)
+        var entries = ["number \(ratio(theme.lineNumberColor, on: tint))"]
+        if case .tinted(let role) = style, role != .conflict {
+          entries.append("marker \(ratio(theme.markerColor(for: style), on: tint))")
+        }
+        entries.append("open ! \(ratio(theme.color(for: .open), on: tint))")
+        entries.append("ring \(ratio(Theme.secondaryMarkColor, on: tint))")
+        return "\(style): \(entries.joined(separator: ", "))"
+      }
+      let cells = Self.styles.map { style in
+        let distances = [true, false].map { isEmphasized in
+          let cell = Contrast.over(
+            resolve(theme.currentCellFill(for: style, isEmphasized: isEmphasized)), ground)
+          let beside = [false, true].map { isFiller in
+            let tint = Contrast.over(
+              resolve(theme.rowFill(for: style, isFiller: isFiller, isCurrent: true)), ground)
+            return String(format: "%.2f", Contrast.ratio(cell, tint))
+          }
+          let number = ratio(Theme.currentCellContentColor(isEmphasized: isEmphasized), on: cell)
+          return "number \(number), apart \(beside[0]) (filler \(beside[1]))"
+        }
+        return "\(style): with focus \(distances[0]); without \(distances[1])"
+      }
+      lines.append(
+        "\(look.name)\n  on the tint of the rows: \(rows.joined(separator: "; "))"
+          + "\n  current cell against the current tint beside it:\n    "
+          + cells.joined(separator: "\n    "))
+    }
+    try Rendering.writeText(lines.joined(separator: "\n"), named: "gutter-contrast")
+  }
+
   private struct Pair {
     var description: String
     var foreground: NSColor
@@ -307,9 +378,9 @@ import Testing
   }
 
   /// The pairs in the gutter beside the rows of a block of `style`: change and conflict marks,
-  /// the ring and line numbers, on the plain gutter, and on the filled cells of the current
-  /// block, with and without focus, where every mark and number takes the color of selected
-  /// content.
+  /// the ring and line numbers, on the tint of the rows, which runs on under the gutter, and on
+  /// the filled cells of the current block, with and without focus, where every mark and number
+  /// takes the color of selected content.
   private func gutterPairs(
     theme: Theme, style: BlockStyle, isCurrent: Bool, ground: NSColor,
     resolve: (NSColor?) -> NSColor?
@@ -318,23 +389,31 @@ import Testing
     guard !isCurrent else {
       for isEmphasized in [true, false] {
         let place = "current cell\(isEmphasized ? "" : " without focus")"
-        let cell = Contrast.over(resolve(Theme.currentCellFill(isEmphasized: isEmphasized)), ground)
+        let cell = Contrast.over(
+          resolve(theme.currentCellFill(for: style, isEmphasized: isEmphasized)), ground)
         let content = Contrast.over(
           resolve(Theme.currentCellContentColor(isEmphasized: isEmphasized)), cell)
         pairs.append(
           Pair(
             description: "line number in \(place)", foreground: content, surface: cell,
             minimum: Self.text))
+        // The sign that collapses an expanded run takes the color of the number on the cell.
+        pairs.append(
+          Pair(
+            description: "sign that collapses a run in \(place)", foreground: content,
+            surface: cell, minimum: Self.sign))
       }
       return pairs
     }
     for isFiller in [false, true] {
       let place = "gutter of \(style)\(isFiller ? ", filler" : "")"
+      let tint = Contrast.over(
+        resolve(theme.rowFill(for: style, isFiller: isFiller, isCurrent: false)), ground)
       func pair(_ name: String, _ color: NSColor, minimum: CGFloat) {
         pairs.append(
           Pair(
-            description: "\(name) in \(place)", foreground: Contrast.over(resolve(color), ground),
-            surface: ground, minimum: minimum))
+            description: "\(name) in \(place)", foreground: Contrast.over(resolve(color), tint),
+            surface: tint, minimum: minimum))
       }
       if case .tinted(let role) = style, role == .a || role == .b {
         pair("change marker", theme.markerColor(for: style), minimum: Self.sign)
@@ -349,6 +428,7 @@ import Testing
         break
       }
       pair("ring", Theme.secondaryMarkColor, minimum: Self.sign)
+      pair("sign that collapses a run", theme.lineNumberColor, minimum: Self.sign)
       if !isFiller {
         pair("line number", theme.lineNumberColor, minimum: Self.text)
       }

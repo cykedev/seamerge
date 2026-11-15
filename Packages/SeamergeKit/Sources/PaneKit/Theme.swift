@@ -61,6 +61,12 @@ public struct Theme {
       ofSize: max(font.pointSize - 2, Self.smallestFontSize), weight: .regular)
   }
 
+  /// The font of the line numbers on the cells of the current block while the pane has no focus,
+  /// where the cell has the color of its side: as large as the other numbers, semibold.
+  public var currentLineNumberFont: NSFont {
+    .monospacedDigitSystemFont(ofSize: lineNumberFont.pointSize, weight: .semibold)
+  }
+
   /// The size and weight of the ring of an ignored difference in the gutter.
   var ringSymbolConfiguration: NSImage.SymbolConfiguration {
     NSImage.SymbolConfiguration(
@@ -113,8 +119,8 @@ public struct Theme {
   /// point, too narrow to read as a character.
   static let removalMarkWidth: CGFloat = 2
 
-  /// The width of the seam of background color around the marks in the gutter and the mark of
-  /// removed text, which keeps them clear on a selection or a cell of a similar color.
+  /// The width of the seam around the mark of removed text and the stroke of a match in the
+  /// overview bar, which keeps them clear on a selection or a mark of a similar color.
   static let markSeam: CGFloat = 1
 
   /// The grid that widths and distances of the panes are rounded to.

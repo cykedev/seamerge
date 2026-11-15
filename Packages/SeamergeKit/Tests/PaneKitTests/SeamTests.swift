@@ -99,14 +99,15 @@ import Testing
     let rows = pane.content.blocks[ConnectedLayout.removal].rows
     try #require(rows.isEmpty)
     let painting = pane.textView.painting(forRows: rows.lowerBound..<rows.lowerBound + 1)
-    #expect(painting.edges[0].top != nil)
-    #expect(painting.edges[0].bottom == nil)
+    #expect(painting.shadings[0].edges.top != nil)
+    #expect(painting.shadings[0].edges.bottom == nil)
 
     var unmarked = pane.content
     unmarked.marksBlocksWithoutRows = false
     pane.content = unmarked
     let plain = pane.textView.painting(forRows: rows.lowerBound..<rows.lowerBound + 1)
-    #expect(plain.edges[0].top == nil, "a result pane draws nothing for a block without rows")
+    #expect(
+      plain.shadings[0].edges.top == nil, "a result pane draws nothing for a block without rows")
   }
 
   @Test func blockWithoutRowsAtTheEndDrawsItsHairlineAtTheBottomOfTheLastRow() throws {
@@ -118,8 +119,8 @@ import Testing
     content.marksBlocksWithoutRows = true
     pane.content = content
     let painting = pane.textView.painting(forRows: 2..<3)
-    #expect(painting.edges[0].top == nil)
-    #expect(painting.edges[0].bottom != nil)
+    #expect(painting.shadings[0].edges.top == nil)
+    #expect(painting.shadings[0].edges.bottom != nil)
   }
 
   @Test func marksOfABlockWithoutRowsStandOnItsHairline() throws {
@@ -330,10 +331,13 @@ final class ConnectedLayout: NSView {
       height: bounds.height)
   }
 
-  /// The layout in a window of `height`, laid out.
-  static func hosted(height: CGFloat = 500) -> (ConnectedLayout, NSWindow) {
+  /// The layout in a window of `height`, laid out, drawn in `appearance`.
+  static func hosted(
+    height: CGFloat = 500, appearance: NSAppearance? = NSAppearance(named: .aqua)
+  ) -> (ConnectedLayout, NSWindow) {
     let layout = ConnectedLayout()
-    let window = Rendering.host(layout, size: CGSize(width: 1000, height: height))
+    let window = Rendering.host(
+      layout, size: CGSize(width: 1000, height: height), appearance: appearance)
     return (layout, window)
   }
 }

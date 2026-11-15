@@ -7,13 +7,6 @@ extension Theme {
   /// The color of the code.
   public static var textColor: NSColor { .textColor }
 
-  /// The fill of the gutter cells of the current block, as a selection of content shows: in the
-  /// accent color while the pane has the focus in the key window, quieter otherwise.
-  public static func currentCellFill(isEmphasized: Bool) -> NSColor {
-    isEmphasized
-      ? .selectedContentBackgroundColor : .unemphasizedSelectedContentBackgroundColor
-  }
-
   /// The color of the line numbers and marks on the gutter cells of the current block, as text
   /// on a selection of content.
   public static func currentCellContentColor(isEmphasized: Bool) -> NSColor {
@@ -265,6 +258,16 @@ extension Theme {
     }
   }
 
+  /// The fill of the gutter cells of the current block on rows of `style`: in the accent color,
+  /// as a focused selection of content, while the pane has the focus in the key window; without
+  /// focus a clearly stronger step of the color of the rows' side (``Palette/currentCell(of:)``),
+  /// or a neutral tone where the rows have no side.
+  public func currentCellFill(for style: BlockStyle, isEmphasized: Bool) -> NSColor {
+    guard !isEmphasized else { return .selectedContentBackgroundColor }
+    let tint = tint(for: style) ?? .quiet
+    return color { appearance, nsAppearance in tint.cellColor(appearance, nsAppearance) }
+  }
+
   /// The fill behind a row, or `nil` if the row stays on the text background.
   ///
   /// Filler rows are tinted at half the strength of their block, and the rows of the current
@@ -384,6 +387,25 @@ private enum Tint {
         .blended(withFraction: 0.5, of: NSColor(rgb: Palette.surface(of: .b)[appearance]))
         ?? NSColor(rgb: Palette.surface(of: .a)[appearance])
     case .quiet, .handwritten: NSColor.labelColor.resolved(in: nsAppearance)
+    }
+  }
+
+  /// The fill of the gutter cells of the current block on rows of the tint while the pane has no
+  /// focus: the cell value of its role, or the label color at the cell opacity for neutral tints.
+  func cellColor(_ appearance: PaletteAppearance, _ nsAppearance: NSAppearance) -> NSColor {
+    switch self {
+    case .role(let role): NSColor(rgb: Palette.currentCell(of: role)[appearance])
+    case .openConflict: NSColor(rgb: Palette.currentCell(of: .conflict)[appearance])
+    case .combined:
+      NSColor(rgb: Palette.currentCell(of: .a)[appearance])
+        .blended(withFraction: 0.5, of: NSColor(rgb: Palette.currentCell(of: .b)[appearance]))
+        ?? NSColor(rgb: Palette.currentCell(of: .a)[appearance])
+    case .quiet:
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.quietCellOpacity[appearance])
+    case .handwritten:
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.handwrittenCellOpacity[appearance])
     }
   }
 

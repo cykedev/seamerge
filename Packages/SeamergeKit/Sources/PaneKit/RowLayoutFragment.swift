@@ -52,12 +52,8 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     /// The number of screen lines of each row: at least those of its text, more where a pane it
     /// lines up with wraps it more.
     var rowLines: [Int]
-    /// The fill of each row, or `nil` for a row on the text background.
-    var rowFills: [NSColor?]
-    /// The fill of the screen lines of each row below its text, or `nil` for the background.
-    var paddingFills: [NSColor?]
-    /// The hairlines at the edges of changed blocks in each row.
-    var edges: [Edges]
+    /// The fills and hairlines of each row, which the gutter beside the text draws too.
+    var shadings: [RowShading]
     /// The color of the text background, which covers AppKit's selection.
     var background: NSColor
     /// The height of the band of a line's text, centered in the row: the height of run fills
@@ -74,14 +70,6 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     /// What the invisible characters of the fragment's rows look like, or `nil` if they do not
     /// show.
     var invisibles: Invisibles?
-  }
-
-  /// The hairlines at the top and the bottom edge of a row, each inside the row.
-  struct Edges: Sendable {
-    /// The color of the hairline at the top, or `nil` for none.
-    var top: NSColor?
-    /// The color of the hairline at the bottom, or `nil` for none.
-    var bottom: NSColor?
   }
 
   /// The symbols for spaces, tabs and line endings.
@@ -249,27 +237,10 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     var top = rows.minY
     for index in painting.rowLines.indices {
       let height = CGFloat(painting.rowLines[index]) * rowHeight
-      let textHeight = min(CGFloat(textLines[index]) * rowHeight, height)
-      for (fill, rect) in [
-        (
-          painting.rowFills[index],
-          CGRect(x: rows.minX, y: top, width: rows.width, height: textHeight)
-        ),
-        (
-          painting.paddingFills[index],
-          CGRect(x: rows.minX, y: top + textHeight, width: rows.width, height: height - textHeight)
-        ),
-      ] {
-        guard let fill, !rect.isEmpty else { continue }
-        context.setFillColor(fill.cgColor)
-        context.fill(rect)
-      }
-      let edges = painting.edges[index]
-      for (color, y) in [(edges.top, top), (edges.bottom, top + height - extent.hairline)] {
-        guard let color else { continue }
-        context.setFillColor(color.cgColor)
-        context.fill(CGRect(x: rows.minX, y: y, width: rows.width, height: extent.hairline))
-      }
+      painting.shadings[index].draw(
+        in: CGRect(x: rows.minX, y: top, width: rows.width, height: height),
+        textLines: textLines[index], rowHeight: rowHeight, hairline: extent.hairline,
+        context: context)
       top += height
     }
     let carets = textLineFragments.map(LineCarets.init)

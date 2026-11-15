@@ -154,7 +154,7 @@ import Testing
     let pane = PaneView()
     pane.content = content
     let appearance = try #require(NSAppearance(named: .aqua))
-    let edges = pane.textView.painting(forRows: 0..<content.lineNumbers.count).edges
+    let edges = pane.textView.painting(forRows: 0..<content.lineNumbers.count).shadings.map(\.edges)
     let strongTop = edges.indices.filter { row in
       guard let top = edges[row].top, row > 0 else { return false }
       let strong = pane.theme.edgeColor(

@@ -391,6 +391,10 @@ public final class PaneView: NSView {
       self, selector: #selector(liveScrollDidEnd(_:)),
       name: NSScrollView.didEndLiveScrollNotification, object: scrollView)
     gutterView.removalRows = { [weak textView] rows in textView?.removalRows(in: rows) ?? [] }
+    gutterView.shading = { [weak textView] row in
+      textView?.shading(atRow: row) ?? .plain
+    }
+    gutterView.textLines = { [weak textView] row in textView?.textLines(ofRow: row) ?? 1 }
     gutterView.hasFocus = { [weak self] in
       self.map { $0.window?.isKeyWindow == true && $0.holdsFocus } ?? false
     }
