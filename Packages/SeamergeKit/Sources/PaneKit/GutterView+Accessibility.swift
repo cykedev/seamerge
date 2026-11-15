@@ -15,7 +15,8 @@ extension GutterView {
   }
 
   /// One element for each mark beside the visible rows: change markers, warning signs, rings of
-  /// ignored differences and marks of removed text, each named with the line it stands at.
+  /// ignored differences and marks of removed text, each named with the line it stands at; in a
+  /// single column also one for each visible row, which names its side and its lines.
   override func accessibilityChildren() -> [Any]? {
     let rows = visibleRows
     var children: [NSAccessibilityElement] = []
@@ -34,6 +35,11 @@ extension GutterView {
           named: Self.name(of: mark.mark), help: mark.help,
           place: placeDescription(ofBoundary: mark.boundary), frame: mark.slot))
     }
+    if let sides = content.sideLineNumbers {
+      for row in rows {
+        children.append(rowElement(ofRow: row, sides: sides))
+      }
+    }
     for index in expandedRuns.indices where rows.contains(expandedRuns[index].rows.lowerBound) {
       children.append(collapseElement(ofRun: index))
     }
@@ -47,6 +53,23 @@ extension GutterView {
           help: nil, atRow: row, frame: rect(ofRow: row)))
     }
     return children
+  }
+
+  /// The element of `row` in a single column, which names its side and its lines: removed, added
+  /// or unchanged, beside the columns of line numbers.
+  private func rowElement(ofRow row: Int, sides: SideLineNumbers) -> NSAccessibilityElement {
+    let element = NSAccessibilityElement()
+    element.setAccessibilityRole(.staticText)
+    element.setAccessibilityLabel(sides.sideName(ofRow: row))
+    element.setAccessibilityValue(sides.placeDescription(ofRow: row))
+    element.setAccessibilityParent(self)
+    let rowRect = rect(ofRow: row)
+    element.setAccessibilityFrameInParentSpace(
+      CGRect(
+        x: 0, y: rowRect.minY,
+        width: bounds.width - CGFloat(markerSlotCount) * Theme.markerSlotWidth,
+        height: min(rowRect.height, theme.rowHeight)))
+    return element
   }
 
   /// The button that collapses the expanded run at `index` again, found beside the run's first
@@ -85,8 +108,12 @@ extension GutterView {
     return element
   }
 
-  /// Where `row` is, in words: its line, or for a filler row the line it follows.
+  /// Where `row` is, in words: its line, or for a filler row the line it follows; in a single
+  /// column its lines in both files.
   private func placeDescription(ofRow row: Int) -> String {
+    if let sides = content.sideLineNumbers {
+      return sides.placeDescription(ofRow: row)
+    }
     if let line = content.lineNumbers[...row].last(where: { $0 >= 0 }) {
       let number = Int(line) + 1
       return content.lineNumbers[row] >= 0
@@ -121,23 +148,12 @@ extension GutterView {
   /// What VoiceOver calls `mark`.
   private static func name(of mark: GutterMark) -> String {
     switch mark {
-    case .marker(let marker, _): name(of: marker)
+    case .marker(let marker, _): marker.accessibilityName
     case .conflict(let conflict): name(of: conflict)
     case .ignoredDifference:
       String(
         localized: "Ignored difference", bundle: .module,
         comment: "VoiceOver: a line that differs only in what the comparison ignores.")
-    }
-  }
-
-  private static func name(of marker: Marker) -> String {
-    switch marker {
-    case .added:
-      String(localized: "Added", bundle: .module, comment: "VoiceOver: the side added lines.")
-    case .changed:
-      String(localized: "Changed", bundle: .module, comment: "VoiceOver: the side changed lines.")
-    case .removed:
-      String(localized: "Removed", bundle: .module, comment: "VoiceOver: the side removed lines.")
     }
   }
 

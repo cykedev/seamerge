@@ -162,6 +162,9 @@
     "Line %lld": {
       "comment": "VoiceOver: where a mark is."
     },
+    "Line %lld on the left, line %lld on the right": {
+      "comment": "VoiceOver: where a row of a single column is that both files share."
+    },
     "Nothing taken": {
       "comment": "VoiceOver: a block that takes no lines from any input."
     },
@@ -206,6 +209,9 @@
     },
     "Takes the lines of %@, in the order you chose": {
       "comment": "Help tag of a block whose sources the user chose, such as B and A."
+    },
+    "Unchanged": {
+      "comment": "VoiceOver: a row of a single column that shows a line both files share."
     }
   },
   "version": "1.0"

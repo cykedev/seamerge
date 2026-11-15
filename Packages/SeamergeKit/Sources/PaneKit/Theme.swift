@@ -108,6 +108,10 @@ public struct Theme {
   /// The distance between the line numbers and the first marker slot.
   static let gutterNumberSpacing: CGFloat = 4
 
+  /// The space between the two columns of line numbers of a pane that shows both files of a
+  /// comparison in one column.
+  static let gutterNumberColumnSpacing: CGFloat = 8
+
   /// The width of the slot that one gutter marker is centered in.
   static let markerSlotWidth: CGFloat = 16
 

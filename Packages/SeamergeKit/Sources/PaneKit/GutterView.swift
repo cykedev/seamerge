@@ -3,6 +3,9 @@ import AppKit
 /// The left margin of a pane: the line numbers, the markers of the blocks and the filled cells of
 /// the current block, on the tint of each row.
 ///
+/// A pane that shows both files of a comparison in one column has two columns of line numbers,
+/// the left file's and the right file's, each as wide as the largest number of either needs.
+///
 /// The gutter sits beside the scroll view and draws the visible rows itself, each at its display
 /// row times the row height, minus the scroll offset of the text. It shades each row as the text
 /// does, from the same source, so that the tint of a block and its hairlines run on from the left
@@ -152,13 +155,17 @@ final class GutterView: NSView {
 
   /// The marks beside `row` from the trailing edge on, each with what it means: the mark of how
   /// a side changed the block and the mark of a conflict before it at the first row of a block,
-  /// and on a row without either the ring of an ignored difference.
+  /// the mark of the second file at the first row of the lower part of a block, and on a row
+  /// without either the ring of an ignored difference.
   func marks(ofRow row: Int) -> [(mark: GutterMark, help: String)] {
     var marks: [(mark: GutterMark, help: String)] = []
-    if let blockIndex = content.blockIndex(atRow: row),
-      content.blocks[blockIndex].rows.lowerBound == row
-    {
-      marks = Self.marks(of: content.blocks[blockIndex])
+    if let blockIndex = content.blockIndex(atRow: row) {
+      let block = content.blocks[blockIndex]
+      if block.rows.lowerBound == row {
+        marks = Self.marks(of: block)
+      } else if let part = block.lowerPart, part.firstRow == row, let marker = part.marker {
+        marks = [(.marker(marker, part.style), MarkHelp.marker(marker))]
+      }
     }
     if marks.isEmpty && content.ignoredDifferenceRows.contains(row) {
       marks.append((.ignoredDifference, MarkHelp.ignoredDifference))
@@ -313,10 +320,13 @@ final class GutterView: NSView {
     return displayRows.row(atDisplayRow: displayRows.clampedDisplayRow(atLine: line))
   }
 
-  /// The width that the gutter needs for the widest line number and the markers of `content`.
+  /// The width that the gutter needs for its columns of line numbers and the markers of
+  /// `content`.
   var fittingWidth: CGFloat {
+    let columns = CGFloat(numberColumnCount)
     let width =
-      Theme.gutterLeadingInset + numberColumnWidth + Theme.gutterNumberSpacing
+      Theme.gutterLeadingInset + columns * numberColumnWidth
+      + (columns - 1) * Theme.gutterNumberColumnSpacing + Theme.gutterNumberSpacing
       + CGFloat(markerSlotCount) * Theme.markerSlotWidth
     return (width / Theme.layoutGrid).rounded(.up) * Theme.layoutGrid
   }
@@ -351,10 +361,9 @@ final class GutterView: NSView {
       let rowRect = rect(ofRow: row)
       let isCurrent = isInCurrentBlock(row)
       drawGround(ofRow: row, in: rowRect, hasFocus: hasFocus)
-      let lineNumber = content.lineNumbers[row]
-      if lineNumber >= 0 {
+      for (column, lineNumber) in shownLineNumbers(ofRow: row).enumerated() where lineNumber >= 0 {
         drawLineNumber(
-          Int(lineNumber) + 1, in: rowRect,
+          Int(lineNumber) + 1, inColumn: column, of: rowRect,
           attributes: isCurrent ? currentNumberAttributes : numberAttributes)
       }
       drawMarkers(ofRow: row, in: rowRect, color: isCurrent ? currentColor : nil)
@@ -385,9 +394,24 @@ final class GutterView: NSView {
       hairline: RowShading.hairline(in: window), context: context)
   }
 
-  /// The width of the widest line number of `content`, with room for a few digits at least.
+  /// The zero-based line numbers that the gutter shows beside `row`, one per column, -1 where a
+  /// column has none: the line of the row, or the lines of both files in a single column.
+  func shownLineNumbers(ofRow row: Int) -> [Int32] {
+    guard let sides = content.sideLineNumbers else { return [content.lineNumbers[row]] }
+    return [sides.left[row], sides.right[row]]
+  }
+
+  /// The number of columns of line numbers: two in a pane that shows both files of a comparison
+  /// in one column, else one.
+  private var numberColumnCount: Int {
+    content.sideLineNumbers == nil ? 1 : 2
+  }
+
+  /// The width of the widest line number of `content`, the same for each column, with room for
+  /// a few digits at least.
   private static func numberColumnWidth(of content: PaneContent, theme: Theme) -> CGFloat {
-    let largest = content.lineNumbers.max().map { Int($0) + 1 } ?? 0
+    let numbers = content.sideLineNumbers.map { [$0.left, $0.right] } ?? [content.lineNumbers]
+    let largest = numbers.compactMap { $0.max() }.max().map { Int($0) + 1 } ?? 0
     let digits = max(String(largest).count, Theme.minimumLineNumberDigits)
     // The semibold numbers of the current block take the same column.
     let digitWidth =
@@ -398,7 +422,7 @@ final class GutterView: NSView {
   }
 
   /// The number of markers that the busiest row of `content` shows side by side, at least one.
-  private var markerSlotCount: Int {
+  var markerSlotCount: Int {
     content.blocks.reduce(1) { count, block in
       max(count, (block.marker == nil ? 0 : 1) + (block.conflict == nil ? 0 : 1))
     }
@@ -408,15 +432,21 @@ final class GutterView: NSView {
     [.font: theme.lineNumberFont, .foregroundColor: color]
   }
 
+  /// Draws `number` right-aligned in the column of line numbers `column`, counted from the
+  /// leading edge.
   private func drawLineNumber(
-    _ number: Int, in rowRect: CGRect, attributes: [NSAttributedString.Key: Any]
+    _ number: Int, inColumn column: Int, of rowRect: CGRect,
+    attributes: [NSAttributedString.Key: Any]
   ) {
     let text = String(number) as NSString
     let size = text.size(withAttributes: attributes)
     let font = attributes[.font] as? NSFont ?? theme.lineNumberFont
+    let columnEnd =
+      Theme.gutterLeadingInset + CGFloat(column + 1) * numberColumnWidth
+      + CGFloat(column) * Theme.gutterNumberColumnSpacing
     // Shares the baseline of the code beside it.
     let origin = CGPoint(
-      x: Theme.gutterLeadingInset + numberColumnWidth - size.width,
+      x: columnEnd - size.width,
       y: rowRect.minY + theme.baseline - font.ascender)
     text.draw(at: origin, withAttributes: attributes)
   }

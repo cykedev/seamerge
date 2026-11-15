@@ -710,7 +710,8 @@ final class PaneTextView: NSTextView {
       between: nil, and: content.blocks[block].style, isOnlyBoundary: block == currentBlock)
   }
 
-  /// The hairlines at the edges of the changed block that `row` belongs to, if any.
+  /// The hairlines at the edges of the changed block that `row` belongs to and between its
+  /// parts, if any.
   private func blockEdges(atRow row: Int) -> RowShading.Edges {
     guard let block = content.blockIndex(atRow: row) else { return tintEdges(atRow: row) }
     let rows = content.blocks[block].rows
@@ -724,6 +725,12 @@ final class PaneTextView: NSTextView {
       let bothTinted = upper.map { $0 != .unchanged } == true && lower != .unchanged
       let isOnlyBoundary = bothTinted && (upper == lower || content.blocks[block].marker == nil)
       edges.top = theme.edgeColor(between: upper, and: lower, isOnlyBoundary: isOnlyBoundary)
+    }
+    if let part = content.blocks[block].lowerPart, row == part.firstRow {
+      // The parts of a block meet like two blocks that touch.
+      edges.top = theme.edgeColor(
+        between: content.blocks[block].style, and: part.style,
+        isOnlyBoundary: part.style == content.blocks[block].style || part.marker == nil)
     }
     if row == rows.upperBound - 1 {
       // A row with a tint of its own below draws the edge at its top.
@@ -777,7 +784,7 @@ final class PaneTextView: NSTextView {
     var removals: [RowLayoutFragment.Removal] = []
     for row in rows {
       guard let blockIndex = content.blockIndex(atRow: row) else { continue }
-      let style = content.blocks[blockIndex].style
+      let style = content.blocks[blockIndex].style(atRow: row)
       // A line that is too long to show whole shows no change beyond its cut.
       let rowOffsets = shownOffsets(ofParagraph: grid.paragraphOffsets(ofRows: row..<row + 1))
       let fill = theme.runFill(for: style, isCurrent: blockIndex == currentBlock)

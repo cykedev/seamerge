@@ -42,7 +42,7 @@ extension PaneTextView {
     if let tint = content.rowTints[row] {
       return tint
     }
-    return content.blockIndex(atRow: row).map { content.blocks[$0].style } ?? .unchanged
+    return content.blockIndex(atRow: row).map { content.blocks[$0].style(atRow: row) } ?? .unchanged
   }
 
   /// Keeps the insertion point and the ends of every selection out of the previews, which cannot

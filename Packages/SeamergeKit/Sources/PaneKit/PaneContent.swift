@@ -9,7 +9,17 @@ public struct PaneContent: Sendable {
   public var text: String
 
   /// The zero-based number of the line that each row shows, or -1 for a filler row.
+  ///
+  /// In a pane with ``sideLineNumbers``, the numbers count the rows of the pane itself, from 0,
+  /// and the gutter shows the numbers of both sides instead.
   public var lineNumbers: [Int32]
+
+  /// The line numbers of both files of a comparison, for a pane that shows them in one column,
+  /// which the gutter shows in two columns; `nil` for a pane of one file.
+  ///
+  /// An edit of the text drops them, as it cannot tell which file the rewritten rows belong to;
+  /// the gutter then numbers the rows of the pane until the owner gives the exact content.
+  public private(set) var sideLineNumbers: SideLineNumbers?
 
   /// The blocks, in row order and without overlap.
   ///
@@ -51,14 +61,20 @@ public struct PaneContent: Sendable {
   ///
   /// - Precondition: `lineNumbers` and `lineEndings` have one entry per row of `text`, and the
   ///   blocks are sorted, do not overlap and lie within the rows; the previews are sorted, do not
-  ///   overlap and lie within the text; the rows of the tints lie within the rows.
+  ///   overlap and lie within the text; the rows of the tints lie within the rows;
+  ///   `sideLineNumbers` has as many rows as `lineNumbers`.
   public init(
-    text: String, lineNumbers: [Int32], blocks: [PaneBlock] = [],
-    ignoredDifferenceRows: IndexSet = [], ignoredDifferencePlaces: [Range<Int>] = [],
-    lineEndings: [LineEnding]? = nil, previews: [PanePreview] = [],
-    rowTints: [Int: BlockStyle] = [:], marksBlocksWithoutRows: Bool = false
+    text: String, lineNumbers: [Int32], sideLineNumbers: SideLineNumbers? = nil,
+    blocks: [PaneBlock] = [], ignoredDifferenceRows: IndexSet = [],
+    ignoredDifferencePlaces: [Range<Int>] = [], lineEndings: [LineEnding]? = nil,
+    previews: [PanePreview] = [], rowTints: [Int: BlockStyle] = [:],
+    marksBlocksWithoutRows: Bool = false
   ) {
+    precondition(
+      sideLineNumbers.map { $0.rowCount == lineNumbers.count } ?? true,
+      "Line numbers of both sides for another number of rows")
     self.text = text
+    self.sideLineNumbers = sideLineNumbers
     self.marksBlocksWithoutRows = marksBlocksWithoutRows
     self.lineNumbers = lineNumbers
     self.blocks = blocks
@@ -151,8 +167,9 @@ public struct PaneContent: Sendable {
       lineNumbers[row] = next
       next += 1
     }
+    sideLineNumbers = nil
     for index in blocks.indices {
-      blocks[index].rows = change.newRows(of: blocks[index].rows)
+      blocks[index].takeOver(change)
     }
     previews = previews.compactMap { $0.takingOver(range, length: length) }
     ignoredDifferenceRows = IndexSet(
@@ -234,13 +251,67 @@ public struct PaneBlock: Sendable, Hashable {
   /// The mark of a conflict, shown on the base pane, or on B while the base is hidden.
   public var conflict: ConflictMarker?
 
+  /// The rows of the second file below those of the first, in a pane that shows both files of
+  /// a comparison in one column, with a tint and a mark of their own; `nil` where the block has
+  /// one tint.
+  ///
+  /// ``style`` and ``marker`` then belong to the rows above the part. A hairline divides the two
+  /// parts as it divides two blocks that touch.
+  public var lowerPart: PaneBlockPart?
+
   /// Creates a block.
+  ///
+  /// - Precondition: `lowerPart` starts below the first row of the block and within it.
   public init(
-    rows: Range<Int>, style: BlockStyle, marker: Marker? = nil, conflict: ConflictMarker? = nil
+    rows: Range<Int>, style: BlockStyle, marker: Marker? = nil, conflict: ConflictMarker? = nil,
+    lowerPart: PaneBlockPart? = nil
   ) {
+    precondition(
+      lowerPart.map { rows.dropFirst().contains($0.firstRow) } ?? true,
+      "The lower part of a block starts below its first row and within it")
     self.rows = rows
     self.style = style
     self.marker = marker
     self.conflict = conflict
+    self.lowerPart = lowerPart
+  }
+
+  /// The lower part if `row` lies in it.
+  func lowerPart(containingRow row: Int) -> PaneBlockPart? {
+    lowerPart.flatMap { row >= $0.firstRow ? $0 : nil }
+  }
+
+  /// How `row` of the block is tinted: in the style of the lower part if it lies there.
+  func style(atRow row: Int) -> BlockStyle {
+    lowerPart(containingRow: row)?.style ?? style
+  }
+
+  /// Takes over an edit that rewrote rows as `change` says: the rows move or grow with it, and
+  /// the lower part stays while it still starts within them below their first row.
+  fileprivate mutating func takeOver(_ change: RowChange) {
+    rows = change.newRows(of: rows)
+    guard var part = lowerPart else { return }
+    part.firstRow = change.newBoundary(of: part.firstRow)
+    lowerPart = rows.dropFirst().contains(part.firstRow) ? part : nil
+  }
+}
+
+/// The lower part of a block in a pane that shows both files of a comparison in one column: the
+/// rows of the second file, from a row of the block to its end.
+public struct PaneBlockPart: Sendable, Hashable {
+  /// The first row of the part, which runs to the end of its block.
+  public var firstRow: Int
+
+  /// How the rows of the part are tinted.
+  public var style: BlockStyle
+
+  /// How the second file changed the block, shown at the first row of the part, or `nil`.
+  public var marker: Marker?
+
+  /// Creates the part of a block from `firstRow` to the end of the block.
+  public init(firstRow: Int, style: BlockStyle, marker: Marker? = nil) {
+    self.firstRow = firstRow
+    self.style = style
+    self.marker = marker
   }
 }

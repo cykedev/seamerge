@@ -728,6 +728,9 @@ extension PaneView: DecisionColumnHost {
 
   func placeDescription(ofBlock block: Int) -> String {
     let rows = content.blocks[block].rows
+    if let sides = content.sideLineNumbers, !rows.isEmpty {
+      return sides.placeDescription(ofRow: rows.lowerBound)
+    }
     let lines = content.lineNumbers
     if rows.isEmpty {
       // A block without rows lies after the line before it.

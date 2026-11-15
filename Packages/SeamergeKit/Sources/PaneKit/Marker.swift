@@ -15,3 +15,18 @@ public enum ConflictMarker: Sendable, Hashable, CaseIterable {
   /// The conflict has been decided; drawn in the secondary label color.
   case resolved
 }
+
+extension Marker {
+  /// What VoiceOver calls the mark, and a row of a single column that shows a line of one file
+  /// alone: removed for the left file, added for the right one.
+  var accessibilityName: String {
+    switch self {
+    case .added:
+      String(localized: "Added", bundle: .module, comment: "VoiceOver: the side added lines.")
+    case .changed:
+      String(localized: "Changed", bundle: .module, comment: "VoiceOver: the side changed lines.")
+    case .removed:
+      String(localized: "Removed", bundle: .module, comment: "VoiceOver: the side removed lines.")
+    }
+  }
+}

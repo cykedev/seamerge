@@ -41,6 +41,9 @@ public final class OverviewBar: NSScroller {
 
   /// The index of the current block, whose mark the triangle points at, or `nil` if there is
   /// none.
+  ///
+  /// Where several marks name the block, as the parts of a block in a single column do, the
+  /// triangle points at the middle of all of them.
   public var currentBlock: Int? {
     didSet { needsDisplay = true }
   }
@@ -324,12 +327,15 @@ public final class OverviewBar: NSScroller {
     path.stroke()
   }
 
+  /// Draws the triangle at the middle of the marks of the current block: of its one mark, or of
+  /// the marks of its parts one below the other in a single column.
   private func drawCurrentBlockIndicator(_ layout: OverviewLayout) {
     guard
       let currentBlock,
-      let index = marks.firstIndex(where: { $0.block == currentBlock })
+      let rect = zip(marks, layout.markRects).filter({ $0.0.block == currentBlock }).map(\.1)
+        .reduce(nil, { $0?.union($1) ?? $1 })
     else { return }
-    let middle = layout.markRects[index].midY
+    let middle = rect.midY
     let height = Theme.currentBlockIndicatorHeight
     let path = NSBezierPath()
     path.move(to: CGPoint(x: 0, y: middle - height / 2))
