@@ -182,6 +182,11 @@ extension PaneSearch: @MainActor NSTextFinderClient {
   public func didReplaceCharacters() {
     guard let (undoManager, replacesAll) = replacement else { return }
     replacement = nil
+    // Replace All leaves no match of the search; the finder searches again only as the search
+    // text changes.
+    if replacesAll {
+      hasFoundMatches = false
+    }
     delegate?.paneSearch(self, didReplaceAll: replacesAll)
     if let undoManager {
       undoManager.setActionName(Self.undoActionName(replacingAll: replacesAll))

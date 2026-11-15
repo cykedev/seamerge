@@ -179,6 +179,8 @@ import Testing
       ---
       Find ▸
         Find… ⌘F
+        Find and Replace… ⌥⌘F
+        Replace All
         Find Next ⌘G
         Find Previous ⇧⌘G
         Use Selection for Find ⌘E

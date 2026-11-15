@@ -76,6 +76,13 @@ public final class PaneSearch: NSObject {
   /// them as the user types; empty while the find bar is closed.
   public private(set) var matches: [Match] = []
 
+  /// Whether the search as the user types found a match when it searched last, while the find
+  /// bar is open.
+  ///
+  /// The matches go once the text changes, as after a replacement, and the finder does not
+  /// search again until the search text changes; this still tells that the text was found.
+  public internal(set) var hasFoundMatches = false
+
   /// Whether ``matches`` are what the finder found in the text as it is now: false once the text
   /// or the panes changed since it searched, and its matches are gone, until it searches again.
   public private(set) var matchesAreCurrent = false
@@ -238,6 +245,7 @@ public final class PaneSearch: NSObject {
 
   /// Clears the marks of the matches once the find bar closes.
   func findBarDidClose() {
+    hasFoundMatches = false
     matchesAreCurrent = false
     showMatches([])
   }
@@ -348,6 +356,7 @@ public final class PaneSearch: NSObject {
       else { return nil }
       return Match(pane: panes[place.pane], range: place.range)
     }
+    hasFoundMatches = !found.isEmpty
     matchesAreCurrent = true
     showMatches(found)
   }

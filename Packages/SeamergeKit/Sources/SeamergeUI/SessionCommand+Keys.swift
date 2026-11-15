@@ -19,7 +19,7 @@ extension SessionCommand {
     case .previousChange: return (Self.upArrow, changeJumps)
     case .firstChange, .lastChange, .goToOtherEndOfMove, .compareExactly, .ignoreLineEndings,
       .ignoreWhitespaceChanges, .ignoreAllWhitespace, .toggleSyntaxHighlighting, .toggleInvisibles,
-      .toggleIgnoredChanges, .copyBlock:
+      .toggleIgnoredChanges, .copyBlock, .replaceAll:
       return nil
     case .swapSides: return ("s", [.option, .command])
     case .skipRemainingFiles: return kind == .diff ? (".", [.command]) : nil
@@ -42,6 +42,7 @@ extension SessionCommand {
     case .openInEditor: return ("o", [.option, .command])
     case .nextFile: return kind == .diff ? (Self.rightArrow, jumps) : nil
     case .find: return ("f", [.command])
+    case .findAndReplace: return ("f", [.option, .command])
     case .findNext: return ("g", [.command])
     case .findPrevious: return ("g", [.shift, .command])
     case .useSelectionForFind: return ("e", [.command])

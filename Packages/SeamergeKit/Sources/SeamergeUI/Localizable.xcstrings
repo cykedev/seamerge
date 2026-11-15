@@ -688,6 +688,9 @@
     "Filter Files" : {
       "comment" : "Edit > Find: put the focus into the field that filters the list of files."
     },
+    "Find and Replace…" : {
+      "comment" : "Edit > Find: open the find bar with the field for replacing in the result."
+    },
     "Find Next" : {
       "comment" : "Edit > Find."
     },
@@ -1085,7 +1088,10 @@
     },
     "Reopen All Conflicts" : {
       "comment" : "Merge menu command."
+    },    "Replace All" : {
+      "comment" : "Edit > Find: replace every match of the search in the result."
     },
+
     "Replaces the entry and the script of another copy of Seamerge in Tower." : {
       "comment" : "Set Up Git Integration: adding to Tower replaces a copy."
     },

@@ -3,7 +3,8 @@ import MergeModel
 import PaneKit
 
 /// The search of the window: one find bar below the panes for all of them, which Find… opens
-/// over every pane in view.
+/// over every pane in view and Find and Replace… over the result alone, the only text that can
+/// be replaced in.
 extension SessionWindowController {
   /// Opens the find bar, without the field for replacing, and searches all panes in view.
   ///
@@ -21,6 +22,20 @@ extension SessionWindowController {
     if search.showsReplaceField {
       search.perform(.hideReplaceInterface)
     }
+  }
+
+  /// Opens the find bar with the field for replacing and limits the search to the result.
+  @objc func findAndReplace(_ sender: Any?) {
+    guard canPerform(.findAndReplace), let resultPane = layout.resultPane else { return }
+    let search = presentation.search
+    search.scope = .pane(resultPane)
+    search.perform(.showReplaceInterface)
+  }
+
+  /// Replaces every match in the result as one step of undo, while the find bar replaces there.
+  @objc func replaceAll(_ sender: Any?) {
+    guard canPerform(.replaceAll) else { return }
+    presentation.search.perform(.replaceAll)
   }
 
   /// Selects the next match, in the order the panes read; from a pane, the focus goes along to

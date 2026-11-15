@@ -34,7 +34,7 @@ extension SessionCommand {
     case .edit:
       [
         [.copyBlock],
-        [.find, .findNext, .findPrevious, .useSelectionForFind],
+        [.find, .findAndReplace, .replaceAll, .findNext, .findPrevious, .useSelectionForFind],
         [.filterFiles],
       ]
     case .view:

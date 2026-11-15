@@ -101,6 +101,12 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Opens the find bar and searches all panes in view.
   case find
 
+  /// Opens the find bar with the field for replacing and limits the search to the result.
+  case findAndReplace
+
+  /// Replaces every match of the search in the result, as one step of undo.
+  case replaceAll
+
   /// Selects the next match of the search, in the order the panes read.
   case findNext
 
@@ -267,6 +273,14 @@ public enum SessionCommand: CaseIterable, Sendable {
         localized: "Show Identical Files", bundle: .module,
         comment: "View menu command, checked while the list of two folders shows equal files too.")
     case .find: String(localized: "Find…", bundle: .module, comment: "Edit > Find.")
+    case .findAndReplace:
+      String(
+        localized: "Find and Replace…", bundle: .module,
+        comment: "Edit > Find: open the find bar with the field for replacing in the result.")
+    case .replaceAll:
+      String(
+        localized: "Replace All", bundle: .module,
+        comment: "Edit > Find: replace every match of the search in the result.")
     case .findNext: String(localized: "Find Next", bundle: .module, comment: "Edit > Find.")
     case .findPrevious:
       String(localized: "Find Previous", bundle: .module, comment: "Edit > Find.")
@@ -573,6 +587,8 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .toggleFooter: #selector(SessionWindowController.toggleFooter(_:))
     case .toggleIdenticalFiles: #selector(SessionWindowController.toggleIdenticalFiles(_:))
     case .find: #selector(SessionWindowController.find(_:))
+    case .findAndReplace: #selector(SessionWindowController.findAndReplace(_:))
+    case .replaceAll: #selector(SessionWindowController.replaceAll(_:))
     case .findNext: #selector(SessionWindowController.findNext(_:))
     case .findPrevious: #selector(SessionWindowController.findPrevious(_:))
     case .useSelectionForFind: #selector(SessionWindowController.useSelectionForFind(_:))

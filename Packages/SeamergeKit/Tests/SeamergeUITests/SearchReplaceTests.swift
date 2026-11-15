@@ -5,7 +5,7 @@ import Testing
 
 @testable import SeamergeUI
 
-/// Replacing in the result: the edits pass through the result document
+/// Replacing in the result through Find and Replace: the edits pass through the result document
 /// as typing does, never touch a preview, and each replacement is one step of undo with its
 /// name, after which typing starts a step of its own.
 ///
@@ -15,17 +15,14 @@ import Testing
 @Suite(.serialized, .timeLimit(.minutes(1)))
 struct SearchReplaceTests {
   /// The window of the merge of nine blocks with an undo manager that groups nothing by itself,
-  /// so that only the window can join edits into one step, and the find bar open for replacing
-  /// in the result.
+  /// so that only the window can join edits into one step, and the find bar open for replacing.
   private static func window() async throws -> (SessionWindowController, SearchDriver) {
     let undoManager = UndoManager()
     undoManager.groupsByEvent = false
     let controller = try Windows.controller(
       for: try await EditingFixture.nineBlocks(), undoManager: undoManager)
     let driver = SearchDriver(controller)
-    let search = controller.presentation.search
-    search.scope = .pane(try #require(controller.layout.resultPane))
-    search.perform(.showReplaceInterface)
+    #expect(try driver.send(.findAndReplace))
     return (controller, driver)
   }
 
@@ -49,17 +46,19 @@ struct SearchReplaceTests {
 
       // "B" stands in block 5, taken from B, and in the preview of the conflict of block 3.
       try await Self.prepare(driver, replacing: "B", matches: 1, with: "Q")
-      driver.search.perform(.replaceAll)
+      #expect(try driver.send(.replaceAll))
       var texts = try controller.segmentTexts
       #expect(texts[3] == "A3\nB3\n")
       #expect(texts[5] == "Q5\n")
       #expect(try controller.segmentStates[3] == .open)
       #expect(undoManager.undoActionName == "Replace All")
+      // Nothing is left to replace until the search finds something again.
+      #expect(!controller.canPerform(.replaceAll))
       // The finder searches the changed text anew; only the preview holds "B" now.
       await driver.waitForMatches(count: 0)
 
       try await Self.prepare(driver, replacing: "u", matches: 5, with: "v")
-      driver.search.perform(.replaceAll)
+      #expect(try driver.send(.replaceAll))
       let replaced = try controller.presentation.mergeResult.text
       #expect(
         replaced == "v0\nA1\nv2\nA3\nB3\nv4\nQ5\nv6\n\(EditingFixture.removalNote)\nY7\nv8\n")
@@ -99,6 +98,7 @@ struct SearchReplaceTests {
       #expect(try controller.presentation.mergeResult.text.filter { $0 == "u" }.count == 4)
       // The matches went with the change of the text, which is no result of a search.
       #expect(driver.announcements == heard)
+      #expect(controller.canPerform(.replaceAll))
     }
   }
 
@@ -115,6 +115,8 @@ struct SearchReplaceTests {
       #expect(try controller.segmentTexts[8] == "w8\n")
       #expect(undoManager.undoActionName == "Replace")
       #expect(controller.typingRun == nil)
+      // The search found the text, so Replace All stays at hand after a replacement.
+      #expect(controller.canPerform(.replaceAll))
 
       // Typing right where the replacement ended is a step of its own.
       let end = try NSMaxRange(

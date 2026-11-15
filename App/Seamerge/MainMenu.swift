@@ -139,7 +139,8 @@ final class MainMenu {
     find.submenu = Self.menu(
       Titles.find,
       [
-        commands(.find, .findNext, .findPrevious, .useSelectionForFind)
+        commands(
+          .find, .findAndReplace, .replaceAll, .findNext, .findPrevious, .useSelectionForFind)
           + [
             Self.item(
               Titles.jumpToSelection, #selector(NSText.centerSelectionInVisibleArea(_:)), key: "j")

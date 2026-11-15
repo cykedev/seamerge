@@ -26,6 +26,11 @@ extension SessionCommand {
     /// text to search for.
     case search(NSTextFinder.Action)
 
+    /// Replacing all matches needs the find bar to show its field for replacing, which limits
+    /// the search to the result, and a match that the search found there; the find bar itself
+    /// offers only Replace.
+    case replacing
+
     /// Choosing a comparison mode needs no comparison under way.
     case noComparisonUnderWay
 
@@ -118,6 +123,8 @@ extension SessionCommand {
     case .nextPane, .previousPane: .anotherPane
     case .toggleIdenticalFiles: .comparedFolders
     case .filterFiles: .fileList
+    case .findAndReplace: .resultPane
+    case .replaceAll: .replacing
     case .findNext: .search(.nextMatch)
     case .findPrevious: .search(.previousMatch)
     case .useSelectionForFind: .search(.setSearchString)

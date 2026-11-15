@@ -238,6 +238,123 @@ struct SearchWindowTests {
     }
   }
 
+  @Test func findAndReplaceIsValidOnlyInAMergeAndLimitsTheSearchToTheResult() async throws {
+    try await FindPasteboard.preserving {
+      let diff = try Windows.controller(for: try await SampleDiffs.greeting())
+      defer { diff.window?.close() }
+      let merge = try Windows.controller(for: try await Self.needleMerge())
+      defer { merge.window?.close() }
+      let item = NSMenuItem(
+        title: "", action: SessionCommand.findAndReplace.action, keyEquivalent: "")
+
+      #expect(!diff.validateUserInterfaceItem(item))
+      #expect(merge.validateUserInterfaceItem(item))
+
+      let replaceAll = NSMenuItem(
+        title: "", action: SessionCommand.replaceAll.action, keyEquivalent: "")
+      #expect(!diff.validateUserInterfaceItem(replaceAll))
+      #expect(!merge.validateUserInterfaceItem(replaceAll))
+
+      let driver = SearchDriver(merge)
+      #expect(try driver.send(.findAndReplace))
+      #expect(driver.search.findBar.isFindBarVisible)
+      #expect(!merge.validateUserInterfaceItem(replaceAll))
+      try driver.type("needle")
+      await driver.waitForMatches(count: 2)
+      #expect(driver.search.matches.allSatisfy { $0.pane === merge.layout.resultPane })
+      #expect(try driver.replaceField.isEditable)
+      #expect(merge.validateUserInterfaceItem(replaceAll))
+      try driver.type("needle x")
+      await driver.waitForMatches(count: 0)
+      #expect(!merge.validateUserInterfaceItem(replaceAll))
+      try driver.type("needle")
+      await driver.waitForMatches(count: 2)
+      // The matches stay on the way to the field for replacing.
+      try driver.typeReplacement("pin")
+      #expect(driver.search.matches.count == 2)
+      #expect(merge.validateUserInterfaceItem(replaceAll))
+
+      // Find goes back to every pane, where nothing can be replaced.
+      #expect(try driver.send(.find))
+      await driver.waitForMatches(count: 11)
+      #expect(!merge.validateUserInterfaceItem(replaceAll))
+    }
+  }
+
+  @Test func switchingReplaceOffInTheBarSearchesAllPanesAndOnAgainTheResultAlone()
+    async throws
+  {
+    try await FindPasteboard.preserving {
+      let controller = try Windows.controller(for: try await Self.needleMerge())
+      let window = try #require(controller.window)
+      defer { window.close() }
+      let driver = SearchDriver(controller)
+      let replaceAll = NSMenuItem(
+        title: "", action: SessionCommand.replaceAll.action, keyEquivalent: "")
+      #expect(try driver.send(.findAndReplace))
+      #expect(driver.search.showsReplaceField)
+      let bar = try #require(driver.search.findBar.findBarView)
+      let toggle = try #require(
+        Self.views(in: bar).compactMap { $0 as? NSButton }.first {
+          $0.title == "Replace" && !$0.isHiddenOrHasHiddenAncestor
+        })
+
+      // The checkbox of the bar, as the user clicks it.
+      toggle.performClick(nil)
+
+      #expect(!driver.search.showsReplaceField)
+      // Checked before waiting for the finder, which would wait in vain for the wrong count.
+      try #require(Self.searchesAllPanes(driver.search))
+      try driver.type("needle")
+      await driver.waitForMatches(count: 11)
+      #expect(!controller.validateUserInterfaceItem(replaceAll))
+
+      toggle.performClick(nil)
+
+      #expect(driver.search.showsReplaceField)
+      try #require(!Self.searchesAllPanes(driver.search))
+      try driver.type("needle a")
+      await driver.waitForMatches(count: 0)
+      try driver.type("needle")
+      await driver.waitForMatches(count: 2)
+      #expect(driver.search.matches.allSatisfy { $0.pane === controller.layout.resultPane })
+      #expect(controller.validateUserInterfaceItem(replaceAll))
+    }
+  }
+
+  @Test func findAfterTheBarClosedWhileReplacingSearchesAllPanesWithoutTheFieldForReplacing()
+    async throws
+  {
+    try await FindPasteboard.preserving {
+      let controller = try Windows.controller(for: try await Self.needleMerge())
+      let window = try #require(controller.window)
+      defer { window.close() }
+      let driver = SearchDriver(controller)
+      #expect(try driver.send(.findAndReplace))
+      #expect(driver.search.showsReplaceField)
+      // Done of the bar.
+      driver.search.perform(.hideFindInterface)
+      #expect(!driver.search.findBar.isFindBarVisible)
+
+      #expect(try driver.send(.find))
+
+      #expect(driver.search.findBar.isFindBarVisible)
+      #expect(!driver.search.showsReplaceField)
+      try #require(Self.searchesAllPanes(driver.search))
+      try driver.type("needle")
+      await driver.waitForMatches(count: 11)
+    }
+  }
+
+  /// Whether `search` goes through all panes rather than the result alone.
+  private static func searchesAllPanes(_ search: PaneSearch) -> Bool {
+    if case .allPanes = search.scope { true } else { false }
+  }
+
+  private static func views(in view: NSView) -> [NSView] {
+    [view] + view.subviews.flatMap(views(in:))
+  }
+
   @Test func commandsOfTheSearchAreValidOnlyWhereTheyWork() async throws {
     try await FindPasteboard.preserving {
       let controller = try Windows.controller(for: try await Self.needleMerge())
@@ -256,7 +373,7 @@ struct SearchWindowTests {
         for: try await SampleDiffs.unavailable(isBinary: true).emptySession(),
         unavailable: SampleDiffs.unavailable(isBinary: true))
       defer { unavailable.window?.close() }
-      for command in [SessionCommand.find, .findNext, .useSelectionForFind] {
+      for command in [SessionCommand.find, .findAndReplace, .findNext, .useSelectionForFind] {
         #expect(
           !unavailable.validateUserInterfaceItem(
             NSMenuItem(title: "", action: command.action, keyEquivalent: "")), "\(command)")
@@ -400,5 +517,6 @@ struct SearchSectionTests {
     checkSections(of: controller)
     #expect(controller.presentation.search.sections.map(\.rows) != before)
     #expect(controller.canPerform(.find))
+    #expect(!controller.canPerform(.findAndReplace))
   }
 }

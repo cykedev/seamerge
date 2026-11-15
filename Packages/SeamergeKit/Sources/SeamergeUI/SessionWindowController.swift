@@ -639,6 +639,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
       collectionLayout?.hasList == true
     case .search(let action):
       presentation.search.validate(action)
+    case .replacing:
+      presentation.search.showsReplaceField && presentation.search.hasFoundMatches
     case .noComparisonUnderWay:
       !isSwitchingComparison
     case .basePane:
