@@ -116,7 +116,9 @@ extension SessionPresentation {
   /// While the panes show the lines of their files and scroll together, the place is the
   /// earliest that any of them reads: a pane without lines in the block at the reading line
   /// stands on the boundary where they are missing, which lies at the end of the block on the
-  /// grid. Each pane on its own, B tells the place.
+  /// grid. A pane that has stopped at the end of its text does not count, and where all have
+  /// stopped at the end or stand at the top, the place is the end or the top of the grid. Each
+  /// pane on its own, B tells the place.
   var gridPlaceAtReadingLine: Double? {
     let shown = layout.sourcePanes.filter(\.pane.isShown)
     guard let first = shown.first else { return nil }
@@ -131,7 +133,16 @@ extension SessionPresentation {
     guard scrollSync.isEnabled else {
       return gridPosition(in: shown.first { $0.role == .b } ?? first)
     }
-    return shown.map(gridPosition(in:)).min()
+    // Where every pane shows the end of its text, or the top, so does the grid.
+    if shown.allSatisfy(\.pane.reachesEndOfText) {
+      return Double(changes.session.rowLayout.rowCount)
+    }
+    if shown.allSatisfy({ $0.pane.documentView.visibleRect.minY <= 0 }) {
+      return 0
+    }
+    // A pane whose text ends sooner stops at its end while the others go on; its reading line
+    // stays behind and does not tell the place.
+    return shown.filter { !$0.pane.reachesEndOfText }.map(gridPosition(in:)).min()
   }
 
   /// Scrolls the panes side by side so that `place`, a row of the grid with its fraction, comes

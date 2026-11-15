@@ -255,6 +255,68 @@ import Testing
     }
   }
 
+  @Test func turningAlignLinesOnAndOffKeepsABlockBoundaryAtTheReadingLine() async throws {
+    let controller = try Windows.controller(for: try await SampleDiffs.everyKindOfChange())
+    let (a, b) = try panes(of: controller)
+    for block in [3, 7, 13, 22] {
+      controller.presentation.jump(to: block)
+      let gridPlace = position(atReadingLineOf: a)
+      #expect(gridPlace == Double(a.content.blocks[block].rows.lowerBound))
+
+      controller.toggleLineAlignment(nil)
+      #expect(controller.presentation.currentBlock == block)
+      let tops = [a, b].map { pane in
+        let span = pane.verticalSpan(ofRows: pane.content.blocks[block].rows)
+        return pane.convert(CGPoint(x: 0, y: span.lowerBound), from: pane.documentView).y
+      }
+      for top in tops {
+        #expect(abs(top - readingLine(of: a)) <= 1, "block \(block): \(tops)")
+      }
+
+      controller.toggleLineAlignment(nil)
+      #expect(abs(position(atReadingLineOf: a) - gridPlace) < 0.06, "block \(block) back")
+    }
+  }
+
+  @Test(arguments: [false, true])
+  func turningAlignLinesOnAndOffAtAnEndKeepsThePlaceWithinALine(atTheEnd: Bool) async throws {
+    let controller = try Windows.controller(for: try await SampleDiffs.everyKindOfChange())
+    let (a, b) = try panes(of: controller)
+    a.documentView.scroll(CGPoint(x: 0, y: atTheEnd ? a.documentView.frame.height : 0))
+    #expect(atAnEnd(a))
+    let gridPlace = position(atReadingLineOf: a)
+
+    controller.toggleLineAlignment(nil)
+    // At the end, the side with fewer lines stops before the other.
+    #expect(atAnEnd(a) || atAnEnd(b))
+    controller.toggleLineAlignment(nil)
+    let placeAgain = position(atReadingLineOf: a)
+    #expect(abs(placeAgain - gridPlace) <= 1, "\(gridPlace) became \(placeAgain)")
+  }
+
+  /// Where both sides show their tops, so does the grid, even though each side's reading line
+  /// lies below lines that only the other side has, further down the grid than on either side.
+  @Test func turningAlignLinesOffAndOnAtTheTopShowsTheTopOfTheGrid() async throws {
+    // A change every few lines, so that no run of unchanged lines collapses.
+    let lines = (1...200).map { "line \($0)" }
+    let changed = lines.enumerated().map {
+      $0.offset % 6 == 5 ? $0.element + " changed" : $0.element
+    }
+    let old = (["only old 1", "only old 2", "only old 3"] + lines).joined(separator: "\n")
+    let new = ([changed[0], "only new 1", "only new 2", "only new 3"] + changed.dropFirst())
+      .joined(separator: "\n")
+    let controller = try Windows.controller(
+      for: try await SampleDiffs.diff(old: old, new: new, label: "lines.txt"))
+    let (a, b) = try panes(of: controller)
+    controller.toggleLineAlignment(nil)
+    controller.window?.contentView?.layoutSubtreeIfNeeded()
+    a.documentView.scroll(.zero)
+    #expect(a.documentView.visibleRect.minY <= 0 && b.documentView.visibleRect.minY <= 0)
+
+    controller.toggleLineAlignment(nil)
+    #expect(a.documentView.visibleRect.minY <= 0, "\(a.documentView.visibleRect.minY)")
+  }
+
   @Test func turningAlignLinesOnAndOffKeepsTheInsertionPointAndTheSelection() async throws {
     let controller = try Windows.controller(for: try await SampleDiffs.everyKindOfChange())
     let (a, b) = try panes(of: controller)

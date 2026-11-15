@@ -21,6 +21,13 @@ extension PaneView {
     window != nil && !isHiddenOrHasHiddenAncestor && bounds.height > 0 && bounds.width > 0
   }
 
+  /// Whether the pane is scrolled as far down as its text goes, so that its reading line can go
+  /// no further.
+  var reachesEndOfText: Bool {
+    let text = documentView
+    return text.visibleRect.maxY >= text.frame.height - 1
+  }
+
   /// The row at the reading line, and how far down that row the reading line passes, from 0 at
   /// its top to 1 at its bottom.
   var rowAtReadingLine: (row: Int, fraction: CGFloat) {
