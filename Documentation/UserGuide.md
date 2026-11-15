@@ -8,8 +8,11 @@ This guide is for people who use Seamerge to compare files and to resolve Git me
 - [Comparing files](#comparing-files)
 - [Resolving a conflict](#resolving-a-conflict)
 - [Collapsing unchanged lines](#collapsing-unchanged-lines)
+- [Connected sides](#connected-sides)
 - [The footer](#the-footer)
 - [Saving and closing](#saving-and-closing)
+- [Settings](#settings)
+- [Accessibility](#accessibility)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Questions](#questions)
 
@@ -77,6 +80,14 @@ Renames are not detected: a renamed file shows as a deleted file and a new file.
 
 In Tower, turn on **Perform directory diff** to compare folders.
 
+### Ignored changes
+
+**View ▸ Show Ignored Changes** marks the places where the two files differ only in what the comparison ignores, such as the amount of whitespace. Each place gets a pale fill, and the whitespace in it is drawn with symbols, even when invisible characters are hidden. The menu item is enabled only when there are such places, and it changes to **Hide Ignored Changes** while they are shown. The result pane does not mark them.
+
+### Long lines
+
+A line longer than 20,000 characters is shown cut off at a character boundary, followed by an ellipsis in the color of the preview. The line is shown whole as soon as the insertion point or a selection lies in it, so you can work in it. The text, copying and saving always use the whole line.
+
 ## Resolving a conflict
 
 ![A conflict after a choice](Images/pill-after-choosing-light.png)
@@ -99,9 +110,36 @@ Long runs of unchanged lines fold into a bar. Click the bar to expand the run, a
 
 **Collapse Unchanged Lines** folds all of them at once, and **Show All Lines** opens them all.
 
+## Connected sides
+
+![Connected sides in a merge](Images/connected-light.png)
+
+By default the panes line up row by row, so a line sits at the same height in every pane, and the gaps fill with empty rows. **Align Lines** (`⌥⌘A`, View menu) changes this. Each pane then shows its own lines as continuous text with its own line numbers, and the seam between two panes carries a band for each changed block. A band fades from the tint of one side to the tint of the other and ends where the block begins and ends in each pane. A block without lines in one pane is marked there by a hairline.
+
+Align Lines works in a comparison and in a merge. When you scroll one pane, the others follow along the same blocks, so the block at the reading line stays at the same height in every pane. Turning Align Lines on or off changes only the display: it keeps the current block, the insertion point, the selection and the expanded runs, and it is not an undo step.
+
 ## The footer
 
-The footer at the bottom of the window holds the comparison and view options, and the syntax language of the current file. Hide or show it with **Hide Footer** or **Show Footer** (`⌘/`).
+The footer at the bottom of the window holds the comparison and view options, and the syntax language of the current file. Hide or show it with **Hide Footer** or **Show Footer** (`⌘/`). The switch with the symbol `=` turns Align Lines on and off, as the View menu does.
+
+## Settings
+
+Choose **Seamerge ▸ Settings…** (`⌘,`). Changes to the text apply at once to every open window.
+
+- **Text:** the font of the code (SF Mono by default, or another monospaced font installed on the Mac), its size from 9 to 24 pt, the line spacing and the tab width. A window keeps the zoom you chose until the size in Settings changes.
+- **New Windows:** how each new window starts: the comparison mode, and whether it highlights syntax, wraps lines, aligns the sides, shows invisible characters and shows the base. Switches in a window's footer change only that window.
+- **Merging:** **Go to Next Conflict After Choosing**: whether a choice on an open conflict moves on to the next open conflict.
+
+Each window opens where the last window of its kind was closed, with the size it had and, for a merge, the split above the result. Hiding the footer and the sidebar applies to all windows.
+
+## Accessibility
+
+- **VoiceOver** reads the panes, the controls and the decision bars by their labels, and announces changes of state. Each pane has the rotors **Conflicts** (in a merge) and **Changes**. They move between the blocks without moving the current block, and a decision is still taken with the decision bar or the keys.
+- **Help ▸ Keyboard Shortcuts** opens a window that lists every command with its shortcut, grouped by menu. The keys without Command or Option are listed separately, with the note on when they work.
+- **Reduce Motion**, turned on in System Settings, makes a preview appear as text at once.
+- **Contrast.** The colors are checked against their backgrounds in light and dark mode, with and without Increase Contrast.
+
+## Keyboard shortcuts
 
 ## Saving and closing
 
@@ -137,14 +175,16 @@ Commands with a Command or Option key work in any window. The keys without them,
 | Next or previous pane | `⌃Tab`, `⇧⌃Tab` |
 | Go to Line | `⌘L` |
 | Show or hide the base | `⌥⌘B` |
+| Align Lines (connected sides) | `⌥⌘A` |
 | Maximize the result | `⌥⌘R` |
 | Wrap lines | `⌥⌘L` |
 | Show all lines, collapse unchanged lines | `⇧⌘L`, `⌥⇧⌘L` |
 | Show or hide the footer | `⌘/` |
 | Swap sides (comparison) | `⌥⌘S` |
-| Zoom in, zoom out, actual size | `⌘+`, `⌘-`, `⌘0` |
+| Zoom in, zoom out, actual size (steps from 9 to 24 pt) | `⌘+`, `⌘-`, `⌘0` |
+| Settings | `⌘,` |
 
-The menus list every command with its shortcut.
+The menus list every command with its shortcut, and **Help ▸ Keyboard Shortcuts** shows them in one window.
 
 ## Questions
 

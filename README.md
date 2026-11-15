@@ -38,7 +38,15 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
 
 - **Syntax colors with a language choice.** Common languages are highlighted, and you choose the language in the footer or switch the highlighting off.
 - **Line wrapping.** Wrap long lines in all panes, with the rows kept aligned.
+- **Connected sides.** View ▸ Align Lines (`⌥⌘A`) joins the panes with bands that show which lines belong together, in a comparison and in a merge. Each side flows as continuous text with its own line numbers, and the bands connect the blocks that belong together.
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/connected-dark.png">
+    <img src="Documentation/Images/connected-light.png" alt="A merge with its sides connected by bands in the seams between the panes.">
+  </picture>
 - **Encoding and line endings of the result.** Choose the encoding and the line endings the result is saved with.
+- **Settings.** Choose the font, size, line spacing and tab width of the code, and how each new window starts. See [Settings](#settings).
+- **Accessibility.** VoiceOver rotors for conflicts and changes, a window of all keyboard shortcuts, and support for Reduce Motion and Increase Contrast. See [Accessibility](#accessibility).
 
 The toolbar counts the open conflicts or changes and moves between them.
 
@@ -86,7 +94,7 @@ The `core.hooksPath` setting in the clone makes Git run the hooks in `Scripts/gi
 
 Seamerge does not change your Git configuration until you ask it to:
 
-1. Open Seamerge and choose **Seamerge > Set Up Git Integration…**. The command is also in the window **Compare Files**, in the line that says whether Git opens Seamerge.
+1. Open Seamerge and choose **Seamerge ▸ Set Up Git Integration…**. The command is also in the window **Compare Files**, in the line that says whether Git opens Seamerge.
 2. Review the text on the sheet. It names the tool it replaces, if any.
 3. Click **Set Up**.
 
@@ -118,6 +126,33 @@ The script prints two commands. The first, `git mergetool` with Seamerge, opens 
 
 The [user guide](Documentation/UserGuide.md#resolving-a-conflict) explains each step.
 
+## Settings
+
+Choose **Seamerge ▸ Settings…** (`⌘,`) to change how the code looks and how new windows start. Changes to the text apply at once to every open window.
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/settings-dark.png">
+    <img src="Documentation/Images/settings-light.png" width="420" alt="The Settings window with the groups Text, New Windows and Merging.">
+  </picture>
+
+- **Text:** the font of the code (SF Mono, or another monospaced font installed on the Mac), its size from 9 to 24 pt, the line spacing (compact, standard or spacious) and the tab width from 2 to 8 spaces. A window keeps the zoom you chose until the size in Settings changes.
+- **New Windows:** how each new window starts: the comparison mode, and whether it highlights syntax, wraps lines, aligns the sides, shows invisible characters and shows the base. The switches in a window's footer change only that window.
+- **Merging:** **Go to Next Conflict After Choosing**: whether a choice on an open conflict moves on to the next open conflict.
+
+Each window opens where the last window of its kind was closed, with the size it had and, for a merge, the split above the result. Hiding the footer and the sidebar applies to all windows.
+
+## Accessibility
+
+- **VoiceOver** reads the panes, the controls and the decision bars by their labels, and announces changes of state. The rotors of a pane, **Conflicts** (in a merge) and **Changes**, move between the blocks without moving the current block.
+- **Keyboard.** The menus show the shortcut of each command that has one, and **Help ▸ Keyboard Shortcuts** lists them in one window. The keys without Command or Option, such as `N` and `1`, work in a pane above the result, so you can read and decide without leaving the text.
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/keyboard-shortcuts-merge-dark.png">
+    <img src="Documentation/Images/keyboard-shortcuts-merge-light.png" width="520" alt="The Keyboard Shortcuts window of a merge, with the commands in two columns, grouped by menu.">
+  </picture>
+- **Reduce Motion.** With Reduce Motion turned on in System Settings, a preview turns into text at once, without a transition.
+- **Contrast.** The colors of the text, the bands and the borders are checked against their backgrounds in light and dark mode, with and without Increase Contrast. The border of a file field in Compare Files that accepts a drop stays visible with any accent color.
+
 ## Keyboard shortcuts
 
 | Action | Shortcut |
@@ -140,13 +175,15 @@ The [user guide](Documentation/UserGuide.md#resolving-a-conflict) explains each 
 | Save and close | ⌘↩ |
 | Leave unresolved and close (merge) | ⌘. |
 | Show or hide the base | ⌥⌘B |
+| Align the sides with bands, or back to the grid | ⌥⌘A |
 | Maximize the result | ⌥⌘R |
 | Wrap lines | ⌥⌘L |
 | Show all lines, or collapse unchanged lines | ⇧⌘L, ⌥⇧⌘L |
 | Show or hide the footer | ⌘/ |
-| Zoom in, zoom out, actual size | ⌘+, ⌘-, ⌘0 |
+| Zoom in, zoom out, actual size (zoom steps from 9 to 24 pt) | ⌘+, ⌘-, ⌘0 |
+| Settings | ⌘, |
 
-The full list is in the menus.
+The full list is in the menus and in the window **Help ▸ Keyboard Shortcuts**.
 
 ## Engine and license
 

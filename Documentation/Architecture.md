@@ -21,9 +21,9 @@ The packages require Swift tools 6.2 and macOS 27.0. Warnings are errors in ever
 | `GitSupport` | nothing | Running `git`, reading the context of a merge or comparison, and writing the Git and Tower configuration. |
 | `SessionIPC` | nothing | The socket between the command and the app: requests, events, the client and the server. |
 | `SyntaxKit` | nothing | Language descriptions and lexers for syntax highlighting. |
-| `PaneKit` | nothing | The text panes, the row grid that aligns them, the decision column and the overview bar. |
+| `PaneKit` | nothing | The text panes, the row grid that aligns them, the connected layout (seams, bands and the common scroll track), the decision column and the overview bar. |
 | `SeamergeCLI` | `SessionIPC`, `GitSupport` | The logic of the `seamerge` command: arguments, file checks, starting the app, the exit code. |
-| `SeamergeUI` | `PaneKit`, `MergeModel`, `SyntaxKit`, `GitSupport` | The session window, its toolbar and menus, the Compare Files window and the Git integration sheet. |
+| `SeamergeUI` | `PaneKit`, `MergeModel`, `SyntaxKit`, `GitSupport` | The session window, its toolbar and menus, the settings (`UserSettings`), the keyboard shortcut window, the Compare Files window and the Git integration sheet. |
 
 The arrows point one way. The user interface knows the model, and the model knows the engine. Only `PaneKit` and `SeamergeUI` import AppKit. A module that is not in the table cannot be imported, which the compiler enforces.
 
@@ -32,8 +32,8 @@ The arrows point one way. The user interface knows the model, and the model know
 ## App
 
 - `App/Seamerge/main.swift` starts the app.
-- `AppDelegate` builds the main menu, starts the session coordinator and shows the Compare Files window when the app has nothing else to do.
-- `SessionCoordinator` opens one window for each session. Sessions come from the socket (`SessionServer`) or from the Compare Files window. Every session window has its own undo manager.
+- `AppDelegate` builds the main menu, creates the one `UserSettings` from the defaults, starts the session coordinator and shows the Compare Files window when the app has nothing else to do.
+- `SessionCoordinator` opens one window for each session and gives it the settings. Sessions come from the socket (`SessionServer`) or from the Compare Files window. Every session window has its own undo manager.
 - `App/SeamergeTool` is the `seamerge` executable. It calls `SeamergeCLI` and starts the app through `WorkspaceAppLauncher` when the app is not running.
 - `App/Shared/HelperLaunch.swift` holds the argument `--for-session` that the command passes when it starts the app, so that the app shows no window of its own at start.
 
@@ -50,6 +50,8 @@ The arrows point one way. The user interface knows the model, and the model know
 
 A comparison that Git starts for several files of one run joins them in one window, as described below. The command then waits only until the app has taken the files over.
 
+While the app is quitting, `SessionCoordinator` rejects new sessions with `SessionRejection.quitting`. `SeamergeCLI` then waits for the old process to end (`AppLauncher.waitUntilAppQuits(within:)`) and opens the app again. If the old process does not end in time, the command exits with status 3 and prints one line.
+
 ## Editing model
 
 A merge is one `Session` with its blocks and one `ResultDocument`.
@@ -65,13 +67,37 @@ A merge is one `Session` with its blocks and one `ResultDocument`.
 2. Choosing sources always works, and replaces whatever the segment holds.
 3. An open conflict is resolved only by a decision, never by typing beside it. Typing in a conflict's preview first resolves it by hand (`MergeModel/ManualResolution.swift`).
 
-The decisions themselves are commands in `SeamergeUI` (`SessionCommand.swift`). The keys for them are in `SessionCommand+Keys.swift`.
+The decisions themselves are commands in `SeamergeUI` (`SessionCommand.swift`). The keys for them are in `SessionCommand+Keys.swift`. The menus and the keyboard shortcut window (`ShortcutOverview.swift`) both read these tables, so the overview cannot disagree with the menus. The VoiceOver rotors for conflicts and changes are in `BlockRotors.swift`; they find blocks by their text and leave the current block where it is.
+
+## Settings
+
+`UserSettings` (`SeamergeUI/UserSettings.swift`) is the only type that reads the defaults of the windows. It is `@Observable`, and `SettingsWindowController` edits it.
+
+- **Text settings** (font, size, line spacing, tab width) apply to every open window at once. The settings post a notification for them, and each window redraws its panes and keeps the line at the reading line in place.
+- **Start values** (comparison mode, syntax highlighting, line wrapping, aligned or connected sides, invisible characters, the base, and Go to Next Conflict After Choosing) are read when a window opens. A switch in a window's footer changes only that window; its value is not written back to the settings.
+- A value outside its range, or an unknown name, reads as its default. A size or tab width outside its range is clamped to the nearest value and saved clamped.
+- Window placement is kept per kind of window (merge, comparison, several files) when a window closes, including when the app quits (`SessionWindowController+Place.swift`). A window of that kind opens there, offset when another window already stands at that place. The split above the result is kept for a merge, and not when the result is maximized.
 
 ## Panes and rows
 
 The panes (`PaneKit`) show the inputs side by side, aligned on a row grid. The grid, not TextKit, decides where row *r* lies: `PaneTextView` places each row at its display row times the row height, in every pane, so that the panes line up. Rows that wrap take the height of the most wrapped pane they line up with. A collapsed run takes one row of room, its bar.
 
-The overview bar, the gutter marks and the decision column read the same grid.
+The overview bar, the gutter marks and the decision column read the same grid. The grid applies to the aligned layout only; the connected layout below does without it.
+
+Ignored differences are marked in the panes only. `IgnoredDifferences.places(in:of:)` in `MergeModel` finds the places in each differing line by comparing tokens. `PaneContent.ignoredDifferencePlaces` passes them to the panes, which fill them with `Theme.ignoredDifferenceFill`. `SessionCommand.toggleIgnoredChanges` is in the View menu only, and it is enabled while there are places.
+
+Lines longer than 20,000 UTF-16 units are cut for display by `LongLine` (`PaneKit`) at a character boundary, followed by an ellipsis. A line is shown whole while the insertion point or a selection lies in it. The cut affects display only: the text, copying and saving use the whole line. Row widths and wrap counts use the part that is shown.
+
+## Connected sides
+
+Align Lines replaces the row grid with the connected layout. Each pane then shows its own lines as continuous text, and the panes are linked along one common track. The switch is in `SessionPresentation+LineAlignment.swift`.
+
+- `RowLayout.lineText(for:)` in `MergeModel` gives the text of one side without filler rows. `ScrollMap` maps a position in one side to the matching position in another, in blocks and lines, from the starts of the blocks in both sides.
+- `PaneKit/ScrollTrack.swift` is the common track, and it measures collapsed runs and wrapped lines in the heights of the panes. It consists of stretches that alternate between unchanged lines and changed blocks. Each stretch is as long on the track as in the pane that shows it highest. A pane takes each place on the track to a place of its own, moving more slowly across a stretch that it shows lower, and standing still across a stretch without rows. `ScrollSync.setTrack(for:)` installs the track in place of the row mapping. `ScrollTrack(panes:)` returns `nil` when the panes do not have the same number of blocks, and the panes then stay still rather than follow a track measured from mixed content.
+- A pane that is scrolled by hand moves the track, and the other panes follow it. A pane that scrolls to a place, such as a jump or the insertion point, sets the track to that place. `ScrollSync.align(to:)` brings the panes together again after new content, collapsing or a switch.
+- `PaneKit/PaneSeam.swift` draws the bands in the seam between two neighboring panes, which is 28 pt wide (`Theme.seamWidth`). A band runs between the edges of one block in both panes and fades from one tint to the other. The seam only draws: it takes no clicks, and it is hidden from VoiceOver. `SeamSplitView` in `SeamergeUI/SessionSplitViewController.swift` makes room for it and keeps the divider draggable.
+- `PaneContent.marksBlocksWithoutRows` draws a hairline for a block that has no rows in one pane.
+- In a merge, `SessionPresentation+LineAlignment.swift` links A, the base, B and the result on one track. Without the base, A and B share one seam. `SessionChanges.blocksWithoutDifference(between:and:)` gives the blocks that get no band, because their panes do not differ.
 
 ## TextKit 2
 
@@ -81,7 +107,7 @@ The text views use TextKit 2. Points that differ from a plain `NSTextView`:
 - `PaneContentStorage` (`PaneKit/PaneContentStorage.swift`) hides the paragraphs of collapsed runs from TextKit. Without it, TextKit enumerates every hidden paragraph after each layout, which is slow in long files with runs collapsed.
 - `RowLayoutFragment` (`PaneKit/RowLayoutFragment.swift`) draws each row: the full-width fill, the highlights of changed runs, the text and the marks of removed text. TextKit keeps fragments across layout changes, so the fragment asks its painter what to draw at each draw, and the pane redraws the rows after a change.
 - The selection is drawn by the fragment, translucent and above the row fills, because AppKit's own selection is opaque and would hide the row tints.
-
+- A change of row heights that leaves the text as it is, such as turning Wrap Lines on or off or a row growing beside a neighbor's wrap, must discard the paragraph elements from the first changed row on (`PaneTextView.setWrappedRows`, `PaneContentStorage.discardElements`, located by `WrappedRows.firstRow(differingFrom:)`). Invalidating the layout is not enough: TextKit keeps the frames of the fragments above, and far down a long file it then looks for the visible rows at the wrong place, and the panes show nothing.
 ## Git and Tower
 
 `GitSupport` runs `git` with an argument list and never through a shell (`Git.swift`). Each command has a time limit.
@@ -99,7 +125,7 @@ Git and Tower start one `difftool` call for each file of a run, and each call ma
 - **Joining.** `App/Seamerge/SessionCoordinator.swift` lets a call join the collection of its origin, accept it, or reject it. From the second file of a run on, the command does not activate the app again.
 - **Ordering and end of receiving.** `SeamergeUI/FileCollection.swift` keeps the files in the order of Git's numbers, or by path, and records when the files of the run are complete. The sidebar shows the progress while files still come.
 - **Copies.** `SeamergeUI/CollectionCache.swift` copies every side that is not in the working tree, because Git and Tower delete their temporary files when the call ends. The copies go when the window closes, and a crash's leftovers go when the app next starts.
-- **Sidebar.** `SeamergeUI/CollectionSplitViewController.swift` and `SeamergeUI/FileListViewController.swift` show the sidebar; View > Show Sidebar (`⌃⌘S`) is in `App/Seamerge/MainMenu.swift`. Go > Next File and Previous File are `SessionCommand` cases with keys in `SeamergeUI/SessionCommand+Keys.swift`.
+- **Sidebar.** `SeamergeUI/CollectionSplitViewController.swift` and `SeamergeUI/FileListViewController.swift` show the sidebar; View ▸ Show Sidebar (`⌃⌘S`) is in `App/Seamerge/MainMenu.swift`. Go ▸ Next File and Previous File are `SessionCommand` cases with keys in `SeamergeUI/SessionCommand+Keys.swift`.
 - **Renames.** There is no renamed state. Git's difftool does not pass renames on, so a renamed file appears as a deleted file and a new file.
 
 **Directory diff.** `git difftool --dir-diff` gives two folders, and the helper compares them in one window. `SeamergeUI/FolderComparison.swift` pairs the files of the two folders by their path: a file only on the right is new, one only on the left is deleted. A file of the working tree is linked by Git instead of copied, and the link is followed, so that the side is the working copy. Any other link is compared by its target and never followed. Two folders always count as a directory diff, even without `--collect`. If no file differs, the command opens no window and exits with 0.
