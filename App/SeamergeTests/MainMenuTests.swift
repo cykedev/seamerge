@@ -140,6 +140,7 @@ import Testing
       Quit Seamerge ⌘Q
     File ▸
       Compare Files… ⌘O
+      Compare Folders…
       Open Recent ▸
       Change Files…
       ---

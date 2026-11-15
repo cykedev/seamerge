@@ -67,6 +67,18 @@ final class AppSandbox {
     return coordinator
   }
 
+  /// Two folders named Old and New, each with a file that differs.
+  func folders() throws -> FolderPair {
+    let pair = FolderPair(
+      left: folder.appending(path: "Old", directoryHint: .isDirectory),
+      right: folder.appending(path: "New", directoryHint: .isDirectory))
+    for (url, text) in [(pair.left, "old\n"), (pair.right, "new\n")] {
+      try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+      try Data(text.utf8).write(to: url.appending(path: "a.txt"))
+    }
+    return pair
+  }
+
   /// Writes `text` into a file named `name` and returns its URL.
   @discardableResult
   func file(_ name: String, _ text: String = "line\n") throws -> URL {

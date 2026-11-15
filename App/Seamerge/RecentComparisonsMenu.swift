@@ -1,8 +1,8 @@
 import AppKit
 import SeamergeUI
 
-/// File > Open Recent: the comparisons last opened from the window Compare Files, up to ten, and
-/// Clear Menu, which forgets them here and in the window.
+/// File > Open Recent: the comparisons last opened from the window Compare Files, up to ten, those
+/// of folders with a folder symbol, and Clear Menu, which forgets them here and in the window.
 @MainActor
 final class RecentComparisonsMenu: NSObject {
   /// The submenu of File > Open Recent.
@@ -39,6 +39,10 @@ extension RecentComparisonsMenu: NSMenuDelegate {
       let item = NSMenuItem(
         title: comparison.title, action: #selector(openComparison(_:)), keyEquivalent: "")
       item.subtitle = comparison.folder
+      if comparison.comparesFolders {
+        item.image = NSImage(
+          systemSymbolName: "folder", accessibilityDescription: MainMenu.Titles.folderComparison)
+      }
       item.target = self
       item.representedObject = comparison
       menu.addItem(item)

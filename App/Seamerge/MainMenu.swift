@@ -99,6 +99,7 @@ final class MainMenu {
       [
         [
           Self.item(Titles.compareFiles, #selector(AppDelegate.showCompareFiles(_:)), key: "o"),
+          Self.item(Titles.compareFolders, #selector(AppDelegate.showCompareFolders(_:))),
           openRecent,
         ] + commands(.changeFiles),
         commands(.openInEditor),

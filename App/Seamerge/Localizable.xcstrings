@@ -25,6 +25,9 @@
     "Compare Files…": {
       "comment": "File menu: open the window Compare Files."
     },
+    "Compare Folders…": {
+      "comment": "File menu: open the window Compare Files to choose two folders."
+    },
     "Comparing files still works. Quit Seamerge and open it again to merge from the command line.": {
       "comment": "Alert at launch: what to do when the app cannot listen for the command line."
     },
@@ -57,6 +60,9 @@
     },
     "Find…": {
       "comment": "Edit > Find."
+    },
+    "Folders": {
+      "comment": "VoiceOver: the symbol of a recent comparison of two folders."
     },
     "Go": {
       "comment": "Menu bar."

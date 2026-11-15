@@ -227,6 +227,46 @@ struct AppDelegateTests {
     second.close()
   }
 
+  @Test func comparisonOfTwoFoldersOpensAtOnceAndFromOpenRecentWithAFolderSymbol() async throws {
+    let sandbox = try AppSandbox()
+    let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
+    let recorder = WindowRecorder()
+    delegate.coordinator.delegate = recorder
+    let folders = try sandbox.folders()
+    let comparison = FileComparison(folders: folders)
+    let controller = CompareFilesWindowController(
+      recentComparisons: delegate.recentComparisons, integrationStore: sandbox.integrationStore)
+
+    try await delegate.compareFilesWindowController(controller, open: comparison)
+    let first = await recorder.nextOpened()
+    #expect(first.collection?.folders == folders)
+    #expect(first.window?.title == "Old ↔ New")
+    first.close()
+    #expect(first.collection?.isDismissed == true)
+    delegate.recentComparisons.add(comparison)
+    let menu = delegate.recentComparisonsMenu.menu
+    delegate.recentComparisonsMenu.menuNeedsUpdate(menu)
+    #expect(menu.items[0].image != nil)
+    #expect(menu.items[0].title == "Old ↔ New")
+    menu.performActionForItem(at: 0)
+    let second = await recorder.nextOpened()
+
+    #expect(second.collection?.folders == folders)
+    second.close()
+  }
+
+  @Test func foldersOnTheDockIconLandInTheOuterFields() throws {
+    let sandbox = try AppSandbox()
+    let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
+    let folders = try sandbox.folders()
+
+    #expect(delegate.openFiles([folders.left, folders.right]))
+
+    let window = try #require(delegate.compareFilesWindowController?.window)
+    #expect(window.isVisible)
+    window.close()
+  }
+
   @Test func settingsOpenFromTheAppMenuOnceAndKeepTheirValuesInTheDefaultsOfTheApp() throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])

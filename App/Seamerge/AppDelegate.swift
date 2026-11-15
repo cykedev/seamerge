@@ -7,9 +7,10 @@ import os
 /// shows the window Compare Files where nothing else is to be done.
 ///
 /// The window Compare Files appears when the app starts without a task, when the Dock icon is
-/// clicked while no window is open, with File > Compare Files…, and with files dropped on the
-/// Dock icon. It does not appear when the helper starts the app, nor after the helper's last
-/// window; then the app hides, so that the terminal is in front again.
+/// clicked while no window is open, with File > Compare Files… and File > Compare Folders…, and
+/// with files or folders dropped on the Dock icon. It does not appear when the helper starts the
+/// app, nor after the helper's last window; then the app hides, so that the terminal is in front
+/// again.
 @MainActor
 final class AppDelegate: NSObject {
   /// Opens a window for each session.
@@ -86,6 +87,11 @@ final class AppDelegate: NSObject {
   /// Shows the window Compare Files in front.
   @objc func showCompareFiles(_ sender: Any?) {
     compareFiles().showWindow(sender)
+  }
+
+  /// Shows the window Compare Files in front, empty, with the open panel for the left folder.
+  @objc func showCompareFolders(_ sender: Any?) {
+    compareFiles().compareFolders()
   }
 
   /// Shows the window Settings in front, made the first time it is needed.
@@ -206,7 +212,7 @@ extension AppDelegate: NSApplicationDelegate {
 
   func application(_ application: NSApplication, open urls: [URL]) {
     if !openFiles(urls) {
-      Self.logger.notice("The window Compare Files takes up to three files and no folders")
+      Self.logger.notice("The window Compare Files takes up to three files or two folders")
     }
   }
 

@@ -19,7 +19,12 @@ extension MainMenu {
     static let file = String(localized: "File", comment: "Menu bar.")
     static let compareFiles = String(
       localized: "Compare Files…", comment: "File menu: open the window Compare Files.")
+    static let compareFolders = String(
+      localized: "Compare Folders…",
+      comment: "File menu: open the window Compare Files to choose two folders.")
     static let openRecent = String(localized: "Open Recent", comment: "File menu.")
+    static let folderComparison = String(
+      localized: "Folders", comment: "VoiceOver: the symbol of a recent comparison of two folders.")
     static let clearMenu = String(
       localized: "Clear Menu", comment: "File > Open Recent: forget the recent comparisons.")
     static let close = String(localized: "Close", comment: "File menu.")
