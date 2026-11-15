@@ -3,16 +3,10 @@
 # Builds, signs and notarizes a release of Seamerge, packs it for download and
 # writes the feed of updates.
 #
-# Usage: Scripts/release.sh <keychain-profile> [--site <folder> [--new-feed]]
+# Usage: Scripts/release.sh <keychain-profile>
 #
 #   <keychain-profile>  The profile that `xcrun notarytool store-credentials`
 #                       saved in the keychain; the script reads only its name.
-#   --site <folder>     The folder of the website: its appcast.xml is the feed
-#                       the new one builds on, and the new feed is copied there.
-#                       Without it, the feed builds on the one online.
-#   --new-feed          Start a new feed in a website folder that has no
-#                       appcast.xml yet; without it, such a folder is refused,
-#                       so that a wrong path never drops the earlier versions.
 #
 # Needs the certificate "Developer ID Application" of the team named in
 # App/Config/Signing.xcconfig and the private EdDSA key of the updates in the
@@ -26,47 +20,24 @@
 # it; packs it as Seamerge-<version>.zip and as a signed, notarized and stapled
 # Seamerge-<version>.dmg; and writes appcast.xml with the zip, signed with the
 # EdDSA key, and the section of the version in CHANGELOG.md as release notes.
+# The feed builds on the one online, which the feed URL of the app reaches
+# through the latest GitHub release; when there is none yet, it starts anew.
 # Every run starts from a clean build and replaces the results of an earlier
 # run of the same version. The results and the logs are in
-# .build/release/<version>/. Uploading them is left to the user.
+# .build/release/<version>/. Uploading them is left to the user: the zip, the
+# disk image and appcast.xml go together to the GitHub release v<version>,
+# which is published as the latest release.
 
 set -euo pipefail
 
-usage() {
-  echo "usage: Scripts/release.sh <keychain-profile> [--site <folder> [--new-feed]]" >&2
+if [ $# -ne 1 ] || [ -z "$1" ]; then
+  echo "usage: Scripts/release.sh <keychain-profile>" >&2
   exit 2
-}
-
-site=""
-new_feed=false
-case $# in
-  1) ;;
-  3) [ "$2" = --site ] || usage ;;
-  4) [ "$2" = --site ] && [ "$4" = --new-feed ] || usage ;;
-  *) usage ;;
-esac
-profile=$1
-[ -n "$profile" ] || usage
-if [ $# -ge 3 ]; then
-  site=$3
-  [ $# -eq 4 ] && new_feed=true
 fi
+profile=$1
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
-
-if [ -n "$site" ] && [ ! -d "$site" ]; then
-  echo "error: $site is not a folder" >&2
-  exit 1
-fi
-if [ -n "$site" ] && [ ! -f "$site/appcast.xml" ] && ! $new_feed; then
-  echo "error: $site has no appcast.xml; check the path, or pass --new-feed to start a new feed there" >&2
-  exit 1
-fi
-if [ -n "$site" ] && [ -f "$site/appcast.xml" ] && $new_feed; then
-  echo "error: $site has an appcast.xml already; leave out --new-feed to build on it" >&2
-  exit 1
-fi
 
 setting() {
   sed -n "s/^$1 = //p" "$2"
@@ -247,21 +218,22 @@ grep -q "^source=Notarized Developer ID$" "$assessment" \
   || fail "Gatekeeper does not accept the disk image as notarized"
 
 # The feed lists the zip at the GitHub release of the version. It builds on the
-# current feed, so that it keeps the earlier versions, and holds no deltas.
+# current feed, so that it keeps the earlier versions, and holds no deltas. The
+# feed URL redirects to the latest GitHub release, which has no feed before the
+# first release with one.
 step "Writing the feed of updates"
 updates=$out/updates
 mkdir "$updates"
-if [ -n "$site" ] && [ -f "$site/appcast.xml" ]; then
-  cp "$site/appcast.xml" "$updates/appcast.xml"
-elif [ -z "$site" ]; then
-  answer=$(curl --silent --show-error --location --output "$updates/appcast.xml" \
-    --write-out '%{http_code}' "$feed" 2>> "$log") || fail "the feed $feed could not be fetched"
-  case $answer in
-    200) ;;
-    404) rm "$updates/appcast.xml" ;;
-    *) fail "the feed $feed answered with $answer" ;;
-  esac
-fi
+answer=$(curl --silent --show-error --location --output "$updates/appcast.xml" \
+  --write-out '%{http_code}' "$feed" 2>> "$log") || fail "the feed $feed could not be fetched"
+case $answer in
+  200) ;;
+  404)
+    rm "$updates/appcast.xml"
+    echo "The latest release has no feed yet; starting a new one."
+    ;;
+  *) fail "the feed $feed answered with $answer" ;;
+esac
 cp "$zip" "$updates/"
 printf '%s\n' "$notes_section" > "$updates/Seamerge-$version.md"
 generate_appcast=$out/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast
@@ -278,13 +250,8 @@ if grep -q "does not match" "$appcast_log"; then
   fail "the key in the keychain is not the one whose public key the app holds"
 fi
 cp "$updates/appcast.xml" "$out/appcast.xml"
-if [ -n "$site" ]; then
-  cp "$out/appcast.xml" "$site/appcast.xml"
-fi
 
 step "Done"
 (cd "$out" && shasum -a 256 "Seamerge-$version.zip" "Seamerge-$version.dmg")
-echo "The files are in $out/."
-if [ -n "$site" ]; then
-  echo "The feed is in $site/appcast.xml as well."
-fi
+echo "The files are in $out/. Attach Seamerge-$version.zip, Seamerge-$version.dmg and"
+echo "appcast.xml to the GitHub release v$version and publish it as the latest release."
