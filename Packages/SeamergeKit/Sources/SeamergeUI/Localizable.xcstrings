@@ -231,7 +231,27 @@
       "comment" : "Settings: the size of the code, such as 13 pt."
     },
     "%lld spaces" : {
-      "comment" : "Settings: the width of a tab, such as 4 spaces."
+      "comment" : "Settings: the width of a tab, such as 4 spaces.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld space"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld spaces"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "✓ Added to Tower" : {
       "comment" : "Set Up Git Integration: Tower lists the app already."

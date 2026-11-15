@@ -70,14 +70,12 @@ struct SettingsView: View {
       } label: {
         Text("Font", bundle: .module, comment: "Settings: the font of the code.")
       }
-      LabeledContent {
-        Stepper(value: $settings.fontSize, in: UserSettings.fontSizes, step: 1) {
-          Text(sizeText)
+      Picker(selection: fontSizeSelection) {
+        ForEach(Self.fontSizes, id: \.self) { size in
+          Text(Self.sizeText(size)).tag(size)
         }
-        .accessibilityLabel(sizeLabel)
-        .accessibilityValue(sizeText)
       } label: {
-        sizeLabel
+        Text("Size", bundle: .module, comment: "Settings: the size of the code.")
       }
       Picker(selection: $settings.lineSpacing) {
         ForEach(LineSpacing.allCases, id: \.self) { spacing in
@@ -86,14 +84,12 @@ struct SettingsView: View {
       } label: {
         Text("Line Spacing", bundle: .module, comment: "Settings: how far apart lines are.")
       }
-      LabeledContent {
-        Stepper(value: $settings.tabWidth, in: UserSettings.tabWidths) {
-          Text(tabWidthText)
+      Picker(selection: tabWidthSelection) {
+        ForEach(Self.tabWidths, id: \.self) { width in
+          Text(Self.tabWidthText(width)).tag(width)
         }
-        .accessibilityLabel(tabWidthLabel)
-        .accessibilityValue(tabWidthText)
       } label: {
-        tabWidthLabel
+        Text("Tab Width", bundle: .module, comment: "Settings: the width of a tab.")
       }
     } header: {
       Text("Text", bundle: .module, comment: "Settings: heading of the group of the code font.")
@@ -104,23 +100,37 @@ struct SettingsView: View {
     }
   }
 
-  private var sizeLabel: Text {
-    Text("Size", bundle: .module, comment: "Settings: the size of the code.")
+  /// The sizes of the code to choose from, in whole points.
+  static let fontSizes = Array(
+    Int(UserSettings.fontSizes.lowerBound)...Int(UserSettings.fontSizes.upperBound))
+
+  /// The widths of a tab to choose from, in spaces.
+  static let tabWidths = Array(UserSettings.tabWidths)
+
+  /// The size chosen in the menu, in whole points, so that a size between two in the menu, which
+  /// only the user defaults can hold, still selects the nearest.
+  var fontSizeSelection: Binding<Int> {
+    Binding(
+      get: { Int(settings.fontSize.rounded()) },
+      set: { settings.fontSize = CGFloat($0) })
   }
 
-  private var sizeText: String {
+  /// The width of a tab chosen in the menu.
+  var tabWidthSelection: Binding<Int> {
+    $settings.tabWidth
+  }
+
+  /// The name of a size in the menu, such as 13 pt.
+  static func sizeText(_ size: Int) -> String {
     String(
-      localized: "\(Int(settings.fontSize)) pt", bundle: .module,
+      localized: "\(size) pt", bundle: .module,
       comment: "Settings: the size of the code, such as 13 pt.")
   }
 
-  private var tabWidthLabel: Text {
-    Text("Tab Width", bundle: .module, comment: "Settings: the width of a tab.")
-  }
-
-  private var tabWidthText: String {
+  /// The name of a width of a tab in the menu, such as 4 spaces.
+  static func tabWidthText(_ width: Int) -> String {
     String(
-      localized: "\(settings.tabWidth) spaces", bundle: .module,
+      localized: "\(width) spaces", bundle: .module,
       comment: "Settings: the width of a tab, such as 4 spaces.")
   }
 }
