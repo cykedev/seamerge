@@ -48,6 +48,7 @@ import Testing
     #expect(try Self.keys(of: item(.nextChange)) == "⌥⌘↓")
     #expect(try Self.keys(of: item(.previousChange)) == "⌥⌘↑")
     #expect(try Self.keys(of: item(.nextConflict)) == "")
+    #expect(try Self.keys(of: item(.filterFiles)) == "⇧⌘F")
     #expect(mainMenu.leaveUnresolvedItem.title == "Skip Remaining Files")
     #expect(mainMenu.leaveUnresolvedItem.action == SessionCommand.skipRemainingFiles.action)
     #expect(Self.keys(of: mainMenu.leaveUnresolvedItem) == "⌘.")
@@ -181,6 +182,8 @@ import Testing
         Find Previous ⇧⌘G
         Use Selection for Find ⌘E
         Jump to Selection ⌘J
+        ---
+        Filter Files
     View ▸
       Hide Base ⌥⌘B
       Maximize Result ⌥⌘R

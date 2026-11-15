@@ -4,7 +4,7 @@ import Testing
 @testable import SeamergeUI
 
 /// Draws the pictures of comparisons of folders: Compare Files with two folders, the window with
-/// identical files listed, while the folders are compared, and in the smallest window.
+/// identical files listed, while the folders are compared, filtered, and in the smallest window.
 @MainActor
 @Suite(.serialized, .timeLimit(.minutes(1))) struct FolderPicturesTests {
   @Test(arguments: Look.all)
@@ -75,6 +75,23 @@ import Testing
     try folders.write("README.md", left: "same\n", right: "same\n")
     let collection = await FileCollection.compared(folders)
     try await Windows.picture(collection, look: look, named: "folders-same-\(look.name)")
+  }
+
+  @Test(arguments: [Look.light, .dark])
+  func filterIsPicturedWithMatchesAndWithout(look: Look) async throws {
+    let folders = try SampleFolders()
+    try folders.fillWithProject()
+    let collection = await FileCollection.compared(folders)
+    for (text, name) in [("order", "matches"), ("invoice", "no-match")] {
+      try await Windows.picture(
+        collection, look: look, named: "folders-filter-\(name)-\(look.name)"
+      ) {
+        controller in
+        let fileList = try #require(controller.collectionLayout?.fileList)
+        fileList.filterField.stringValue = text
+        controller.fileList(fileList, didChangeFilter: text)
+      }
+    }
   }
 
   @Test func windowIsPicturedInTheSmallestSize() async throws {

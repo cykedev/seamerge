@@ -90,7 +90,10 @@ import Testing
     let single = try Windows.controller(for: try await SampleDiffs.greeting())
 
     #expect(!gitWindow.canPerform(.toggleIdenticalFiles))
+    #expect(gitWindow.canPerform(.filterFiles))
     #expect(!single.canPerform(.toggleIdenticalFiles))
+    #expect(!single.canPerform(.filterFiles))
+    #expect(Keys.of(.filterFiles, in: .diff) == Keys("f", [.shift, .command]))
   }
 
   @Test func foldersWithTheSameFilesSaySoInPlaceOfTheLines() async throws {
@@ -261,5 +264,105 @@ import Testing
     while !condition(collection) {
       guard await iterator.next() != nil else { return }
     }
+  }
+}
+
+/// The field at the foot of the sidebar that narrows the list by name or folder.
+@MainActor
+@Suite(.serialized, .timeLimit(.minutes(1))) struct FileFilterTests {
+  @Test func textMatchesNameOrFolderIgnoringCaseAndDiacritics() async throws {
+    let folders = try SampleFolders()
+    try folders.fillWithProject()
+    let controller = try await Windows.controller(for: await FileCollection.compared(folders))
+
+    #expect(try listed(after: "readme", in: controller) == ["README.md"])
+    #expect(
+      try listed(after: "ÖRDERS/", in: controller)
+        == ["Sources/Orders/Discount.swift", "Sources/Orders/OrderService.swift"])
+    #expect(try listed(after: "", in: controller).count == 6)
+  }
+
+  @Test func listWithoutMatchSaysSoAndEscapeEmptiesTheField() async throws {
+    let folders = try SampleFolders()
+    try folders.fillWithProject()
+    let controller = try await Windows.controller(for: await FileCollection.compared(folders))
+    let fileList = try #require(controller.collectionLayout?.fileList)
+    let window = try #require(controller.window)
+
+    #expect(try listed(after: "invoice", in: controller).isEmpty)
+    #expect(!fileList.emptyLabel.isHidden)
+    #expect(fileList.emptyLabel.stringValue == "No Files Match")
+
+    #expect(window.tryToPerform(SessionCommand.filterFiles.action, with: nil))
+    let editor = try #require(window.firstResponder as? NSTextView)
+    #expect(editor.delegate === fileList.filterField)
+    editor.doCommand(by: #selector(NSResponder.cancelOperation(_:)))
+
+    #expect(fileList.filterField.stringValue.isEmpty)
+    #expect(fileList.tableView.numberOfRows == 6)
+    #expect(fileList.emptyLabel.isHidden)
+  }
+
+  @Test func nextAndPreviousFileFollowTheFilteredList() async throws {
+    let folders = try SampleFolders()
+    try folders.fillWithProject()
+    let collection = await FileCollection.compared(folders)
+    let controller = try await Windows.controller(for: collection)
+    let all = collection.files
+
+    _ = try listed(after: "swift", in: controller)
+    #expect(controller.shownFile?.path == "prices.txt", "The file in view stays")
+    controller.showNextFile(nil)
+    await controller.fileLoad?.value
+    #expect(controller.shownFile?.path == "Sources/Orders/Discount.swift")
+    controller.showNextFile(nil)
+    await controller.fileLoad?.value
+
+    #expect(controller.shownFile?.path == "Sources/Orders/OrderService.swift")
+    #expect(!controller.canPerform(.nextFile))
+    #expect(controller.window?.subtitle.contains("File 2 of 2") == true)
+    #expect(collection.files == all, "The filter leaves the files of the window as they are")
+  }
+
+  @Test func filterNarrowsTheWindowOfARunOfGitAndNextFileFollowsIt() async throws {
+    let collection = FileCollection(
+      files: try SampleCollections.commit(in: try SampleCollections.folder()))
+    let controller = try await Windows.controller(for: collection)
+
+    #expect(
+      try listed(after: "orders", in: controller)
+        == ["Sources/Orders/OrderService.swift", "Sources/Orders/Discount.swift"])
+    #expect(controller.shownFile?.path == "Sources/Orders/OrderService.swift")
+    controller.showNextFile(nil)
+    await controller.fileLoad?.value
+
+    #expect(controller.shownFile?.path == "Sources/Orders/Discount.swift")
+    #expect(!controller.canPerform(.nextFile))
+    #expect(controller.window?.subtitle.contains("File 2 of 2") == true)
+  }
+
+  @Test func filterFilesShowsAHiddenListAndPutsTheFocusInTheField() async throws {
+    let collection = FileCollection(
+      files: try SampleCollections.commit(in: try SampleCollections.folder()))
+    let controller = try await Windows.controller(for: collection)
+    let layout = try #require(controller.collectionLayout)
+    layout.toggleSidebar(nil)
+    #expect(layout.sidebarItem.isCollapsed)
+
+    controller.filterFiles(nil)
+
+    #expect(!layout.sidebarItem.isCollapsed)
+    let editor = try #require(controller.window?.firstResponder as? NSTextView)
+    #expect(editor.delegate === layout.fileList.filterField)
+  }
+
+  /// The paths the list shows once `text` is typed into the filter field.
+  private func listed(after text: String, in controller: SessionWindowController) throws
+    -> [String]
+  {
+    let fileList = try #require(controller.collectionLayout?.fileList)
+    fileList.filterField.stringValue = text
+    controller.fileList(fileList, didChangeFilter: text)
+    return fileList.files.map(\.path)
   }
 }

@@ -104,11 +104,12 @@ enum Rendering {
           CGPath(roundedRect: rowFrame, cornerWidth: 6, cornerHeight: 6, transform: nil))
         context.cgContext.fillPath()
       }
-      let parts = inside.filter { $0 is NSTableCellView || $0 is NSStackView }.filter { part in
-        !inside.contains {
-          $0 !== part && ($0 is NSTableCellView || $0 is NSStackView)
-            && part.isDescendant(of: $0)
-        }
+      // Rows, lines and fields; each drawn once, with whatever lies inside it.
+      let isPart = { (view: NSView) in
+        view is NSTableCellView || view is NSStackView || view is NSTextField
+      }
+      let parts = inside.filter(isPart).filter { part in
+        !inside.contains { $0 !== part && isPart($0) && part.isDescendant(of: $0) }
       }
       for part in buttons + parts where !part.isHiddenOrHasHiddenAncestor {
         let visible = part.visibleRect

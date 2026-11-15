@@ -1,18 +1,23 @@
 import AppKit
 import PaneKit
 
-/// Learns which file the user chose in the list of a window that compares several files.
+/// Learns which file the user chose in the list of a window that compares several files, and
+/// what the user typed to filter it.
 @MainActor
 protocol FileListDelegate: AnyObject {
   /// The user selected the file in row `row` of the list.
   func fileList(_ fileList: FileListViewController, didSelectRow row: Int)
+
+  /// The user changed the text that the list is filtered by.
+  func fileList(_ fileList: FileListViewController, didChangeFilter text: String)
 }
 
 /// The list of the files of a window that compares several, in its sidebar: one row for each
 /// file with the sign of what happened to it, its name and its folder.
 ///
 /// Below the rows stands a quiet line while files come or folders are compared, and what a
-/// comparison of folders found once it is done.
+/// comparison of folders found once it is done; below it the field that filters the list by
+/// name or folder.
 @MainActor
 final class FileListViewController: NSViewController {
   /// Learns which file the user chose; the list does not retain it.
@@ -31,6 +36,7 @@ final class FileListViewController: NSViewController {
     didSet {
       tableView.reloadData()
       statusLabel.textColor = folderColor
+      emptyLabel.textColor = folderColor
     }
   }
 
@@ -40,6 +46,15 @@ final class FileListViewController: NSViewController {
   /// The line below the rows that says how many files have come, how far the comparison of
   /// folders is, or what it found.
   let statusLine = NSStackView()
+
+  /// The field that filters the list.
+  let filterField = NSSearchField()
+
+  /// What the list says in place of rows when the filter leaves none.
+  let emptyLabel = NSTextField(
+    labelWithString: String(
+      localized: "No Files Match", bundle: .module,
+      comment: "Sidebar: no file of the list matches what was typed in the filter field."))
 
   private let statusLabel = NSTextField(labelWithString: "")
   private let statusIndicator = NSProgressIndicator()
@@ -75,6 +90,12 @@ final class FileListViewController: NSViewController {
     scrollView.drawsBackground = false
     scrollView.translatesAutoresizingMaskIntoConstraints = false
 
+    emptyLabel.font = .preferredFont(forTextStyle: .body)
+    emptyLabel.textColor = folderColor
+    emptyLabel.alignment = .center
+    emptyLabel.isHidden = true
+    emptyLabel.translatesAutoresizingMaskIntoConstraints = false
+
     statusIndicator.style = .spinning
     statusIndicator.controlSize = .small
     statusIndicator.isDisplayedWhenStopped = false
@@ -91,21 +112,38 @@ final class FileListViewController: NSViewController {
     statusLine.setAccessibilityElement(true)
     statusLine.setAccessibilityRole(.staticText)
 
+    filterField.placeholderString = Self.filterName
+    filterField.setAccessibilityLabel(Self.filterName)
+    filterField.sendsSearchStringImmediately = true
+    filterField.sendsWholeSearchString = false
+    filterField.controlSize = .regular
+    filterField.target = self
+    filterField.action = #selector(filterDidChange(_:))
+    filterField.translatesAutoresizingMaskIntoConstraints = false
+
     // The split view gives the sidebar the width its view has when it first shows.
     let container = NSView(
       frame: CGRect(x: 0, y: 0, width: WindowMetrics.sidebarWidth, height: 400))
-    container.addSubview(scrollView)
-    container.addSubview(statusLine)
+    for view in [scrollView, emptyLabel, statusLine, filterField] as [NSView] {
+      container.addSubview(view)
+    }
     let statusHeight = statusLine.heightAnchor.constraint(equalToConstant: 0)
+    let inset = WindowMetrics.sidebarFilterInset
     NSLayoutConstraint.activate([
       scrollView.topAnchor.constraint(equalTo: container.topAnchor),
       scrollView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
       scrollView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
       scrollView.bottomAnchor.constraint(equalTo: statusLine.topAnchor),
+      emptyLabel.centerYAnchor.constraint(equalTo: scrollView.centerYAnchor),
+      emptyLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: inset),
+      emptyLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -inset),
       statusLine.leadingAnchor.constraint(equalTo: container.leadingAnchor),
       statusLine.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-      statusLine.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+      statusLine.bottomAnchor.constraint(equalTo: filterField.topAnchor, constant: -inset / 2),
       statusHeight,
+      filterField.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: inset),
+      filterField.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -inset),
+      filterField.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -inset),
     ])
     self.statusHeight = statusHeight
     view = container
@@ -119,6 +157,7 @@ final class FileListViewController: NSViewController {
     isSelectingFromCode = true
     tableView.reloadData()
     isSelectingFromCode = false
+    emptyLabel.isHidden = !(files.isEmpty && !filterField.stringValue.isEmpty)
     select(selection, scrolling: scrolling)
   }
 
@@ -154,6 +193,10 @@ final class FileListViewController: NSViewController {
     // The sidebar may be too narrow for the whole line.
     statusLine.toolTip = text
     statusLine.setAccessibilityLabel(text)
+  }
+
+  @objc private func filterDidChange(_ sender: NSSearchField) {
+    delegate?.fileList(self, didChangeFilter: sender.stringValue)
   }
 
   /// What the line below the rows says while files come.
@@ -206,6 +249,12 @@ final class FileListViewController: NSViewController {
     String(
       localized: "Files", bundle: .module,
       comment: "VoiceOver: the list of the files in the sidebar of a window that compares several.")
+  }
+
+  private static var filterName: String {
+    String(
+      localized: "Filter File Name", bundle: .module,
+      comment: "The field at the bottom of the sidebar that narrows the list to matching files.")
   }
 
   private static let column = NSUserInterfaceItemIdentifier("file")

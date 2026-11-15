@@ -41,6 +41,7 @@ extension SessionCommand {
     case .goToLine: return ("l", [.command])
     case .openInEditor: return ("o", [.option, .command])
     case .nextFile: return kind == .diff ? (Self.rightArrow, jumps) : nil
+    case .filterFiles: return kind == .diff ? ("f", [.shift, .command]) : nil
     case .toggleIdenticalFiles: return nil
     case .previousFile: return kind == .diff ? (Self.leftArrow, jumps) : nil
     case .nextPane: return (Self.tab, [.control])

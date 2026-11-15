@@ -608,7 +608,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
   func canPerform(_ command: SessionCommand) -> Bool {
     if unavailable != nil || collectionPlaceholder != nil,
       ![
-        .skipRemainingFiles, .toggleFooter, .nextFile, .previousFile, .toggleIdenticalFiles,
+        .skipRemainingFiles, .toggleFooter, .nextFile, .previousFile, .filterFiles,
+        .toggleIdenticalFiles,
       ].contains(command)
     {
       return false
@@ -625,6 +626,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
       neighborIndex(forward: forward) != nil
     case .comparedFolders:
       collection?.folders != nil
+    case .fileList:
+      collectionLayout?.hasList == true
     case .noComparisonUnderWay:
       !isSwitchingComparison
     case .basePane:

@@ -150,6 +150,10 @@ final class MainMenu {
     submenu.addItem(
       Self.item(
         Titles.jumpToSelection, #selector(NSText.centerSelectionInVisibleArea(_:)), key: "j"))
+    submenu.addItem(.separator())
+    for item in commands(.filterFiles) {
+      submenu.addItem(item)
+    }
     find.submenu = submenu
     return find
   }

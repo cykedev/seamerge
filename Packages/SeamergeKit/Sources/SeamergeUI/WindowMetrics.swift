@@ -96,6 +96,9 @@ enum WindowMetrics {
   /// The width of the list of files in the sidebar of a window that compares several files.
   static let sidebarWidth: CGFloat = 220
 
+  /// The distance of the filter field from the edges of the sidebar.
+  static let sidebarFilterInset: CGFloat = 8
+
   /// The narrowest the list of files gets before it collapses.
   static let minimumSidebarWidth: CGFloat = 160
 

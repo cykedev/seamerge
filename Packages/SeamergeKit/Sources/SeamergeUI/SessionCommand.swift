@@ -94,6 +94,9 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// out.
   case toggleIdenticalFiles
 
+  /// Puts the focus into the field that filters the list of the files.
+  case filterFiles
+
   /// Makes the text larger.
   case zoomIn
 
@@ -243,6 +246,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Show Identical Files", bundle: .module,
         comment: "View menu command, checked while the list of two folders shows equal files too.")
+    case .filterFiles:
+      String(
+        localized: "Filter Files", bundle: .module,
+        comment: "Edit > Find: put the focus into the field that filters the list of files.")
     case .zoomIn: String(localized: "Zoom In", bundle: .module, comment: "View menu command.")
     case .zoomOut: String(localized: "Zoom Out", bundle: .module, comment: "View menu command.")
     case .actualSize:
@@ -474,6 +481,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "List the files that are the same in both folders too", bundle: .module,
         comment: "Help tag of View > Show Identical Files.")
+    case .filterFiles:
+      String(
+        localized: "Narrow the list to files whose name or folder contains a text",
+        bundle: .module, comment: "Help tag of Edit > Find > Filter Files.")
     case .saveAndClose:
       String(
         localized: "Save and close", bundle: .module,
@@ -530,6 +541,7 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .collapseUnchangedLines: #selector(SessionWindowController.collapseUnchangedLines(_:))
     case .toggleFooter: #selector(SessionWindowController.toggleFooter(_:))
     case .toggleIdenticalFiles: #selector(SessionWindowController.toggleIdenticalFiles(_:))
+    case .filterFiles: #selector(SessionWindowController.filterFiles(_:))
     case .zoomIn: #selector(SessionWindowController.zoomIn(_:))
     case .zoomOut: #selector(SessionWindowController.zoomOut(_:))
     case .actualSize: #selector(SessionWindowController.actualSize(_:))

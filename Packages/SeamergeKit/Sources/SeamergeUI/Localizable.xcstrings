@@ -629,6 +629,12 @@
     "Files" : {
       "comment" : "VoiceOver: the list of the files in the sidebar of a window that compares several."
     },
+    "Filter File Name" : {
+      "comment" : "The field at the bottom of the sidebar that narrows the list to matching files."
+    },
+    "Filter Files" : {
+      "comment" : "Edit > Find: put the focus into the field that filters the list of files."
+    },
     "First Change" : {
       "comment" : "Go menu command."
     },
@@ -871,6 +877,9 @@
     "Move Seamerge to the Applications folder first." : {
       "comment" : "Set Up Git Integration: the app runs from a disk image or Downloads."
     },
+    "Narrow the list to files whose name or folder contains a text" : {
+      "comment" : "Help tag of Edit > Find > Filter Files."
+    },
     "New" : {
       "comment" : "A file in the sidebar that has no earlier side."
     },
@@ -903,6 +912,9 @@
     },
     "No File Selected" : {
       "comment" : "Window of two folders: the list holds files, but none is shown."
+    },
+    "No Files Match" : {
+      "comment" : "Sidebar: no file of the list matches what was typed in the filter field."
     },
     "Nothing taken" : {
       "comment" : "VoiceOver: a part of the result that takes no lines."

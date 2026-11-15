@@ -96,6 +96,15 @@ extension SessionWindowController {
     listFiles(scrolling: true)
   }
 
+  /// Puts the focus into the field that filters the list, and shows the list if it is hidden.
+  @objc func filterFiles(_ sender: Any?) {
+    guard canPerform(.filterFiles), let collectionLayout else { return }
+    if collectionLayout.sidebarItem.isCollapsed {
+      collectionLayout.toggleSidebar(sender)
+    }
+    window?.makeFirstResponder(collectionLayout.fileList.filterField)
+  }
+
   /// The index in the collection of the file that Next File, or Previous File if not `forward`,
   /// shows: the next one the list shows after the file in view, wherever that file stands in
   /// the order, even if the list leaves it out.
@@ -253,11 +262,13 @@ extension SessionWindowController {
   }
 
   /// Where the file in view stands in the list: among as many files as Git announced or the list
-  /// holds; `nil` if the list leaves the file out.
+  /// holds, while nothing is typed in the filter field; `nil` if the list leaves the file out.
   private var filePosition: FilePosition? {
     guard shownFile != nil, let row = listedRow(of: fileIndex) else { return nil }
-    return FilePosition(
-      number: row + 1, count: max(collection?.expectedCount ?? 0, listedIndices.count))
+    let count =
+      fileFilter.text.isEmpty
+      ? max(collection?.expectedCount ?? 0, listedIndices.count) : listedIndices.count
+    return FilePosition(number: row + 1, count: count)
   }
 
   /// Says in place of the lines why no file of two folders is shown, while none is.
@@ -449,5 +460,10 @@ extension SessionWindowController: FileListDelegate {
   func fileList(_ fileList: FileListViewController, didSelectRow row: Int) {
     guard listedIndices.indices.contains(row) else { return }
     showFile(at: listedIndices[row])
+  }
+
+  func fileList(_ fileList: FileListViewController, didChangeFilter text: String) {
+    fileFilter.text = text
+    listFiles(scrolling: true)
   }
 }
