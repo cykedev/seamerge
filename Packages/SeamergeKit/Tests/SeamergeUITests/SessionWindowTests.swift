@@ -190,9 +190,11 @@ import Testing
   @Test func changingTheDisplayOptionsRedrawsWithTheirTheme() async throws {
     let session = try await SampleMerges.helloWorld()
     let controller = makeController(session, context: SessionContext())
-    controller.displayOptions = DisplayOptions(differentiatesWithoutColor: true)
+    controller.displayOptions = DisplayOptions(
+      differentiatesWithoutColor: true, reducesMotion: true)
     for pane in controller.presentation.allPanes {
       #expect(pane.theme.differentiatesWithoutColor)
+      #expect(pane.theme.reducesMotion)
     }
     #expect(controller.presentation.sourcesOverviewBar.theme.differentiatesWithoutColor)
     #expect(try controller.presentation.mergeDecisionColumn.theme.differentiatesWithoutColor)

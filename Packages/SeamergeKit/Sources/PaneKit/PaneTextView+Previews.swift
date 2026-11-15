@@ -117,9 +117,11 @@ extension PaneTextView {
   /// Cross-fades the text from how it looks now to how it looks once the change under way has
   /// been drawn: a preview turning into text, or text into a preview.
   ///
-  /// A cross-fade moves nothing, so it stays with Reduce Motion.
+  /// With Reduce Motion, the change shows at once.
   func fadeAfterPreviewChange() {
-    guard window != nil, let layer = enclosingScrollView?.contentView.layer else { return }
+    guard !theme.reducesMotion, window != nil,
+      let layer = enclosingScrollView?.contentView.layer
+    else { return }
     let transition = CATransition()
     transition.type = .fade
     transition.duration = Theme.previewFadeDuration

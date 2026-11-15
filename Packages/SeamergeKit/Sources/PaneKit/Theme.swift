@@ -27,19 +27,26 @@ public struct Theme {
   /// overview bar then get a notch at their leading edge.
   public var differentiatesWithoutColor: Bool
 
+  /// Whether a preview turns into text at once rather than in a cross-fade.
+  ///
+  /// Set it from the system setting, `NSWorkspace.accessibilityDisplayShouldReduceMotion`.
+  public var reducesMotion: Bool
+
   /// Creates a theme.
   public init(
     font: NSFont = .monospacedSystemFont(ofSize: 13, weight: .regular),
     lineHeightMultiple: CGFloat = 1.5,
     tabWidth: Int = 4,
     increasesContrast: Bool = false,
-    differentiatesWithoutColor: Bool = false
+    differentiatesWithoutColor: Bool = false,
+    reducesMotion: Bool = false
   ) {
     self.font = font
     self.lineHeightMultiple = lineHeightMultiple
     self.tabWidth = tabWidth
     self.increasesContrast = increasesContrast
     self.differentiatesWithoutColor = differentiatesWithoutColor
+    self.reducesMotion = reducesMotion
   }
 
   /// The height of every row, in points: the font size times the multiple, rounded up.

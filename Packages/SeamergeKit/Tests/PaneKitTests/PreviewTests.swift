@@ -33,6 +33,17 @@ import Testing
     #expect(textView.selectedRange() == NSRange(location: 30, length: 0))
   }
 
+  /// With Reduce Motion, a preview turns into text at once, without the cross-fade.
+  @Test func previewTurnsIntoTextAtOnceWhenMotionIsReduced() throws {
+    let (pane, window, _) = Self.pane()
+    defer { window.close() }
+    pane.theme = Theme(reducesMotion: true)
+    let layer = try #require(pane.documentView.enclosingScrollView?.contentView.layer)
+    layer.removeAllAnimations()
+    pane.setBlocks([], previews: [Self.previews[1]], rowTints: [:])
+    #expect((layer.animationKeys() ?? []).isEmpty)
+  }
+
   @Test func clickOnThePreviewLeavesTheInsertionPointOutsideIt() {
     let (pane, window, _) = Self.pane()
     defer { window.close() }

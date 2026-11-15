@@ -38,7 +38,8 @@ struct DisplayOptions: Hashable {
   /// The theme of the panes with these settings, with code at its standard size.
   var theme: Theme {
     Theme(
-      increasesContrast: increasesContrast, differentiatesWithoutColor: differentiatesWithoutColor)
+      increasesContrast: increasesContrast, differentiatesWithoutColor: differentiatesWithoutColor,
+      reducesMotion: reducesMotion)
   }
 
   /// The theme of the panes with these settings, with code in the font, line spacing and tab
