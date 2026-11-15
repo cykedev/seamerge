@@ -283,6 +283,6 @@ import Testing
       Bring All to Front
     Help ▸
       Seamerge Help (deactivated)
-      Keyboard Shortcuts (deactivated)
+      Keyboard Shortcuts
     """
 }

@@ -33,6 +33,9 @@ final class AppDelegate: NSObject {
   /// The window Settings, once it has appeared.
   private(set) var settingsWindowController: SettingsWindowController?
 
+  /// The window Keyboard Shortcuts, once it has appeared.
+  private(set) var shortcutOverviewWindowController: ShortcutOverviewWindowController?
+
   /// Whether the helper started the app to hand over a session.
   private let isLaunchedForSession: Bool
 
@@ -83,6 +86,17 @@ final class AppDelegate: NSObject {
   @objc func showSettings(_ sender: Any?) {
     let controller = settingsWindowController ?? SettingsWindowController(settings: settings)
     settingsWindowController = controller
+    controller.showWindow(sender)
+  }
+
+  /// Shows the window Keyboard Shortcuts in front, made the first time it is needed with the
+  /// shortcuts of the kind of session window in front.
+  @objc func showKeyboardShortcuts(_ sender: Any?) {
+    let controller =
+      shortcutOverviewWindowController
+      ?? ShortcutOverviewWindowController(
+        kind: NSApp.mainWindow.flatMap { coordinator.kind(of: $0) } ?? .merge)
+    shortcutOverviewWindowController = controller
     controller.showWindow(sender)
   }
 

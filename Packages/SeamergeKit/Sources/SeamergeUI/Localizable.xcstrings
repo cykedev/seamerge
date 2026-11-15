@@ -79,6 +79,9 @@
         }
       }
     },
+    "%@ or %@" : {
+      "comment" : "Keyboard Shortcuts: two single keys that do the same, such as “1 or ←”."
+    },
     "%@ removed from %@" : {
       "comment" : "VoiceOver: a field was emptied, such as LoginView.swift removed from Left."
     },
@@ -93,6 +96,9 @@
     },
     "%@, %@, %@" : {
       "comment" : "VoiceOver: a pane with its name and role in the order the header shows them, such as A, feature/login, incoming or A, your commit, 1a2b3c4 Fix typo."
+    },
+    "%@, %@, or %@" : {
+      "comment" : "VoiceOver, Keyboard Shortcuts: a command, its shortcut and its single keys."
     },
     "%@, in %@" : {
       "comment" : "VoiceOver: the file in a field, such as LoginView.swift, in ~/Projects/app."
@@ -531,6 +537,9 @@
     "Earlier Version" : {
       "comment" : "Role: the file before the change, shown when both sides have the same name."
     },
+    "Edit" : {
+      "comment" : "Menu bar."
+    },
     "Edited by hand" : {
       "comment" : "VoiceOver: a part of the result that the user typed."
     },
@@ -715,6 +724,9 @@
     },
     "Keep your version to save over it later, or reload the file as it is now. You can undo reloading." : {
       "comment" : "Sheet: another app changed the result file; the choices."
+    },
+    "Keyboard Shortcuts" : {
+      "comment" : "Title of the window of all keyboard shortcuts."
     },
     "Last Change" : {
       "comment" : "Go menu command."
@@ -1070,6 +1082,12 @@
     "Show where this side comes from" : {
       "comment" : "Help tag of ⓘ."
     },
+    "Single keys work wherever you are not typing in the result." : {
+      "comment" : "Keyboard Shortcuts: when the keys without Command work in a merge."
+    },
+    "Single keys work while a pane has the focus." : {
+      "comment" : "Keyboard Shortcuts: when the keys without Command work in a comparison."
+    },
     "Size" : {
       "comment" : "Settings: the size of the code."
     },
@@ -1286,8 +1304,14 @@
     "UTF-32 LE" : {
       "comment" : "Encoding: UTF-32 little-endian."
     },
+    "View" : {
+      "comment" : "Menu bar."
+    },
     "Whitespace changes ignored" : {
       "comment" : "Subtitle: the comparison ignores how much whitespace there is."
+    },
+    "Window" : {
+      "comment" : "Keyboard Shortcuts: the choice of the window."
     },
     "Windows 1252" : {
       "comment" : "Encoding: Windows code page."

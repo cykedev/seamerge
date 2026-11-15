@@ -111,4 +111,23 @@ enum WindowMetrics {
 
   /// The width of the window Settings.
   static let settingsWidth: CGFloat = 480
+
+  /// The distance between the parts of the window Keyboard Shortcuts, and between its groups.
+  static let shortcutOverviewSpacing: CGFloat = 16
+
+  /// The distance between the two columns of the window Keyboard Shortcuts.
+  static let shortcutOverviewColumnSpacing: CGFloat = 32
+
+  /// The width of each column of the window Keyboard Shortcuts: room for the longest command
+  /// with its single keys and its shortcut.
+  static let shortcutOverviewColumnWidth: CGFloat = 320
+
+  /// The distance between the edges of the window Keyboard Shortcuts and what it shows.
+  static let shortcutOverviewInset: CGFloat = 24
+
+  /// The distance between the rows of a group in the window Keyboard Shortcuts.
+  static let shortcutOverviewRowSpacing: CGFloat = 4
+
+  /// The distance between a command, its single keys and its shortcut.
+  static let shortcutOverviewKeySpacing: CGFloat = 12
 }

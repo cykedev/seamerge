@@ -246,6 +246,22 @@ struct AppDelegateTests {
     #expect(UserSettings(defaults: sandbox.defaults).tabWidth == 6)
   }
 
+  @Test func keyboardShortcutsOpenFromTheHelpMenuOnce() throws {
+    let sandbox = try AppSandbox()
+    let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
+    let helpMenu = try #require(delegate.mainMenu.menu.items.last?.submenu)
+    let item = try #require(helpMenu.items.first { $0.title == "Keyboard Shortcuts" })
+    #expect(item.action == #selector(AppDelegate.showKeyboardShortcuts(_:)))
+
+    delegate.showKeyboardShortcuts(item)
+    let window = try #require(delegate.shortcutOverviewWindowController?.window)
+    defer { window.close() }
+    #expect(window.isVisible)
+    #expect(window.title == "Keyboard Shortcuts")
+    delegate.showKeyboardShortcuts(item)
+    #expect(delegate.shortcutOverviewWindowController?.window === window)
+  }
+
   private func makeDelegate(in sandbox: AppSandbox, arguments: [String]) -> AppDelegate {
     AppDelegate(
       arguments: arguments, defaults: sandbox.defaults, socketURL: sandbox.socketURL,

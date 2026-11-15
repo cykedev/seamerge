@@ -238,7 +238,10 @@ final class MainMenu {
   }
 
   private func helpMenuContent() -> NSMenu {
-    for item in [Self.item(Titles.seamergeHelp), Self.item(Titles.keyboardShortcuts)] {
+    for item in [
+      Self.item(Titles.seamergeHelp),
+      Self.item(Titles.keyboardShortcuts, #selector(AppDelegate.showKeyboardShortcuts(_:))),
+    ] {
       helpMenu.addItem(item)
     }
     return helpMenu
