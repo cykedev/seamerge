@@ -33,6 +33,7 @@ public final class PaneFindBar: NSView, @MainActor NSTextFinderBarContainer {
       let hadFocus = !isFindBarVisible && holdsFocus
       findBarView?.isHidden = !isFindBarVisible
       barDidChangeHeight()
+      search?.findBarDidChangeHeight()
       if !isFindBarVisible {
         search?.findBarDidClose()
         if hadFocus {
@@ -46,6 +47,7 @@ public final class PaneFindBar: NSView, @MainActor NSTextFinderBarContainer {
   /// hides the field for replacing.
   public func findBarViewDidChangeHeight() {
     barDidChangeHeight()
+    search?.findBarDidChangeHeight()
   }
 
   /// No content to dim: the tints of the panes carry meaning.
@@ -70,6 +72,20 @@ public final class PaneFindBar: NSView, @MainActor NSTextFinderBarContainer {
     super.layout()
     guard let findBarView else { return }
     findBarView.frame = CGRect(x: 0, y: 0, width: bounds.width, height: findBarView.frame.height)
+  }
+
+  /// Whether the find bar shows a field for the text that replaces a match: an editable field
+  /// besides the search field, as the standard bar has.
+  var showsReplaceField: Bool {
+    guard let findBarView else { return false }
+    return Self.views(in: findBarView).contains { view in
+      guard let field = view as? NSTextField else { return false }
+      return !(field is NSSearchField) && field.isEditable && !field.isHiddenOrHasHiddenAncestor
+    }
+  }
+
+  private static func views(in view: NSView) -> [NSView] {
+    [view] + view.subviews.flatMap(views(in:))
   }
 
   /// Whether the user types in the search field of the find bar, whose field editor holds the

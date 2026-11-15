@@ -33,7 +33,8 @@ extension SessionWindowController {
     registerUndo(of: presentation.carryOut(plan), named: name)
   }
 
-  /// Takes `step` of typing over into the run of typing it continues, or starts a run with it.
+  /// Takes `step` of typing over into the run of typing it continues, or starts a run with it;
+  /// during a replacement of the search, into the steps of the replacement.
   ///
   /// Typing continues the run that the last step of undo takes back while it starts where the
   /// run left the insertion point, within two seconds of the last key; a command, any other step
@@ -43,6 +44,10 @@ extension SessionWindowController {
   ///   - range: The range of the result pane's text that the typing replaced.
   ///   - caret: The insertion point after the typing.
   func recordTyping(_ step: UndoStep, at range: Range<Int>, caret: Int) {
+    if replacementSteps != nil {
+      replacementSteps?.append(step)
+      return
+    }
     let time = now()
     if let run = typingRun, time - run.lastTyped < Self.typingPause,
       run.caret == range.lowerBound || run.caret == range.upperBound,
@@ -92,7 +97,7 @@ extension SessionWindowController {
 
   /// Registers the step that takes `step` back, under `name`: on the undo stack, or on the redo
   /// stack while undoing.
-  private func registerUndo(of step: UndoStep, named name: String) {
+  func registerUndo(of step: UndoStep, named name: String) {
     sessionUndoManager.registerUndo(withTarget: self) { controller in
       MainActor.assumeIsolated { controller.takeBack(step, named: name) }
     }

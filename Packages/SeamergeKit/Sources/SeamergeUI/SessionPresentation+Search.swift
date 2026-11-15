@@ -100,6 +100,16 @@ extension SessionPresentation: PaneSearchDelegate {
     announce(Self.matchesAnnouncement(matchCount: search.matches.count, paneCount: panes.count))
   }
 
+  /// Tells the delegate, which keeps the steps of undo.
+  func paneSearchWillReplace(_ search: PaneSearch) {
+    delegate?.presentationWillReplaceMatches(self)
+  }
+
+  /// Tells the delegate, which keeps the steps of undo.
+  func paneSearch(_ search: PaneSearch, didReplaceAll replacesAll: Bool) {
+    delegate?.presentation(self, didReplaceAllMatches: replacesAll)
+  }
+
   /// What VoiceOver says once the search has found `matchCount` matches in `paneCount` panes,
   /// such as 12 matches in 3 panes.
   static func matchesAnnouncement(matchCount: Int, paneCount: Int) -> String {

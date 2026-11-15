@@ -12,8 +12,11 @@ extension PaneSearch: @MainActor NSTextFinderClient {
   /// One selection in one pane: the finder cannot select matches in several panes at once.
   public var allowsMultipleSelection: Bool { false }
 
-  /// Whether the search is limited to one pane that can be edited, the only way to replace.
-  public var isEditable: Bool { editablePane != nil }
+  /// Whether text can be replaced: in the pane that the search is limited to, or in the
+  /// replaceable pane, which the field for replacing limits the search to as it comes.
+  public var isEditable: Bool {
+    editablePane != nil || replaceablePane?.editingDelegate != nil
+  }
 
   /// The part of the search text that holds `characterIndex`: lines of one pane, which always
   /// end with a search boundary.
@@ -143,15 +146,15 @@ extension PaneSearch: @MainActor NSTextFinderClient {
 
   /// Begins a replacement of the matches at `ranges` in the editable pane, as one step of undo;
   /// refuses it while the search is not limited to such a pane.
+  ///
+  /// A match that reaches from one line into the next belongs to no pane and stays as it is;
+  /// the others are replaced.
   public func shouldReplaceCharacters(inRanges ranges: [NSValue], with strings: [String]) -> Bool {
     guard let pane = editablePane else { return false }
     let text = searchText()
     let paneIndex = panes.firstIndex { $0 === pane }
-    guard
-      ranges.allSatisfy({ value in
-        Range(value.rangeValue).flatMap(text.paneRange(of:)).map { $0.pane == paneIndex } ?? false
-      })
-    else { return false }
+    let places = ranges.compactMap { Range($0.rangeValue).flatMap(text.paneRange(of:)) }
+    guard !places.isEmpty, places.allSatisfy({ $0.pane == paneIndex }) else { return false }
     // The text view keeps no undo of its own and answers none; the window has the undo of the pane.
     let undoManager = pane.undoManager
     undoManager?.beginUndoGrouping()
@@ -159,6 +162,7 @@ extension PaneSearch: @MainActor NSTextFinderClient {
     let replacesAll =
       ranges.count > 1 || actionUnderWay == .replaceAll || actionUnderWay == .replaceAllInSelection
     replacement = (undoManager, replacesAll)
+    delegate?.paneSearchWillReplace(self)
     return true
   }
 
@@ -178,12 +182,18 @@ extension PaneSearch: @MainActor NSTextFinderClient {
   public func didReplaceCharacters() {
     guard let (undoManager, replacesAll) = replacement else { return }
     replacement = nil
+    delegate?.paneSearch(self, didReplaceAll: replacesAll)
     if let undoManager {
-      undoManager.setActionName(
-        replacesAll
-          ? String(localized: "Replace All", bundle: .module)
-          : String(localized: "Replace", bundle: .module))
+      undoManager.setActionName(Self.undoActionName(replacingAll: replacesAll))
       undoManager.endUndoGrouping()
     }
+  }
+
+  /// The name of the step of undo that replacing makes: Replace All for all matches, also if
+  /// there is only one, else Replace.
+  public static func undoActionName(replacingAll replacesAll: Bool) -> String {
+    replacesAll
+      ? String(localized: "Replace All", bundle: .module)
+      : String(localized: "Replace", bundle: .module)
   }
 }

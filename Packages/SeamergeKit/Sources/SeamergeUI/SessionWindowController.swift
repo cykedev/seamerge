@@ -163,6 +163,10 @@ public final class SessionWindowController: NSWindowController {
   /// The typing that the last step of undo takes back, as long as further typing joins it.
   var typingRun: TypingRun?
 
+  /// The steps of the replacement of the search under way, which become one step of undo once
+  /// it is over, or `nil` while the search replaces nothing.
+  var replacementSteps: [UndoStep]?
+
   /// The time now, which tells when typing paused.
   let now: () -> ContinuousClock.Instant
 
@@ -716,6 +720,16 @@ extension SessionWindowController: SessionPresentationDelegate {
     _ presentation: SessionPresentation, didType step: UndoStep, at range: Range<Int>, caret: Int
   ) {
     recordTyping(step, at: range, caret: caret)
+  }
+
+  func presentationWillReplaceMatches(_ presentation: SessionPresentation) {
+    searchWillReplace()
+  }
+
+  func presentation(
+    _ presentation: SessionPresentation, didReplaceAllMatches replacesAll: Bool
+  ) {
+    searchDidReplace(all: replacesAll)
   }
 
   func presentation(

@@ -213,6 +213,7 @@ final class SessionPresentation {
     }
     connectPanes()
     search.delegate = self
+    search.replaceablePane = layout.resultPane
     syntax.onLexed = { [weak self] in self?.showSyntax() }
     showSession()
     let blockRotors = BlockRotors(presentation: self)

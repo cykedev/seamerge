@@ -81,6 +81,26 @@ import Testing
     }
   }
 
+  @Test func replaceAllReplacesTheMatchesOfAPaneAndLeavesThoseAcrossALine() {
+    let panes = SearchPanes()
+    defer { panes.window.close() }
+    panes.search.scope = .pane(panes.result)
+    #expect(panes.search.stringLength() == 27)
+    // The result alone: "needle" 0..<6; "pre " 6..<10, " post" 11..<16, "end needle" 17..<27,
+    // with line feeds between them; "post\nend" reaches across a line.
+    let across = NSRange(location: 12, length: 8)
+    let needle = NSRange(location: 21, length: 6)
+    #expect(
+      panes.search.shouldReplaceCharacters(
+        inRanges: [NSValue(range: across), NSValue(range: needle)], with: ["x", "pin"]))
+    panes.search.replaceCharacters(in: needle, with: "pin")
+    panes.search.replaceCharacters(in: across, with: "x")
+    panes.search.didReplaceCharacters()
+    #expect(panes.result.documentView.string == "needle\nneedle\npre needle post\nend pin")
+    // A replacement of matches across lines alone is refused.
+    #expect(!panes.search.shouldReplaceCharacters(inRanges: [NSValue(range: across)], with: ["x"]))
+  }
+
   @Test func longTextTakesFewPartsAndEveryLineKeepsItsPlace() {
     let lines = (0..<100_000).map { "line \($0)" }
     let text = lines.joined(separator: "\n")
@@ -150,6 +170,7 @@ import Testing
     #expect(!panes.search.shouldReplaceCharacters(inRanges: ranges, with: ["pin"]))
     panes.search.replaceCharacters(in: ranges[3].rangeValue, with: "pin")
     #expect(panes.editor.asked.isEmpty)
+    #expect(panes.observer.replacements.isEmpty)
     #expect(panes.result.documentView.string == SearchPanes.resultText)
   }
 
@@ -166,6 +187,7 @@ import Testing
     #expect(panes.result.documentView.string == "needle\nneedle\npre needle post\nend pin")
     #expect(panes.a.documentView.string == SearchPanes.aText)
     #expect(panes.base.documentView.string == SearchPanes.baseText)
+    #expect(panes.observer.replacements == ["will 0", "did one 1"])
     #expect(panes.editor.undoManager?.undoActionName == "Replace")
   }
 
@@ -201,7 +223,9 @@ import Testing
     panes.search.didReplaceCharacters()
     #expect(panes.result.documentView.string == "pin\nneedle\npre needle post\nend pin")
     #expect(panes.editor.carriedOut.count == 2)
+    #expect(panes.observer.replacements == ["will 0", "did all 2"])
     #expect(undoManager.undoActionName == "Replace All")
+    #expect(undoManager.undoActionName == PaneSearch.undoActionName(replacingAll: true))
     undoManager.undo()
     #expect(panes.result.documentView.string == SearchPanes.resultText)
     #expect(!undoManager.canUndo)

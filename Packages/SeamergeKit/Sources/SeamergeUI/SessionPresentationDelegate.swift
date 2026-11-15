@@ -29,6 +29,14 @@ protocol SessionPresentationDelegate: AnyObject {
   func presentation(
     _ presentation: SessionPresentation, didType step: UndoStep, at range: Range<Int>, caret: Int)
 
+  /// Tells the delegate that the search is about to replace matches in the result, whose edits
+  /// it reports as typing until it has replaced them.
+  func presentationWillReplaceMatches(_ presentation: SessionPresentation)
+
+  /// Tells the delegate that the search has replaced the matches it began to replace, all of
+  /// them if `replacesAll` is set, else the current one.
+  func presentation(_ presentation: SessionPresentation, didReplaceAllMatches replacesAll: Bool)
+
   /// Tells the delegate that the user switched toggle `toggle` of changed block `block` in the
   /// decision column.
   func presentation(

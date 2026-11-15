@@ -38,6 +38,7 @@ final class SearchPanes {
       PaneSearch.Section(pane: result, rows: 2..<4),
     ]
     search.delegate = observer
+    observer.editor = editor
     let container = NSView(frame: CGRect(x: 0, y: 0, width: 900, height: 400))
     for (index, pane) in [a, base, result].enumerated() {
       pane.frame = CGRect(x: CGFloat(index) * 300, y: 60, width: 300, height: 340)
@@ -103,11 +104,26 @@ final class SearchPanes {
 final class SearchObserver: PaneSearchDelegate {
   private(set) var revealed: [PaneSearch.Match] = []
 
+  /// The replacements the search began and ended, as "will" and "did all" or "did one", each
+  /// with the number of edits the editor of the result had carried out by then.
+  private(set) var replacements: [String] = []
+
+  /// The editor whose edits the replacements count.
+  weak var editor: UndoingEditor?
+
   /// A test waiting for a condition on the matches, with what resumes it.
   private var waiter: (condition: () -> Bool, continuation: CheckedContinuation<Void, Never>)?
 
   func paneSearch(_ search: PaneSearch, didReveal match: PaneSearch.Match) {
     revealed.append(match)
+  }
+
+  func paneSearchWillReplace(_ search: PaneSearch) {
+    replacements.append("will \(editor?.carriedOut.count ?? 0)")
+  }
+
+  func paneSearch(_ search: PaneSearch, didReplaceAll replacesAll: Bool) {
+    replacements.append("did \(replacesAll ? "all" : "one") \(editor?.carriedOut.count ?? 0)")
   }
 
   func paneSearchDidChangeMatches(_ search: PaneSearch) {

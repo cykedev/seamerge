@@ -37,6 +37,16 @@ final class SearchDriver {
     }
   }
 
+  /// The field for the text that replaces a match.
+  var replaceField: NSTextField {
+    get throws {
+      let bar = try #require(search.findBar.findBarView)
+      let fields = Self.views(in: bar).compactMap { $0 as? NSTextField }
+      return try #require(
+        fields.first { !($0 is NSSearchField) && $0.isEditable && !$0.isHidden })
+    }
+  }
+
   /// Carries out `command` as its menu item does, along the responder chain from the focus of
   /// the window, and tells whether anything along it carried it out.
   @discardableResult
@@ -46,6 +56,12 @@ final class SearchDriver {
     let item = NSMenuItem(title: command.title, action: command.action, keyEquivalent: "")
     let responder = window.firstResponder ?? window
     return responder.tryToPerform(command.action, with: item)
+  }
+
+  /// Carries out `action` of the finder, as a button of the find bar does.
+  func perform(_ action: NSTextFinder.Action) {
+    holdSearchText()
+    search.perform(action)
   }
 
   /// Puts the text of the search field back on the find pasteboard of the system, which Find
@@ -66,6 +82,11 @@ final class SearchDriver {
   /// typing while the finder searches races with that search.
   func type(_ text: String) throws {
     try type(text, into: searchField)
+  }
+
+  /// Types `text` into the field for the text that replaces a match, over all it held.
+  func typeReplacement(_ text: String) throws {
+    try type(text, into: replaceField)
   }
 
   private func type(_ text: String, into field: NSTextField) throws {

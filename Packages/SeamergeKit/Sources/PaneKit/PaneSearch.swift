@@ -9,7 +9,7 @@ import Synchronization
 /// one pane into the next, and filler rows and previews are never searched. ``scope`` limits the
 /// search to one pane, the only one that text can be replaced in; every replacement passes
 /// through that pane's ``PaneView/editingDelegate`` as typing does, and Replace All is one step
-/// of undo.
+/// of undo, which the delegate learns the start and end of.
 ///
 /// Put ``findBar`` at the bottom of the window, below the panes. The search does not dim the
 /// panes, whose tints carry meaning; it marks its matches in the panes and shows the current one
@@ -79,6 +79,17 @@ public final class PaneSearch: NSObject {
   /// Whether ``matches`` are what the finder found in the text as it is now: false once the text
   /// or the panes changed since it searched, and its matches are gone, until it searches again.
   public private(set) var matchesAreCurrent = false
+
+  /// Whether the find bar shows the field for replacing, as the owner opened it or as the user
+  /// switched it on or off in the bar.
+  public private(set) var showsReplaceField = false
+
+  /// The pane that text can be replaced in, if any and if it can be edited.
+  ///
+  /// The find bar offers its field for replacing while the pane is set; as the field comes, the
+  /// search is limited to the pane, and as it goes, the search goes through all panes again,
+  /// whether the owner or the user in the bar switched it.
+  public var replaceablePane: PaneView?
 
   /// The finder that runs the find bar.
   private let finder = NSTextFinder()
@@ -211,7 +222,8 @@ public final class PaneSearch: NSObject {
     return panes.first
   }
 
-  /// The pane that the search is limited to, if it can be edited.
+  /// The pane that the search is limited to, if it can be edited: the only pane that text is
+  /// replaced in.
   var editablePane: PaneView? {
     guard case .pane(let pane) = scope, pane.editingDelegate != nil else { return nil }
     return pane
@@ -228,6 +240,19 @@ public final class PaneSearch: NSObject {
   func findBarDidClose() {
     matchesAreCurrent = false
     showMatches([])
+  }
+
+  /// Limits the search to the replaceable pane once the field for replacing comes, and searches
+  /// all panes again once it goes, as the bar changes its height then.
+  func findBarDidChangeHeight() {
+    let shows = findBar.isFindBarVisible && findBar.showsReplaceField
+    guard shows != showsReplaceField else { return }
+    showsReplaceField = shows
+    if shows, let replaceablePane {
+      scope = .pane(replaceablePane)
+    } else if !shows {
+      scope = .allPanes
+    }
   }
 
   private func makeSearchText() -> SearchText {
