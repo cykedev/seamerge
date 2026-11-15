@@ -1,27 +1,47 @@
 import Foundation
 
-/// The lines that differ from the line they are compared with, although the comparison mode
-/// counts them as equal: they differ only in whitespace or in their line ending.
+/// The lines that differ from the line they are compared with, although the comparison counts
+/// them as equal: they differ only in whitespace, in their line ending or in text that ignore
+/// rules match.
+///
+/// In a comparison with rules, the lines whose text the rules match entirely and that one side
+/// has more count too. Such a line between real changes stays part of the change: it is not
+/// one of the differing lines, but its matched text is among the places.
 ///
 /// A line is checked against the line it is compared with in its block:
 /// - In a merge, A and B against the base where they did not change it, and A against B where
 ///   both made the same change. Without a base, A is checked against B wherever they are equal.
 /// - In a comparison of two files, both files against each other where they are equal.
 ///
-/// With ``ComparisonMode/exact``, lines that count as equal are byte-identical, so there are none.
+/// With ``ComparisonMode/exact`` and no rules, lines that count as equal are byte-identical, so
+/// there are none.
 public struct IgnoredDifferences: Sendable, Hashable {
   /// The differing lines of each input.
   private let linesByRole: [Role: IndexSet]
 
-  /// Each differing line of each input, with the input and the line it is compared with.
+  /// Each line of each input that has places, with the line of another input it is compared
+  /// with.
   private let pairs: [Role: [LinePair]]
 
-  /// A differing line and the line of another input it is compared with.
+  /// A differing line and the line of another input it is compared with, if there is one.
   private struct LinePair: Sendable, Hashable {
     var line: Int
-    var reference: Role
-    var referenceLine: Int
+    var reference: Reference?
   }
+
+  /// The line of another input that a line is compared with.
+  private struct Reference: Sendable, Hashable {
+    var role: Role
+    var line: Int
+  }
+
+  /// Whether ignore rules pass over at least one of the differences: one that the comparison
+  /// mode alone would count.
+  ///
+  /// Lines that rules match entirely and that one side has more always count; a line compared
+  /// with another counts if the rules match text in one of them and the two differ by more than
+  /// the mode ignores.
+  public let includesDifferencesThatRulesIgnore: Bool
 
   /// Finds the differing lines in the blocks of `session`.
   ///
@@ -30,25 +50,50 @@ public struct IgnoredDifferences: Sendable, Hashable {
   public init(in session: Session) {
     var linesByRole: [Role: IndexSet] = [:]
     var pairs: [Role: [LinePair]] = [:]
-    if session.options.mode != .exact {
-      let files = session.files
+    var includesRuleDifferences = false
+    let files = session.files
+    let hasRules = files.values.contains { !$0.ruleMatches.isEmpty }
+    if session.options.mode != .exact || hasRules {
       let hasBase = files[.base] != nil
       for block in session.blocks {
+        // A matched line between real changes stays part of the change and gets no ring, but
+        // shows its matched text among the places.
+        if block.kind == .changed {
+          for role in [Role.a, .b] {
+            guard let file = files[role] else { continue }
+            for line in block.lines(in: role) where file.ruleMatches.entireLines.contains(line) {
+              pairs[role, default: []].append(LinePair(line: line, reference: nil))
+            }
+          }
+        }
         let comparedRoles = Self.comparedRoles(
           in: block.kind, of: session.kind, hasBase: hasBase)
         for (role, reference) in comparedRoles {
           guard let file = files[role], let referenceFile = files[reference] else { continue }
-          for (line, referenceLine) in zip(block.lines(in: role), block.lines(in: reference))
+          let lines = block.lines(in: role)
+          let referenceLines = block.lines(in: reference)
+          for (line, referenceLine) in zip(lines, referenceLines)
           where !Self.bytesMatch(file, line, referenceFile, referenceLine) {
             linesByRole[role, default: IndexSet()].insert(line)
             pairs[role, default: []].append(
-              LinePair(line: line, reference: reference, referenceLine: referenceLine))
+              LinePair(line: line, reference: Reference(role: reference, line: referenceLine)))
+            includesRuleDifferences =
+              includesRuleDifferences
+              || Self.rulesHide(
+                line, of: file, from: referenceLine, of: referenceFile, mode: session.options.mode)
+          }
+          // Only lines that rules match entirely stand alone in an unchanged block.
+          for line in lines.dropFirst(referenceLines.count) {
+            linesByRole[role, default: IndexSet()].insert(line)
+            pairs[role, default: []].append(LinePair(line: line, reference: nil))
+            includesRuleDifferences = true
           }
         }
       }
     }
     self.linesByRole = linesByRole
     self.pairs = pairs
+    includesDifferencesThatRulesIgnore = includesRuleDifferences
   }
 
   /// A place within a line where it differs from the line it is compared with.
@@ -68,11 +113,14 @@ public struct IgnoredDifferences: Sendable, Hashable {
 
   /// The places where the differing lines of the input of `role` differ, in line order: the
   /// characters a line has in place of those of the line it is compared with, such as other
-  /// whitespace, widened to whole composed characters.
+  /// whitespace, and the text that ignore rules match in it where it differs, widened to whole
+  /// composed characters and joined where they overlap.
   ///
-  /// A line that differs only in its line ending, or only by lacking whitespace the other line
-  /// has, has no place of its own. The search compares the tokens of each differing line, so it
-  /// is meant to run once the user asks to see the places; the result is meant to be kept.
+  /// A line without a line it is compared with, such as a line that the rules match entirely,
+  /// has the text that the rules match as its places. A line that differs only in its line
+  /// ending, or only by lacking text the other line has, has no place of its own. The search
+  /// compares the tokens of each differing line, so it is meant to run once the user asks to see
+  /// the places; the result is meant to be kept.
   ///
   /// - Precondition: `session` is the session the differences were found in.
   /// - Throws: The error of the comparison.
@@ -80,22 +128,40 @@ public struct IgnoredDifferences: Sendable, Hashable {
     guard let file = session.files[role] else { return [] }
     var places: [Place] = []
     for pair in (pairs[role] ?? []).sorted(by: { $0.line < $1.line }) {
-      guard let referenceFile = session.files[pair.reference] else { continue }
-      let text = file.utf8.subdata(in: file.contentByteRange(ofLine: pair.line))
-      let referenceText = referenceFile.utf8.subdata(
-        in: referenceFile.contentByteRange(ofLine: pair.referenceLine))
-      guard text != referenceText else { continue }
-      let string = String(decoding: text, as: UTF8.self) as NSString
-      for run in try EngineAdapter.compareTokens(text, referenceText).changedRuns
-      where !run.first.isEmpty {
-        let start = file.lineIndex.utf16Offset(
-          ofByteOffset: run.first.lowerBound, inLine: pair.line)
-        let end = file.lineIndex.utf16Offset(ofByteOffset: run.first.upperBound, inLine: pair.line)
+      let content = file.contentByteRange(ofLine: pair.line)
+      let lineStart = file.lineStarts[pair.line]
+      let matched = file.ruleMatches.ranges(overlapping: content).map {
+        ($0.lowerBound - lineStart)..<($0.upperBound - lineStart)
+      }
+      var byteRanges = matched
+      if let reference = pair.reference, let referenceFile = session.files[reference.role] {
+        let text = file.utf8.subdata(in: content)
+        let referenceText = referenceFile.utf8.subdata(
+          in: referenceFile.contentByteRange(ofLine: reference.line))
+        let runs =
+          text == referenceText
+          ? [] : try EngineAdapter.compareTokens(text, referenceText).changedRuns.map(\.first)
+        // Matched text counts only where text of this line differs within it, as one place.
+        byteRanges =
+          runs.filter { !$0.isEmpty }
+          + matched.filter { range in runs.contains { !$0.isEmpty && range.overlaps($0) } }
+      }
+      let string = String(decoding: file.utf8.subdata(in: content), as: UTF8.self) as NSString
+      var lineRanges: [Range<Int>] = []
+      for bytes in byteRanges.sorted(by: { $0.lowerBound < $1.lowerBound }) {
+        let start = file.lineIndex.utf16Offset(ofByteOffset: bytes.lowerBound, inLine: pair.line)
+        let end = file.lineIndex.utf16Offset(ofByteOffset: bytes.upperBound, inLine: pair.line)
         let composed = string.rangeOfComposedCharacterSequences(
           for: NSRange(location: start, length: end - start))
-        places.append(
-          Place(line: pair.line, range: composed.location..<composed.location + composed.length))
+        let range = composed.location..<composed.location + composed.length
+        if let last = lineRanges.last, range.lowerBound <= last.upperBound {
+          lineRanges[lineRanges.count - 1] =
+            last.lowerBound..<max(last.upperBound, range.upperBound)
+        } else {
+          lineRanges.append(range)
+        }
       }
+      places += lineRanges.map { Place(line: pair.line, range: $0) }
     }
     return places
   }
@@ -105,8 +171,8 @@ public struct IgnoredDifferences: Sendable, Hashable {
     linesByRole[role] ?? IndexSet()
   }
 
-  /// Whether no line of any input differs.
-  public var isEmpty: Bool { linesByRole.values.allSatisfy(\.isEmpty) }
+  /// Whether no line of any input differs and no line within a change has places.
+  public var isEmpty: Bool { pairs.values.allSatisfy(\.isEmpty) }
 
   /// The inputs whose lines are checked in a block of `kind`, each with the input it is checked
   /// against.
@@ -121,6 +187,20 @@ public struct IgnoredDifferences: Sendable, Hashable {
     case (.merge, .changedInB): [(.a, .base)]
     case (_, .conflict), (_, .changed), (.diff, _): []
     }
+  }
+
+  /// Whether ignore rules match text in `line` or `referenceLine` and the two lines differ by
+  /// more than the comparison mode ignores.
+  private static func rulesHide(
+    _ line: Int, of file: ComparedFile, from referenceLine: Int, of referenceFile: ComparedFile,
+    mode: ComparisonMode
+  ) -> Bool {
+    let hasMatches = [(file, line), (referenceFile, referenceLine)].contains { file, line in
+      !file.ruleMatches.ranges(overlapping: file.contentByteRange(ofLine: line)).isEmpty
+    }
+    return hasMatches
+      && MoveDetection.fingerprint(ofLine: line, in: file.text, mode: mode)
+        != MoveDetection.fingerprint(ofLine: referenceLine, in: referenceFile.text, mode: mode)
   }
 
   /// Whether two lines have the same bytes, line endings included.

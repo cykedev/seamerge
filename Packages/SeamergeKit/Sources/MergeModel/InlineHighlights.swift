@@ -7,9 +7,10 @@ import Foundation
 /// changed: in a merge, A and B each with the base. Without a base, in a merge as in a comparison
 /// of two files, A and B are compared with each other and both are highlighted. The base pane
 /// stays without highlights, and so does a side that did not change the block. Changes that the
-/// comparison mode ignores are not highlighted. When more than 60 % of the runs of a comparison
-/// changed, removed runs included, it highlights nothing, because the block as a whole is then
-/// the change.
+/// comparison mode ignores are not highlighted, nor are lines that ignore rules match entirely
+/// and runs of text that the rules match on both sides. When more than 60 % of the runs of a
+/// comparison changed, removed runs included, it highlights nothing, because the block as a whole
+/// is then the change.
 ///
 /// A run that one side replaced is highlighted on both sides. A run that one side lacks is
 /// highlighted on the side that has it and marked by an empty range on the side that lacks it,
@@ -50,26 +51,27 @@ public struct InlineHighlights: Sendable, Hashable {
       let secondText = secondFile.utf8.subdata(in: secondBytes)
       let tokens = try EngineAdapter.compareTokens(firstText, secondText)
       let filter = ChangeFilter(mode: session.options.mode, first: firstText, second: secondText)
-      let shownRuns = tokens.changedRuns.filter { !filter.ignores($0) }
+      var runs: [RuleTrimmedRun] = []
+      for run in tokens.changedRuns where !filter.ignores(run) {
+        runs.append(
+          try RuleTrimmedRun(
+            run, first: firstFile, at: firstBytes.lowerBound, second: secondFile,
+            at: secondBytes.lowerBound, mode: session.options.mode))
+      }
+      let shownRuns = runs.filter { !$0.isMatched }
       let changedTokenCount = shownRuns.reduce(0) { $0 + $1.tokenCount }
       guard
         changedTokenCount * Self.maximumChangedShare.denominator
           <= tokens.tokenCount * Self.maximumChangedShare.numerator
       else { continue }
-      let runs = shownRuns.map {
-        (
-          first: $0.first.shifted(by: firstBytes.lowerBound),
-          second: $0.second.shifted(by: secondBytes.lowerBound)
-        )
-      }
       if comparison.highlightsFirst {
         rangesByRole[comparison.first] = Self.displayRanges(
-          of: runs.map { (own: $0.first, other: $0.second) },
-          in: firstFile, against: secondFile, role: comparison.first, layout: session.rowLayout)
+          of: shownRuns.flatMap(\.ofFirst), in: firstFile, against: secondFile,
+          role: comparison.first, layout: session.rowLayout)
       }
       rangesByRole[comparison.second] = Self.displayRanges(
-        of: runs.map { (own: $0.second, other: $0.first) },
-        in: secondFile, against: firstFile, role: comparison.second, layout: session.rowLayout)
+        of: shownRuns.flatMap(\.ofSecond), in: secondFile, against: firstFile,
+        role: comparison.second, layout: session.rowLayout)
     }
     self.rangesByRole = rangesByRole.filter { !$0.value.isEmpty }
   }

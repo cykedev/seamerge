@@ -22,6 +22,9 @@ public struct Session: Sendable {
   public let options: ComparisonOptions
 
   /// The blocks in input order; their ``Block/id`` is their position.
+  ///
+  /// In a comparison with ignore rules, the lines whose text the rules match entirely may form
+  /// unchanged blocks of their own with lines on one side only.
   public let blocks: [Block]
 
   /// The row grid of the panes.
@@ -190,8 +193,13 @@ public struct Session: Sendable {
     self.ignoreRuleProblems = ignoreRuleProblems
     switch kind {
     case .diff:
-      let runs = try MoveDetection.runs(in: blocks, files: files, mode: options.mode)
-      let split = MoveDetection.splitting(blocks, at: runs)
+      guard let old = files[.a], let new = files[.b] else {
+        preconditionFailure("A comparison has the files A and B")
+      }
+      let separated = EntirelyMatchedLines.separating(
+        blocks, of: old, with: new, mode: options.mode)
+      let runs = try MoveDetection.runs(in: separated, files: files, mode: options.mode)
+      let split = MoveDetection.splitting(separated, at: runs)
       self.blocks = split.blocks
       moves = split.moves
     case .merge:
