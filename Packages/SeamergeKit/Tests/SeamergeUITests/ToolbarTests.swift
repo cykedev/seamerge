@@ -60,6 +60,9 @@ import Testing
     #expect(done.action == SessionCommand.saveAndClose.action)
     #expect(done.toolTip == "Save and close")
     #expect(done.title == "Done")
+    // VoiceOver and the palette say what it does, as the menu does.
+    #expect(done.label == "Save and Close")
+    #expect(done.paletteLabel == "Save and Close")
     #expect(done.isEnabled)
     #expect(done.style == .plain)
 
@@ -74,8 +77,8 @@ import Testing
     let done = try #require(
       toolbar.toolbar(
         toolbar.toolbar, itemForItemIdentifier: .done, willBeInsertedIntoToolbar: false))
-    #expect(done.image != nil)
-    #expect(done.label == "Done")
+    #expect(done.image?.accessibilityDescription == "Save and Close")
+    #expect(done.label == "Save and Close")
   }
 
   @Test func comparisonModeCanBeDraggedInWithTheCommandsOfTheCompareMenu() async throws {

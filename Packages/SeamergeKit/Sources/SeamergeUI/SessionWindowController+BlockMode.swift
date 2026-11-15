@@ -56,15 +56,14 @@ extension SessionWindowController: SessionKeyHandling {
   /// Whether the focus is in a pane above the result that is in view, or in the result beside
   /// its text, as after a click on a toggle.
   ///
-  /// Text the user types into beside the text of the result, such as the field of its find bar,
-  /// takes every key, as a field does anywhere.
+  /// The fields of the find bar lie below the panes and take every key, as a field does
+  /// anywhere.
   var isInBlockMode: Bool {
     let isInSource = layout.sourcePanes.contains {
       $0.pane.isShown && window?.firstResponder === $0.pane.documentView
     }
     let isBesideResult =
       layout.resultPane.map { $0.isShown && $0.holdsFocus } == true && !isInTextMode
-      && !(window?.firstResponder is NSText)
     return isInSource || isBesideResult
   }
 

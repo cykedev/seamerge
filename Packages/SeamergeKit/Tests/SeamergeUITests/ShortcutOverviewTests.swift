@@ -17,10 +17,15 @@ import Testing
       }
     }
     let listed = Set(overview.groups.flatMap(\.entries).map(\.command))
+    // The Edit menu holds the standard commands of finding, which the overview leaves out as it
+    // leaves out Copy.
+    let editCommands = Set(SessionCommand.groups(in: .edit).joined())
     let withKeys = SessionCommand.allCases.filter {
-      $0.keyEquivalent(in: .merge) != nil || !$0.blockModeKeys.isEmpty
+      !editCommands.contains($0)
+        && ($0.keyEquivalent(in: .merge) != nil || !$0.blockModeKeys.isEmpty)
     }
     #expect(Set(withKeys).subtracting(listed).isEmpty)
+    #expect(listed.isDisjoint(with: editCommands))
   }
 
   @Test func shortcutsAreSpelledAsTheMenusShowThem() throws {

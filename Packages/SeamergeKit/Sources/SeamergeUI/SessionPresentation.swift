@@ -40,6 +40,9 @@ final class SessionPresentation {
   /// The coupling of the panes, which keeps them at the same place while one of them scrolls.
   let scrollSync = ScrollSync()
 
+  /// The search over the panes, whose find bar the window shows below them.
+  let search: PaneSearch
+
   /// The alignment of the inputs, which keeps their rows level while long lines wrap.
   let rowAlignment = RowAlignment()
 
@@ -162,10 +165,11 @@ final class SessionPresentation {
   ///   - language: The language the code is colored as, or `nil` if it is not colored.
   ///   - alignsLines: Whether the panes side by side line up their lines on the grid, or connect
   ///     their changes with bands.
+  ///   - search: The search over the panes, which the presentation gives the rows to go through.
   init(
     session: Session, arrangement: PaneArrangement, layout: SessionSplitViewController,
     headers: [Role: SideHeader], resultHeader: ResultHeader?, displayOptions: DisplayOptions,
-    language: LanguageDescription?, alignsLines: Bool
+    language: LanguageDescription?, alignsLines: Bool, search: PaneSearch
   ) {
     let result =
       arrangement.showsResult
@@ -175,6 +179,7 @@ final class SessionPresentation {
     self.headers = headers
     self.displayOptions = displayOptions
     self.alignsLines = alignsLines
+    self.search = search
     self.result = result
     changes = SessionChanges(session: session, origin: arrangement.origin)
     collapsed = CollapsedRows(session: session, document: result?.document)
@@ -207,6 +212,7 @@ final class SessionPresentation {
       layout.showsSeams = true
     }
     connectPanes()
+    search.delegate = self
     syntax.onLexed = { [weak self] in self?.showSyntax() }
     showSession()
     let blockRotors = BlockRotors(presentation: self)
@@ -321,6 +327,7 @@ final class SessionPresentation {
   /// Shows the session in every pane: the contents, the collapsed runs, the marks of the
   /// overview bars and, in a merge, the signs of the decision column.
   private func showSession() {
+    defer { updateSearchSections() }
     showSources()
     sourcesOverviewBar.marks = OverviewMarks.sources(
       of: changes, document: result?.document, arrangement: arrangement)
@@ -348,6 +355,7 @@ final class SessionPresentation {
     showSeamBands()
     showOverviewGrid()
     alignSourcesToB()
+    updateSearchSections()
   }
 
   /// Gives each pane side by side its content, on the grid or with the lines of its file.
@@ -501,6 +509,7 @@ final class SessionPresentation {
           conflictMarkRole: conflictMarkRole, alignsLines: alignsLines),
         previews: [], rowTints: [:])
     }
+    updateSearchSections()
     delegate?.presentationDidChangeResult(self)
   }
 
@@ -658,6 +667,7 @@ final class SessionPresentation {
   /// or gave it back, and brings the panes side by side to where the result stands.
   func resultDidChangeMaximized() {
     connectPanes()
+    updateSearchSections()
     guard let resultPane = layout.resultPane, !layout.maximizesResult else { return }
     layout.view.layoutSubtreeIfNeeded()
     scrollSync.align(to: resultPane)

@@ -163,7 +163,8 @@ final class CollapsedRunBar: NSButton {
 final class CollapsedRunBarLayer: NSView {
   override init(frame frameRect: NSRect) {
     super.init(frame: frameRect)
-    // A bar partly below the layer, where the find bar lies, shows only the part above it.
+    // A bar partly below the visible text, where a scroller may lie, shows only the part above
+    // it.
     clipsToBounds = true
   }
 

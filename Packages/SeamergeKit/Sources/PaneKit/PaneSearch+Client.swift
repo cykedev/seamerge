@@ -1,6 +1,6 @@
 import AppKit
 
-/// The search as the finder sees it: the searchable parts of the panes' lines as one string, the
+/// The search as the finder sees it: the searchable pieces of the panes' lines as one string, the
 /// selection of one pane, and the panes that show the matches.
 ///
 /// The finder addresses the text by offsets into the search text, which the search translates
@@ -15,11 +15,12 @@ extension PaneSearch: @MainActor NSTextFinderClient {
   /// Whether the search is limited to one pane that can be edited, the only way to replace.
   public var isEditable: Bool { editablePane != nil }
 
-  /// The part of the search text that holds `characterIndex`, which always ends with a search
-  /// boundary.
+  /// The part of the search text that holds `characterIndex`: lines of one pane, which always
+  /// end with a search boundary.
   ///
   /// The finder asks from a thread of its own while it searches as the user types, so this reads
-  /// the copy of the text that the search took last.
+  /// the copy of the text that the search took last, which never changes; the search replaces
+  /// it as a whole.
   public nonisolated func string(
     at characterIndex: Int, effectiveRange outRange: NSRangePointer,
     endsWithSearchBoundary outFlag: UnsafeMutablePointer<ObjCBool>
@@ -44,8 +45,8 @@ extension PaneSearch: @MainActor NSTextFinderClient {
     return MainActor.assumeIsolated { searchText().length }
   }
 
-  /// The selection of the pane that Find Next starts from, in the search text: within the part
-  /// of its line, or empty at the next part if it starts where the search does not go.
+  /// The selection of the pane that Find Next starts from, in the search text: within the piece
+  /// of its line, or empty at the next piece if it starts where the search does not go.
   public var firstSelectedRange: NSRange {
     let text = searchText()
     guard let pane = selectionPane, let index = panes.firstIndex(where: { $0 === pane }),
@@ -61,11 +62,17 @@ extension PaneSearch: @MainActor NSTextFinderClient {
   /// another pane of the search. Otherwise it stays where it is: in the find bar, as in the find
   /// bar of a text view, or where the user just put it, when the finder selects its current
   /// match as the find bar loses the focus.
+  ///
+  /// A match that reaches from one line into the next, as for a search for a line break, is no
+  /// match in a pane: the selection goes to its end, where Find Next goes on.
   public var selectedRanges: [NSValue] {
     get { [NSValue(range: firstSelectedRange)] }
     set {
-      guard let first = newValue.first.flatMap({ Range($0.rangeValue) }),
-        let place = searchText().paneRange(of: first)
+      guard let first = newValue.first.flatMap({ Range($0.rangeValue) }) else { return }
+      let text = searchText()
+      guard
+        let place = text.paneRange(of: first)
+          ?? text.paneRange(of: first.upperBound..<first.upperBound)
       else { return }
       let pane = panes[place.pane]
       let movesFocus = isPerformingAction && (focusedPane.map { $0 !== pane } ?? false)

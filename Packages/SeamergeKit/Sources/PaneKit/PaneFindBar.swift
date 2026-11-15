@@ -72,6 +72,14 @@ public final class PaneFindBar: NSView, @MainActor NSTextFinderBarContainer {
     findBarView.frame = CGRect(x: 0, y: 0, width: bounds.width, height: findBarView.frame.height)
   }
 
+  /// Whether the user types in the search field of the find bar, whose field editor holds the
+  /// focus.
+  var holdsSearchFocus: Bool {
+    guard let findBarView, let field = (window?.firstResponder as? NSText)?.delegate as? NSView
+    else { return false }
+    return field is NSSearchField && field.isDescendant(of: findBarView)
+  }
+
   /// Whether the focus lies in the find bar: in one of its fields, whose field editor holds it.
   private var holdsFocus: Bool {
     guard let findBarView, let responder = window?.firstResponder else { return false }

@@ -31,7 +31,12 @@ extension SessionCommand {
         [.changeFiles], [.openInEditor], [.save, .saveAs, .saveAndClose],
         [.leaveUnresolved, .skipRemainingFiles],
       ]
-    case .edit: [[.copyBlock], [.filterFiles]]
+    case .edit:
+      [
+        [.copyBlock],
+        [.find, .findNext, .findPrevious, .useSelectionForFind],
+        [.filterFiles],
+      ]
     case .view:
       [
         [.toggleBase, .toggleResultMaximized],

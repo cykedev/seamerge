@@ -210,6 +210,59 @@
     "%lld from B" : {
       "comment" : "Subtitle: the changes of the own side after those of A, such as 5 from B."
     },
+    "%lld matches in %lld panes" : {
+      "comment" : "VoiceOver: how often the search found its text and in how many panes.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@matches@ in %#@panes@"
+          },
+          "substitutions" : {
+            "matches" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg match"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg matches"
+                    }
+                  }
+                }
+              }
+            },
+            "panes" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg pane"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg panes"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld more files with conflicts" : {
       "comment" : "Subtitle: how many other files of the operation still have conflicts.",
       "localizations" : {
@@ -635,6 +688,15 @@
     "Filter Files" : {
       "comment" : "Edit > Find: put the focus into the field that filters the list of files."
     },
+    "Find Next" : {
+      "comment" : "Edit > Find."
+    },
+    "Find Previous" : {
+      "comment" : "Edit > Find."
+    },
+    "Find…" : {
+      "comment" : "Edit > Find."
+    },
     "First Change" : {
       "comment" : "Go menu command."
     },
@@ -921,6 +983,9 @@
     },
     "No Files Match" : {
       "comment" : "Sidebar: no file of the list matches what was typed in the filter field."
+    },
+    "No matches" : {
+      "comment" : "VoiceOver: the search found nothing in the panes."
     },
     "Nothing taken" : {
       "comment" : "VoiceOver: a part of the result that takes no lines."
@@ -1404,6 +1469,9 @@
     },
     "Use Seamerge for Git Merges and Diffs" : {
       "comment" : "Set Up Git Integration: the title of the offer."
+    },
+    "Use Selection for Find" : {
+      "comment" : "Edit > Find."
     },
     "Use Version of %@" : {
       "comment" : "Context menu of a changed block of a side, such as Use Version of main."

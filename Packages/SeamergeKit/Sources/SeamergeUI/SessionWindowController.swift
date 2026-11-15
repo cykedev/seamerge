@@ -285,8 +285,9 @@ public final class SessionWindowController: NSWindowController {
       headers: arrangement.sourceRoles.compactMap { headers[$0] }, resultHeader: resultHeader,
       theme: theme)
     self.layout = layout
+    let search = PaneSearch()
     let content = SessionContentController(
-      layout: layout,
+      layout: layout, findBar: search.findBar,
       footer: SessionFooterView(
         toggles: FooterToggle.allCases.filter {
           $0 != .base || arrangement.sourceRoles.contains(.base)
@@ -322,7 +323,7 @@ public final class SessionWindowController: NSWindowController {
       resultHeader: resultHeader, displayOptions: displayOptions,
       language: settings.highlightsSyntax
         ? syntaxChoices[syntaxPath].language(detected: detectedLanguage) : nil,
-      alignsLines: settings.alignsLines)
+      alignsLines: settings.alignsLines, search: search)
     presentation.wrapsLines = settings.wrapsLines
     for pane in presentation.allPanes {
       pane.showsInvisibles = settings.showsInvisibles
@@ -498,10 +499,12 @@ extension SessionWindowController: NSWindowDelegate {
     return false
   }
 
-  /// Remembers the place of the window for the next of its kind and reports the end of the
-  /// session, once: a merge counts as saved if what the window shows was written to its file,
-  /// and closing a comparison means it was seen, so that Git goes on to the next file.
+  /// Ends the search, remembers the place of the window for the next of its kind and reports
+  /// the end of the session, once: a merge counts as saved if what the window shows was written
+  /// to its file, and closing a comparison means it was seen, so that Git goes on to the next
+  /// file.
   public func windowWillClose(_ notification: Notification) {
+    presentation.search.close()
     rememberPlace()
     fileWatchers = []
     let isSaved =
@@ -630,6 +633,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
       collection?.folders != nil
     case .fileList:
       collectionLayout?.hasList == true
+    case .search(let action):
+      presentation.search.validate(action)
     case .noComparisonUnderWay:
       !isSwitchingComparison
     case .basePane:

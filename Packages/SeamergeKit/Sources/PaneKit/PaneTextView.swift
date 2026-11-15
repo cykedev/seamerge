@@ -2,7 +2,8 @@ import AppKit
 
 /// The text view of a pane: read-only text on the row grid, drawn with TextKit 2.
 ///
-/// Selection, copying, the find bar, input methods and VoiceOver come from `NSTextView`. The
+/// Selection, copying, input methods and VoiceOver come from `NSTextView`; finding is the
+/// business of a ``PaneSearch`` over all panes of a window, which has the find bar. The
 /// view adds the row fills, the highlights and marks within lines and its size, all from the
 /// grid rather than from TextKit, so that row *r* lies at the first screen line of its display
 /// row times `rowHeight` in every pane; the rows behind a collapsed run take no room, except the
@@ -49,10 +50,6 @@ final class PaneTextView: NSTextView {
 
   /// Learns about clicks on rows and supplies the context menu.
   weak var interaction: (any RowInteraction)?
-
-  /// Whether a find action of the find bar or the Find menu is under way, whose result comes into
-  /// view the way a jump does.
-  var isPerformingFindAction = false
 
   /// The search over several panes that this view hands its find commands to, if it is among
   /// its sections.
@@ -143,8 +140,6 @@ final class PaneTextView: NSTextView {
     isRichText = false
     importsGraphics = false
     allowsUndo = false
-    usesFindBar = true
-    isIncrementalSearchingEnabled = true
     usesFontPanel = false
     usesRuler = false
     isAutomaticQuoteSubstitutionEnabled = false
@@ -553,9 +548,9 @@ final class PaneTextView: NSTextView {
   /// Takes `newSize`, but never less high than the rows.
   ///
   /// The pane sets the size of the view as it lays itself out. The view also fits itself to its
-  /// clip view whenever that changes its size, as it does when the find bar opens or closes
-  /// below the text; that would cut the text down to the height of the clip view, and nothing
-  /// below it could be scrolled to.
+  /// clip view whenever that changes its size, as it does when the find bar of the window opens
+  /// or closes below the panes; that would cut the text down to the height of the clip view, and
+  /// nothing below it could be scrolled to.
   override func setFrameSize(_ newSize: NSSize) {
     let newSize = NSSize(width: newSize.width, height: max(newSize.height, rowsHeight))
     let widthChanged = newSize.width != frame.width

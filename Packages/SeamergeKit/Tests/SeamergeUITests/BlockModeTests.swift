@@ -134,7 +134,7 @@ import Testing
 
   /// The finder writes to the find pasteboard of the system as the find bar opens; the test puts
   /// back what it held.
-  @Test func typingInTheFindBarOfTheResultTypesAndCarriesOutNoCommand() async throws {
+  @Test func typingInTheFindBarOfTheWindowTypesAndCarriesOutNoCommand() async throws {
     try await FindPasteboard.preserving {
       let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
       let window = try #require(controller.window)
@@ -142,13 +142,12 @@ import Testing
       let result = try controller.mergeResult
       let current = controller.presentation.currentBlock
       let text = result.documentView.string
-      window.makeFirstResponder(result.documentView)
-      let item = NSMenuItem(
-        title: "", action: #selector(NSTextView.performTextFinderAction(_:)), keyEquivalent: "")
-      item.tag = NSTextFinder.Action.showFindInterface.rawValue
-      result.documentView.performTextFinderAction(item)
+      let a = try #require(controller.layout.sourcePane(.a))
+      window.makeFirstResponder(a.documentView)
+      #expect(controller.isInBlockMode)
+      #expect(try SearchDriver(controller).send(.find))
       let field = try #require(window.firstResponder as? NSText)
-      #expect(field.isDescendant(of: result))
+      #expect(field.isDescendant(of: controller.presentation.search.findBar))
       #expect(!controller.isInBlockMode)
       #expect(!controller.isInTextMode)
       // In block mode, "n" and "2" jump to the next conflict and take B; the others do nothing.

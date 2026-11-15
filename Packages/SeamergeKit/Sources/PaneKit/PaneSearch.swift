@@ -14,7 +14,7 @@ import Synchronization
 /// Put ``findBar`` at the bottom of the window, below the panes. The search does not dim the
 /// panes, whose tints carry meaning; it marks its matches in the panes and shows the current one
 /// with the system's find indicator. A pane among the sections hands the find commands that reach
-/// it to the search, so the find bar of its own stays closed. The find bar reads the text while
+/// it to the search; a pane has no find bar of its own. The find bar reads the text while
 /// it searches as the user types, on a thread of its own, from a copy that the search takes after
 /// each change.
 @MainActor
@@ -76,6 +76,10 @@ public final class PaneSearch: NSObject {
   /// them as the user types; empty while the find bar is closed.
   public private(set) var matches: [Match] = []
 
+  /// Whether ``matches`` are what the finder found in the text as it is now: false once the text
+  /// or the panes changed since it searched, and its matches are gone, until it searches again.
+  public private(set) var matchesAreCurrent = false
+
   /// The finder that runs the find bar.
   private let finder = NSTextFinder()
 
@@ -127,9 +131,21 @@ public final class PaneSearch: NSObject {
   }
 
   isolated deinit {
+    close()
     for pane in observedPanes where pane.textView.search === self {
       pane.textView.search = nil
     }
+  }
+
+  /// Ends the search for good, as the window of the panes closes: takes the find indicator away
+  /// and lets the finder go of the search.
+  ///
+  /// The find indicator updates after a delay, as the panes change their size, and holds the
+  /// finder without retaining it; it must not find the finder gone.
+  public func close() {
+    finder.cancelFindIndicator()
+    finder.client = nil
+    finder.findBarContainer = nil
   }
 
   /// Carries out the find command of `sender`, a menu item or control whose tag is an
@@ -210,6 +226,7 @@ public final class PaneSearch: NSObject {
 
   /// Clears the marks of the matches once the find bar closes.
   func findBarDidClose() {
+    matchesAreCurrent = false
     showMatches([])
   }
 
@@ -286,11 +303,19 @@ public final class PaneSearch: NSObject {
   private func textWillChange() {
     finder.noteClientStringWillChange()
     isTextStale = true
+    // The ranges of the matches refer to the text as it was.
+    matchesAreCurrent = false
+    showMatches([])
   }
 
   /// Marks the matches that the finder has found so far in their panes and tells the delegate.
+  ///
+  /// The finder drops its matches once the focus leaves the search field, as after Find Next or
+  /// on the way to the field for replacing; they hold all the same until the text or the panes
+  /// change, and stay while the bar is open.
   private func matchesDidChange() {
     guard findBar.isFindBarVisible else { return showMatches([]) }
+    guard !finder.incrementalMatchRanges.isEmpty || findBar.holdsSearchFocus else { return }
     let text = searchText()
     let found = finder.incrementalMatchRanges.compactMap { value -> Match? in
       guard let range = Range(value.rangeValue), let place = text.paneRange(of: range),
@@ -298,6 +323,7 @@ public final class PaneSearch: NSObject {
       else { return nil }
       return Match(pane: panes[place.pane], range: place.range)
     }
+    matchesAreCurrent = true
     showMatches(found)
   }
 

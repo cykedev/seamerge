@@ -98,6 +98,18 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// out.
   case toggleIdenticalFiles
 
+  /// Opens the find bar and searches all panes in view.
+  case find
+
+  /// Selects the next match of the search, in the order the panes read.
+  case findNext
+
+  /// Selects the previous match of the search.
+  case findPrevious
+
+  /// Takes the selection of the pane with the focus as the text to search for.
+  case useSelectionForFind
+
   /// Puts the focus into the field that filters the list of the files.
   case filterFiles
 
@@ -254,6 +266,12 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Show Identical Files", bundle: .module,
         comment: "View menu command, checked while the list of two folders shows equal files too.")
+    case .find: String(localized: "Find…", bundle: .module, comment: "Edit > Find.")
+    case .findNext: String(localized: "Find Next", bundle: .module, comment: "Edit > Find.")
+    case .findPrevious:
+      String(localized: "Find Previous", bundle: .module, comment: "Edit > Find.")
+    case .useSelectionForFind:
+      String(localized: "Use Selection for Find", bundle: .module, comment: "Edit > Find.")
     case .filterFiles:
       String(
         localized: "Filter Files", bundle: .module,
@@ -554,6 +572,10 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .collapseUnchangedLines: #selector(SessionWindowController.collapseUnchangedLines(_:))
     case .toggleFooter: #selector(SessionWindowController.toggleFooter(_:))
     case .toggleIdenticalFiles: #selector(SessionWindowController.toggleIdenticalFiles(_:))
+    case .find: #selector(SessionWindowController.find(_:))
+    case .findNext: #selector(SessionWindowController.findNext(_:))
+    case .findPrevious: #selector(SessionWindowController.findPrevious(_:))
+    case .useSelectionForFind: #selector(SessionWindowController.useSelectionForFind(_:))
     case .filterFiles: #selector(SessionWindowController.filterFiles(_:))
     case .zoomIn: #selector(SessionWindowController.zoomIn(_:))
     case .zoomOut: #selector(SessionWindowController.zoomOut(_:))

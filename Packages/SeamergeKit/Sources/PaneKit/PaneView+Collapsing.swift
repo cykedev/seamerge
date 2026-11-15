@@ -50,13 +50,11 @@ extension PaneView {
 
   /// Shows a bar for each collapsed run in view, across the gutter and the text, and removes the
   /// bars of runs out of view.
-  ///
-  /// The bars end above the find bar, which lies over the bottom of the text.
   func placeRunBars() {
     let visible = clipView.bounds
     runBarLayer.frame = CGRect(
       x: 0, y: 0, width: gutterView.frame.width + clipView.frame.width,
-      height: heightAboveFindBar)
+      height: clipView.frame.height)
     let first = displayRows.displayRow(atLine: Int((visible.minY / rowHeight).rounded(.down)))
     let endLine = Int((visible.maxY / rowHeight).rounded(.up))
     let end = endLine > 0 ? displayRows.displayRow(atLine: endLine - 1) + 1 : 0

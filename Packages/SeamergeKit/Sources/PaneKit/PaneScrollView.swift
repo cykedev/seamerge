@@ -13,8 +13,6 @@ final class PaneScrollView: NSScrollView {
     // Panes on one grid scroll together, and a pane bouncing on its own would leave the rows of
     // its neighbors.
     verticalScrollElasticity = .none
-    // A find bar above the text would push its rows down against those of the neighbors.
-    findBarPosition = .belowContent
     contentView.postsBoundsChangedNotifications = true
   }
 
@@ -38,21 +36,6 @@ final class PaneScrollView: NSScrollView {
       // A legacy scroller takes its height from the text, an overlay scroller lies above it.
       superview?.needsLayout = true
     }
-  }
-
-  /// Lays out the pane again as the find bar opens or closes, so that the bars of collapsed runs
-  /// end above it.
-  override var isFindBarVisible: Bool {
-    didSet {
-      guard isFindBarVisible != oldValue else { return }
-      superview?.needsLayout = true
-    }
-  }
-
-  /// Lays out the pane again as the find bar grows or shrinks, as when it shows the replace field.
-  override func findBarViewDidChangeHeight() {
-    super.findBarViewDidChangeHeight()
-    superview?.needsLayout = true
   }
 
   /// Whether the scroll view is handling an event of the scroll wheel or the trackpad, during

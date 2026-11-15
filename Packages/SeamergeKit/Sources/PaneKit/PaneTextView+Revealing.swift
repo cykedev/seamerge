@@ -9,7 +9,7 @@ extension PaneTextView {
   }
 
   /// Scrolls so that the character at `offset` comes into view with some text before it, unless
-  /// it is in view already: the way of a jump and of the find bar.
+  /// it is in view already: the way of a jump and of a match of the search.
   ///
   /// A row that comes into view vertically comes to rest at the reading line. Sideways, the view
   /// goes back to the start of the lines if the place fits within the first screen width.
@@ -17,31 +17,24 @@ extension PaneTextView {
     scroll(toShow: offset, withContext: true)
   }
 
-  /// Brings a range into view: a result of the find bar the way a jump does, the selection that
-  /// the user moves in this view by as little as it takes, as in any text view.
+  /// Brings a range into view: the selection that the user moves in this view by as little as it
+  /// takes, as in any text view, and any other range the way a jump does.
   override func scrollRangeToVisible(_ range: NSRange) {
     guard range.location != NSNotFound else { return }
-    // The find bar has the focus while it searches as the user types; Find Next runs as an action.
-    let isFindResult = isPerformingFindAction || window?.firstResponder !== self
-    scroll(toShow: min(range.location, grid.textLength), withContext: isFindResult)
+    scroll(
+      toShow: min(range.location, grid.textLength), withContext: window?.firstResponder !== self)
   }
 
+  /// Hands a find command to the search over the panes, if the view is among its sections; a
+  /// pane has no find bar of its own.
   override func performTextFinderAction(_ sender: Any?) {
-    if let search {
-      return search.performTextFinderAction(sender)
-    }
-    isPerformingFindAction = true
-    defer { isPerformingFindAction = false }
-    super.performTextFinderAction(sender)
+    search?.performTextFinderAction(sender)
   }
 
+  /// Hands a command of the Find menu to the search over the panes, if the view is among its
+  /// sections.
   override func performFindPanelAction(_ sender: Any?) {
-    if let search {
-      return search.performTextFinderAction(sender)
-    }
-    isPerformingFindAction = true
-    defer { isPerformingFindAction = false }
-    super.performFindPanelAction(sender)
+    search?.performTextFinderAction(sender)
   }
 
   private func scroll(toShow offset: Int, withContext: Bool) {

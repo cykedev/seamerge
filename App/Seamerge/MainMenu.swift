@@ -133,29 +133,19 @@ final class MainMenu {
       ])
   }
 
+  /// The submenu Find, whose commands search the panes of a session window.
   private func findItem() -> NSMenuItem {
     let find = NSMenuItem(title: Titles.find, action: nil, keyEquivalent: "")
-    let action = #selector(NSTextView.performFindPanelAction(_:))
-    let entries: [(String, String, NSEvent.ModifierFlags, NSFindPanelAction)] = [
-      (Titles.findEllipsis, "f", [.command], .showFindPanel),
-      (Titles.findNext, "g", [.command], .next),
-      (Titles.findPrevious, "g", [.shift, .command], .previous),
-      (Titles.useSelectionForFind, "e", [.command], .setFindString),
-    ]
-    let submenu = NSMenu(title: Titles.find)
-    for (title, key, modifiers, tag) in entries {
-      let item = Self.item(title, action, key: key, modifiers: modifiers)
-      item.tag = Int(tag.rawValue)
-      submenu.addItem(item)
-    }
-    submenu.addItem(
-      Self.item(
-        Titles.jumpToSelection, #selector(NSText.centerSelectionInVisibleArea(_:)), key: "j"))
-    submenu.addItem(.separator())
-    for item in commands(.filterFiles) {
-      submenu.addItem(item)
-    }
-    find.submenu = submenu
+    find.submenu = Self.menu(
+      Titles.find,
+      [
+        commands(.find, .findNext, .findPrevious, .useSelectionForFind)
+          + [
+            Self.item(
+              Titles.jumpToSelection, #selector(NSText.centerSelectionInVisibleArea(_:)), key: "j")
+          ],
+        commands(.filterFiles),
+      ])
     return find
   }
 

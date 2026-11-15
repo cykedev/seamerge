@@ -1,3 +1,4 @@
+import AppKit
 import MergeModel
 
 extension SessionCommand {
@@ -20,6 +21,10 @@ extension SessionCommand {
 
     /// Filtering the files needs a list of them.
     case fileList
+
+    /// A command of the search needs the search to be able to carry out its action, such as a
+    /// text to search for.
+    case search(NSTextFinder.Action)
 
     /// Choosing a comparison mode needs no comparison under way.
     case noComparisonUnderWay
@@ -113,6 +118,9 @@ extension SessionCommand {
     case .nextPane, .previousPane: .anotherPane
     case .toggleIdenticalFiles: .comparedFolders
     case .filterFiles: .fileList
+    case .findNext: .search(.nextMatch)
+    case .findPrevious: .search(.previousMatch)
+    case .useSelectionForFind: .search(.setSearchString)
     case .compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace:
       .noComparisonUnderWay
     case .toggleBase: .basePane
@@ -132,7 +140,7 @@ extension SessionCommand {
     case .changeFiles: .ownFiles
     case .toggleIgnoredChanges: .ignoredChanges
     case .toggleScrollSynchronization, .toggleSyntaxHighlighting, .toggleInvisibles,
-      .toggleLineWrapping, .toggleLineAlignment, .toggleFooter, .goToLine:
+      .toggleLineWrapping, .toggleLineAlignment, .toggleFooter, .goToLine, .find:
       .nothing
     case .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone: .choice(chosenRoles ?? [])
     case .toggleSourceA: .toggle(.a)

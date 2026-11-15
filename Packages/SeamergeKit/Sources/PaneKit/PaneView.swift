@@ -233,7 +233,7 @@ public final class PaneView: NSView {
     }
   }
 
-  /// The view that shows the text, for selection and the find bar.
+  /// The view that shows the text, for selection and the focus.
   public var documentView: NSTextView { textView }
 
   /// The row that the UTF-16 `offset` of the text lies in.
@@ -324,15 +324,6 @@ public final class PaneView: NSView {
   /// The view that clips the text to the visible part, whose bounds origin is the scroll
   /// position.
   var clipView: NSClipView { scrollView.contentView }
-
-  /// The height of the text in view above the find bar, which lies over its bottom while it is
-  /// open.
-  var heightAboveFindBar: CGFloat {
-    guard scrollView.isFindBarVisible, let findBar = scrollView.findBarView else {
-      return clipView.frame.height
-    }
-    return min(clipView.frame.height, convert(findBar.frame, from: scrollView).minY)
-  }
 
   /// The top left corner of the visible part of the text.
   var scrollOrigin: CGPoint { clipView.bounds.origin }

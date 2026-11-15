@@ -37,11 +37,6 @@ extension MainMenu {
     static let paste = String(localized: "Paste", comment: "Edit menu.")
     static let selectAll = String(localized: "Select All", comment: "Edit menu.")
     static let find = String(localized: "Find", comment: "Edit menu: the submenu of finding.")
-    static let findEllipsis = String(localized: "Find…", comment: "Edit > Find.")
-    static let findNext = String(localized: "Find Next", comment: "Edit > Find.")
-    static let findPrevious = String(localized: "Find Previous", comment: "Edit > Find.")
-    static let useSelectionForFind = String(
-      localized: "Use Selection for Find", comment: "Edit > Find.")
     static let jumpToSelection = String(localized: "Jump to Selection", comment: "Edit > Find.")
 
     static let view = String(localized: "View", comment: "Menu bar.")

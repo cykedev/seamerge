@@ -52,15 +52,6 @@
     "Find": {
       "comment": "Edit menu: the submenu of finding."
     },
-    "Find Next": {
-      "comment": "Edit > Find."
-    },
-    "Find Previous": {
-      "comment": "Edit > Find."
-    },
-    "Find…": {
-      "comment": "Edit > Find."
-    },
     "Folders": {
       "comment": "VoiceOver: the symbol of a recent comparison of two folders."
     },
@@ -138,9 +129,6 @@
     },
     "Undo": {
       "comment": "Edit menu."
-    },
-    "Use Selection for Find": {
-      "comment": "Edit > Find."
     },
     "View": {
       "comment": "Menu bar."

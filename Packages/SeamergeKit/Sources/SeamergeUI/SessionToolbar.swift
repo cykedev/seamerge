@@ -226,14 +226,17 @@ final class SessionToolbar: NSObject {
       let item = NSToolbarItem(itemIdentifier: identifier)
       let title = String(
         localized: "Done", bundle: .module, comment: "Toolbar button: save and close.")
+      // VoiceOver says what the button does in the words of the menu, since the find bar has a
+      // Done of its own that only closes the bar.
+      let label = SessionCommand.saveAndClose.title
       switch doneStyle {
       case .checkmark:
-        item.image = NSImage(systemSymbolName: "checkmark", accessibilityDescription: title)
+        item.image = NSImage(systemSymbolName: "checkmark", accessibilityDescription: label)
       case .word:
         item.title = title
       }
-      item.label = title
-      item.paletteLabel = title
+      item.label = label
+      item.paletteLabel = label
       item.toolTip = SessionCommand.saveAndClose.help
       item.action = SessionCommand.saveAndClose.action
       item.autovalidates = false
