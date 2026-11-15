@@ -56,13 +56,6 @@ struct RandomMergeInput: CustomStringConvertible {
 
   /// The engine's merge of the inputs, as a session runs it.
   func engineMerge(mode: ComparisonMode, strategy: MergeModel.MergeStrategy) throws -> Merge {
-    let whitespace: Whitespace =
-      switch mode {
-      case .exact: .exact
-      case .ignoreLineEndings: .ignoreLineEndings
-      case .ignoreWhitespaceAmount: .ignoreAmount
-      case .ignoreAllWhitespace: .ignoreAll
-      }
     let engineStrategy: MergeEngine.MergeStrategy =
       switch strategy {
       case _ where base == nil: .twoWay
@@ -72,7 +65,7 @@ struct RandomMergeInput: CustomStringConvertible {
       case .guardedDiff3: .guardedDiff3
       }
     return try Merge(
-      base: Data((base ?? "").utf8), a: Data(a.utf8), b: Data(b.utf8), whitespace: whitespace,
+      base: Data((base ?? "").utf8), a: Data(a.utf8), b: Data(b.utf8), whitespace: Whitespace(mode),
       strategy: engineStrategy)
   }
 
@@ -105,5 +98,18 @@ struct RandomMergeInput: CustomStringConvertible {
       text = String(text.dropLast())
     }
     return text
+  }
+}
+
+extension Whitespace {
+  /// The engine's mode for `mode`, as a session uses it.
+  init(_ mode: ComparisonMode) {
+    self =
+      switch mode {
+      case .exact: .exact
+      case .ignoreLineEndings: .ignoreLineEndings
+      case .ignoreWhitespaceAmount: .ignoreAmount
+      case .ignoreAllWhitespace: .ignoreAll
+      }
   }
 }

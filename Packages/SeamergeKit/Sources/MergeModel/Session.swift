@@ -40,6 +40,14 @@ public struct Session: Sendable {
   /// side; uniqueness comes first.
   public let moves: [Move]
 
+  /// The enabled ignore rules the comparison was asked to use, in their order; empty in a merge.
+  ///
+  /// The rules in ``ignoreRuleProblems`` took no effect; the others did.
+  public let ignoreRules: [IgnoreRule]
+
+  /// The rules of ``ignoreRules`` that took no effect, each with the reason.
+  public let ignoreRuleProblems: [IgnoreRule: IgnoreRule.Problem]
+
   /// The files that take part, split into lines as the comparison split them.
   let files: [Role: ComparedFile]
 
@@ -69,32 +77,66 @@ public struct Session: Sendable {
       base: texts[.base], a: texts[.a, default: Data()], b: texts[.b, default: Data()],
       options: options)
     return try Session(
-      kind: .merge, options: options, inputs: inputs, texts: texts, comparison: comparison)
+      kind: .merge, options: options,
+      files: comparedFiles(of: inputs, texts: texts, comparison: comparison),
+      blocks: comparison.blocks)
   }
 
   /// Compares the older file `old` with the newer file `new`; they become A and B.
   ///
-  /// The comparison runs off the calling actor.
+  /// Text that an enabled rule of `rules` matches does not count: lines that differ only there
+  /// are equal. A rule whose pattern is invalid, or that takes longer than
+  /// ``IgnoreRule/timeLimit`` for a file, takes no effect and is listed in
+  /// ``ignoreRuleProblems``. The files are shown as they are. The comparison runs off the
+  /// calling actor.
   ///
   /// - Throws: ``MergeModelError/binaryInput(_:)`` if a file is binary, or the error of the
   ///   comparison.
   @concurrent
   public static func diff(
-    old: SourceFile, new: SourceFile, mode: ComparisonMode = .exact
+    old: SourceFile, new: SourceFile, mode: ComparisonMode = .exact,
+    ignoring rules: [IgnoreRule] = []
   ) async throws(MergeModelError) -> Session {
     let inputs = [Role.a: old, .b: new]
     let texts = try comparedTexts(of: inputs, in: mode)
-    let comparison = try EngineAdapter.diff(
-      old: texts[.a, default: Data()], new: texts[.b, default: Data()], mode: mode)
+    let enabledRules = rules.filter(\.isEnabled)
+    var problems: [IgnoreRule: IgnoreRule.Problem] = [:]
+    var validRules: [(rule: IgnoreRule, expression: NSRegularExpression)] = []
+    for rule in enabledRules {
+      switch rule.validated() {
+      case .valid(let expression): validRules.append((rule, expression))
+      case .invalid(let problem): problems[rule] = problem
+      }
+    }
+    let files: [Role: ComparedFile]
+    let comparison: EngineAdapter.Comparison
+    if validRules.isEmpty {
+      comparison = try EngineAdapter.diff(
+        old: texts[.a, default: Data()], new: texts[.b, default: Data()], mode: mode)
+      files = comparedFiles(of: inputs, texts: texts, comparison: comparison)
+    } else {
+      let masking = await IgnoreMask.masks(of: texts, rules: validRules, mode: mode)
+      for rule in masking.slowRules { problems[rule] = .exceedsTimeLimit }
+      comparison = try EngineAdapter.diff(
+        old: masking.masks[.a]?.masked.utf8 ?? Data(),
+        new: masking.masks[.b]?.masked.utf8 ?? Data(), mode: mode)
+      files = inputs.reduce(into: [:]) { files, input in
+        guard let mask = masking.masks[input.key] else { return }
+        precondition(
+          comparison.lineStarts[input.key] == mask.masked.lineStarts,
+          "The engine splits the mask of \(input.key) into the lines of its file")
+        files[input.key] = ComparedFile(file: input.value, mask: mask)
+      }
+    }
     return try Session(
-      kind: .diff, options: ComparisonOptions(mode: mode), inputs: inputs, texts: texts,
-      comparison: comparison)
+      kind: .diff, options: ComparisonOptions(mode: mode), files: files,
+      blocks: comparison.blocks, ignoreRules: enabledRules, ignoreRuleProblems: problems)
   }
 
   /// Compares the files of the session anew with `options`.
   ///
-  /// A comparison of two files uses only the comparison mode. The comparison runs off the calling
-  /// actor.
+  /// A comparison of two files uses only the comparison mode, and the same ignore rules. The
+  /// comparison runs off the calling actor.
   ///
   /// - Throws: The error of the comparison.
   @concurrent
@@ -106,35 +148,57 @@ public struct Session: Sendable {
     case .merge:
       return try await Session.merge(base: file(for: .base), a: a, b: b, options: options)
     case .diff:
-      return try await Session.diff(old: a, new: b, mode: options.mode)
+      return try await Session.diff(old: a, new: b, mode: options.mode, ignoring: ignoreRules)
+    }
+  }
+
+  /// Compares the files of a comparison of two files anew with `rules` and the same comparison
+  /// mode.
+  ///
+  /// The comparison runs off the calling actor.
+  ///
+  /// - Precondition: The session is a comparison of two files; a merge takes no rules.
+  /// - Throws: The error of the comparison.
+  @concurrent
+  public func recomputed(ignoring rules: [IgnoreRule]) async throws(MergeModelError) -> Session {
+    guard kind == .diff, let a = file(for: .a), let b = file(for: .b) else {
+      preconditionFailure("Only a comparison of two files takes ignore rules")
+    }
+    return try await Session.diff(old: a, new: b, mode: options.mode, ignoring: rules)
+  }
+
+  /// The files of `inputs` split as the engine split their `texts` in `comparison`.
+  private static func comparedFiles(
+    of inputs: [Role: SourceFile], texts: [Role: Data], comparison: EngineAdapter.Comparison
+  ) -> [Role: ComparedFile] {
+    inputs.reduce(into: [:]) { files, input in
+      guard let text = texts[input.key], let lineStarts = comparison.lineStarts[input.key] else {
+        return
+      }
+      files[input.key] = ComparedFile(file: input.value, text: text, lineStarts: lineStarts)
     }
   }
 
   private init(
-    kind: Kind, options: ComparisonOptions, inputs: [Role: SourceFile], texts: [Role: Data],
-    comparison: EngineAdapter.Comparison
+    kind: Kind, options: ComparisonOptions, files: [Role: ComparedFile], blocks: [Block],
+    ignoreRules: [IgnoreRule] = [], ignoreRuleProblems: [IgnoreRule: IgnoreRule.Problem] = [:]
   ) throws(MergeModelError) {
-    let files = Dictionary(
-      uniqueKeysWithValues: inputs.compactMap { role, file -> (Role, ComparedFile)? in
-        guard let text = texts[role], let lineStarts = comparison.lineStarts[role] else {
-          return nil
-        }
-        return (role, ComparedFile(file: file, text: text, lineStarts: lineStarts))
-      })
     self.kind = kind
     self.options = options
     self.files = files
+    self.ignoreRules = ignoreRules
+    self.ignoreRuleProblems = ignoreRuleProblems
     switch kind {
     case .diff:
-      let runs = try MoveDetection.runs(in: comparison.blocks, files: files, mode: options.mode)
-      let split = MoveDetection.splitting(comparison.blocks, at: runs)
-      blocks = split.blocks
+      let runs = try MoveDetection.runs(in: blocks, files: files, mode: options.mode)
+      let split = MoveDetection.splitting(blocks, at: runs)
+      self.blocks = split.blocks
       moves = split.moves
     case .merge:
-      blocks = comparison.blocks
+      self.blocks = blocks
       moves = try MoveDetection.moves(inMerge: blocks, files: files, mode: options.mode)
     }
-    rowLayout = RowLayout(blocks: blocks, files: files)
+    rowLayout = RowLayout(blocks: self.blocks, files: files)
     var moveIndices: [MoveEnd: Int] = [:]
     for (index, move) in moves.enumerated() {
       for end in [move.source, move.destination] {

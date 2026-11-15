@@ -3,6 +3,8 @@ import Foundation
 /// Finds the lines that moved: removed at one place and added at another, unchanged under the
 /// comparison mode.
 ///
+/// The lines are read as the engine compared them, without the text that ignore rules match.
+///
 /// Candidates come from fingerprints of the lines, which follow the comparison mode: lines that
 /// the mode counts as equal share a fingerprint. A candidate grows from an anchor, a line whose
 /// fingerprint occurs once among the removed and once among the added lines, as far as the lines
@@ -69,8 +71,8 @@ enum MoveDetection {
       for lineInA in start.a..<end.a { isUsedInA[lineInA] = true }
       for lineInB in start.b..<end.b { isUsedInB[lineInB] = true }
       let shared = try EngineAdapter.equalLines(
-        old.utf8.subdata(in: old.byteRange(ofLines: start.a..<end.a)),
-        new.utf8.subdata(in: new.byteRange(ofLines: start.b..<end.b)), mode: mode)
+        old.compared.bytes(ofLines: start.a..<end.a), new.compared.bytes(ofLines: start.b..<end.b),
+        mode: mode)
       for stretch in shared {
         let a = start.a + stretch.first.lowerBound..<start.a + stretch.first.upperBound
         let b = start.b + stretch.second.lowerBound..<start.b + stretch.second.upperBound
@@ -81,7 +83,7 @@ enum MoveDetection {
           return removed.onlyLine(with: fingerprint) == lineInA
             && added.onlyLine(with: fingerprint) != nil
         }
-        guard holdsAnchor, hasEnoughAlphanumerics(old.utf8.subdata(in: old.byteRange(ofLines: a)))
+        guard holdsAnchor, hasEnoughAlphanumerics(old.compared.bytes(ofLines: a))
         else { continue }
         runs.append(Run(blockInA: blockInA, a: a, blockInB: blockInB, b: b))
       }
@@ -172,15 +174,15 @@ enum MoveDetection {
   /// ``ComparisonMode/ignoreAllWhitespace``.
   ///
   /// The engine still has the last word on whether two lines are equal.
-  static func fingerprint(ofLine line: Int, in file: ComparedFile, mode: ComparisonMode) -> UInt64 {
+  static func fingerprint(ofLine line: Int, in text: LineText, mode: ComparisonMode) -> UInt64 {
     let range =
       mode == .exact
-      ? file.byteRange(ofLines: line..<line + 1) : file.contentByteRange(ofLine: line)
+      ? text.byteRange(ofLines: line..<line + 1) : text.contentByteRange(ofLine: line)
     // 64-bit FNV-1a: fast, and the same in every process, unlike `Hasher`.
     var hash: UInt64 = 0xcbf2_9ce4_8422_2325
     func add(_ byte: UInt8) { hash = (hash ^ UInt64(byte)) &* 0x100_0000_01b3 }
     var followsWhitespace = false
-    file.utf8.withUnsafeBytes { bytes in
+    text.utf8.withUnsafeBytes { bytes in
       for byte in bytes[range] {
         if byte == UInt8(ascii: " ") || byte == UInt8(ascii: "\t") {
           switch mode {
@@ -224,7 +226,7 @@ private struct ChangedLines {
     var repeated: Set<UInt64> = []
     for (index, block) in blocks.enumerated() where block.kind == .changed {
       for line in block.lines(in: role) {
-        let fingerprint = MoveDetection.fingerprint(ofLine: line, in: file, mode: mode)
+        let fingerprint = MoveDetection.fingerprint(ofLine: line, in: file.compared, mode: mode)
         lines.append(line)
         self.blocks[line] = index
         fingerprints[line] = fingerprint

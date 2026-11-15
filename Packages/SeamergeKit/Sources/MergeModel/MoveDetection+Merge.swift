@@ -50,9 +50,9 @@ extension MoveDetection {
     _ file: ComparedFile, _ lines: Range<Int>, _ otherFile: ComparedFile,
     _ otherLines: Range<Int>, mode: ComparisonMode
   ) throws(MergeModelError) -> Bool {
-    let text = file.utf8.subdata(in: file.byteRange(ofLines: lines))
+    let text = file.compared.bytes(ofLines: lines)
     guard hasEnoughAlphanumerics(text) else { return false }
-    let otherText = otherFile.utf8.subdata(in: otherFile.byteRange(ofLines: otherLines))
+    let otherText = otherFile.compared.bytes(ofLines: otherLines)
     return try EngineAdapter.linesAreEqual(text, otherText, mode: mode)
   }
 
@@ -71,7 +71,7 @@ extension MoveDetection {
     of lines: Range<Int>, in file: ComparedFile, mode: ComparisonMode
   ) -> UInt64 {
     lines.reduce(0xcbf2_9ce4_8422_2325) { hash, line in
-      (hash ^ fingerprint(ofLine: line, in: file, mode: mode)) &* 0x100_0000_01b3
+      (hash ^ fingerprint(ofLine: line, in: file.compared, mode: mode)) &* 0x100_0000_01b3
     }
   }
 }

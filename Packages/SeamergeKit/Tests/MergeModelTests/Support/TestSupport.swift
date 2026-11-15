@@ -18,10 +18,13 @@ func merge(
     b: SourceFile(b, label: "b"), options: ComparisonOptions(mode: mode))
 }
 
-/// Compares two texts.
-func diff(_ old: String, _ new: String, mode: ComparisonMode = .exact) async throws -> Session {
+/// Compares two texts, without the text that `rules` match.
+func diff(
+  _ old: String, _ new: String, mode: ComparisonMode = .exact, ignoring rules: [IgnoreRule] = []
+) async throws -> Session {
   try await Session.diff(
-    old: SourceFile(old, label: "old"), new: SourceFile(new, label: "new"), mode: mode)
+    old: SourceFile(old, label: "old"), new: SourceFile(new, label: "new"), mode: mode,
+    ignoring: rules)
 }
 
 extension Session {
@@ -33,6 +36,12 @@ extension Session {
   /// The text of each row of the pane of `role`.
   func rowTexts(of role: Role) throws -> [String] {
     let text = try #require(rowLayout.displayText(for: role))
+    return (0..<text.rowCount).map { text.string.utf16Substring(text.utf16Range(ofRow: $0)) }
+  }
+
+  /// The text of each line of the file of `role`, as shown without the line ending.
+  func lineTexts(of role: Role) throws -> [String] {
+    let text = try #require(rowLayout.lineText(for: role))
     return (0..<text.rowCount).map { text.string.utf16Substring(text.utf16Range(ofRow: $0)) }
   }
 

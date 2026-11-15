@@ -8,36 +8,57 @@ struct ComparedFile: Sendable {
   /// The file.
   let file: SourceFile
 
-  /// The text of the file as UTF-8 as the comparison saw it, starting at index 0.
+  /// The text of the file as UTF-8 and its lines, as shown.
   ///
   /// It differs from the file's text only where ``SourceFile/comparedText(in:)`` converts line
   /// endings, which keeps every offset.
-  let utf8: Data
+  let text: LineText
 
-  /// The byte offset where each line starts, followed by the byte count.
-  let lineStarts: [Int]
+  /// The text the engine compared: ``text`` without what the ignore rules match, line for line,
+  /// or ``text`` itself in a comparison without rules.
+  let compared: LineText
+
+  /// The text that the ignore rules match.
+  let ruleMatches: RuleMatches
 
   /// The UTF-16 positions of the lines.
   let lineIndex: LineIndex
 
-  /// Splits `text`, the compared text of `file`, at `lineStarts`.
+  /// Splits `text`, the compared text of `file`, at `lineStarts`, for a comparison without
+  /// ignore rules.
   ///
   /// - Precondition: `lineStarts` meets the preconditions of `LineIndex`, which the engine's
   ///   split of valid UTF-8 always does: it splits only after CR or LF, and neither byte occurs
   ///   within a multi-byte scalar.
   init(file: SourceFile, text: Data, lineStarts: [Int]) {
     self.file = file
-    utf8 = text
-    self.lineStarts = lineStarts
+    self.text = LineText(utf8: text, lineStarts: lineStarts)
+    compared = self.text
+    ruleMatches = .none
     lineIndex = LineIndex(utf8: text, byteLineStarts: lineStarts)
   }
+
+  /// The file `file` as the engine compared it, masked by `mask`.
+  init(file: SourceFile, mask: IgnoreMask) {
+    self.file = file
+    text = mask.text
+    compared = mask.masked
+    ruleMatches = mask.matches
+    lineIndex = mask.lineIndex
+  }
+
+  /// The text of the file as UTF-8, starting at index 0.
+  var utf8: Data { text.utf8 }
+
+  /// The byte offset where each line starts, followed by the byte count.
+  var lineStarts: [Int] { text.lineStarts }
 
   /// The number of lines.
   var lineCount: Int { lineStarts.count - 1 }
 
   /// The bytes of `lines`, including the line ending of the last one.
   func byteRange(ofLines lines: Range<Int>) -> Range<Int> {
-    lineStarts[lines.lowerBound]..<lineStarts[lines.upperBound]
+    text.byteRange(ofLines: lines)
   }
 
   /// The text of `lines` as the file has it, including the line ending of the last one.
@@ -53,16 +74,14 @@ struct ComparedFile: Sendable {
 
   /// The bytes of a line without its line ending.
   func contentByteRange(ofLine line: Int) -> Range<Int> {
-    let start = lineStarts[line]
-    let end = lineStarts[line + 1]
-    return start..<(end - lineEndingLength(before: end, notBefore: start))
+    text.contentByteRange(ofLine: line)
   }
 
   /// The number of UTF-16 code units of a line without its line ending.
   func contentUTF16Length(ofLine line: Int) -> Int {
     let end = lineStarts[line + 1]
     return lineIndex.utf16Range(ofLine: line).count
-      - lineEndingLength(before: end, notBefore: lineStarts[line])
+      - text.lineEndingLength(before: end, notBefore: lineStarts[line])
   }
 
   /// The line that contains the byte at `offset`.
@@ -100,18 +119,5 @@ struct ComparedFile: Sendable {
 
   private static func isLineEnding(_ byte: UInt8) -> Bool {
     byte == UInt8(ascii: "\n") || byte == UInt8(ascii: "\r")
-  }
-
-  /// The length of the line ending CRLF, LF or CR that ends just before `end`, looking no
-  /// further back than `start`.
-  ///
-  /// Line endings are ASCII, so their length is the same in bytes and in UTF-16.
-  private func lineEndingLength(before end: Int, notBefore start: Int) -> Int {
-    guard end > start else { return 0 }
-    switch utf8[end - 1] {
-    case UInt8(ascii: "\n"): return end - 1 > start && utf8[end - 2] == UInt8(ascii: "\r") ? 2 : 1
-    case UInt8(ascii: "\r"): return 1
-    default: return 0
-    }
   }
 }
