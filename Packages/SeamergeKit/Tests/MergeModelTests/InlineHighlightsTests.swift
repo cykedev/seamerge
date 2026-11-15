@@ -16,6 +16,18 @@ struct InlineHighlightsTests {
     #expect(try session.highlightedTexts(of: .b, inFirst: .changed) == ["大阪"])
   }
 
+  @Test func manyChangesWithinOneLineLieOnTheirCharacters() async throws {
+    let old = (0..<200).map { "ü😀 v\($0) 東" }.joined(separator: " ") + "\n"
+    let new = (0..<200).map { "ü😀 v\($0 + 1_000) 東" }.joined(separator: " ") + "\n"
+    let session = try await diff(old, new)
+
+    #expect(
+      try session.highlightedTexts(of: .a, inFirst: .changed) == (0..<200).map { "v\($0)" })
+    #expect(
+      try session.highlightedTexts(of: .b, inFirst: .changed)
+        == (0..<200).map { "v\($0 + 1_000)" })
+  }
+
   @Test func highlightsAreOffsetByTheRowsAboveIncludingFillerRows() async throws {
     let session = try await diff(
       "same\nnot in b\nvalue = 1 // 😀 ü\n", "same\nvalue = 2 // 😀 ü\n")

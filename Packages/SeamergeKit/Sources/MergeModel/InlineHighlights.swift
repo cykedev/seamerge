@@ -112,6 +112,7 @@ public struct InlineHighlights: Sendable, Hashable {
   ) -> [Range<Int>] {
     guard let displayText = layout.displayText(for: role) else { return [] }
     let string = displayText.string as NSString
+    var offsets = UTF16Offsets(file: file)
     var ranges: [Range<Int>] = []
     for run in runs {
       if run.own.isEmpty {
@@ -131,8 +132,8 @@ public struct InlineHighlights: Sendable, Hashable {
         if lower < upper {
           let rowStart = displayText.utf16Range(ofRow: layout.row(ofLine: line, in: role))
             .lowerBound
-          let start = rowStart + file.lineIndex.utf16Offset(ofByteOffset: lower, inLine: line)
-          let end = rowStart + file.lineIndex.utf16Offset(ofByteOffset: upper, inLine: line)
+          let start = rowStart + offsets.offset(ofByte: lower, inLine: line)
+          let end = rowStart + offsets.offset(ofByte: upper, inLine: line)
           let composed = string.rangeOfComposedCharacterSequences(
             for: NSRange(location: start, length: end - start))
           insert(composed.location..<(composed.location + composed.length), into: &ranges)
@@ -187,6 +188,43 @@ public struct InlineHighlights: Sendable, Hashable {
       ranges.removeLast()
     }
     ranges.append(joined)
+  }
+}
+
+/// Converts byte offsets within the lines of a file into UTF-16 offsets, going on from the
+/// offset it converted last where that lies before in the same line.
+///
+/// The runs of a line come in text order, so the runs of a long line take time in proportion to
+/// the line rather than to the line times the number of runs.
+private struct UTF16Offsets {
+  let file: ComparedFile
+  private var last: (line: Int, byte: Int, utf16: Int)?
+
+  init(file: ComparedFile) {
+    self.file = file
+  }
+
+  /// The UTF-16 offset from the start of `line` that corresponds to the byte offset `byte` from
+  /// its start.
+  ///
+  /// - Precondition: `byte` lies within the line or at its end, at the start of a Unicode scalar.
+  mutating func offset(ofByte byte: Int, inLine line: Int) -> Int {
+    guard let last, last.line == line, last.byte <= byte else {
+      let utf16 = file.lineIndex.utf16Offset(ofByteOffset: byte, inLine: line)
+      self.last = (line, byte, utf16)
+      return utf16
+    }
+    let start = file.lineStarts[line]
+    let utf16 = file.utf8.withUnsafeBytes { bytes in
+      var count = last.utf16
+      for index in (start + last.byte)..<(start + byte) where !UTF8.isContinuation(bytes[index]) {
+        // A scalar of four bytes lies outside the Basic Multilingual Plane and takes two units.
+        count += bytes[index] >= 0xF0 ? 2 : 1
+      }
+      return count
+    }
+    self.last = (line, byte, utf16)
+    return utf16
   }
 }
 
