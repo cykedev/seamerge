@@ -99,6 +99,7 @@ final class PanelRecorder: CompareFilesPanels {
   private(set) var fileChoices: [FileChoice] = []
   private(set) var failures: [String] = []
   private let (choices, choiceSink) = AsyncStream.makeStream(of: Void.self)
+  private let (shownFailures, failureSink) = AsyncStream.makeStream(of: Void.self)
 
   func chooseFile(_ choice: FileChoice, for role: String, in window: NSWindow) async -> URL? {
     roles.append(role)
@@ -109,6 +110,7 @@ final class PanelRecorder: CompareFilesPanels {
 
   func showFailure(_ error: any Error, in window: NSWindow) async {
     failures.append(error.localizedDescription)
+    failureSink.yield()
   }
 
   /// Waits until the window has taken the answer to the next question for a file.
@@ -117,6 +119,12 @@ final class PanelRecorder: CompareFilesPanels {
   /// returns.
   func nextChoice() async {
     var iterator = choices.makeAsyncIterator()
+    await iterator.next()
+  }
+
+  /// Waits until the window has shown the next failure.
+  func nextFailure() async {
+    var iterator = shownFailures.makeAsyncIterator()
     await iterator.next()
   }
 }

@@ -199,7 +199,7 @@ struct UpdaterTests {
       socketURL: sandbox.socketURL, collectionCache: sandbox.collectionCache,
       presenter: sandbox.presenter, integrationStore: sandbox.integrationStore,
       commandLineTool: sandbox.commandLineTool,
-      makeSoftwareUpdater: { _ in softwareUpdater })
+      makeSoftwareUpdater: { _ in softwareUpdater }, bundle: sandbox.bundle, updateServices: {})
   }
 
   /// An updater of Sparkle that is never started, for the calls of its delegate.

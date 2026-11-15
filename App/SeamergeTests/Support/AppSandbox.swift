@@ -14,7 +14,12 @@ final class AppSandbox {
   let settings: UserSettings
   /// Records the alerts the app would show and whether it would hide.
   let presenter = PresenterRecorder()
+  /// Where the app in the test runs from: outside the folders of applications, so that it never
+  /// registers its service with the system.
+  let bundle = URL(filePath: "/Volumes/Build/Seamerge.app")
   private let suiteName = "app.eiden.seamerge.tests.\(UUID().uuidString)"
+  /// The provider of services before the test, which a launch in the test replaces.
+  private let servicesProvider = NSApplication.shared.servicesProvider
 
   init() throws {
     // Socket paths are limited to 103 bytes, so the folder name stays short.
@@ -26,6 +31,7 @@ final class AppSandbox {
   }
 
   isolated deinit {
+    NSApplication.shared.servicesProvider = servicesProvider
     defaults.removePersistentDomain(forName: suiteName)
     do {
       try FileManager.default.removeItem(at: folder)
@@ -124,6 +130,7 @@ final class AppSandbox {
 final class PresenterRecorder: AppPresenter {
   private(set) var errors: [any Error] = []
   private(set) var hideCount = 0
+  private(set) var activationCount = 0
 
   /// The errors shown, as their messages.
   var messages: [String] { errors.map(\.localizedDescription) }
@@ -134,6 +141,10 @@ final class PresenterRecorder: AppPresenter {
 
   func hide() {
     hideCount += 1
+  }
+
+  func activate() {
+    activationCount += 1
   }
 }
 

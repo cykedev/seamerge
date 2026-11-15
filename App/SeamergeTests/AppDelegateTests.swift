@@ -14,6 +14,7 @@ struct AppDelegateTests {
 
     delegate.applicationDidFinishLaunching(
       Notification(name: NSApplication.didFinishLaunchingNotification))
+    await delegate.startWindowTask?.value
 
     let window = try #require(delegate.compareFilesWindowController?.window)
     #expect(window.isVisible)
@@ -342,6 +343,7 @@ struct AppDelegateTests {
       collectionCache: sandbox.collectionCache, presenter: sandbox.presenter,
       integrationStore: sandbox.integrationStore,
       commandLineTool: sandbox.commandLineTool,
-      makeSoftwareUpdater: { _ in SoftwareUpdaterDouble() })
+      makeSoftwareUpdater: { _ in SoftwareUpdaterDouble() }, bundle: sandbox.bundle,
+      updateServices: {})
   }
 }

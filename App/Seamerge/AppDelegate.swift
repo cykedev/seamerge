@@ -10,7 +10,7 @@ import os
 /// clicked while no window is open, with File > Compare Files… and File > Compare Folders…, and
 /// with files or folders dropped on the Dock icon. It does not appear when the helper starts the
 /// app, nor after the helper's last window; then the app hides, so that the terminal is in front
-/// again.
+/// again. The service Compare with Seamerge shows it only for what it does not open at once.
 @MainActor
 final class AppDelegate: NSObject {
   /// Opens a window for each session.
@@ -43,8 +43,22 @@ final class AppDelegate: NSObject {
   /// Whether the helper started the app to hand over a session.
   private let isLaunchedForSession: Bool
 
-  /// Shows alerts and hides the app.
-  private let presenter: any AppPresenter
+  /// Whether the service or files to open handed the app something to do, which shows what it
+  /// needs instead of the empty window Compare Files after the launch.
+  var hasReceivedTask = false
+
+  /// The window Compare Files appearing after the launch, until it has.
+  private(set) var startWindowTask: Task<Void, Never>?
+
+  /// Shows alerts, hides the app and brings it to the front.
+  let presenter: any AppPresenter
+
+  /// The bundle of the running copy, which registers the service only from a folder of
+  /// applications.
+  let bundle: URL
+
+  /// Has the system read the services of the apps again.
+  let updateServices: @MainActor () -> Void
 
   /// The settings of Git and Tower that the window Compare Files reads and writes.
   private let integrationStore: SystemIntegrationStore
@@ -56,17 +70,21 @@ final class AppDelegate: NSObject {
 
   /// Creates the delegate of an app started with `arguments`, which keeps its settings and
   /// recent comparisons in `defaults`, listens for the helper at `socketURL`, keeps the copies of
-  /// collected files in `collectionCache`, shows alerts and hides with `presenter`, sets up Git
-  /// and Tower in `integrationStore`, installs the seamerge command with `commandLineTool`, and
-  /// updates itself with the updater that `makeSoftwareUpdater` makes.
+  /// collected files in `collectionCache`, shows alerts, hides and comes to the front with
+  /// `presenter`, sets up Git and Tower in `integrationStore`, installs the seamerge command with
+  /// `commandLineTool`, updates itself with the updater that `makeSoftwareUpdater` makes, and
+  /// registers its service with `updateServices` when `bundle` is in a folder of applications.
   init(
     arguments: [String], defaults: UserDefaults, socketURL: URL,
     collectionCache: CollectionCache = .standard, presenter: any AppPresenter,
     integrationStore: SystemIntegrationStore, commandLineTool: CommandLineTool,
-    makeSoftwareUpdater: @MainActor (Updater) -> any SoftwareUpdater = Updater.sparkle
+    makeSoftwareUpdater: @MainActor (Updater) -> any SoftwareUpdater = Updater.sparkle,
+    bundle: URL, updateServices: @escaping @MainActor () -> Void
   ) {
     isLaunchedForSession = arguments.contains(HelperLaunch.argument)
     self.presenter = presenter
+    self.bundle = bundle
+    self.updateServices = updateServices
     self.integrationStore = integrationStore
     self.commandLineTool = commandLineTool
     settings = UserSettings(defaults: defaults)
@@ -142,8 +160,15 @@ final class AppDelegate: NSObject {
     return took
   }
 
+  /// Shows the window Compare Files after the launch, unless the app was handed something to do
+  /// or a session window shows.
+  private func showCompareFilesUnlessBusy() {
+    guard !hasReceivedTask, coordinator.windowControllers.isEmpty else { return }
+    showCompareFiles(nil)
+  }
+
   /// The window Compare Files, made the first time it is needed.
-  private func compareFiles() -> CompareFilesWindowController {
+  func compareFiles() -> CompareFilesWindowController {
     if let compareFilesWindowController {
       return compareFilesWindowController
     }
@@ -200,6 +225,11 @@ extension AppDelegate: NSApplicationDelegate {
     application.servicesMenu = mainMenu.servicesMenu
   }
 
+  /// Listens for the helper, serves the service and shows the window Compare Files, unless the
+  /// helper, the service or files to open started the app, which show what they need.
+  ///
+  /// The service hands over its selection only once the run loop turns after the launch, so the
+  /// window waits that long, and does not stand empty behind what the service opens.
   func applicationDidFinishLaunching(_ notification: Notification) {
     do {
       try coordinator.start()
@@ -207,8 +237,10 @@ extension AppDelegate: NSApplicationDelegate {
       Self.logger.error("Cannot listen for the helper: \(String(describing: error))")
       presenter.present(ListeningError(error))
     }
+    NSApplication.shared.servicesProvider = self
+    registerServiceIfInstalled()
     if !isLaunchedForSession {
-      showCompareFiles(nil)
+      startWindowTask = Task { showCompareFilesUnlessBusy() }
     }
     updater.start()
   }
@@ -221,6 +253,7 @@ extension AppDelegate: NSApplicationDelegate {
   }
 
   func application(_ application: NSApplication, open urls: [URL]) {
+    hasReceivedTask = true
     if !openFiles(urls) {
       Self.logger.notice("The window Compare Files takes up to three files or two folders")
     }

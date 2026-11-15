@@ -1,7 +1,7 @@
 import AppKit
 
 /// What the app shows and does around its windows: alerts that say what went wrong and what to
-/// do, and hiding itself.
+/// do, hiding itself, and coming to the front.
 @MainActor
 protocol AppPresenter: AnyObject {
   /// Shows `error` with what to do next.
@@ -9,6 +9,9 @@ protocol AppPresenter: AnyObject {
 
   /// Hides the app, so that the app before it is in front again.
   func hide()
+
+  /// Brings the app to the front, as a service that opens a window does.
+  func activate()
 }
 
 /// The presenter of the running app.
@@ -19,5 +22,9 @@ final class ApplicationPresenter: AppPresenter {
 
   func hide() {
     NSApplication.shared.hide(nil)
+  }
+
+  func activate() {
+    NSApplication.shared.activate()
   }
 }

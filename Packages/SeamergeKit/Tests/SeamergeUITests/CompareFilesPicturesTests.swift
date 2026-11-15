@@ -4,8 +4,8 @@ import Testing
 @testable import SeamergeUI
 
 /// Draws the pictures of the window Compare Files for the visual review: empty, with two and
-/// with three files, with recent comparisons, in every look; and checks the contrast of what the
-/// fields draw.
+/// with three files, with recent comparisons, as the service leaves it, in every look; and checks
+/// the contrast of what the fields draw.
 @MainActor
 @Suite(.serialized) struct CompareFilesPicturesTests {
   /// What the fields hold in a picture.
@@ -71,6 +71,20 @@ import Testing
         left: try files.file("LoginView.swift"), right: try files.file("LoginView copy.swift")))
     #expect(fixture.controller.fill(with: Array(Filling.twoFiles.files.prefix(1))))
     try picture(fixture, look: look, named: "compare-files-recent-\(look.name)")
+  }
+
+  /// What the service Compare with Seamerge leaves in the window: one file to compare with the
+  /// next, or the sentence about a selection it does not compare.
+  @Test(arguments: Look.all)
+  func selectionsOfTheServiceArePictured(look: Look) throws {
+    let fixture = try CompareFilesFixture(
+      displayOptions: DisplayOptions(increasesContrast: look.increasesContrast))
+    defer { fixture.window.close() }
+    fixture.controller.compare(with: Filling.twoFiles.files[0])
+    try picture(fixture, look: look, named: "compare-files-service-one-\(look.name)")
+
+    fixture.controller.showUnsupportedSelection()
+    try picture(fixture, look: look, named: "compare-files-service-unsupported-\(look.name)")
   }
 
   @Test func longNamesAreShortenedInTheMiddle() throws {

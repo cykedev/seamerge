@@ -1413,6 +1413,9 @@
     "Seamerge can’t show the differences of “%@”" : {
       "comment" : "Comparison window: the files cannot be compared, such as of “logo.png”."
     },
+    "Seamerge compares two or three files, or two folders." : {
+      "comment" : "Compare Files: below the fields after Compare with Seamerge in the Finder was used on a selection that Seamerge does not compare."
+    },
     "Seamerge couldn’t compare the files." : {
       "comment" : "Alert: the comparison of the files of a session failed."
     },

@@ -29,7 +29,17 @@ public final class CompareFilesWindowController: NSWindowController {
   }
 
   /// The files in the fields.
-  var selection = FileSelection()
+  var selection = FileSelection() {
+    didSet {
+      if selection != oldValue {
+        showsUnsupportedSelection = false
+      }
+    }
+  }
+
+  /// Whether the window says what Seamerge compares, after it was handed a selection it does
+  /// not compare; until the fields change.
+  var showsUnsupportedSelection = false
 
   /// The fields, by their place.
   let fields: [FileSlot: FileField]
@@ -398,7 +408,9 @@ public final class CompareFilesWindowController: NSWindowController {
         url: selection[slot], hasBase: hasBase, isFolder: selection.namesFolder(slot))
     }
     showDropTargets()
-    problemLabel.stringValue = selection.problem?.message ?? ""
+    problemLabel.stringValue =
+      selection.problem?.message
+      ?? (showsUnsupportedSelection ? Self.unsupportedSelectionMessage : "")
     switch purpose {
     case .compare:
       openButton.title =

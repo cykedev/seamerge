@@ -8,6 +8,7 @@ let delegate = AppDelegate(
   presenter: ApplicationPresenter(),
   integrationStore: SystemIntegrationStore(
     bundle: Bundle.main.bundleURL, home: FileManager.default.homeDirectoryForCurrentUser),
-  commandLineTool: CommandLineTool(bundle: Bundle.main.bundleURL))
+  commandLineTool: CommandLineTool(bundle: Bundle.main.bundleURL), bundle: Bundle.main.bundleURL,
+  updateServices: { NSUpdateDynamicServices() })
 application.delegate = delegate
 application.run()
