@@ -83,6 +83,20 @@ enum EngineAdapter {
       blocks: blocks, lineStarts: [.a: lineStarts(of: diff.a), .b: lineStarts(of: diff.b)])
   }
 
+  /// The runs of lines that two texts share under `mode`, as a comparison of two files finds
+  /// them: each the lines of the first text and the lines of the second, in text order.
+  static func equalLines(
+    _ first: Data, _ second: Data, mode: ComparisonMode
+  ) throws(MergeModelError) -> [(first: Range<Int>, second: Range<Int>)] {
+    let diff: Diff
+    do {
+      diff = try Diff(first, second, whitespace: Whitespace(mode))
+    } catch {
+      throw MergeModelError(error)
+    }
+    return diff.blocks.filter { $0.kind == .equal }.map { ($0.a.lines, $0.b.lines) }
+  }
+
   /// Compares two texts in runs of one character class: letters, digits and all non-ASCII
   /// bytes; spaces and other whitespace; punctuation; line endings.
   ///

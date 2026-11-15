@@ -27,6 +27,16 @@ public struct Session: Sendable {
   /// The row grid of the panes.
   public let rowLayout: RowLayout
 
+  /// The runs of lines that moved, in the order of their sources.
+  ///
+  /// In a comparison, the lines leave A and arrive in B. Where moved lines also changed, the
+  /// stretch that stayed equal under the comparison mode still moves, and the changed lines stay
+  /// a removal and an addition. A run counts only if it is long enough and recurs exactly once. A
+  /// more lenient comparison mode keeps the moves of a stricter one as long as the engine aligns
+  /// the lines alike and each run still holds a line that occurs once on each side; uniqueness
+  /// comes first.
+  public let moves: [Move]
+
   /// The files that take part, split into lines as the comparison split them.
   let files: [Role: ComparedFile]
 
@@ -46,7 +56,7 @@ public struct Session: Sendable {
     let comparison = try EngineAdapter.merge(
       base: texts[.base], a: texts[.a, default: Data()], b: texts[.b, default: Data()],
       options: options)
-    return Session(
+    return try Session(
       kind: .merge, options: options, inputs: inputs, texts: texts, comparison: comparison)
   }
 
@@ -64,7 +74,7 @@ public struct Session: Sendable {
     let texts = try comparedTexts(of: inputs, in: mode)
     let comparison = try EngineAdapter.diff(
       old: texts[.a, default: Data()], new: texts[.b, default: Data()], mode: mode)
-    return Session(
+    return try Session(
       kind: .diff, options: ComparisonOptions(mode: mode), inputs: inputs, texts: texts,
       comparison: comparison)
   }
@@ -91,7 +101,7 @@ public struct Session: Sendable {
   private init(
     kind: Kind, options: ComparisonOptions, inputs: [Role: SourceFile], texts: [Role: Data],
     comparison: EngineAdapter.Comparison
-  ) {
+  ) throws(MergeModelError) {
     let files = Dictionary(
       uniqueKeysWithValues: inputs.compactMap { role, file -> (Role, ComparedFile)? in
         guard let text = texts[role], let lineStarts = comparison.lineStarts[role] else {
@@ -104,6 +114,16 @@ public struct Session: Sendable {
     self.files = files
     blocks = comparison.blocks
     rowLayout = RowLayout(blocks: comparison.blocks, files: files)
+    moves =
+      switch kind {
+      case .diff:
+        try MoveDetection.runs(in: comparison.blocks, files: files, mode: options.mode).map { run in
+          Move(
+            source: Move.End(block: run.blockInA, role: .a, lines: run.a),
+            destination: Move.End(block: run.blockInB, role: .b, lines: run.b))
+        }
+      case .merge: []
+      }
   }
 
   /// The inputs that take part, in the order base, A, B.
