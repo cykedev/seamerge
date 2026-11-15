@@ -105,6 +105,7 @@ final class MainMenu {
         commands(.openInEditor),
         [Self.item(Titles.close, #selector(NSWindow.performClose(_:)), key: "w")]
           + commands(.save, .saveAs, .saveAndClose),
+        commands(.exportPatch),
         [
           Self.submenu(ResultFormatChoice.encodingMenuTitle, of: ResultFormatChoice.encodings),
           Self.submenu(ResultFormatChoice.lineEndingMenuTitle, of: ResultFormatChoice.lineEndings),
@@ -128,7 +129,7 @@ final class MainMenu {
           Self.item(Titles.paste, #selector(NSText.paste(_:)), key: "v"),
           Self.item(Titles.selectAll, #selector(NSText.selectAll(_:)), key: "a"),
         ],
-        commands(.copyBlock),
+        commands(.copyBlock, .copyPatch),
         [findItem()],
       ])
   }

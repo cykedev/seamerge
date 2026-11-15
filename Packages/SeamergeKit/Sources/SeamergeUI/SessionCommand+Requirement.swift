@@ -66,6 +66,10 @@ extension SessionCommand {
     /// Copying a block needs a current block with text.
     case blockText
 
+    /// A patch needs a comparison, not a merge, with a file whose bytes differ and whose lines
+    /// it can show, or a window of several files with one that changed.
+    case patch
+
     /// Maximizing the result needs a result.
     case resultPane
 
@@ -143,6 +147,7 @@ extension SessionCommand {
     case .actualSize: .otherFontSize
     case .openInEditor: .fileOnDisk
     case .copyBlock: .blockText
+    case .copyPatch, .exportPatch: .patch
     case .toggleResultMaximized: .resultPane
     case .swapSides: .swappableSides
     case .goToOtherEndOfMove: .moveEnd

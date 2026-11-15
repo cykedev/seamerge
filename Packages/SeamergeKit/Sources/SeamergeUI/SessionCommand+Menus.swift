@@ -28,12 +28,12 @@ extension SessionCommand {
     switch menu {
     case .file:
       [
-        [.changeFiles], [.openInEditor], [.save, .saveAs, .saveAndClose],
+        [.changeFiles], [.openInEditor], [.save, .saveAs, .saveAndClose], [.exportPatch],
         [.leaveUnresolved, .skipRemainingFiles],
       ]
     case .edit:
       [
-        [.copyBlock],
+        [.copyBlock, .copyPatch],
         [.find, .findAndReplace, .replaceAll, .findNext, .findPrevious, .useSelectionForFind],
         [.filterFiles],
       ]

@@ -247,6 +247,24 @@ final class PromptRecorder: SessionPrompts {
     questions.append("binary \(name): use \(b) or \(a)")
     return binaryChoices.isEmpty ? nil : binaryChoices.removeFirst()
   }
+
+  /// Where to export a patch, or `nil` to cancel.
+  var patchDestination: URL?
+
+  /// The number of files that each choice of the place of a patch named, `nil` for one file.
+  private(set) var patchFileCounts: [Int?] = []
+
+  func choosePatchDestination(
+    suggesting name: String, fileCount: Int?, in window: NSWindow
+  ) async -> URL? {
+    questions.append("where to export \(name)")
+    patchFileCounts.append(fileCount)
+    return patchDestination
+  }
+
+  func reportFailedPatch(_ error: PatchError, exporting name: String?, in window: NSWindow) async {
+    questions.append("failed patch \(name ?? "copy"): \(error.localizedDescription)")
+  }
 }
 
 extension SessionWindowController {
@@ -274,16 +292,17 @@ extension SessionPresentation {
 }
 
 extension Windows {
-  /// A window for `collection`, laid out without a screen.
+  /// A window for `collection`, laid out without a screen, that asks `prompts`.
   static func controller(
     for collection: FileCollection, options: DisplayOptions = DisplayOptions(reducesMotion: true),
-    settings: UserSettings = .private(), window: SessionWindow = SessionWindow()
+    settings: UserSettings = .private(), window: SessionWindow = SessionWindow(),
+    prompts: PromptRecorder = PromptRecorder()
   ) async throws -> SessionWindowController {
     let opening = try await SessionWindowController.opening(collection, settings: settings)
     let controller = SessionWindowController(
       session: opening.loaded.session, context: opening.context, undoManager: UndoManager(),
       displayOptions: options, pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(),
-      prompts: PromptRecorder(), doneStyle: .standard, settings: settings, window: window,
+      prompts: prompts, doneStyle: .standard, settings: settings, window: window,
       unavailable: opening.loaded.unavailable, collection: collection)
     controller.window?.contentView?.layoutSubtreeIfNeeded()
     return controller

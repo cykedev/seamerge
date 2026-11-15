@@ -207,6 +207,29 @@
         }
       }
     },
+    "%lld files" : {
+      "comment" : "Message of the choice of the place of a patch: the files it holds, such as 12 files.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld file"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld files"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld from B" : {
       "comment" : "Subtitle: the changes of the own side after those of A, such as 5 from B."
     },
@@ -423,6 +446,9 @@
     "Changes" : {
       "comment" : "Toolbar items: the current change and the buttons that go through the changes."
     },
+    "changes" : {
+      "comment" : "The name suggested for the patch of the files of a run of Git, before .patch."
+    },
     "Changing the files discards %lld decisions." : {
       "comment" : "Sheet before showing other files in a window, such as discards 3 decisions.",
       "localizations" : {
@@ -463,6 +489,9 @@
     },
     "Choose a file, or drop one here" : {
       "comment" : "VoiceOver hint of a field of Compare Files."
+    },
+    "Choose another folder, then export again." : {
+      "comment" : "Sheet after exporting a patch failed: what to do next."
     },
     "Choose how lines are compared" : {
       "comment" : "Help tag of the choice of the comparison mode in the toolbar and the footer."
@@ -586,8 +615,37 @@
     "Connect changes with bands (no lines to show)" : {
       "comment" : "Help tag of the footer toggle of aligned lines in a window without lines."
     },
+    "Copied the patch" : {
+      "comment" : "VoiceOver after copying the patch of a comparison of two files."
+    },
+    "Copied the patch of %lld files" : {
+      "comment" : "VoiceOver after copying the patch of a window of several files.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Copied the patch of %lld file"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Copied the patch of %lld files"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Copy" : {
       "comment" : "Context menu: copy the selected text, or the block if nothing is selected.\nSet Up Git Integration: the button that copies the commands."
+    },
+    "Copy as Patch" : {
+      "comment" : "Edit menu command: copy the changes as a unified diff."
     },
     "Copy Block" : {
       "comment" : "Edit menu command: copy the lines of the current block."
@@ -600,6 +658,12 @@
     },
     "Couldn’t Compare the Files Anew" : {
       "comment" : "Sheet after switching the comparison failed."
+    },
+    "Couldn’t Copy the Patch" : {
+      "comment" : "Sheet after copying a patch failed."
+    },
+    "Couldn’t Export “%@”" : {
+      "comment" : "Sheet after exporting a patch to a file failed."
     },
     "Couldn’t Save “%@”" : {
       "comment" : "Sheet after saving failed."
@@ -696,6 +760,12 @@
     },
     "Exact" : {
       "comment" : "Compare menu: compare every byte."
+    },
+    "Export as Patch…" : {
+      "comment" : "File menu command: save the changes as a unified diff in a file."
+    },
+    "Exported %@" : {
+      "comment" : "VoiceOver after exporting a patch, such as Exported story.txt.patch."
     },
     "File" : {
       "comment" : "Details of a side: where the file was read from.\nMenu bar."
@@ -1109,6 +1179,9 @@
     },
     "Recent" : {
       "comment" : "Compare Files: the heading of the comparisons opened last."
+    },
+    "Records every byte, whatever the comparison mode" : {
+      "comment" : "Help tag of Copy as Patch and Export as Patch."
     },
     "Regular Expression" : {
       "comment" : "Settings: placeholder of the pattern of an ignore rule that has none yet."

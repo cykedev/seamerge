@@ -83,6 +83,15 @@ protocol SessionPrompts: AnyObject {
 
   /// Tells that the files could not be compared anew.
   func reportFailedComparison(in window: NSWindow) async
+
+  /// Asks where to export a patch, suggesting `name`, and returns the place or `nil`; a patch of
+  /// several files says how many, `fileCount`.
+  func choosePatchDestination(
+    suggesting name: String, fileCount: Int?, in window: NSWindow
+  ) async -> URL?
+
+  /// Tells that a patch could not be exported to the file `name`, or copied for `nil`, and why.
+  func reportFailedPatch(_ error: PatchError, exporting name: String?, in window: NSWindow) async
 }
 
 /// The prompts of a window as sheets.
@@ -349,7 +358,7 @@ final class SessionSheets: SessionPrompts {
   ///
   /// An alert gives Escape only to a Cancel button that does not hold Return, and Command-Period
   /// to none, so the sheet watches for both while it is open.
-  private static func present(
+  static func present(
     _ alert: NSAlert, in window: NSWindow
   ) async -> NSApplication.ModalResponse {
     let cancelTitle = cancelTitle

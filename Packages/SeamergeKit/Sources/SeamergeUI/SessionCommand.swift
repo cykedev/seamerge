@@ -142,6 +142,13 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// context menu.
   case copyBlock
 
+  /// Copies the changes of the window as a unified diff, every byte counted.
+  case copyPatch
+
+  /// Writes the changes of the window as a unified diff, every byte counted, to a file that the
+  /// user chooses.
+  case exportPatch
+
   /// Closes a comparison that `git difftool` started and tells Git to compare no further files.
   case skipRemainingFiles
 
@@ -310,6 +317,14 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Copy Block", bundle: .module,
         comment: "Edit menu command: copy the lines of the current block.")
+    case .copyPatch:
+      String(
+        localized: "Copy as Patch", bundle: .module,
+        comment: "Edit menu command: copy the changes as a unified diff.")
+    case .exportPatch:
+      String(
+        localized: "Export as Patch…", bundle: .module,
+        comment: "File menu command: save the changes as a unified diff in a file.")
     case .skipRemainingFiles:
       String(
         localized: "Skip Remaining Files", bundle: .module,
@@ -541,6 +556,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Narrow the list to files whose name or folder contains a text",
         bundle: .module, comment: "Help tag of Edit > Find > Filter Files.")
+    case .copyPatch, .exportPatch:
+      String(
+        localized: "Records every byte, whatever the comparison mode", bundle: .module,
+        comment: "Help tag of Copy as Patch and Export as Patch.")
     case .saveAndClose:
       String(
         localized: "Save and close", bundle: .module,
@@ -612,6 +631,8 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .goToLine: #selector(SessionWindowController.goToLine(_:))
     case .openInEditor: #selector(SessionWindowController.openInEditor(_:))
     case .copyBlock: #selector(SessionWindowController.copyBlock(_:))
+    case .copyPatch: #selector(SessionWindowController.copyPatch(_:))
+    case .exportPatch: #selector(SessionWindowController.exportPatch(_:))
     case .skipRemainingFiles: #selector(SessionWindowController.skipRemainingFiles(_:))
     case .changeFiles: #selector(SessionWindowController.changeFiles(_:))
     case .save: #selector(SessionWindowController.saveResult(_:))

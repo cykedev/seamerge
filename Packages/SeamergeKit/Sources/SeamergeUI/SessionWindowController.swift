@@ -154,6 +154,11 @@ public final class SessionWindowController: NSWindowController {
   /// match; every window starts with it, since whoever writes rules wants them.
   var usesIgnoreRules = true
 
+  /// Whether the comparison of two files in view has a patch, worked out once for each
+  /// comparison shown rather than whenever a menu asks, since it compares the files byte for
+  /// byte.
+  var comparisonHasPatch = false
+
   /// Whether the toolbar says that the files are being compared anew, which it does once the
   /// comparison has taken a moment.
   var showsComparisonProgress = false
@@ -457,6 +462,7 @@ public final class SessionWindowController: NSWindowController {
 
   /// Titles the window after the session it shows now.
   func sessionDidChange() {
+    comparisonHasPatch = shownComparisonHasPatch
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: presentation.arrangement,
       startMode: settings.comparisonMode, ignoredDifferences: presentation.ignoredDifferences)
@@ -623,12 +629,13 @@ extension SessionWindowController: NSUserInterfaceValidations {
   }
 
   /// Whether `command` can have an effect now; while the window cannot show the lines of its
-  /// files, only skipping the remaining files can.
+  /// files, only skipping the remaining files, the commands of the list, and in a window of
+  /// several files the patch of all of them can.
   func canPerform(_ command: SessionCommand) -> Bool {
     if unavailable != nil || collectionPlaceholder != nil,
       ![
         .skipRemainingFiles, .toggleFooter, .nextFile, .previousFile, .filterFiles,
-        .toggleIdenticalFiles,
+        .toggleIdenticalFiles, .copyPatch, .exportPatch,
       ].contains(command)
     {
       return false
@@ -676,6 +683,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
       editableFileURL != nil
     case .blockText:
       !blockText(at: CopiedPlace(pane: focusedPane, block: presentation.currentBlock)).isEmpty
+    case .patch:
+      hasPatch
     case .resultPane:
       layout.resultPane != nil
     case .swappableSides:

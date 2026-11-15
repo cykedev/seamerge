@@ -151,6 +151,8 @@ import Testing
       Save As…
       Save and Close ⌘↩
       ---
+      Export as Patch…
+      ---
       Result Encoding ▸
         UTF-8
         UTF-16 LE
@@ -176,6 +178,7 @@ import Testing
       Select All ⌘A
       ---
       Copy Block
+      Copy as Patch
       ---
       Find ▸
         Find… ⌘F
