@@ -193,13 +193,28 @@ final class SessionSplitViewController: NSSplitViewController {
   /// Whether the result has the whole window, with the panes above it collapsed.
   ///
   /// - Precondition: The window has a result, if it is to be maximized.
+  ///
+  /// Giving the panes above back their room puts the divider where it was before.
   var maximizesResult: Bool {
     get { resultPane != nil && splitViewItems.first?.isCollapsed == true }
     set {
       precondition(resultPane != nil || !newValue, "Only a window with a result maximizes it")
+      guard newValue != maximizesResult else { return }
+      let fraction = currentSourcesFraction
       splitViewItems.first?.isCollapsed = newValue
+      if newValue {
+        fractionBeforeMaximizing = fraction
+      } else if let fractionBeforeMaximizing {
+        view.layoutSubtreeIfNeeded()
+        splitView.setPosition(
+          (splitView.bounds.height * fractionBeforeMaximizing).rounded(), ofDividerAt: 0)
+      }
     }
   }
+
+  /// The share of the height that the panes above the result took before the result was
+  /// maximized.
+  private var fractionBeforeMaximizing: CGFloat?
 
   /// The split view item of the pane of the base, if the merge has one.
   private var baseItem: NSSplitViewItem? {

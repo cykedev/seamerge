@@ -204,6 +204,19 @@ import Testing
     #expect(abs(lineAtReadingLine(of: b) - line) <= 1)
   }
 
+  @Test func restoringTheLayoutPutsTheDividerAboveTheResultWhereItWas() async throws {
+    let controller = try Windows.controller(for: try await SampleMerges.helloWorld())
+    defer { controller.window?.close() }
+    let layout = controller.layout
+    layout.splitView.setPosition((layout.splitView.bounds.height * 0.56).rounded(), ofDividerAt: 0)
+    let before = try #require(layout.currentSourcesFraction)
+    controller.toggleResultMaximized(nil)
+    #expect(layout.currentSourcesFraction == nil)
+    controller.toggleResultMaximized(nil)
+    let after = try #require(layout.currentSourcesFraction)
+    #expect(abs(after - before) < 0.01, "\(before) became \(after)")
+  }
+
   @Test func zoomStaysWithinTheSizesThatTheSettingsOffer() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.helloWorld())
     defer { controller.window?.close() }
