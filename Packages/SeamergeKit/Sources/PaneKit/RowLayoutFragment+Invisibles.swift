@@ -2,7 +2,8 @@ import AppKit
 
 extension RowLayoutFragment {
   /// Draws a symbol in the cell of each space and tab of the fragment's lines and one for the
-  /// ending of each line after its last character.
+  /// ending of each line after its last character, or only in the cells of the spaces and tabs
+  /// in places of ignored differences.
   ///
   /// The symbols are drawn only, never part of the text, so that they are neither copied nor
   /// read by VoiceOver.
@@ -16,6 +17,8 @@ extension RowLayoutFragment {
       let font = text.attribute(.font, at: 0, effectiveRange: nil) as? NSFont
     else { return }
     let symbols = Symbols(font: font, color: invisibles.color)
+    let placeSymbols = Symbols(font: font, color: invisibles.placeColor)
+    let showsAll = invisibles.lineEndings != nil
     context.saveGState()
     defer { context.restoreGState() }
     // The context is flipped; text needs its own matrix to stand upright.
@@ -36,22 +39,27 @@ extension RowLayoutFragment {
         end -= 1
       }
       for index in range.lowerBound..<end {
-        let symbol: CTLine? =
-          switch text.character(at: index) {
-          case Self.space: symbols.space
-          case Self.tab: symbols.tab
-          default: nil
-          }
-        if let symbol {
-          draw(symbol, x: cellStart(index), baseline: baseline, in: context)
-        }
+        let character = text.character(at: index)
+        guard character == Self.space || character == Self.tab else { continue }
+        let isInPlace = Self.contains(invisibles.places, paragraphStart + index)
+        guard isInPlace || showsAll else { continue }
+        let set = isInPlace ? placeSymbols : symbols
+        draw(
+          character == Self.space ? set.space : set.tab, x: cellStart(index), baseline: baseline,
+          in: context)
       }
-      if isLastOfRow, row < invisibles.lineEndings.count,
-        let ending = symbols.lineEnding(invisibles.lineEndings[row])
+      if isLastOfRow, let lineEndings = invisibles.lineEndings, row < lineEndings.count,
+        let ending = symbols.lineEnding(lineEndings[row])
       {
         draw(ending, x: cellStart(end), baseline: baseline, in: context)
       }
     }
+  }
+
+  /// Whether one of `places`, sorted and apart, contains `offset`.
+  private static func contains(_ places: [Range<Int>], _ offset: Int) -> Bool {
+    let index = places.partitioningIndex { $0.upperBound > offset }
+    return index < places.count && places[index].contains(offset)
   }
 
   private func draw(_ line: CTLine, x: CGFloat, baseline: CGFloat, in context: CGContext) {

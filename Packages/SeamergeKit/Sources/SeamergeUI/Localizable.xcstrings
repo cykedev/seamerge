@@ -680,6 +680,9 @@
     "Hide Footer" : {
       "comment" : "View menu command."
     },
+    "Hide Ignored Changes" : {
+      "comment" : "View menu command."
+    },
     "Hide Invisibles" : {
       "comment" : "View menu command."
     },
@@ -1057,6 +1060,9 @@
     },
     "Show invisible characters (no lines to show)" : {
       "comment" : "Help tag of the footer toggle of invisibles in a window without lines."
+    },
+    "Show Ignored Changes" : {
+      "comment" : "View menu command: highlights where lines differ in ignored ways."
     },
     "Show Invisibles" : {
       "comment" : "View menu command."

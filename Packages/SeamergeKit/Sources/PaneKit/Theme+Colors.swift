@@ -65,6 +65,24 @@ extension Theme {
     }
   }
 
+  /// The fill behind the places where a line differs in a way that the comparison ignores, such
+  /// as other whitespace: a pale gray, like the hollow ring of such a line in the gutter.
+  public var ignoredDifferenceFill: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.ignoredDifferenceOpacity[appearance])
+    }
+  }
+
+  /// The color of the spaces and tabs in a place of an ignored difference, which say what differs
+  /// there.
+  public var ignoredDifferenceSymbolColor: NSColor {
+    color { appearance, nsAppearance in
+      NSColor.labelColor.resolved(in: nsAppearance)
+        .withAlphaComponent(Palette.ignoredDifferenceSymbolOpacity[appearance])
+    }
+  }
+
   /// The tone behind the marks of the overview bar, drawn over the text background.
   public var overviewBackgroundTone: NSColor {
     color { appearance, nsAppearance in

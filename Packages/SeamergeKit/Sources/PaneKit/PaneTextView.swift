@@ -784,6 +784,17 @@ final class PaneTextView: NSTextView {
         }
       }
     }
+    let places = content.ignoredDifferencePlaces
+    if !places.isEmpty {
+      let offsets = shownOffsets(ofParagraph: grid.paragraphOffsets(ofRows: rows))
+      var index = places.partitioningIndex { $0.upperBound > offsets.lowerBound }
+      while index < places.count, places[index].lowerBound < offsets.upperBound {
+        runs.append(
+          RowLayoutFragment.Run(
+            range: places[index].clamped(to: offsets), fill: theme.ignoredDifferenceFill))
+        index += 1
+      }
+    }
     return (runs, removals)
   }
 
@@ -892,9 +903,17 @@ extension PaneTextView: RowPainter {
       background: Theme.backgroundColor,
       textBandHeight: theme.textBandHeight, runs: changes.runs, selections: selections,
       removals: changes.removals,
-      invisibles: showsInvisibles
-        ? RowLayoutFragment.Invisibles(
-          lineEndings: Array(content.lineEndings[rows]),
-          color: theme.invisibleCharacterColor, baseline: theme.baseline) : nil)
+      invisibles: invisibles(inRows: rows))
+  }
+
+  /// The invisible characters that `rows` show: all of them while the pane shows them, and the
+  /// spaces and tabs of the places of ignored differences, which tell what differs there, in a
+  /// stronger color.
+  private func invisibles(inRows rows: Range<Int>) -> RowLayoutFragment.Invisibles? {
+    guard showsInvisibles || !content.ignoredDifferencePlaces.isEmpty else { return nil }
+    return RowLayoutFragment.Invisibles(
+      lineEndings: showsInvisibles ? Array(content.lineEndings[rows]) : nil,
+      places: content.ignoredDifferencePlaces, color: theme.invisibleCharacterColor,
+      placeColor: theme.ignoredDifferenceSymbolColor, baseline: theme.baseline)
   }
 }

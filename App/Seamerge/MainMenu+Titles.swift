@@ -38,9 +38,6 @@ extension MainMenu {
     static let jumpToSelection = String(localized: "Jump to Selection", comment: "Edit > Find.")
 
     static let view = String(localized: "View", comment: "Menu bar.")
-    static let showIgnoredChanges = String(
-      localized: "Show Ignored Changes",
-      comment: "View menu: mark the differences the comparison mode ignores.")
     static let showSidebar = String(
       localized: "Show Sidebar", comment: "View menu: show the list of the files of a window.")
     static let showToolbar = String(localized: "Show Toolbar", comment: "View menu.")

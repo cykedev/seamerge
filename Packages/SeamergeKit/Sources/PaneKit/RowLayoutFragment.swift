@@ -84,10 +84,16 @@ final class RowLayoutFragment: NSTextLayoutFragment {
 
   /// The symbols for spaces, tabs and line endings.
   struct Invisibles: Sendable {
-    /// How the line of each of the fragment's rows ends.
-    var lineEndings: [LineEnding]
+    /// How the line of each of the fragment's rows ends, or `nil` if only the places of ignored
+    /// differences get symbols.
+    var lineEndings: [LineEnding]?
+    /// The places of ignored differences, as UTF-16 offsets into the text, sorted and apart,
+    /// whose spaces and tabs get symbols in a color of their own.
+    var places: [Range<Int>]
     /// The color of the symbols.
     var color: NSColor
+    /// The color of the symbols in the places of ignored differences.
+    var placeColor: NSColor
     /// The distance from the top of a row to the baseline of its text, as drawn.
     var baseline: CGFloat
   }

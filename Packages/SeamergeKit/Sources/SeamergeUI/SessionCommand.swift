@@ -70,6 +70,10 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Shows spaces, tabs and line endings as quiet symbols, or hides them.
   case toggleInvisibles
 
+  /// Highlights the places where lines differ in a way that the comparison mode ignores, such
+  /// as other whitespace, or stops highlighting them.
+  case toggleIgnoredChanges
+
   /// Wraps long lines at the width of their panes in every session window, or lets them run on.
   case toggleLineWrapping
 
@@ -215,6 +219,10 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "Highlight Syntax", bundle: .module, comment: "View menu command.")
     case .toggleInvisibles:
       String(localized: "Show Invisibles", bundle: .module, comment: "View menu command.")
+    case .toggleIgnoredChanges:
+      String(
+        localized: "Show Ignored Changes", bundle: .module,
+        comment: "View menu command: highlights where lines differ in ignored ways.")
     case .toggleLineWrapping:
       String(localized: "Wrap Lines", bundle: .module, comment: "View menu command.")
     case .toggleLineAlignment:
@@ -394,6 +402,8 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(localized: "Restore Layout", bundle: .module, comment: "View menu command.")
     case .toggleInvisibles:
       String(localized: "Hide Invisibles", bundle: .module, comment: "View menu command.")
+    case .toggleIgnoredChanges:
+      String(localized: "Hide Ignored Changes", bundle: .module, comment: "View menu command.")
     case .toggleFooter:
       String(localized: "Show Footer", bundle: .module, comment: "View menu command.")
     default:
@@ -501,6 +511,7 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .toggleSyntaxHighlighting:
       #selector(SessionWindowController.toggleSyntaxHighlighting(_:))
     case .toggleInvisibles: #selector(SessionWindowController.toggleInvisibles(_:))
+    case .toggleIgnoredChanges: #selector(SessionWindowController.toggleIgnoredChanges(_:))
     case .toggleLineWrapping: #selector(SessionWindowController.toggleLineWrapping(_:))
     case .toggleLineAlignment: #selector(SessionWindowController.toggleLineAlignment(_:))
     case .showAllLines: #selector(SessionWindowController.showAllLines(_:))

@@ -13,12 +13,23 @@ public struct IgnoredDifferences: Sendable, Hashable {
   /// The differing lines of each input.
   private let linesByRole: [Role: IndexSet]
 
+  /// Each differing line of each input, with the input and the line it is compared with.
+  private let pairs: [Role: [LinePair]]
+
+  /// A differing line and the line of another input it is compared with.
+  private struct LinePair: Sendable, Hashable {
+    var line: Int
+    var reference: Role
+    var referenceLine: Int
+  }
+
   /// Finds the differing lines in the blocks of `session`.
   ///
   /// The search compares the bytes of every line that counts as equal to another, so it takes
   /// time in proportion to the size of the files; the result is meant to be kept.
   public init(in session: Session) {
     var linesByRole: [Role: IndexSet] = [:]
+    var pairs: [Role: [LinePair]] = [:]
     if session.options.mode != .exact {
       let files = session.files
       let hasBase = files[.base] != nil
@@ -30,11 +41,63 @@ public struct IgnoredDifferences: Sendable, Hashable {
           for (line, referenceLine) in zip(block.lines(in: role), block.lines(in: reference))
           where !Self.bytesMatch(file, line, referenceFile, referenceLine) {
             linesByRole[role, default: IndexSet()].insert(line)
+            pairs[role, default: []].append(
+              LinePair(line: line, reference: reference, referenceLine: referenceLine))
           }
         }
       }
     }
     self.linesByRole = linesByRole
+    self.pairs = pairs
+  }
+
+  /// A place within a line where it differs from the line it is compared with.
+  public struct Place: Sendable, Hashable {
+    /// The zero-based index of the line.
+    public var line: Int
+
+    /// The characters of the place, as UTF-16 offsets from the start of the line.
+    public var range: Range<Int>
+
+    /// Creates the place of the characters `range` of `line`.
+    public init(line: Int, range: Range<Int>) {
+      self.line = line
+      self.range = range
+    }
+  }
+
+  /// The places where the differing lines of the input of `role` differ, in line order: the
+  /// characters a line has in place of those of the line it is compared with, such as other
+  /// whitespace, widened to whole composed characters.
+  ///
+  /// A line that differs only in its line ending, or only by lacking whitespace the other line
+  /// has, has no place of its own. The search compares the tokens of each differing line, so it
+  /// is meant to run once the user asks to see the places; the result is meant to be kept.
+  ///
+  /// - Precondition: `session` is the session the differences were found in.
+  /// - Throws: The error of the comparison.
+  public func places(in role: Role, of session: Session) throws(MergeModelError) -> [Place] {
+    guard let file = session.files[role] else { return [] }
+    var places: [Place] = []
+    for pair in (pairs[role] ?? []).sorted(by: { $0.line < $1.line }) {
+      guard let referenceFile = session.files[pair.reference] else { continue }
+      let text = file.utf8.subdata(in: file.contentByteRange(ofLine: pair.line))
+      let referenceText = referenceFile.utf8.subdata(
+        in: referenceFile.contentByteRange(ofLine: pair.referenceLine))
+      guard text != referenceText else { continue }
+      let string = String(decoding: text, as: UTF8.self) as NSString
+      for run in try EngineAdapter.compareTokens(text, referenceText).changedRuns
+      where !run.first.isEmpty {
+        let start = file.lineIndex.utf16Offset(
+          ofByteOffset: run.first.lowerBound, inLine: pair.line)
+        let end = file.lineIndex.utf16Offset(ofByteOffset: run.first.upperBound, inLine: pair.line)
+        let composed = string.rangeOfComposedCharacterSequences(
+          for: NSRange(location: start, length: end - start))
+        places.append(
+          Place(line: pair.line, range: composed.location..<composed.location + composed.length))
+      }
+    }
+    return places
   }
 
   /// The differing lines of the input of `role`, as zero-based indices.

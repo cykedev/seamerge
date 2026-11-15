@@ -20,6 +20,10 @@ public struct PaneContent: Sendable {
   /// counts both as equal.
   public var ignoredDifferenceRows: IndexSet
 
+  /// The places within the rows of ``ignoredDifferenceRows`` where they differ, as UTF-16
+  /// ranges of the text, sorted and apart; empty unless the places are to be shown.
+  public var ignoredDifferencePlaces: [Range<Int>]
+
   /// How the line of each row ends in the file, shown among the invisible characters.
   public var lineEndings: [LineEnding]
 
@@ -50,15 +54,16 @@ public struct PaneContent: Sendable {
   ///   overlap and lie within the text; the rows of the tints lie within the rows.
   public init(
     text: String, lineNumbers: [Int32], blocks: [PaneBlock] = [],
-    ignoredDifferenceRows: IndexSet = [], lineEndings: [LineEnding]? = nil,
-    previews: [PanePreview] = [], rowTints: [Int: BlockStyle] = [:],
-    marksBlocksWithoutRows: Bool = false
+    ignoredDifferenceRows: IndexSet = [], ignoredDifferencePlaces: [Range<Int>] = [],
+    lineEndings: [LineEnding]? = nil, previews: [PanePreview] = [],
+    rowTints: [Int: BlockStyle] = [:], marksBlocksWithoutRows: Bool = false
   ) {
     self.text = text
     self.marksBlocksWithoutRows = marksBlocksWithoutRows
     self.lineNumbers = lineNumbers
     self.blocks = blocks
     self.ignoredDifferenceRows = ignoredDifferenceRows
+    self.ignoredDifferencePlaces = ignoredDifferencePlaces
     self.previews = previews
     self.rowTints = rowTints
     self.lineEndings =
@@ -152,6 +157,14 @@ public struct PaneContent: Sendable {
     previews = previews.compactMap { $0.takingOver(range, length: length) }
     ignoredDifferenceRows = IndexSet(
       ignoredDifferenceRows.compactMap { Self.row($0, after: change) })
+    let delta = length - range.count
+    ignoredDifferencePlaces = ignoredDifferencePlaces.compactMap { place in
+      if place.upperBound <= range.lowerBound { return place }
+      if place.lowerBound >= range.upperBound {
+        return place.lowerBound + delta..<place.upperBound + delta
+      }
+      return nil
+    }
     rowTints = Dictionary(
       uniqueKeysWithValues: rowTints.compactMap { row, tint in
         Self.row(row, after: change).map { ($0, tint) }

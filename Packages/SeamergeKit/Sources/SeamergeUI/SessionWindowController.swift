@@ -575,6 +575,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
     case .toggleBase: !layout.showsBase
     case .toggleResultMaximized: layout.maximizesResult
     case .toggleInvisibles: presentation.allPanes.contains(where: \.showsInvisibles)
+    case .toggleIgnoredChanges: presentation.showsIgnoredChanges
     case .toggleScrollSynchronization: presentation.scrollSync.isEnabled
     case .toggleSyntaxHighlighting: highlightsSyntax
     case .toggleLineWrapping: presentation.wrapsLines
@@ -607,6 +608,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
       presentation.changes.hasBase && !layout.maximizesResult
     case .collapsedRows:
       presentation.canShowAllRows
+    case .ignoredChanges:
+      presentation.hasPlacesOfIgnoredChanges
     case .collapsibleRows:
       presentation.canCollapseUnchangedRows(caretLine: caretLineInTextMode)
     case .largerFontSize:

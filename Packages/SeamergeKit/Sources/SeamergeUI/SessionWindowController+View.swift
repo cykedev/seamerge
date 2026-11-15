@@ -57,6 +57,12 @@ extension SessionWindowController {
     updateFooter()
   }
 
+  /// Highlights the places where lines differ in a way that the comparison ignores, or stops.
+  @objc func toggleIgnoredChanges(_ sender: Any?) {
+    guard canPerform(.toggleIgnoredChanges) else { return }
+    presentation.showsIgnoredChanges.toggle()
+  }
+
   /// Wraps long lines at the width of their panes, or lets them run on.
   @objc func toggleLineWrapping(_ sender: Any?) {
     presentation.keepingTheLineOfBInPlace {

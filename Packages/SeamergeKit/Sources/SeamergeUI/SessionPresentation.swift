@@ -51,6 +51,42 @@ final class SessionPresentation {
   /// The text of each input without filler rows, made when a pane first shows it.
   var lineTexts: [Role: DisplayText] = [:]
 
+  /// The lines that differ in a way that the comparison mode ignores, once the panes side by
+  /// side show the session.
+  private(set) var ignoredDifferences: IgnoredDifferences? {
+    didSet { hasIgnoredChangePlaces = nil }
+  }
+
+  /// Whether a pane side by side has a place where its lines differ in a way that the comparison
+  /// mode ignores, once asked; lines that differ only in their line endings have none.
+  private var hasIgnoredChangePlaces: Bool?
+
+  /// Whether the panes side by side have a place where their lines differ in a way that the
+  /// comparison mode ignores, which Show Ignored Changes would highlight.
+  var hasPlacesOfIgnoredChanges: Bool {
+    if let hasIgnoredChangePlaces { return hasIgnoredChangePlaces }
+    guard let ignoredDifferences, !ignoredDifferences.isEmpty else { return false }
+    let session = changes.session
+    let hasPlaces = layout.sourcePanes.contains { role, _ in
+      do {
+        return try !ignoredDifferences.places(in: role, of: session).isEmpty
+      } catch {
+        return false
+      }
+    }
+    hasIgnoredChangePlaces = hasPlaces
+    return hasPlaces
+  }
+
+  /// Whether the panes side by side highlight the places where their lines differ in a way that
+  /// the comparison mode ignores.
+  var showsIgnoredChanges = false {
+    didSet {
+      guard showsIgnoredChanges != oldValue else { return }
+      scrollSync.withoutFollowing(showSourceContents)
+    }
+  }
+
   /// Whether the panes wrap long lines at their width.
   var wrapsLines = false {
     didSet {
@@ -312,6 +348,7 @@ final class SessionPresentation {
   /// Gives each pane side by side its content, on the grid or with the lines of its file.
   private func showSourceContents() {
     let ignoredDifferences = IgnoredDifferences(in: changes.session)
+    self.ignoredDifferences = ignoredDifferences
     let conflictMarkRole = changes.conflictMarkRole(baseIsShown: layout.showsBase)
     highlights = []
     for (role, pane) in layout.sourcePanes {
@@ -322,10 +359,12 @@ final class SessionPresentation {
         alignsLines
         ? PaneContent(
           source: role, of: changes, document: result?.document,
-          ignoredDifferences: ignoredDifferences, conflictMarkRole: conflictMarkRole)
+          ignoredDifferences: ignoredDifferences, showsIgnoredPlaces: showsIgnoredChanges,
+          conflictMarkRole: conflictMarkRole)
         : PaneContent(
           lines: role, text: lineText(of: role), of: changes, document: result?.document,
-          ignoredDifferences: ignoredDifferences, conflictMarkRole: conflictMarkRole)
+          ignoredDifferences: ignoredDifferences, showsIgnoredPlaces: showsIgnoredChanges,
+          conflictMarkRole: conflictMarkRole)
       pane.setContent(content, collapsedRuns: sourceRuns(in: role))
       pane.expandedRuns = sourceExpandedRuns(in: role)
     }

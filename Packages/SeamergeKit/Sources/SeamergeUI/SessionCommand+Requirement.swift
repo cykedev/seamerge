@@ -21,6 +21,10 @@ extension SessionCommand {
     /// Showing all lines needs a collapsed run.
     case collapsedRows
 
+    /// Showing the places of ignored changes needs a place where a line differs in a way the
+    /// comparison ignores; a line that differs only in its line ending has none.
+    case ignoredChanges
+
     /// Collapsing needs a run of unchanged lines without work that is expanded.
     case collapsibleRows
 
@@ -114,6 +118,7 @@ extension SessionCommand {
     case .save, .saveAs, .saveAndClose: .result
     case .leaveUnresolved: .waitingCaller
     case .changeFiles: .ownFiles
+    case .toggleIgnoredChanges: .ignoredChanges
     case .toggleScrollSynchronization, .toggleSyntaxHighlighting, .toggleInvisibles,
       .toggleLineWrapping, .toggleLineAlignment, .toggleFooter, .goToLine:
       .nothing

@@ -77,7 +77,10 @@ import Testing
         let rowFill = resolve(theme.rowFill(for: style, isFiller: false, isCurrent: isCurrent))
         let row = Contrast.over(rowFill, ground)
         let runFill = resolve(theme.runFill(for: style, isCurrent: isCurrent))
-        var surfaces = [("row", row), ("changed run", Contrast.over(runFill, row))]
+        var surfaces = [
+          ("row", row), ("changed run", Contrast.over(runFill, row)),
+          ("place of an ignored change", Contrast.over(resolve(theme.ignoredDifferenceFill), row)),
+        ]
         for isEmphasized in [true, false] {
           let selection = resolve(theme.selectionFill(isEmphasized: isEmphasized))
           let name = isEmphasized ? "selection" : "inactive selection"
@@ -102,7 +105,17 @@ import Testing
                   surface: surface, minimum: Self.text))
             }
           }
-          // An invisible character tells which line ending a line has.
+          // The spaces and tabs in a place of an ignored change say what differs there.
+          if surfaceName == "place of an ignored change" {
+            pairs.append(
+              Pair(
+                description: "space or tab on \(surfaceName) of \(place)",
+                foreground: Contrast.over(resolve(theme.ignoredDifferenceSymbolColor), surface),
+                surface: surface, minimum: Self.sign))
+          }
+          // An invisible character tells which line ending a line has; none stands in a place
+          // of an ignored change.
+          guard surfaceName != "place of an ignored change" else { continue }
           pairs.append(
             Pair(
               description: "invisible character on \(surfaceName) of \(place)",

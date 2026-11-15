@@ -67,4 +67,37 @@ struct IgnoredDifferencesTests {
     #expect(session.blocks.map(\.kind) == [.conflict])
     #expect(IgnoredDifferences(in: session).isEmpty)
   }
+
+  @Test func placesAreTheCharactersThatDifferWithinTheLines() async throws {
+    let session = try await diff(
+      "same\n\tlet  x = 1 // ü\nend\n", "same\n    let x = 1 // ü\nend\n",
+      mode: .ignoreWhitespaceAmount)
+    let ignored = IgnoredDifferences(in: session)
+
+    #expect(
+      try ignored.places(in: .a, of: session)
+        == [.init(line: 1, range: 0..<1), .init(line: 1, range: 4..<6)])
+    #expect(
+      try ignored.places(in: .b, of: session)
+        == [.init(line: 1, range: 0..<4), .init(line: 1, range: 7..<8)])
+  }
+
+  @Test func lineThatDiffersOnlyInItsEndingHasNoPlace() async throws {
+    let session = try await diff("a\r\nb\n", "a\nb\n", mode: .ignoreWhitespaceAmount)
+    let ignored = IgnoredDifferences(in: session)
+
+    #expect(ignored.lines(in: .a) == IndexSet(integer: 0))
+    #expect(try ignored.places(in: .a, of: session).isEmpty)
+    #expect(try ignored.places(in: .b, of: session).isEmpty)
+  }
+
+  @Test func placeAfterCharactersOutsideTheBasicPlaneCountsUTF16Units() async throws {
+    let session = try await merge(
+      base: "a\nb\nc\n", a: "a\nx\ny\nb\n😀 c  d\n", b: "a\nb\n😀 c d\n",
+      mode: .ignoreWhitespaceAmount)
+
+    #expect(
+      try IgnoredDifferences(in: session).places(in: .a, of: session)
+        == [.init(line: 4, range: 4..<6)])
+  }
 }

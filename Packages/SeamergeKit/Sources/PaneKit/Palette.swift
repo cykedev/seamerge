@@ -168,6 +168,16 @@ enum Palette {
   static let offToggleLabelOpacity = AppearanceValues<CGFloat>(
     light: 0.5, dark: 0.5, lightHighContrast: 0.65, darkHighContrast: 0.65)
 
+  /// The opacity of the label color behind the places where a line differs in a way that the
+  /// comparison ignores: about as quiet as the tint of typed text.
+  static let ignoredDifferenceOpacity = AppearanceValues<CGFloat>(
+    light: 0.10, dark: 0.10, lightHighContrast: 0.12, darkHighContrast: 0.12)
+
+  /// The opacity of the label color for the spaces and tabs in such a place: stronger than the
+  /// other invisible characters, since they say what differs there.
+  static let ignoredDifferenceSymbolOpacity = AppearanceValues<CGFloat>(
+    light: 0.62, dark: 0.66, lightHighContrast: 0.72, darkHighContrast: 0.72)
+
   /// The opacity of the label color for the invisible characters.
   static let invisibleCharacterOpacity = AppearanceValues<CGFloat>(
     light: 0.46, dark: 0.53, lightHighContrast: 0.60, darkHighContrast: 0.60)
