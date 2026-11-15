@@ -256,16 +256,40 @@ struct AppDelegateTests {
     second.close()
   }
 
-  @Test func foldersOnTheDockIconLandInTheOuterFields() throws {
+  @Test func foldersOnTheDockIconLandInTheOuterFieldsWithoutOpening() throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
     let folders = try sandbox.folders()
+    let plain = [folders.left, folders.right].map {
+      URL(filePath: $0.path(percentEncoded: false), directoryHint: .notDirectory)
+    }
 
-    #expect(delegate.openFiles([folders.left, folders.right]))
+    delegate.application(.shared, open: plain)
 
     let window = try #require(delegate.compareFilesWindowController?.window)
+    defer { window.close() }
     #expect(window.isVisible)
-    window.close()
+    let fields = fileFields(in: window)
+    #expect(fields.map(\.label) == ["Left Folder", "Base, optional", "Right Folder"])
+    #expect(
+      fields.map(\.value)
+        == [fileFieldValue(of: folders.left), "empty", fileFieldValue(of: folders.right)])
+    #expect(delegate.coordinator.windowControllers.isEmpty)
+  }
+
+  @Test func appTakesFilesAndFoldersButIsNeverTheirDefaultApp() throws {
+    let app = Bundle(for: AppDelegate.self).bundleURL.deletingLastPathComponent()
+      .appending(path: "Seamerge.app")
+    let info = try #require(NSDictionary(contentsOf: app.appending(path: "Contents/Info.plist")))
+    let types = try #require(info["CFBundleDocumentTypes"] as? [[String: Any]])
+
+    #expect(
+      types.flatMap { $0["LSItemContentTypes"] as? [String] ?? [] }
+        == ["public.data", "public.folder"])
+    for type in types {
+      #expect(type["LSHandlerRank"] as? String == "None", "\(type)")
+      #expect(type["CFBundleTypeRole"] as? String == "Viewer", "\(type)")
+    }
   }
 
   @Test func settingsOpenFromTheAppMenuOnceAndKeepTheirValuesInTheDefaultsOfTheApp() throws {
