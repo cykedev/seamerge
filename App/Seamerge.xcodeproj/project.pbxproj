@@ -323,12 +323,13 @@
 			);
 			name = "Keep English Only in Sparkle";
 			outputFileListPaths = (
+				"$(SRCROOT)/Config/SparkleTranslations.xcfilelist",
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Sparkle brings its own translations, which would show its windows in the language of the system\n# in an app that speaks English only. Base.lproj holds its English texts. Xcode signs the\n# framework after this phase.\nframework=\"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Sparkle.framework\"\nfind \"${framework}/Versions/B/Resources\" -maxdepth 1 -name '*.lproj' ! -name Base.lproj \\\n  -exec rm -rf {} +\n";
+			shellScript = "# Sparkle brings its own translations, which would show its windows in the language of the system\n# in an app that speaks English only; Base.lproj holds its English texts. The sandbox of build\n# scripts lets a script remove only the paths it declares, so they are the outputs of this phase,\n# each file before its folder. As they are gone afterwards, the phase runs in every build. Xcode\n# signs the framework after it.\nset -e\n/usr/bin/grep -v '^#' \"${SCRIPT_OUTPUT_FILE_LIST_0}\" | while IFS= read -r path; do\n  /bin/rm -rf \"${path}\"\ndone\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
