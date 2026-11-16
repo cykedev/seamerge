@@ -125,6 +125,25 @@ import Testing
     try expect(in: try Rendering.bitmap(of: pane), at: pointer, is: Contrast.over(label, outside))
   }
 
+  @Test func pointerMovesWithTheMarksOfTheCurrentBlock() throws {
+    let theme = Theme()
+    let (pane, bar, window) = Self.paneWithBar(theme: theme, appearance: appearance)
+    defer { window.close() }
+    pane.documentView.scroll(CGPoint(x: 0, y: pane.documentView.frame.height))
+    bar.currentBlock = 1
+    let label = try #require(Contrast.resolve(.labelColor, in: appearance))
+    func pointer(atRow row: Int) -> CGPoint {
+      CGPoint(x: bar.frame.minX + 1, y: Self.y(of: row, in: bar))
+    }
+    let before = try Rendering.bitmap(of: pane)
+    let ground = try Rendering.color(in: before, at: pointer(atRow: 70))
+    try expect(in: before, at: pointer(atRow: 170), is: Contrast.over(label, ground))
+    bar.marks[1].rows = 60..<80
+    let after = try Rendering.bitmap(of: pane)
+    try expect(in: after, at: pointer(atRow: 70), is: Contrast.over(label, ground))
+    #expect(try Rendering.color(in: after, at: pointer(atRow: 170)) == ground)
+  }
+
   @Test func frameOfTheVisiblePartSpansTheBarAndGetsStrongerUnderThePointer() throws {
     let theme = Theme()
     let (pane, bar, window) = Self.paneWithBar(theme: theme, appearance: appearance)

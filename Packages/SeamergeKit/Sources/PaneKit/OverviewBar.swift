@@ -63,6 +63,13 @@ public final class OverviewBar: NSScroller {
   private var cachedLayout: OverviewLayout?
   private var cachedMarkElements: [MarkElement]?
 
+  /// The block whose marks ``cachedCurrentBlockRect`` covers, if it holds any.
+  private var cachedCurrentBlock: Int?
+
+  /// What the marks of ``cachedCurrentBlock`` cover, `nil` if it has none, found once for each
+  /// layout and current block rather than on every step of scrolling.
+  private var cachedCurrentBlockRect: CGRect?
+
   /// Whether the pointer is over the bar or drags its frame, which then draws stronger.
   private(set) var isEmphasized = false {
     didSet {
@@ -272,6 +279,7 @@ public final class OverviewBar: NSScroller {
   private func invalidateLayout() {
     cachedLayout = nil
     cachedMarkElements = nil
+    cachedCurrentBlock = nil
     needsDisplay = true
   }
 
@@ -330,11 +338,13 @@ public final class OverviewBar: NSScroller {
   /// Draws the triangle at the middle of the marks of the current block: of its one mark, or of
   /// the marks of its parts one below the other in a single column.
   private func drawCurrentBlockIndicator(_ layout: OverviewLayout) {
-    guard
-      let currentBlock,
-      let rect = zip(marks, layout.markRects).filter({ $0.0.block == currentBlock }).map(\.1)
-        .reduce(nil, { $0?.union($1) ?? $1 })
-    else { return }
+    guard let currentBlock else { return }
+    if cachedCurrentBlock != currentBlock {
+      cachedCurrentBlockRect = zip(marks, layout.markRects).filter { $0.0.block == currentBlock }
+        .map(\.1).reduce(nil) { $0?.union($1) ?? $1 }
+      cachedCurrentBlock = currentBlock
+    }
+    guard let rect = cachedCurrentBlockRect else { return }
     let middle = rect.midY
     let height = Theme.currentBlockIndicatorHeight
     let path = NSBezierPath()

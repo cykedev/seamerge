@@ -10,8 +10,18 @@ import AppKit
 final class CollapsedRunBar: NSButton {
   /// The colors and fonts of the pane.
   var theme: Theme {
-    didSet { needsDisplay = true }
+    didSet {
+      ellipsis = nil
+      needsDisplay = true
+    }
   }
+
+  /// The ellipsis in the color of the text, made when first drawn; the color is resolved as it
+  /// draws, so one image serves every appearance.
+  ///
+  /// AppKit draws a view again each time it moves, so a bar draws on every step of scrolling;
+  /// made anew each time, the symbol would be looked up and rendered anew as well.
+  private var ellipsis: NSImage?
 
   /// The index of the run in the pane's collapsed runs.
   let runIndex: Int
@@ -106,11 +116,13 @@ final class CollapsedRunBar: NSButton {
     }
     let color = theme.collapsedRunTextColor
     var x = contentInset
-    if let symbol = NSImage(systemSymbolName: "ellipsis", accessibilityDescription: nil)?
-      .withSymbolConfiguration(
-        NSImage.SymbolConfiguration(textStyle: Theme.collapsedRunTextStyle)
-          .applying(NSImage.SymbolConfiguration(paletteColors: [color])))
-    {
+    if ellipsis == nil {
+      ellipsis = NSImage(systemSymbolName: "ellipsis", accessibilityDescription: nil)?
+        .withSymbolConfiguration(
+          NSImage.SymbolConfiguration(textStyle: Theme.collapsedRunTextStyle)
+            .applying(NSImage.SymbolConfiguration(paletteColors: [color])))
+    }
+    if let symbol = ellipsis {
       let size = symbol.size
       symbol.draw(
         in: CGRect(

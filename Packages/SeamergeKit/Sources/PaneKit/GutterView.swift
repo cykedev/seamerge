@@ -16,6 +16,7 @@ import AppKit
 final class GutterView: NSView {
   var theme = Theme() {
     didSet {
+      ringImages = [:]
       numberColumnWidth = Self.numberColumnWidth(of: content, theme: theme)
       needsDisplay = true
       updateToolTips()
@@ -37,6 +38,13 @@ final class GutterView: NSView {
 
   /// The width of the column of line numbers, which only the content and the theme change.
   private var numberColumnWidth = GutterView.numberColumnWidth(of: .empty, theme: Theme())
+
+  /// The rings of ignored differences by color, made when first drawn.
+  ///
+  /// The gutter draws on every step of scrolling, and a symbol made anew is looked up and rendered
+  /// anew as well. The colors are resolved as the rings draw, so one image serves every
+  /// appearance.
+  private var ringImages: [NSColor: NSImage] = [:]
 
   var currentBlock: Int? {
     didSet { needsDisplay = true }
@@ -412,14 +420,21 @@ final class GutterView: NSView {
       .font: hasFocus ? theme.lineNumberFont : theme.currentLineNumberFont,
       .foregroundColor: currentColor,
     ]
+    // The digits have equal widths, so all numbers with as many digits are as wide. The gutter
+    // draws on every step of scrolling; each drawing measures one number for each count of
+    // digits and font, not every number.
+    var numberWidths: [NumberWidth: CGFloat] = [:]
     for row in rows {
       let rowRect = rect(ofRow: row)
       let isCurrent = isInCurrentBlock(row)
       drawGround(ofRow: row, in: rowRect, hasFocus: hasFocus)
       for (column, lineNumber) in shownLineNumbers(ofRow: row).enumerated() where lineNumber >= 0 {
-        drawLineNumber(
-          Int(lineNumber) + 1, inColumn: column, of: rowRect,
-          attributes: isCurrent ? currentNumberAttributes : numberAttributes)
+        let text = String(Int(lineNumber) + 1) as NSString
+        let attributes = isCurrent ? currentNumberAttributes : numberAttributes
+        let key = NumberWidth(digits: text.length, isCurrent: isCurrent)
+        let width = numberWidths[key] ?? text.size(withAttributes: attributes).width
+        numberWidths[key] = width
+        drawLineNumber(text, width: width, inColumn: column, of: rowRect, attributes: attributes)
       }
       drawMarkers(ofRow: row, in: rowRect, color: isCurrent ? currentColor : nil)
     }
@@ -487,21 +502,19 @@ final class GutterView: NSView {
     [.font: theme.lineNumberFont, .foregroundColor: color]
   }
 
-  /// Draws `number` right-aligned in the column of line numbers `column`, counted from the
-  /// leading edge.
+  /// Draws the line number `text`, `width` wide, right-aligned in the column of line numbers
+  /// `column`, counted from the leading edge.
   private func drawLineNumber(
-    _ number: Int, inColumn column: Int, of rowRect: CGRect,
+    _ text: NSString, width: CGFloat, inColumn column: Int, of rowRect: CGRect,
     attributes: [NSAttributedString.Key: Any]
   ) {
-    let text = String(number) as NSString
-    let size = text.size(withAttributes: attributes)
     let font = attributes[.font] as? NSFont ?? theme.lineNumberFont
     let columnEnd =
       Theme.gutterLeadingInset + CGFloat(column + 1) * numberColumnWidth
       + CGFloat(column) * Theme.gutterNumberColumnSpacing
     // Shares the baseline of the code beside it.
     let origin = CGPoint(
-      x: columnEnd - size.width,
+      x: columnEnd - width,
       y: rowRect.minY + theme.baseline - font.ascender)
     text.draw(at: origin, withAttributes: attributes)
   }
@@ -551,12 +564,15 @@ final class GutterView: NSView {
   /// Draws the hollow ring of a line whose difference the comparison ignores, in `color` or, for
   /// `nil`, in the secondary color.
   private func drawRing(centeredIn slot: CGRect, color: NSColor?) {
+    let color = color ?? Theme.secondaryMarkColor
     guard
-      let image = NSImage(systemSymbolName: "circle", accessibilityDescription: nil)?
+      let image = ringImages[color]
+        ?? NSImage(systemSymbolName: "circle", accessibilityDescription: nil)?
         .withSymbolConfiguration(
           theme.ringSymbolConfiguration.applying(
-            NSImage.SymbolConfiguration(paletteColors: [color ?? Theme.secondaryMarkColor])))
+            NSImage.SymbolConfiguration(paletteColors: [color])))
     else { return }
+    ringImages[color] = image
     let size = image.size
     let rect = CGRect(
       origin: pixelAligned(CGPoint(x: slot.midX - size.width / 2, y: slot.midY - size.height / 2)),
@@ -619,6 +635,13 @@ final class GutterView: NSView {
   private static func arrowCharacter(pointsDown: Bool) -> String {
     pointsDown ? "\u{2193}" : "\u{2191}"
   }
+}
+
+/// The digits of a line number, and whether it stands on a cell of the current block, in its
+/// font: what decides how wide the number is.
+private struct NumberWidth: Hashable {
+  var digits: Int
+  var isCurrent: Bool
 }
 
 /// A mark in the gutter.
