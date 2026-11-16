@@ -2,6 +2,24 @@
 
 All notable changes to Seamerge are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] - 2026-11-16
+
+Users of 0.4.0 get this version through Seamerge ▸ Check for Updates… or the automatic check.
+
+### Added
+
+- `Examples/Logs` holds two build logs for trying the ignore rules.
+
+### Changed
+
+- With the base hidden, a merge compares A with B directly: wherever A and B differ, both sides are tinted, the bands run from one side to the other, and the changed words are marked against the other side. Blocks that both sides changed alike stay untinted. The marks in the margin still tell which side changed against the base.
+- Bands whose ends lie far apart turn more gently, instead of bending sharply at their tip.
+
+### Fixed
+
+- With scroll bars always shown, the line numbers, the tint and the bands end above the horizontal scroll bar, instead of leaving a light frame around it.
+- Switching between the pages of Settings resizes the window together with the page, not after it.
+
 ## [0.4.0] - 2026-11-16
 
 Users of 0.3.0 get this version through Seamerge ▸ Check for Updates… or the automatic check.
