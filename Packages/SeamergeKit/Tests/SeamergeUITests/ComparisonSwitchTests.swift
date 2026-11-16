@@ -128,6 +128,26 @@ import Testing
     #expect(controller.comparisonOptions.mode == .windowDefault)
   }
 
+  @Test func switchKeepsALastChangeThatRemovedTheEndOfTheNewerFile() async throws {
+    // The change has no lines in B; it lies past the last line of B.
+    let controller = try Windows.controller(
+      for: try await SampleDiffs.diff(old: "one\ntwo\nthree\n", new: "one\n"))
+    controller.selectLastChange(nil)
+    await controller.switchComparison(to: ComparisonOptions(mode: .exact))
+    #expect(controller.presentation.currentBlock == 0)
+    #expect(controller.presentation.changes.blocks.count == 1)
+  }
+
+  @Test func switchKeepsAChangeCurrentWhenSideBIsEmpty() async throws {
+    let controller = try Windows.controller(
+      for: try await SampleDiffs.diff(old: "one\ntwo\n", new: ""))
+    controller.selectLastChange(nil)
+    #expect(controller.presentation.currentBlock == 0)
+    await controller.switchComparison(to: ComparisonOptions(mode: .exact))
+    #expect(controller.presentation.changes.blocks.count == 1)
+    #expect(controller.presentation.currentBlock == 0)
+  }
+
   @Test func menuItemOfTheModeInUseHasACheckmark() async throws {
     let controller = try Windows.controller(for: try await SampleMerges.helloWorld())
     for command in [

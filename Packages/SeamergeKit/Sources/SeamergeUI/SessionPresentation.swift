@@ -615,7 +615,9 @@ final class SessionPresentation {
     currentBlock = nil
     setCurrentBlock(
       currentLineOfB.flatMap { line in
-        let row = rowLayout.row(ofLine: line, in: .b)
+        // B may have become shorter than the line, or empty, which leaves its place at the top.
+        let lineCount = rowLayout.lineCount(in: .b)
+        let row = lineCount > 0 ? rowLayout.row(ofLine: min(line, lineCount - 1), in: .b) : 0
         return changes.blocks.firstIndex { rowLayout.rows(of: $0).upperBound > row }
       })
   }
