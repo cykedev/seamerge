@@ -13,7 +13,7 @@ import Testing
     let header = SideHeader(role: .a, session: same, context: SessionContext())
     #expect(header.differingEncoding == nil)
     #expect(header.details.encoding == .utf8)
-    #expect(ResultHeader(session: same, context: SessionContext()).format.encoding == .utf8)
+    #expect(ResultHeader(session: same, context: SessionContext()).format?.encoding == .utf8)
 
     let windows = "caf\u{E9} \u{20AC}\n".data(using: .windowsCP1252) ?? Data()
     let session = try await Session.merge(
@@ -26,6 +26,6 @@ import Testing
     #expect(b.differingEncoding == .windows1252)
     #expect(b.differingEncoding?.name == "Windows 1252")
     #expect(
-      ResultHeader(session: session, context: SessionContext()).format.encoding == .windows1252)
+      ResultHeader(session: session, context: SessionContext()).format?.encoding == .windows1252)
   }
 }

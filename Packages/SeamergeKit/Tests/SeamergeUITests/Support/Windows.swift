@@ -10,7 +10,8 @@ import Testing
 enum Windows {
   /// The controller of a window for `session`, laid out, with movement reduced unless
   /// `options` say otherwise, so that every jump lands at once; for an `unavailable`
-  /// comparison, `session` is its empty session.
+  /// comparison, `session` is its empty session; for a `pendingComparison`, `session` names
+  /// the files without their lines.
   ///
   /// Windows that share `syntaxChoices` find the languages chosen in each other.
   static func controller(
@@ -18,20 +19,22 @@ enum Windows {
     options: DisplayOptions = DisplayOptions(reducesMotion: true),
     workspace: WorkspaceRecorder = WorkspaceRecorder(), prompts: PromptRecorder = PromptRecorder(),
     undoManager: UndoManager = UndoManager(), unavailable: UnavailableComparison? = nil,
-    settings: UserSettings = .private(), syntaxChoices: SyntaxChoices = SyntaxChoices()
+    settings: UserSettings = .private(), syntaxChoices: SyntaxChoices = SyntaxChoices(),
+    pendingComparison: PendingComparison? = nil
   ) throws -> SessionWindowController {
     WindowAnimations.turnOff()
     let controller = SessionWindowController(
       session: session, context: context, undoManager: undoManager, displayOptions: options,
       pasteboard: .withUniqueName(), workspace: workspace, prompts: prompts, doneStyle: .standard,
       settings: settings, syntaxChoices: syntaxChoices, window: SessionWindow(),
-      unavailable: unavailable)
+      unavailable: unavailable, pendingComparison: pendingComparison)
     let window = try #require(controller.window)
     window.contentView?.layoutSubtreeIfNeeded()
     return controller
   }
 
-  /// Draws the window of `session` at `size`, or at its least size for `nil`, after `prepare`.
+  /// Draws the window of `session` at `size`, or at its least size for `nil`, after `prepare`;
+  /// for a `pendingComparison`, the window that waits for it.
   ///
   /// With `actsAsKey`, the window acts as the key
   /// window, so that the focus shows in the accent color.
@@ -40,14 +43,15 @@ enum Windows {
     options: DisplayOptions = DisplayOptions(), doneStyle: SessionToolbar.DoneStyle = .standard,
     settings: UserSettings = .private(), actsAsKey: Bool = false,
     size: CGSize? = WindowMetrics.defaultContentSize, named name: String,
-    unavailable: UnavailableComparison? = nil,
+    unavailable: UnavailableComparison? = nil, pendingComparison: PendingComparison? = nil,
     prepare: (SessionWindowController) -> Void = { _ in }
   ) throws {
     let controller = SessionWindowController(
       session: session, context: context, undoManager: UndoManager(), displayOptions: options,
       pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(), prompts: PromptRecorder(),
       doneStyle: doneStyle, settings: settings,
-      window: actsAsKey ? KeySessionWindow() : SessionWindow(), unavailable: unavailable)
+      window: actsAsKey ? KeySessionWindow() : SessionWindow(), unavailable: unavailable,
+      pendingComparison: pendingComparison)
     let window = try #require(controller.window)
     defer { window.close() }
     Rendering.prepare(window, size: size ?? window.contentMinSize, appearance: look.appearance)

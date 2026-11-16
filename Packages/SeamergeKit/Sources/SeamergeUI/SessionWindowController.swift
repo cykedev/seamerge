@@ -150,6 +150,10 @@ public final class SessionWindowController: NSWindowController {
   /// Whether the files are being compared anew.
   var isSwitchingComparison = false
 
+  /// The filling of the panes once the comparison is ready, while the window waits for the
+  /// comparison of its files.
+  var comparisonFill: Task<Void, Never>?
+
   /// Whether a comparison of two files leaves out the text that the ignore rules of Settings
   /// match; every window starts with it, since whoever writes rules wants them.
   var usesIgnoreRules = true
@@ -275,6 +279,10 @@ public final class SessionWindowController: NSWindowController {
   /// out in `window`; for an `unavailable` comparison, it says why in place of the lines. `now`
   /// tells the time, which ends a run of typing after a pause.
   ///
+  /// With a `pendingComparison`, `session` names the files without their lines, and the window
+  /// shows their headers and empty panes until the comparison is ready, then the session it
+  /// makes.
+  ///
   /// For a `collection`, the window shows `session`, one of its files, beside the list of the
   /// files.
   init(
@@ -284,6 +292,7 @@ public final class SessionWindowController: NSWindowController {
     syntaxChoices: SyntaxChoices = SyntaxChoices(),
     window: SessionWindow, unavailable: UnavailableComparison? = nil,
     binaryMerge: BinaryMerge? = nil, collection: FileCollection? = nil,
+    pendingComparison: PendingComparison? = nil,
     now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
   ) {
     let theme = displayOptions.theme(settings: settings, fontSize: settings.fontSize)
@@ -344,9 +353,12 @@ public final class SessionWindowController: NSWindowController {
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: arrangement,
       startMode: settings.comparisonMode, ignoredDifferences: presentation.ignoredDifferences)
-    saving = presentation.result.map {
-      ResultSaving(result: $0, session: session, url: context.resultURL)
-    }
+    // A result comes with the comparison the window waits for.
+    saving =
+      pendingComparison == nil
+      ? presentation.result.map {
+        ResultSaving(result: $0, session: session, url: context.resultURL)
+      } : nil
     self.unavailable = unavailable
     self.binaryMerge = binaryMerge
     if let unavailable {
@@ -405,6 +417,9 @@ public final class SessionWindowController: NSWindowController {
     observeTextSettings()
     observeIgnoreRules()
     setUpCollection()
+    if let pendingComparison {
+      wait(for: pendingComparison)
+    }
     stateDidChange()
     watchFiles()
   }
@@ -422,9 +437,12 @@ public final class SessionWindowController: NSWindowController {
 
   /// What the toolbar counts: the open conflicts of a merge, or the current change of a
   /// comparison, which has no conflicts.
-  private var toolbarCount: SessionToolbar.Count {
+  var toolbarCount: SessionToolbar.Count {
     let changes = presentation.changes
+    guard !waitsForComparison else { return .waiting }
     switch changes.session.kind {
+    case .merge where unavailable != nil:
+      return .nothing
     case .merge:
       return .conflicts(
         open: presentation.navigation.openConflictCount,
@@ -472,7 +490,8 @@ public final class SessionWindowController: NSWindowController {
     comparisonHasPatch = shownComparisonHasPatch
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: presentation.arrangement,
-      startMode: settings.comparisonMode, ignoredDifferences: presentation.ignoredDifferences)
+      startMode: settings.comparisonMode, ignoredDifferences: presentation.ignoredDifferences,
+      isComparing: waitsForComparison)
     window?.title = summary.title
     window?.setAccessibilityTitle([summary.title, summary.fullSubtitle].joined(separator: ", "))
     updateSubtitle()
@@ -529,9 +548,11 @@ extension SessionWindowController: NSWindowDelegate {
     presentation.search.close()
     rememberPlace()
     fileWatchers = []
+    // A merge without a result yet, as while the window waits for it, was not saved.
     let isSaved =
       binaryMerge == nil
-      && (saving.map { $0.url != nil && $0.saved != nil && !isResultEdited } ?? true)
+      && (saving.map { $0.url != nil && $0.saved != nil && !isResultEdited }
+        ?? (presentation.changes.session.kind == .diff))
     finish(isSaved ? .saved : .cancelled)
   }
 }
@@ -642,7 +663,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
   /// files, only skipping the remaining files, the commands of the list, and in a window of
   /// several files the patch of all of them can.
   func canPerform(_ command: SessionCommand) -> Bool {
-    if unavailable != nil || collectionPlaceholder != nil,
+    if unavailable != nil || collectionPlaceholder != nil || waitsForComparison,
       ![
         .skipRemainingFiles, .toggleFooter, .nextFile, .previousFile, .filterFiles,
         .toggleIdenticalFiles, .copyPatch, .exportPatch,

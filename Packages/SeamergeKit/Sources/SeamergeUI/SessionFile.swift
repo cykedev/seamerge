@@ -56,6 +56,23 @@ extension Session {
     }
   }
 
+  /// Reads `files`, each in its role, away from the main actor.
+  ///
+  /// - Throws: ``SessionLoadingError`` with the first file that cannot be read or is not text.
+  @concurrent
+  static func read(_ files: [Role: SessionFile]) async throws(SessionLoadingError) -> [Role:
+    SourceFile]
+  {
+    var read: [Role: SourceFile] = [:]
+    for role in Role.allCases {
+      guard let file = files[role] else { continue }
+      let source = try Self.read(file)
+      guard !source.isBinary else { throw .binaryFile(file.url) }
+      read[role] = source
+    }
+    return read
+  }
+
   /// Reads `file`; `/dev/null`, the missing side of a new or a deleted file, is empty, since it
   /// cannot be mapped like a file.
   private static func read(_ file: SessionFile) throws(SessionLoadingError) -> SourceFile {

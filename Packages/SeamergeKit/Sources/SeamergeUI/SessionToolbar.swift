@@ -40,6 +40,10 @@ final class SessionToolbar: NSObject {
 
     /// Nothing, for a comparison whose files cannot be compared.
     case nothing
+
+    /// Nothing yet, while the window waits for the comparison of its files; the arrows stay
+    /// where they will be, without effect.
+    case waiting
   }
 
   /// The toolbar of the window.
@@ -89,6 +93,14 @@ final class SessionToolbar: NSObject {
     return countView.convert(countView.bounds, to: nil).minX
   }
 
+  /// What the toolbar says while the files are being compared, which empty panes tell
+  /// VoiceOver as well.
+  static var comparingText: String {
+    String(
+      localized: "Comparing…", bundle: .module,
+      comment: "Toolbar, and empty panes for VoiceOver: the files are being compared.")
+  }
+
   /// Shows the state of the window: the count in the middle, which arrows lead anywhere and
   /// whether the button that saves and closes can act, whether a comparison is under way, and
   /// whether that button is the one to press.
@@ -103,12 +115,7 @@ final class SessionToolbar: NSObject {
     count: Count, isComparing: Bool, lineArrangement: LineArrangement,
     canShow: (LineArrangement) -> Bool, isValid: (SessionCommand) -> Bool
   ) {
-    countLabel.stringValue =
-      isComparing
-      ? String(
-        localized: "Comparing…", bundle: .module,
-        comment: "Toolbar: the files are being compared anew.")
-      : Self.countText(count)
+    countLabel.stringValue = isComparing ? Self.comparingText : Self.countText(count)
     countView.setAccessibilityLabel(countLabel.stringValue)
     if isComparing {
       progressIndicator.startAnimation(nil)
@@ -119,6 +126,7 @@ final class SessionToolbar: NSObject {
     case .conflicts(let open, _): items[.conflictNavigation]?.isHidden = open == 0
     case .changes(_, let total): items[.changeNavigation]?.isHidden = total == 0
     case .nothing: items[.changeNavigation]?.isHidden = true
+    case .waiting: break
     }
     for item in [items[.conflictNavigation], items[.changeNavigation]] {
       for subitem in (item as? NSToolbarItemGroup)?.subitems ?? [] {
@@ -145,7 +153,7 @@ final class SessionToolbar: NSObject {
       countText(openConflictCount: open, hasConflicts: hadAny)
     case .changes(let current, let total):
       countText(currentChange: current, changeCount: total)
-    case .nothing:
+    case .nothing, .waiting:
       ""
     }
   }

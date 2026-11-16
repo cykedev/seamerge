@@ -390,7 +390,7 @@ struct SavingTests {
 
     #expect(try Data(contentsOf: url) == Data("price 5 €\n".utf8))
     #expect(controller.saving?.format.encoding == .utf8)
-    #expect(controller.layout.resultHeader?.format.encoding == .utf8)
+    #expect(controller.layout.resultHeader?.format?.encoding == .utf8)
     #expect(
       prompts.questions == [
         "save prices.txt as UTF-8 instead of ISO 8859-1",
@@ -425,14 +425,14 @@ struct SavingTests {
     controller.chooseResultFormat(item)
     controller.endEvent()
     #expect(controller.validateUserInterfaceItem(item) && item.state == .on)
-    #expect(controller.layout.resultHeader?.format.lineEnding == .crlf)
+    #expect(controller.layout.resultHeader?.format?.lineEnding == .crlf)
     #expect(await controller.save())
     let crlf = Self.lines("line 5 from main").replacingOccurrences(of: "\n", with: "\r\n")
     #expect(try fixture.written == Data(crlf.utf8))
 
     controller.sessionUndoManager.undo()
     #expect(controller.saving?.format.lineEnding == .lf)
-    #expect(controller.layout.resultHeader?.format.lineEnding == .lf)
+    #expect(controller.layout.resultHeader?.format?.lineEnding == .lf)
   }
 
   @Test func namesInTheMarkersStandOnOneLine() async throws {
@@ -461,6 +461,6 @@ struct SavingTests {
     let header = try #require(controller.layout.resultHeader)
 
     #expect(header.bWithMixedLineEndings == "b")
-    #expect(header.format.lineEnding == .crlf)
+    #expect(header.format?.lineEnding == .crlf)
   }
 }

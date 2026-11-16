@@ -34,12 +34,11 @@ extension SessionWindowController {
   /// compares the files of the session anew, keeping the decisions that belong to the same
   /// blocks, after asking if others would be lost.
   ///
-  /// While the window reloads, saves or compares its files anew already, it looks again
-  /// afterwards.
+  /// While the window reloads, saves or compares its files already, it looks again afterwards.
   func reloadChangedFiles() async {
     isReloadPending = false
     guard !hasFinished, unavailable == nil else { return }
-    guard !isReloading, !isSwitchingComparison, !isSaving else {
+    guard !isReloading, !isSwitchingComparison, !isSaving, !waitsForComparison else {
       looksAtFilesAgain = true
       return
     }

@@ -7,8 +7,9 @@ struct ResultHeader: Equatable {
   /// Where the result is written, with the home folder as a tilde, if it goes to a file.
   var path: String?
 
-  /// How the result is written.
-  var format: ResultFormat
+  /// How the result is written, or `nil` while it is not known, as before the files of a merge
+  /// are compared.
+  var format: ResultFormat?
 
   /// The name of B if it ends its lines in more than one way, so that writing the result
   /// unifies them; `nil` otherwise.
@@ -65,18 +66,21 @@ struct ResultHeaderView: View {
             .truncationMode(.middle)
         }
         Spacer(minLength: 0)
-        menu(
-          of: ResultFormatChoice.encodings, current: .encoding(header.format.encoding),
-          label: ResultFormatChoice.encodingMenuTitle, help: ResultFormatChoice.encodingHelp)
-        menu(
-          of: ResultFormatChoice.lineEndings, current: .lineEnding(header.format.lineEnding),
-          label: ResultFormatChoice.lineEndingMenuTitle, help: ResultFormatChoice.lineEndingHelp)
+        if let format = header.format {
+          menu(
+            of: ResultFormatChoice.encodings, current: .encoding(format.encoding),
+            label: ResultFormatChoice.encodingMenuTitle, help: ResultFormatChoice.encodingHelp)
+          menu(
+            of: ResultFormatChoice.lineEndings, current: .lineEnding(format.lineEnding),
+            label: ResultFormatChoice.lineEndingMenuTitle,
+            help: ResultFormatChoice.lineEndingHelp)
+        }
       }
       .frame(height: WindowMetrics.headerHeight)
-      if let b = header.bWithMixedLineEndings {
+      if let b = header.bWithMixedLineEndings, let format = header.format {
         notice(
           Text(
-            "\(b) mixes line endings. The result is written with \(ResultFormatChoice.lineEnding(header.format.lineEnding).title) throughout.",
+            "\(b) mixes line endings. The result is written with \(ResultFormatChoice.lineEnding(format.lineEnding).title) throughout.",
             bundle: .module,
             comment:
               "Notice below the result header: B ends its lines in more than one way, such as main mixes line endings. The result is written with LF throughout."

@@ -716,7 +716,7 @@
       "comment" : "Sidebar: the files of two folders are being paired, and it is not known how many."
     },
     "Comparing…" : {
-      "comment" : "Toolbar: the files are being compared anew.\nWindow of two folders: no file is shown yet while the folders are compared."
+      "comment" : "Toolbar, and empty panes for VoiceOver: the files are being compared.\nWindow of two folders: no file is shown yet while the folders are compared."
     },
     "Comparison" : {
       "comment" : "Keyboard Shortcuts: the shortcuts of a comparison of two files.\nThe choice of the comparison mode: a toolbar item and the pop-up button of the footer."
@@ -887,6 +887,9 @@
     },
     "Files" : {
       "comment" : "VoiceOver: the list of the files in the sidebar of a window that compares several."
+    },
+    "Files compared. %@" : {
+      "comment" : "VoiceOver once the files of a window that showed without their lines are compared, such as Files compared. 12 Changes."
     },
     "Filter File Name" : {
       "comment" : "The field at the bottom of the sidebar that narrows the list to matching files."
@@ -1432,6 +1435,9 @@
     },
     "Seamerge can’t merge the contents of this file. Use one side as a whole, or leave it unresolved." : {
       "comment" : "Merge of a file that is not text: what can be done."
+    },
+    "Seamerge can’t merge “%@”" : {
+      "comment" : "Merge window: the files cannot be merged, such as “Settings.swift”."
     },
     "Seamerge can’t read “%@”." : {
       "comment" : "Alert: a file of a merge or comparison cannot be read."

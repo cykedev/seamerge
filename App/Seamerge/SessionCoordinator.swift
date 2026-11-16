@@ -128,7 +128,8 @@ final class SessionCoordinator {
   /// Opens a window for the files of `comparison` in their roles and returns once it shows: a
   /// merge with a base, a comparison without one, or the files of two folders.
   ///
-  /// Such a session has no file to save to and no Git behind it. While the app quits, nothing
+  /// Such a session has no file to save to and no Git behind it. A comparison that takes a
+  /// moment shows the headers of its files until it is ready. While the app quits, nothing
   /// opens.
   ///
   /// - Throws: Why the files cannot be opened.
@@ -138,20 +139,20 @@ final class SessionCoordinator {
       return
     }
     let file = { (url: URL) in SessionFile(url: url, label: url.lastPathComponent) }
-    let session =
+    let controller =
       if let base = comparison.base {
-        try await Session.loadMerge(
+        try await SessionWindowController.openMerge(
           base: file(base), a: file(comparison.left), b: file(comparison.right),
-          mode: settings.comparisonMode)
+          mode: settings.comparisonMode, context: SessionContext(), undoManager: UndoManager(),
+          settings: settings)
       } else {
-        try await Session.loadDiff(
+        try await SessionWindowController.openDiff(
           old: file(comparison.left), new: file(comparison.right), mode: settings.comparisonMode,
-          ignoring: settings.ignoreRules)
+          ignoring: settings.ignoreRules, context: SessionContext(), undoManager: UndoManager(),
+          settings: settings)
       }
-    let controller = SessionWindowController(
-      session: session, context: SessionContext(), undoManager: UndoManager(), settings: settings)
     guard !isFinishing else { return }
-    show(controller, kind: session.kind) { _ in }
+    show(controller, kind: comparison.base == nil ? .diff : .merge) { _ in }
   }
 
   /// Opens a window that compares the files of `folders` and returns once it shows, while the
@@ -420,7 +421,8 @@ final class SessionCoordinator {
   /// temporary copies; so does every side of a comparison that Git started, unless the command
   /// line names it. A comparison whose files cannot be compared, such as of an image, still gets
   /// a window that says why, so that a run of `git difftool` goes on past it; the merge of a
-  /// file that is not text gets a window that asks which side to take as a whole.
+  /// file that is not text gets a window that asks which side to take as a whole. A merge or
+  /// comparison that takes a moment shows the headers of its files until it is ready.
   ///
   /// - Throws: Why the files of a merge cannot be opened.
   private static func makeWindow(
@@ -437,11 +439,10 @@ final class SessionCoordinator {
         git: GitContext(merge.context, hasCommonAncestor: merge.base != nil),
         waitingCaller: merge.isRunByGit ? .git : .commandLine)
       do {
-        let session = try await Session.loadMerge(
+        return try await SessionWindowController.openMerge(
           base: merge.base.map { SessionFile(url: $0, label: label) }, a: a, b: b,
-          mode: settings.comparisonMode)
-        return SessionWindowController(
-          session: session, context: context, undoManager: UndoManager(), settings: settings)
+          mode: settings.comparisonMode, context: context, undoManager: UndoManager(),
+          settings: settings)
       } catch .binaryFile {
         Self.logger.notice("Asking which side of the binary file to take")
         return try await SessionWindowController(
@@ -455,10 +456,9 @@ final class SessionCoordinator {
       let (old, new) = (file(diff.left, diff.leftLabel), file(diff.right, diff.rightLabel))
       let context = SessionContext(difftool: DifftoolContext(diff))
       do {
-        let session = try await Session.loadDiff(
-          old: old, new: new, mode: settings.comparisonMode, ignoring: settings.ignoreRules)
-        return SessionWindowController(
-          session: session, context: context, undoManager: UndoManager(), settings: settings)
+        return try await SessionWindowController.openDiff(
+          old: old, new: new, mode: settings.comparisonMode, ignoring: settings.ignoreRules,
+          context: context, undoManager: UndoManager(), settings: settings)
       } catch {
         Self.logger.notice("Showing why the files cannot be compared: \(String(describing: error))")
         return try await SessionWindowController(

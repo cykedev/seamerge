@@ -21,10 +21,11 @@ struct SessionSummary: Equatable {
 
   /// Summarizes `changes` in `context`, with the sides of a comparison where `arrangement` puts
   /// them, and names the comparison mode where it differs from `startMode`, that of a new window,
-  /// and the ignore rules if they passed over a difference, as `ignoredDifferences` tell.
+  /// and the ignore rules if they passed over a difference, as `ignoredDifferences` tell; while
+  /// the files `isComparing` for the first time, it counts no changes yet.
   init(
     changes: SessionChanges, context: SessionContext, arrangement: PaneArrangement,
-    startMode: ComparisonMode, ignoredDifferences: IgnoredDifferences?
+    startMode: ComparisonMode, ignoredDifferences: IgnoredDifferences?, isComparing: Bool = false
   ) {
     let session = changes.session
     // A rule that empties a whole file leaves no change; the note says why.
@@ -41,8 +42,8 @@ struct SessionSummary: Equatable {
       let file = session.file(for: .b)
       title =
         context.resultURL?.lastPathComponent ?? file?.url?.lastPathComponent ?? file?.label ?? ""
-      self.changes = [Self.changeCounts(of: changes), modeNotes].compactMap(\.self)
-        .joined(separator: Self.separator)
+      self.changes = [isComparing ? nil : Self.changeCounts(of: changes), modeNotes]
+        .compactMap(\.self).joined(separator: Self.separator)
     } else {
       title =
         context.difftool?.path

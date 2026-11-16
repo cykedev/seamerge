@@ -700,6 +700,43 @@ final class SessionPresentation {
     return prepared.setup == self.setup ? prepared : nil
   }
 
+  /// What the panes show for `session`, the comparison that a window without lines waited for,
+  /// as loaded, made away from the main actor for the setup of the panes once it is ready: a
+  /// merge with every conflict open and every other change taken as the merge takes it.
+  func prepareLoaded(_ session: Session) async -> PreparedSession {
+    while true {
+      let setup = setup
+      let prepared = await Self.prepareLoaded(
+        session, setup: setup, removalNotes: Self.removalNotes(headers: headers))
+      if prepared.setup == self.setup {
+        return prepared
+      }
+    }
+  }
+
+  @concurrent
+  private static func prepareLoaded(
+    _ session: Session, setup: PaneSetup, removalNotes: [Role: String]
+  ) async -> PreparedSession {
+    let result =
+      setup.arrangement.showsResult
+      ? ResultState(session: session, removalNotes: removalNotes) : nil
+    return await PreparedSession.concurrently(
+      session: session, result: result, setup: setup, lines: InputLines(session: session))
+  }
+
+  /// Shows `prepared`, the comparison that a window without lines waited for, as a new window
+  /// shows it: with the first open conflict current, or the first change if no conflict is
+  /// open, in view.
+  ///
+  /// - Precondition: `prepared` was made for the setup of the panes now.
+  func showLoaded(_ prepared: PreparedSession) {
+    show(prepared)
+    currentBlock = nil
+    setCurrentBlock(navigation.firstOpenConflict ?? navigation.firstChange)
+    showCurrentBlock()
+  }
+
   /// Shows `prepared`, made for the same files compared anew, and keeps the line of B at the
   /// reading line where it is.
   ///
