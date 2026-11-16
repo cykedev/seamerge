@@ -17,7 +17,7 @@ public final class SettingsWindowController: NSWindowController {
   public let settings: UserSettings
 
   /// The pages of the window.
-  let tabs = NSTabViewController()
+  let tabs: SettingsTabViewController
 
   /// The page of the ignore rules.
   let ignoredText: IgnoredTextViewController
@@ -42,10 +42,8 @@ public final class SettingsWindowController: NSWindowController {
       localized: "General", bundle: .module,
       comment: "Settings: the page of the font, new windows, merging and updates.")
     ignoredText = IgnoredTextViewController(settings: settings, displayOptions: displayOptions)
-    tabs.tabStyle = .toolbar
     // The window takes the size of the page in view; with Reduce Motion, the pages cut.
-    tabs.transitionOptions =
-      displayOptions.reducesMotion ? [] : [.crossfade, .allowUserInteraction]
+    tabs = SettingsTabViewController(reducesMotion: displayOptions.reducesMotion)
     for (page, symbol) in [(general, "gearshape"), (ignoredText, "eye.slash")]
       as [(NSViewController, String)]
     {
