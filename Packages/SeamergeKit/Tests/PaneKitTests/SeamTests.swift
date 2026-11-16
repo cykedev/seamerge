@@ -284,12 +284,13 @@ import Testing
     layout.right.content = content
     layout.right.documentView.scroll(CGPoint(x: 0, y: 0))
     let track = try #require(ScrollTrack(panes: [layout.left, layout.right]))
-    // Together on the track again: the left pane stands its two rows further down.
-    let leftPositions = track.trackPositions(ofPane: 0, atPlace: layout.left.readingLinePlace)
+    // Together on the track again: the left pane stands its two rows further down, where the
+    // track puts it, at the nearest whole pixel, to which a pane scrolls.
     let rightPositions = track.trackPositions(ofPane: 1, atPlace: layout.right.readingLinePlace)
-    #expect(
-      leftPositions.lowerBound <= rightPositions.upperBound + 0.001
-        && rightPositions.lowerBound <= leftPositions.upperBound + 0.001)
+    let place = track.place(ofPane: 0, atTrackPosition: rightPositions.lowerBound)
+    let origin = place - Theme.readingLine * layout.left.visibleHeight
+    let scale = window.backingScaleFactor
+    #expect(layout.left.scrollOrigin.y == (origin * scale).rounded() / scale)
   }
 
   @Test func paneThatScrollsToAPlaceTakesTheOthersAlongToItsPlaceOnTheTrack() throws {

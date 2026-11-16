@@ -42,6 +42,7 @@ import Testing
     let result = try controller.mergeResult
     let panes = showsBase ? [a, base, b, result] : [a, b, result]
     let track = try #require(ScrollTrack(panes: panes))
+    let halfPixel = 0.5 / (controller.window?.backingScaleFactor ?? 2)
     for leader in panes {
       let step = leader.rowHeight / 2
       var steps = 0
@@ -59,9 +60,15 @@ import Testing
           #expect(
             moves.allSatisfy { $0 >= -0.001 && $0 <= leader.rowHeight },
             "\(moves) at step \(steps), \(direction)")
-          // Panes at the top or the end of their texts may stand short of the track.
+          // Panes at the top or the end of their texts may stand short of the track. Each pane
+          // rounds its own place to whole pixels, up to half a pixel from its place on the track,
+          // which spreads further on the track across a stretch that the pane shows lower.
           if !panes.contains(where: atAnEnd) {
-            let positions = now.indices.map { track.trackPositions(ofPane: $0, atPlace: now[$0]) }
+            let positions = now.indices.map { pane in
+              let lowest = track.trackPositions(ofPane: pane, atPlace: now[pane] - halfPixel)
+              let highest = track.trackPositions(ofPane: pane, atPlace: now[pane] + halfPixel)
+              return lowest.lowerBound...highest.upperBound
+            }
             let lowest = positions.map(\.upperBound).min() ?? 0
             let highest = positions.map(\.lowerBound).max() ?? 0
             #expect(highest <= lowest + 0.5, "the panes stand together: \(positions)")

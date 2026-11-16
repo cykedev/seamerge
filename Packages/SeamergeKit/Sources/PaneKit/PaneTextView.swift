@@ -545,6 +545,16 @@ final class PaneTextView: NSTextView {
     CGFloat(displayRows.lineCount) * theme.rowHeight
   }
 
+  /// Stays at the origin of its clip view, which scrolls it to whole pixels.
+  ///
+  /// As it makes its layer, the text view moves itself to whole pixels of the window, by a
+  /// fraction of a point, but not when it scrolls later; the rows would then lie that much off
+  /// the places that the gutter, the decision column and the seams beside the pane take for
+  /// them.
+  override func setFrameOrigin(_ newOrigin: NSPoint) {
+    super.setFrameOrigin(.zero)
+  }
+
   /// Takes `newSize`, but never less high than the rows.
   ///
   /// The pane sets the size of the view as it lays itself out. The view also fits itself to its

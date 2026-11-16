@@ -5,6 +5,7 @@ import AppKit
 final class PaneScrollView: NSScrollView {
   override init(frame frameRect: NSRect) {
     super.init(frame: frameRect)
+    contentView = PaneClipView()
     hasVerticalScroller = false
     hasHorizontalScroller = false
     borderType = .noBorder
