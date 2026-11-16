@@ -3,7 +3,9 @@
 # Measures how the app handles large files: builds the package in release
 # mode in a fresh clone, runs the suite LargeFileMeasurements once per case
 # and run, each in a process of its own, and prints a table with the median
-# and the 95th percentile of every metric.
+# and the 95th percentile of every metric. How a case opens as the app opens
+# it, with the window first and its lines after, is measured in one more
+# process per run, so that the other run opens its files as the first time.
 #
 # Usage: Scripts/measure-large-files.sh [options] [case...]
 #
@@ -161,12 +163,13 @@ if ! swift build "${build[@]}" --build-tests > "$work/logs/build.log" 2>&1; then
   exit 1
 fi
 
-# Runs one case once into the file of values $2; a run past the time limit is
-# stopped with every process it started. Sets outcome to how it ended.
+# Runs one case once into the file of values $2, or with $4 set to 1 only how
+# it opens as the app opens it; a run past the time limit is stopped with every
+# process it started. Sets outcome to how it ended.
 run_case() {
-  local name=$1 values=$2 log=$3 deadline status
+  local name=$1 values=$2 log=$3 opening=${4:-0} deadline status
   deadline=$(($(date +%s) + timeout_minutes * 60))
-  SEAMERGE_MEASURE_CASE=$name SEAMERGE_MEASURE_OUTPUT=$values \
+  SEAMERGE_MEASURE_CASE=$name SEAMERGE_MEASURE_OUTPUT=$values SEAMERGE_MEASURE_OPENING=$opening \
     SWIFT_BACKTRACE=enable=yes,interactive=no,color=no \
     swift test "${build[@]}" --skip-build --filter LargeFileMeasurements > "$log" 2>&1 &
   running=$!
@@ -207,6 +210,18 @@ for name in "${cases[@]}"; do
     fi
     statuses+=("# $name run $run: $outcome")
     progress "$name run $run: $outcome"
+    # The opening as the app opens it, in a process of its own, so that the run above opens
+    # its files as the first time.
+    values=$work/values/$name-$run-opening.tsv
+    : > "$values"
+    run_case "$name" "$values" "$work/logs/$name-$run-opening.log" 1
+    if [ "$outcome" != complete ]; then
+      failed=1
+      grep -E 'recorded an issue|Fatal error|Crash' "$work/logs/$name-$run-opening.log" |
+        head -n 5 >&2
+    fi
+    statuses+=("# $name run $run, opening: $outcome")
+    progress "$name run $run, opening: $outcome"
   done
 done
 

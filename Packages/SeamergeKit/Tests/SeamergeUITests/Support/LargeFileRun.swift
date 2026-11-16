@@ -62,12 +62,7 @@ final class LargeFileRun {
   init(_ largeCase: LargeFileCase, recorder: LargeFileRecorder) async throws {
     self.largeCase = largeCase
     self.recorder = recorder
-    // Beside the output, where the script removes them also after a run it stopped.
-    let output = ProcessInfo.processInfo.environment["SEAMERGE_MEASURE_OUTPUT"].map {
-      URL(filePath: $0).deletingLastPathComponent()
-    }
-    folder = (output ?? FileManager.default.temporaryDirectory)
-      .appending(path: "SeamergeMeasurements-\(UUID().uuidString)", directoryHint: .isDirectory)
+    folder = Self.newFolder()
     let files = try Self.writeFiles(of: largeCase, into: folder)
     let size = try FileManager.default.attributesOfItem(atPath: files.b.path)[.size] as? Int
     recorder.record("size", Double(size ?? 0) / 1_048_576, unit: "MB")
@@ -155,6 +150,78 @@ final class LargeFileRun {
     let picture = try #require(contentView.bitmapImageRepForCachingDisplay(in: contentView.bounds))
     contentView.cacheDisplay(in: contentView.bounds, to: picture)
     window.close()
+  }
+
+  /// A new folder for the files of a measurement, beside the output, where the script removes it
+  /// also after a run it stopped.
+  private static func newFolder() -> URL {
+    let output = ProcessInfo.processInfo.environment["SEAMERGE_MEASURE_OUTPUT"].map {
+      URL(filePath: $0).deletingLastPathComponent()
+    }
+    return (output ?? FileManager.default.temporaryDirectory)
+      .appending(path: "SeamergeMeasurements-\(UUID().uuidString)", directoryHint: .isDirectory)
+  }
+
+  /// Writes the files of `largeCase`, opens them as the app opens them and measures how long the
+  /// user waits for the window with its headers and for the lines in it, each until the window
+  /// is laid out and drawn, the longest hold of the main actor meanwhile, and the memory after.
+  ///
+  /// A comparison that is ready soon opens the window with its lines, in its first picture; then
+  /// both times are the same. Meant for a process of its own, so that the other measurements of
+  /// the case open their files as the first time.
+  static func measureOpening(of largeCase: LargeFileCase, recorder: LargeFileRecorder)
+    async throws
+  {
+    let folder = newFolder()
+    defer {
+      do {
+        try FileManager.default.removeItem(at: folder)
+      } catch {
+        Issue.record(error, "The files of the measurement stay in \(folder.path)")
+      }
+    }
+    let files = try writeFiles(of: largeCase, into: folder)
+    try await openAndCloseASmallWindow()
+    let label = "file.\(largeCase.fileExtension)"
+    let file = { (url: URL) in SessionFile(url: url, label: label) }
+    let clock = ContinuousClock()
+    let start = clock.now
+    var headers = Duration.zero
+    var lines = Duration.zero
+    var opened: SessionWindowController?
+    // The times are taken within the work: once it is over, the main actor may first color the
+    // syntax, which comes after the first picture.
+    let held = try await longestHold {
+      let controller =
+        largeCase.isMerge
+        ? try await SessionWindowController.openMerge(
+          base: files.base.map(file), a: file(files.a), b: file(files.b), mode: .windowDefault,
+          context: SessionContext(), undoManager: UndoManager(), settings: .private())
+        : try await SessionWindowController.openDiff(
+          old: file(files.a), new: file(files.b), mode: .windowDefault,
+          context: SessionContext(), undoManager: UndoManager(), settings: .private())
+      opened = controller
+      let window = try #require(controller.window)
+      let contentView = try #require(window.contentView)
+      let picture = try #require(
+        contentView.bitmapImageRepForCachingDisplay(in: contentView.bounds))
+      let waits = controller.waitsForComparison
+      contentView.layoutSubtreeIfNeeded()
+      contentView.cacheDisplay(in: contentView.bounds, to: picture)
+      headers = clock.now - start
+      lines = headers
+      // A window that came filled showed its lines in that first picture.
+      guard waits else { return }
+      await controller.comparisonFill?.value
+      contentView.layoutSubtreeIfNeeded()
+      contentView.cacheDisplay(in: contentView.bounds, to: picture)
+      lines = clock.now - start
+    }
+    recorder.record("open-headers-drawn", headers)
+    recorder.record("open-lines-drawn", lines)
+    recorder.record("open-longest-hold", held)
+    recorder.recordMemory(after: "opening")
+    opened?.window?.close()
   }
 
   /// Measures the engine alone on the files, for its share of the comparison, in the mode a
@@ -256,6 +323,12 @@ final class LargeFileRun {
   ///
   /// A task beside it asks for the main actor every millisecond and measures how long it waits.
   func longestHold(during work: () async throws -> Void) async rethrows -> Duration {
+    try await Self.longestHold(during: work)
+  }
+
+  /// Carries out `work` and returns the longest time the main actor was held at a stretch
+  /// meanwhile, as ``longestHold(during:)`` does.
+  static func longestHold(during work: () async throws -> Void) async rethrows -> Duration {
     let watch = Task.detached(priority: .userInitiated) { () -> Duration in
       let clock = ContinuousClock()
       var longest = Duration.zero

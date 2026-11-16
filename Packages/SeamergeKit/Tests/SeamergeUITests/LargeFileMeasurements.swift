@@ -21,12 +21,18 @@ struct LargeFileMeasurements {
     ProcessInfo.processInfo.environment["SEAMERGE_MEASURE_CASE"]
   }
 
+  /// Whether the environment asks to measure only how the chosen case opens as the app opens
+  /// it, in a process of its own.
+  nonisolated static var measuresOpening: Bool {
+    ProcessInfo.processInfo.environment["SEAMERGE_MEASURE_OPENING"] == "1"
+  }
+
   /// The folder to write the files of the chosen case into, if the environment names one.
   nonisolated static var folderForFiles: String? {
     ProcessInfo.processInfo.environment["SEAMERGE_MEASURE_FILES"]
   }
 
-  @Test(.enabled(if: chosenCase != nil && folderForFiles == nil))
+  @Test(.enabled(if: chosenCase != nil && folderForFiles == nil && !measuresOpening))
   func measureTheChosenCase() async throws {
     let name = try #require(Self.chosenCase)
     let largeCase = try #require(LargeFileCase.all.first { $0.name == name }, "No case \(name)")
@@ -57,6 +63,18 @@ struct LargeFileMeasurements {
     // measures a race of the finder with the new content instead.
     run.pause(.seconds(1))
     try await run.phase("search") { try await run.measureSearching() }
+    recorder.finish()
+  }
+
+  /// Measures how the chosen case opens as the app opens it: the window with its headers, then
+  /// with its lines.
+  @Test(.enabled(if: chosenCase != nil && folderForFiles == nil && measuresOpening))
+  func measureOpeningTheChosenCase() async throws {
+    let name = try #require(Self.chosenCase)
+    let largeCase = try #require(LargeFileCase.all.first { $0.name == name }, "No case \(name)")
+    let recorder = try LargeFileRecorder(caseName: name)
+    recorder.begin("opening")
+    try await LargeFileRun.measureOpening(of: largeCase, recorder: recorder)
     recorder.finish()
   }
 
