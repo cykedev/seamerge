@@ -49,6 +49,14 @@ public final class PaneView: NSView {
     show(content, collapsedRuns: collapsedRuns)
   }
 
+  /// Shows `prepared`, content prepared away from the main actor, with `collapsedRuns`, as
+  /// ``setContent(_:collapsedRuns:)`` shows content.
+  ///
+  /// - Precondition: As for ``setContent(_:collapsedRuns:)``.
+  public func setContent(_ prepared: PreparedPaneContent, collapsedRuns: [CollapsedRun]) {
+    show(prepared.content, collapsedRuns: collapsedRuns, prepared: prepared)
+  }
+
   /// Gives the content new blocks, previews and row tints and keeps its text, rows and
   /// line numbers: what the owner of an editable pane gives it after an edit, in place of new
   /// content.
@@ -464,14 +472,16 @@ public final class PaneView: NSView {
     scrollView.scrollWheel(with: event)
   }
 
-  private func show(_ content: PaneContent, collapsedRuns: [CollapsedRun]) {
+  private func show(
+    _ content: PaneContent, collapsedRuns: [CollapsedRun], prepared: PreparedPaneContent? = nil
+  ) {
     contentGeneration += 1
     // The runs, and with them the indices of the bars, may change; the text reports its new
     // selection while it changes.
     removeRunBars()
     // The old expanded runs need not fit the new rows; the owner hands new ones.
     gutterView.expandedRuns = []
-    textView.show(content, collapsedRuns: collapsedRuns, theme: theme)
+    textView.show(content, collapsedRuns: collapsedRuns, theme: theme, prepared: prepared)
     alignRows()
     gutterView.theme = theme
     gutterView.content = content

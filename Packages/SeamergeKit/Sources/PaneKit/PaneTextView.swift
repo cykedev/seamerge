@@ -181,15 +181,25 @@ final class PaneTextView: NSTextView {
     self.theme = theme
   }
 
-  /// Shows `content` with `collapsedRuns`, drawn with `theme`.
+  /// Shows `content` with `collapsedRuns`, drawn with `theme`; with `prepared`, the content
+  /// prepared for it, whose rows and stored text it takes.
   ///
   /// - Precondition: `content` has one line number per row, and the runs lie within its rows.
-  func show(_ content: PaneContent, collapsedRuns: [CollapsedRun], theme: Theme) {
-    let keepsText = (content.text as NSString).isEqual(to: string)
+  func show(
+    _ content: PaneContent, collapsedRuns: [CollapsedRun], theme: Theme,
+    prepared: PreparedPaneContent? = nil
+  ) {
+    let text = prepared?.storedText ?? content.text
+    let keepsText = (text as NSString).isEqual(to: string)
     // The rows of the same text are those the pane knows.
     let grid =
-      keepsText && theme.tabWidth == self.theme.tabWidth
-      ? self.grid : RowGrid(text: content.text, tabWidth: theme.tabWidth)
+      if keepsText && theme.tabWidth == self.theme.tabWidth {
+        self.grid
+      } else if let prepared, prepared.tabWidth == theme.tabWidth {
+        prepared.grid
+      } else {
+        RowGrid(text: text, tabWidth: theme.tabWidth)
+      }
     precondition(
       content.lineNumbers.count == grid.rowCount,
       "\(content.lineNumbers.count) line numbers for \(grid.rowCount) rows")
@@ -205,7 +215,7 @@ final class PaneTextView: NSTextView {
       // The width of characters may have changed with the theme.
       self.lineWrapping = makeLineWrapping(width: lineWrapping.width)
     }
-    ownWrappedRows = wrappedRows(in: 0..<grid.rowCount, of: content.text as NSString)
+    ownWrappedRows = wrappedRows(in: 0..<grid.rowCount, of: text as NSString)
     // The pane lines the rows up with its neighbors once it has shown them.
     displayRows = DisplayRows(
       runs: collapsedRuns, rowCount: grid.rowCount, wrappedRows: ownWrappedRows)
@@ -239,7 +249,7 @@ final class PaneTextView: NSTextView {
       }
     } else {
       textStorage.setAttributedString(
-        NSAttributedString(string: content.text, attributes: attributes))
+        NSAttributedString(string: text, attributes: attributes))
       rowsToDiscard = nil
       farthestRowShown = 0
     }
