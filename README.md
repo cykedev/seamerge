@@ -80,7 +80,7 @@ Download the latest release from [GitHub Releases](https://github.com/cykedev/se
 brew install --cask cykedev/tap/seamerge
 ```
 
-The cask is published in the tap `cykedev/homebrew-tap` with each release.
+The cask is published in the tap `cykedev/homebrew-tap` with each release. If Seamerge is already in your Applications folder, add `--adopt` so that Homebrew takes over that copy instead of refusing to install.
 
 ### Build from source
 
