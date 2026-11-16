@@ -64,6 +64,16 @@ import Testing
     #expect(Self.keys(of: mainMenu.leaveUnresolvedItem) == "⌘.")
   }
 
+  @Test func noTwoItemsShareAKeyInEitherKindOfWindow() {
+    let mainMenu = MainMenu(openRecentMenu: NSMenu())
+    for kind in [Session.Kind.diff, .merge] {
+      mainMenu.update(for: kind)
+      let keys = Self.allItems(of: mainMenu.menu).map(Self.keys(of:)).filter { !$0.isEmpty }
+      let repeated = Dictionary(grouping: keys, by: \.self).filter { $0.value.count > 1 }.keys
+      #expect(repeated.isEmpty, "\(kind): \(repeated.sorted())")
+    }
+  }
+
   @Test func whatHasNoEffectIsDeactivatedAndNothingIsHidden() {
     let menu = MainMenu(openRecentMenu: NSMenu()).menu
     let items = Self.allItems(of: menu)
