@@ -1,8 +1,8 @@
 #!/bin/bash
 #
 # Measures scrolling on the screen: builds a copy of the app with a bundle
-# identifier of its own, compares two files in it from the window Compare
-# Files, plays flicks of a trackpad with momentum over the window while
+# identifier of its own, compares two files or merges three in it from the
+# window Compare Files, plays flicks of a trackpad with momentum over the window while
 # Instruments records hitches, and prints how many frames came late. With
 # --counter, a library loaded into the copy counts the frames of the window
 # instead, through the display link of its content view, without Instruments.
@@ -14,22 +14,30 @@
 # signed ad hoc without the hardened runtime; the app as shipped runs with the
 # hardened runtime, which ignores DYLD_INSERT_LIBRARIES.
 #
-# Usage: Scripts/measure-scrolling.sh [options] (<case> | <file> <file>)
+# Usage: Scripts/measure-scrolling.sh [options] (<case> | <file> [<base>] <file>)
 #
 #   --arrangement <a>   aligned (default), connected or single.
+#   --hides-base        Hide the base pane of a merge.
+#   --screen <s>        The screen the window goes to: slow (default), the one
+#                       with the lowest frame rate, or fast, with the highest.
 #   --flicks <n>        Flicks down and up again (default 6).
 #   --bundle-id <id>    The bundle identifier of the copy, app.eiden.seamerge.
 #                       and more (default app.eiden.seamerge.measure).
 #   --revision <rev>    Build a commit instead of the working tree.
 #   --counter           Count frames in the copy instead of recording hitches
 #                       with Instruments.
-#   --keep              Keep the build, the trace and the files.
+#   --sample <file>     With --counter, also sample the copy into <file> while
+#                       it scrolls, which costs frames of its own.
+#   --keep              Keep the trace, the files and the logs; the copy and
+#                       the build go, since Launch Services would register
+#                       them again.
 #
 # A case is one of Scripts/measure-large-files.sh; its files are written
-# first. The screen must be unlocked, the process that runs the script needs
-# the permission to control the computer, which clicking Compare and posting
-# the scroll events take, and Instruments records hitches only while the
-# developer mode of the system is on (DevToolsSecurity).
+# first, with the base of a merge. The screen must be unlocked, the process
+# that runs the script needs the permission to control the computer, which
+# clicking Compare or Merge and posting the scroll events take, and
+# Instruments records hitches only while the developer mode of the system is
+# on (DevToolsSecurity).
 #
 # Exits with 0 when the frames were measured, with 1 otherwise, and with 2 for
 # wrong arguments.
@@ -37,7 +45,7 @@
 set -u
 
 usage() {
-  sed -n '13,29p' "$0" | sed 's/^# \{0,1\}//' >&2
+  sed -n '/^# Usage:/,/^# on (DevToolsSecurity)/p' "$0" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -46,7 +54,10 @@ flicks=6
 bundle_id=app.eiden.seamerge.measure
 revision=""
 counter=false
+sample_file=""
 keep=false
+hides_base=false
+screen=slow
 inputs=()
 while [ $# -gt 0 ]; do
   case $1 in
@@ -55,14 +66,19 @@ while [ $# -gt 0 ]; do
     --bundle-id) [ $# -ge 2 ] || usage; bundle_id=$2; shift 2 ;;
     --revision) [ $# -ge 2 ] || usage; revision=$2; shift 2 ;;
     --counter) counter=true; shift ;;
+    --sample) [ $# -ge 2 ] || usage; sample_file=$2; shift 2 ;;
     --keep) keep=true; shift ;;
+    --hides-base) hides_base=true; shift ;;
+    --screen) [ $# -ge 2 ] || usage; screen=$2; shift 2 ;;
     -*) usage ;;
     *) inputs+=("$1"); shift ;;
   esac
 done
 case $arrangement in aligned | connected | single) ;; *) usage ;; esac
 case $flicks in '' | *[!0-9]* | 0) usage ;; esac
-case ${#inputs[@]} in 1 | 2) ;; *) usage ;; esac
+case ${#inputs[@]} in 1 | 2 | 3) ;; *) usage ;; esac
+case $screen in slow | fast) ;; *) usage ;; esac
+[ -z "$sample_file" ] || $counter || usage
 root=$(cd "$(dirname "$0")/.." && pwd)
 
 # Succeeds if $1 can name the copy: app.eiden.seamerge. and more, in any case,
@@ -126,6 +142,11 @@ clean_up() {
   fi
   if [ -n "$pid" ]; then
     kill "$pid" 2> /dev/null
+    # Its settings go only once it no longer writes them.
+    for _ in $(seq 1 50); do
+      kill -0 "$pid" 2> /dev/null || break
+      sleep 0.1
+    done
   else
     pkill -f "^$copy/Contents/MacOS/" 2> /dev/null
   fi
@@ -140,6 +161,8 @@ clean_up() {
     "$HOME/Library/Caches/$bundle_id" "$HOME/Library/HTTPStorages/$bundle_id" \
     "$HOME/Library/HTTPStorages/$bundle_id.binarycookies"
   rm -f "$HOME/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.ApplicationRecentDocuments/$(printf '%s' "$bundle_id" | tr '[:upper:]' '[:lower:]')".sfl*
+  # A copy or build left on disk would be registered again by whatever looks at it next.
+  rm -rf "$copy" "$work/build"
   if $keep; then
     progress "kept $work"
   else
@@ -180,16 +203,20 @@ if [ ${#inputs[@]} -eq 1 ]; then
     keep=true
     exit 1
   fi
+  # A comparison has old and new, a merge theirs, base and ours, in the order of the fields.
   files=()
-  for name in base old new theirs ours; do
+  for name in old new theirs base ours; do
     for file in "$work/files/$name".*; do
-      [ -e "$file" ] && [ "$name" != base ] && files+=("$file")
+      [ -e "$file" ] && files+=("$file")
     done
   done
 else
   files=("${inputs[@]}")
 fi
-[ ${#files[@]} -eq 2 ] || { echo "a measurement on the screen compares two files" >&2; exit 1; }
+case ${#files[@]} in
+  2 | 3) ;;
+  *) echo "a measurement on the screen compares two files or merges three" >&2; exit 1 ;;
+esac
 
 progress "building the app in release mode"
 if ! xcodebuild -project "$clone/App/Seamerge.xcodeproj" -scheme Seamerge -configuration Release \
@@ -220,6 +247,7 @@ case $arrangement in
 esac
 defaults write "$bundle_id" ConnectsChanges -bool "$connects"
 defaults write "$bundle_id" ShowsSingleColumn -bool "$single"
+defaults write "$bundle_id" HidesBase -bool "$hides_base"
 # The driver finds the window and the button by their English titles.
 defaults write "$bundle_id" AppleLanguages -array en
 
@@ -280,8 +308,9 @@ func button(titled title: String, in element: AXUIElement) -> AXUIElement? {
 }
 
 func pressCompare(in pid: pid_t) {
-  guard let compare = button(titled: "Compare", in: AXUIElementCreateApplication(pid)) else {
-    fail("the window Compare Files of \(pid) has no button Compare")
+  let app = AXUIElementCreateApplication(pid)
+  guard let compare = button(titled: "Compare", in: app) ?? button(titled: "Merge", in: app) else {
+    fail("the window Compare Files of \(pid) has no button Compare or Merge")
   }
   guard AXUIElementPerformAction(compare, kAXPressAction as CFString) == .success else {
     fail("Compare could not be pressed")
@@ -335,12 +364,34 @@ func flick(_ count: Int, in pid: pid_t) {
   print("flicks", start, CACurrentMediaTime(), screen?.maximumFramesPerSecond ?? 60)
 }
 
+// Moves the comparison to the top left of the screen with the lowest or the highest frame rate,
+// at the size it has.
+func place(in pid: pid_t, fast: Bool) {
+  let screens = NSScreen.screens.sorted { $0.maximumFramesPerSecond < $1.maximumFramesPerSecond }
+  guard let screen = fast ? screens.last : screens.first, let primary = NSScreen.screens.first
+  else { fail("no screen") }
+  var value: CFTypeRef?
+  AXUIElementCopyAttributeValue(
+    AXUIElementCreateApplication(pid), kAXWindowsAttribute as CFString, &value)
+  for window in value as? [AXUIElement] ?? [] {
+    var title: CFTypeRef?
+    AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &title)
+    guard title as? String != "Compare Files" else { continue }
+    let visible = screen.visibleFrame
+    var origin = CGPoint(x: visible.minX + 20, y: primary.frame.height - visible.maxY + 20)
+    guard let position = AXValueCreate(.cgPoint, &origin),
+      AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, position) == .success
+    else { fail("the comparison could not be moved") }
+  }
+}
+
 let arguments = CommandLine.arguments
 guard arguments.count >= 3, let pid = pid_t(arguments[2]) else { fail("usage: driver <command> <pid> …") }
 switch arguments[1] {
 case "compare": pressCompare(in: pid)
 case "flicks": flick(arguments.count > 3 ? Int(arguments[3]) ?? 1 : 1, in: pid)
 case "windows": for window in windows(of: pid) { print(window.name) }
+case "place": place(in: pid, fast: arguments.count > 3 && arguments[3] == "fast")
 default: fail("unknown command \(arguments[1])")
 }
 SWIFT
@@ -387,10 +438,19 @@ if $counter; then
           CACurrentMediaTime());
 }
 
+- (void)windowDidChangeScreen:(NSNotification *)notification {
+  NSWindow *window = notification.object;
+  if (window.isKeyWindow) [self windowDidBecomeKey:notification];
+}
+
 - (void)windowDidBecomeKey:(NSNotification *)notification {
   NSWindow *window = notification.object;
   [self.link invalidate];
   self.link = [window.contentView displayLinkWithTarget:self selector:@selector(frame:)];
+  // On a screen whose rate varies, as with ProMotion, the link asks for the highest one, which
+  // scrolling gets from the system anyway; otherwise it would count at 60 Hz.
+  float highest = (float)window.screen.maximumFramesPerSecond;
+  self.link.preferredFrameRateRange = CAFrameRateRangeMake(highest, highest, highest);
   [self.link addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
   fprintf(self.output, "# window %s\n", window.title.UTF8String);
 }
@@ -409,6 +469,10 @@ __attribute__((constructor)) static void startCounting(void) {
   [NSNotificationCenter.defaultCenter addObserver:counter
                                          selector:@selector(windowDidBecomeKey:)
                                              name:NSWindowDidBecomeKeyNotification
+                                           object:nil];
+  [NSNotificationCenter.defaultCenter addObserver:counter
+                                         selector:@selector(windowDidChangeScreen:)
+                                             name:NSWindowDidChangeScreenNotification
                                            object:nil];
 }
 OBJC
@@ -433,17 +497,26 @@ done
 wait_for_window "Compare Files" || { echo "the copy shows no window Compare Files" >&2; exit 1; }
 "$work/driver" compare "$pid" || exit 1
 wait_for_window --other "Compare Files" || { echo "the comparison did not open" >&2; exit 1; }
+sleep 1
+"$work/driver" place "$pid" "$screen" || exit 1
 
 header() {
   printf '# Scrolling on the screen, %s, %d flicks down and up, %s, %s\n' "$arrangement" \
     "$flicks" "$1" "$(date '+%Y-%m-%d %H:%M')"
-  printf '# files: %s\n' "${files[*]##*/}"
+  printf '# files: %s, %s screen, base %s\n' "${files[*]##*/}" "$screen" \
+    "$($hides_base && echo hidden || echo shown)"
 }
 
 if $counter; then
   progress "counting frames while playing $flicks flicks down and up"
   sleep 1
+  sampler=""
+  if [ -n "$sample_file" ]; then
+    sample "$pid" $((flicks * 4)) 1 -mayDie -file "$sample_file" > /dev/null 2>&1 &
+    sampler=$!
+  fi
   flicked=$("$work/driver" flicks "$pid" "$flicks") || exit 1
+  [ -z "$sampler" ] || wait "$sampler"
   header "frames counted in the copy"
   # The frames between the first and the last event of the flicks: a gap
   # between two frames longer than one and a half frames lost the frames in
