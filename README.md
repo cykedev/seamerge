@@ -168,7 +168,7 @@ Choose **Seamerge ▸ Settings…** (`⌘,`) to change how the code looks and ho
 
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-settings-dark.png">
-    <img src="Documentation/Images/screenshot-settings-light.png" width="480" alt="The Settings window with the groups Text, New Windows and Merging.">
+    <img src="Documentation/Images/screenshot-settings-light.png" width="480" alt="The Settings window on its page General, with the groups Text, New Windows, Merging and Updates.">
   </picture>
 
 - **Text:** the font of the code (SF Mono, or another monospaced font installed on the Mac), its size from 9 to 24 pt, the line spacing (compact, standard or spacious) and the tab width from 2 to 8 spaces. A window keeps the zoom you chose until the size in Settings changes.
