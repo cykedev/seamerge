@@ -144,7 +144,7 @@ private enum Stretch {
   case of(Int)
 
   /// The rows of the stretch in `pane`, from `start` on, where the stretch before it ended.
-  func rows(in pane: PaneView, from start: Int, blockCount: Int) -> Range<Int> {
+  @MainActor func rows(in pane: PaneView, from start: Int, blockCount: Int) -> Range<Int> {
     let blocks = pane.content.blocks
     let end: Int
     switch self {

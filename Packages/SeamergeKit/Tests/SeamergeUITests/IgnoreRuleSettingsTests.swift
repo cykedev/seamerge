@@ -1,5 +1,6 @@
 import AppKit
 import MergeModel
+import Synchronization
 import Testing
 
 @testable import SeamergeUI
@@ -59,17 +60,17 @@ struct IgnoreRuleSettingsTests {
 
   @Test func changeOfTheRulesIsAnnouncedOnce() {
     let settings = UserSettings.private()
-    var count = 0
+    let count = Mutex(0)
     let observer = NotificationCenter.default.addObserver(
       forName: UserSettings.ignoreRulesDidChangeNotification, object: settings, queue: nil
-    ) { _ in count += 1 }
+    ) { _ in count.withLock { $0 += 1 } }
     defer { NotificationCenter.default.removeObserver(observer) }
 
     settings.enabledBuiltInIgnoreRules = [.uuids]
     settings.enabledBuiltInIgnoreRules = [.uuids]
     settings.customIgnoreRules = [IgnoreRule(name: "Own", pattern: "x")]
 
-    #expect(count == 2)
+    #expect(count.withLock { $0 } == 2)
   }
 }
 
