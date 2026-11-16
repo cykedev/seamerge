@@ -140,7 +140,7 @@ If Tower is installed, the sheet also has **Add Seamerge to Tower**. Tick it bef
 
 In Finder, select files or folders and choose **Compare with Seamerge** from the Services menu. Two files open at once, with the older one on the left; two folders open in the folder comparison; three files fill Compare Files. Seamerge must be in the Applications folder, and it registers the service when it starts.
 
-## Try it with the example
+## Try it with the examples
 
 The `Examples` folder holds one Java file in three versions (`Base`, `A` and `B`) and a script that makes a throwaway repository in which a merge stops with ten conflicts:
 
@@ -149,6 +149,14 @@ Examples/make-git-conflict.sh <directory>
 ```
 
 The script prints two commands. The first, `git mergetool` with Seamerge, opens the conflicts. Choose the sides you want in each block, save, and close the window. The second, `git difftool`, compares the base with the branch in Seamerge. The commands pass their settings with `-c`, so they work without the Git integration being set up.
+
+`Examples/Logs` holds two runs of a build log, in which almost every line differs only in its timestamp, a session UUID or a memory address:
+
+```bash
+seamerge Examples/Logs/build-monday.log Examples/Logs/build-tuesday.log
+```
+
+Turn on Timestamps, UUIDs and Memory Addresses in **Settings ▸ Ignored Text**, and only the lines that really changed remain.
 
 ## Resolving a conflict
 

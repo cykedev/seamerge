@@ -1,0 +1,8 @@
+2026-11-17 09:02:47.903+0100 [INFO] Build started, session 3c9b1d22-71aa-4e0f-b8c5-55e01f7a9d10
+2026-11-17 09:02:48.210+0100 [INFO] Resolving packages
+2026-11-17 09:02:51.664+0100 [INFO] Compiling MergeModel (42 files)
+2026-11-17 09:03:05.118+0100 [INFO] Compiling PaneKit (32 files)
+2026-11-17 09:03:13.770+0100 [INFO] Linking Seamerge, image base 0x7ff8b20a9100
+2026-11-17 09:03:14.151+0100 [INFO] Signing the app
+2026-11-17 09:03:16.809+0100 [ERROR] Tests: 811 passed, 1 failed
+2026-11-17 09:03:16.810+0100 [INFO] Build finished in 28.9 s

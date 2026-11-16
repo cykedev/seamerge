@@ -1,0 +1,9 @@
+2026-11-16 08:14:02.118+0100 [INFO] Build started, session 8f14e45f-ceea-467f-a0e6-0b8f8b1d5c2a
+2026-11-16 08:14:02.431+0100 [INFO] Resolving packages
+2026-11-16 08:14:05.902+0100 [INFO] Compiling MergeModel (42 files)
+2026-11-16 08:14:19.377+0100 [INFO] Compiling PaneKit (31 files)
+2026-11-16 08:14:27.040+0100 [WARN] PaneView.swift:212: variable 'offset' was never mutated
+2026-11-16 08:14:33.615+0100 [INFO] Linking Seamerge, image base 0x7ff8a1c03e40
+2026-11-16 08:14:34.002+0100 [INFO] Signing the app
+2026-11-16 08:14:36.551+0100 [INFO] Tests: 812 passed, 0 failed
+2026-11-16 08:14:36.552+0100 [INFO] Build finished in 34.4 s
