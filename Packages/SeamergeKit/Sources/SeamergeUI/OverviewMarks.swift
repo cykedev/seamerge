@@ -1,3 +1,4 @@
+import Foundation
 import MergeModel
 import PaneKit
 
@@ -27,6 +28,7 @@ enum OverviewMarks {
       (arrangement.leadingRole, OverviewMark.Placement.leading),
       (arrangement.trailingRole, .trailing),
     ]
+    let labels = Labels()
     var marks: [OverviewMark] = []
     for (index, block) in changes.blocks.enumerated() {
       let rows = layout.rows(of: block)
@@ -35,7 +37,7 @@ enum OverviewMarks {
         marks.append(
           conflictMark(
             rows: rows, segment: segment, block: index,
-            line: firstLine(of: block, in: changes.hasBase ? .base : .b)))
+            line: firstLine(of: block, in: changes.hasBase ? .base : .b), labels: labels))
         continue
       }
       let changers = SessionChanges.changers(of: block)
@@ -48,7 +50,8 @@ enum OverviewMarks {
         marks.append(
           OverviewMark(
             rows: rows, style: style, placement: placement, block: index,
-            accessibilityLabel: changeLabel(of: changer, line: firstLine(of: block, in: changer))))
+            accessibilityLabel: labels.change(
+              of: changer, line: firstLine(of: block, in: changer))))
       }
     }
     return marks
@@ -62,6 +65,7 @@ enum OverviewMarks {
       (column.firstSide, OverviewMark.Placement.leading),
       (PaneContent.otherSide(of: column.firstSide), .trailing),
     ]
+    let labels = Labels()
     var marks: [OverviewMark] = []
     for (index, block) in changes.blocks.enumerated() {
       for (role, placement) in sides {
@@ -71,7 +75,7 @@ enum OverviewMarks {
         marks.append(
           OverviewMark(
             rows: rows, style: style, placement: placement, block: index,
-            accessibilityLabel: changeLabel(of: role, line: firstLine(of: block, in: role))))
+            accessibilityLabel: labels.change(of: role, line: firstLine(of: block, in: role))))
       }
     }
     return marks
@@ -81,17 +85,18 @@ enum OverviewMarks {
   static func result(
     of changes: SessionChanges, document: ResultDocument, result: PaneContent
   ) -> [OverviewMark] {
+    let labels = Labels()
     var marks: [OverviewMark] = []
     for (index, (block, paneBlock)) in zip(changes.blocks, result.blocks).enumerated() {
       let segment = document.segment(for: block)
       let line = paneBlock.rows.lowerBound + 1
       if block.kind == .conflict {
-        marks.append(conflictMark(rows: paneBlock.rows, segment: segment, block: index, line: line))
+        marks.append(
+          conflictMark(
+            rows: paneBlock.rows, segment: segment, block: index, line: line, labels: labels))
         continue
       }
-      let label = String(
-        localized: "\(sourceDescription(of: segment)), line \(line)", bundle: .module,
-        comment: "VoiceOver: a mark in the overview bar of the result, such as From A, line 12.")
+      let label = labels.source(sourceDescription(of: segment), line: line)
       let style = ResultPaneContent.style(of: segment)
       for (role, placement) in [(Role.a, OverviewMark.Placement.leading), (.b, .trailing)]
       where SessionChanges.changers(of: block).contains(role) {
@@ -104,29 +109,59 @@ enum OverviewMarks {
     return marks
   }
 
-  /// What VoiceOver calls the mark of a change of `role` that starts at `line`, counted from 1.
-  private static func changeLabel(of role: Role, line: Int) -> String {
-    String(
-      localized: "Change in \(role.letter), line \(line)", bundle: .module,
-      comment: "VoiceOver: a mark in the overview bar, such as Change in A, line 12.")
-  }
-
   /// The mark of a conflict: red while open, in the color of its source once decided.
   private static func conflictMark(
-    rows: Range<Int>, segment: Segment, block: Int, line: Int
+    rows: Range<Int>, segment: Segment, block: Int, line: Int, labels: Labels
   ) -> OverviewMark {
     let isOpen = segment.state == .open
-    let label =
-      isOpen
-      ? String(
-        localized: "Open conflict, line \(line)", bundle: .module,
-        comment: "VoiceOver: the mark of an open conflict in the overview bar.")
-      : String(
-        localized: "Resolved conflict, line \(line)", bundle: .module,
-        comment: "VoiceOver: the mark of a decided conflict in the overview bar.")
     return OverviewMark(
       rows: rows, style: ResultPaneContent.style(of: segment), placement: .fullWidth,
-      block: block, accessibilityLabel: label)
+      block: block,
+      accessibilityLabel: isOpen
+        ? labels.openConflict(line: line) : labels.resolvedConflict(line: line))
+  }
+
+  /// What VoiceOver calls the marks, from patterns looked up once for a bar: a lookup takes some
+  /// 20 µs, which for each of the thousands of marks of a large file adds up to most of a second.
+  private struct Labels {
+    private let changePattern = LabelPattern(
+      String(
+        localized: "Change in %@, line %lld", bundle: .module,
+        comment: "VoiceOver: a mark in the overview bar, such as Change in A, line 12."))
+    private let sourcePattern = LabelPattern(
+      String(
+        localized: "%@, line %lld", bundle: .module,
+        comment: "VoiceOver: a mark in the overview bar of the result, such as From A, line 12."))
+    private let openConflictPattern = LabelPattern(
+      String(
+        localized: "Open conflict, line %lld", bundle: .module,
+        comment: "VoiceOver: the mark of an open conflict in the overview bar."))
+    private let resolvedConflictPattern = LabelPattern(
+      String(
+        localized: "Resolved conflict, line %lld", bundle: .module,
+        comment: "VoiceOver: the mark of a decided conflict in the overview bar."))
+
+    private let letters = Dictionary(uniqueKeysWithValues: Role.allCases.map { ($0, $0.letter) })
+
+    /// The mark of a change of `role` that starts at `line`, counted from 1.
+    func change(of role: Role, line: Int) -> String {
+      changePattern.filled(letters[role] ?? role.letter, String(line))
+    }
+
+    /// The mark of a part of the result at `line`, whose text comes from `source`.
+    func source(_ source: String, line: Int) -> String {
+      sourcePattern.filled(source, String(line))
+    }
+
+    /// The mark of an open conflict at `line`.
+    func openConflict(line: Int) -> String {
+      openConflictPattern.filled(String(line))
+    }
+
+    /// The mark of a decided conflict at `line`.
+    func resolvedConflict(line: Int) -> String {
+      resolvedConflictPattern.filled(String(line))
+    }
   }
 
   /// Where the text of a decided segment comes from, in words.
