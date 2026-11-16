@@ -114,7 +114,7 @@ cask "seamerge" do
   url "https://github.com/cykedev/seamerge/releases/download/v#{version}/Seamerge-#{version}.zip"
   name "Seamerge"
   desc "Diff and merge tool built for Git"
-  homepage "https://www.seamerge.app"
+  homepage "https://www.seamerge.app/"
 
   livecheck do
     url :url
@@ -122,7 +122,7 @@ cask "seamerge" do
   end
 
   auto_updates true
-  depends_on macos: ">= :golden_gate"
+  depends_on macos: :golden_gate
 
   app "Seamerge.app"
   binary "#{appdir}/Seamerge.app/Contents/Helpers/seamerge"
