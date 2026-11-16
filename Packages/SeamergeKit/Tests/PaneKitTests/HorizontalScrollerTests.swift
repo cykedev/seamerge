@@ -5,7 +5,8 @@ import Testing
 
 /// Checks the scroller below a pane whose lines are wider than the pane: in either style that the
 /// system gives scrollers, it lies wholly in the pane, its knob fits the width of the text, and a
-/// legacy scroller takes its height from the text, while an overlay scroller lies above it.
+/// legacy scroller takes its height from the text, the gutter and the decision column, which end
+/// with the text above it, while an overlay scroller lies above them all.
 @MainActor
 @Suite struct HorizontalScrollerTests {
   private static let size = CGSize(width: 400, height: 300)
@@ -48,6 +49,27 @@ import Testing
       style == .overlay ? scrollView.bounds.height : scroller.frame.minY
     #expect(pane.clipView.frame.height == expectedHeight)
     #expect(pane.documentView.frame.height == expectedHeight)
+  }
+
+  @Test(arguments: [NSScroller.Style.overlay, .legacy])
+  func gutterAndDecisionColumnEndWithTheVisibleText(style: NSScroller.Style) throws {
+    let (pane, window) = Self.hostedPane(lineCount: 50, width: 200)
+    defer { window.close() }
+    pane.decisionColumn = DecisionColumnView()
+    let scrollView = try Self.scrollView(of: pane)
+    scrollView.scrollerStyle = style
+    pane.layoutSubtreeIfNeeded()
+    let column = try #require(pane.decisionColumn)
+    let scroller = try #require(scrollView.horizontalScroller)
+    let textBottom = pane.convert(pane.clipView.frame, from: scrollView).maxY
+    // The legacy scroller takes the bottom of the pane below the text with its track; the
+    // overlay scroller lies over the text, which reaches the bottom.
+    let scrollerTop = pane.convert(scroller.frame, from: scrollView).minY
+    #expect(textBottom == (style == .legacy ? scrollerTop : pane.bounds.maxY))
+    #expect(textBottom < pane.bounds.maxY || style == .overlay)
+    #expect(pane.gutterView.frame.maxY == textBottom)
+    #expect(column.frame.maxY == textBottom)
+    #expect(pane.gutterView.frame.minY == 0 && column.frame.minY == 0)
   }
 
   @Test func lastLineScrollsWhollyAboveALegacyScroller() throws {

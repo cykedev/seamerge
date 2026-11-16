@@ -444,6 +444,12 @@ public final class PaneView: NSView {
       scrollView.hasHorizontalScroller = hasHorizontalScroller
       scrollView.tile()
     }
+    // The gutter and the decision column end with the visible text, above a legacy scroller,
+    // which takes the bottom of the pane below the text with its track; beside an overlay
+    // scroller, which lies over the text, they reach the bottom as the text does.
+    let textBottom = convert(clipView.frame, from: scrollView).maxY
+    gutterView.frame.size.height = textBottom
+    decisionColumn?.frame.size.height = textBottom
     // At least as high as the view, so that a click below the last line reaches the text and
     // puts the insertion point at its end, as in any editor.
     textView.setFrameSize(
