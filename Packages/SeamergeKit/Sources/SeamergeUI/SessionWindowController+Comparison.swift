@@ -25,23 +25,60 @@ extension SessionWindowController {
         await comparisonFailed(error)
         return
       }
-      guard let result = presentation.result else {
-        show(switched, result: nil, named: Self.switchName)
+      guard presentation.result != nil else {
+        show(await prepared(switched, result: nil), named: Self.switchName)
         return
       }
-      let modeSwitch = result.document.planSwitching(to: switched, text: result.text)
-      if modeSwitch.discardedDecisionCount > 0 {
-        guard let window,
-          await prompts.confirmDiscarding(modeSwitch.discardedDecisionCount, in: window)
-        else { return }
+      // The user may decide or type while the new comparison is made ready; it then starts
+      // over from the result as it is now.
+      while let result = presentation.result {
+        let modeSwitch = await Self.switching(result, to: switched)
+        if modeSwitch.discardedDecisionCount > 0 {
+          guard let window,
+            await prompts.confirmDiscarding(modeSwitch.discardedDecisionCount, in: window)
+          else { return }
+          // Asking took a moment; a decision made meanwhile goes into the switch as well.
+          guard isShowing(result) else { continue }
+        }
+        let prepared = await prepared(modeSwitch.session, result: modeSwitch.result)
+        guard isShowing(result) else { continue }
+        show(prepared, named: Self.switchName)
+        return
       }
-      var document = result.document
-      _ = document.apply(modeSwitch.plan, replacedTexts: [result.text])
-      show(
-        document.session,
-        result: ResultState(
-          document: document, text: modeSwitch.plan.replacements.map(\.text).joined()),
-        named: Self.switchName)
+    }
+  }
+
+  /// What switching `result` to `session`, the same files compared anew, makes of it: the
+  /// session and the result with each decision that keeps its block, and how many decisions it
+  /// discards; worked out away from the main actor.
+  @concurrent
+  private static func switching(
+    _ result: ResultState, to session: Session
+  ) async -> (session: Session, result: ResultState, discardedDecisionCount: Int) {
+    let modeSwitch = result.document.planSwitching(to: session, text: result.text)
+    var document = result.document
+    _ = document.apply(modeSwitch.plan, replacedTexts: [result.text])
+    return (
+      document.session,
+      ResultState(document: document, text: modeSwitch.plan.replacements.map(\.text).joined()),
+      modeSwitch.discardedDecisionCount
+    )
+  }
+
+  /// Whether the window shows `result` as the result of its merge, unchanged since.
+  func isShowing(_ result: ResultState) -> Bool {
+    guard let current = presentation.result else { return false }
+    return current.text == result.text && current.document.segments == result.document.segments
+  }
+
+  /// What the panes show for `session` with `result`, made away from the main actor for the
+  /// setup of the panes once it is ready; made anew while the user changes the setup
+  /// meanwhile, as by showing all lines in another arrangement.
+  func prepared(_ session: Session, result: ResultState?) async -> PreparedSession {
+    while true {
+      if let prepared = await presentation.prepare(session, result: result) {
+        return prepared
+      }
     }
   }
 
@@ -115,9 +152,21 @@ extension SessionWindowController {
   /// the rules of Settings changed meanwhile. The language of the code is recognized anew, since
   /// a file read again may start with another first line.
   func show(_ session: Session, result: ResultState?, named name: String?) {
+    show(
+      PreparedSession(
+        session: session, result: result, setup: presentation.setup, lines: presentation.lines),
+      named: name)
+  }
+
+  /// Shows `prepared`, made for the same files compared anew, in place of what the window shows
+  /// now, as ``show(_:result:named:)`` shows its session.
+  ///
+  /// - Precondition: `prepared` was made for the setup of the panes now.
+  func show(_ prepared: PreparedSession, named name: String?) {
     let previous = (presentation.changes.session, presentation.result, usesIgnoreRules)
+    let session = prepared.changes.session
     typingRun = nil
-    presentation.show(session, result: result)
+    presentation.showComparedAnew(prepared)
     presentation.show(
       Dictionary(
         uniqueKeysWithValues: session.roles.map { role in

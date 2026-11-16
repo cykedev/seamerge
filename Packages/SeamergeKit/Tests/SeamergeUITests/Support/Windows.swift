@@ -127,8 +127,12 @@ final class PromptRecorder: SessionPrompts {
   private(set) var discardedHandwritingCounts: [Int] = []
   private(set) var failureCount = 0
 
+  /// What happens while the window asks whether to switch although decisions would be lost.
+  var whileAskingToDiscard: @MainActor () async -> Void = {}
+
   func confirmDiscarding(_ count: Int, in window: NSWindow) async -> Bool {
     discardedCounts.append(count)
+    await whileAskingToDiscard()
     return switchesAnyway
   }
 
@@ -225,8 +229,12 @@ final class PromptRecorder: SessionPrompts {
     return reloadsChangedResult
   }
 
+  /// What happens while the window asks whether to reload although decisions would be lost.
+  var whileAskingToReload: @MainActor () async -> Void = {}
+
   func confirmReloading(_ name: String?, discarding count: Int, in window: NSWindow) async -> Bool {
     questions.append("reload \(name ?? "files"), \(count) decisions")
+    await whileAskingToReload()
     return reloadsAnyway
   }
 

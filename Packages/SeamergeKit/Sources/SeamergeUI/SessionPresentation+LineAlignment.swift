@@ -5,28 +5,12 @@ import PaneKit
 extension SessionPresentation {
   /// The text of the input of `role` without filler rows, made once.
   func lineText(of role: Role) -> DisplayText {
-    if let text = lineTexts[role] {
-      return text
-    }
-    guard let text = changes.session.rowLayout.lineText(for: role) else {
-      preconditionFailure("The session has no input \(role)")
-    }
-    lineTexts[role] = text
-    return text
+    lines.text(of: role)
   }
 
   /// How each line of the input of `role` ends, worked out once.
   func lineEndings(of role: Role) -> [LineEnding] {
-    if let endings = lineEndingsByRole[role] {
-      return endings
-    }
-    guard let file = changes.session.file(for: role) else {
-      preconditionFailure("The session has no input \(role)")
-    }
-    let endings = PaneContent.lineEndings(
-      of: file, lineCount: changes.session.rowLayout.lineCount(in: role))
-    lineEndingsByRole[role] = endings
-    return endings
+    lines.endings(of: role)
   }
 
   /// The map from rows of the grid to lines of the input of `role`.
@@ -73,11 +57,21 @@ extension SessionPresentation {
   /// Gives each seam the blocks in which the inputs on either side have the same text, which
   /// get no band: next to the base, the changes of the other side only.
   func showSeamBands() {
+    showSeamBands { changes.blocksWithoutDifference(between: $0.left, and: $0.right) }
+  }
+
+  /// Gives each seam the blocks without band that `blocksWithoutBand` worked out for it.
+  func showSeamBands(_ blocksWithoutBand: [PaneSetup.Seam: IndexSet]) {
+    showSeamBands { blocksWithoutBand[$0] ?? IndexSet() }
+  }
+
+  /// Gives each seam the blocks without band that `blocks` tells for the inputs on its sides.
+  private func showSeamBands(_ blocks: (PaneSetup.Seam) -> IndexSet) {
     for seam in layout.seams {
       guard let left = seam.leftPane.flatMap(role(of:)),
         let right = seam.rightPane.flatMap(role(of:))
       else { continue }
-      seam.blocksWithoutBand = changes.blocksWithoutDifference(between: left, and: right)
+      seam.blocksWithoutBand = blocks(PaneSetup.Seam(left: left, right: right))
     }
   }
 

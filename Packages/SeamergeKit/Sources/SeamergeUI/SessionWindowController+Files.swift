@@ -165,26 +165,42 @@ extension SessionWindowController {
     with session: Session, askingWith ask: (Int, NSWindow) async -> Bool
   ) async -> Bool {
     guard let window else { return false }
-    guard let result = presentation.result else {
-      show(session, result: nil, named: Self.reloadName)
+    guard presentation.result != nil else {
+      show(await prepared(session, result: nil), named: Self.reloadName)
       return true
     }
-    let reload = result.document.planReloading(to: session, text: result.text)
-    if reload.discardedDecisionCount > 0 {
-      guard await ask(reload.discardedDecisionCount, window) else { return false }
+    // The user may decide or type while the new comparison is made ready; it then starts over
+    // from the result as it is now.
+    while let result = presentation.result {
+      let reload = await Self.reloading(result, to: session)
+      if reload.discardedDecisionCount > 0 {
+        guard await ask(reload.discardedDecisionCount, window) else { return false }
+        // Asking took a moment; a decision made meanwhile goes into the reload as well.
+        guard isShowing(result) else { continue }
+      }
+      let prepared = await prepared(reload.session, result: reload.result)
+      guard isShowing(result) else { continue }
+      show(prepared, named: Self.reloadName)
+      return true
     }
-    // Asking took a moment; what the window shows may have changed meanwhile.
-    guard let current = presentation.result, current.text == result.text,
-      current.document.segments == result.document.segments
-    else { return false }
+    return false
+  }
+
+  /// What reloading `result` with `session`, a comparison of the files as they are now, makes
+  /// of it: the session and the result with each decision that belongs to the same block
+  /// without doubt, and how many decisions it discards; worked out away from the main actor.
+  @concurrent
+  private static func reloading(
+    _ result: ResultState, to session: Session
+  ) async -> (session: Session, result: ResultState, discardedDecisionCount: Int) {
+    let reload = result.document.planReloading(to: session, text: result.text)
     var document = result.document
     _ = document.apply(reload.plan, replacedTexts: [result.text])
-    show(
+    return (
       document.session,
-      result: ResultState(
-        document: document, text: reload.plan.replacements.map(\.text).joined()),
-      named: Self.reloadName)
-    return true
+      ResultState(document: document, text: reload.plan.replacements.map(\.text).joined()),
+      reload.discardedDecisionCount
+    )
   }
 
   /// What Undo calls reloading files that changed on disk, and the button of the sheets that

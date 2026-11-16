@@ -104,20 +104,31 @@ extension SessionPresentation {
 
   /// Gives the single column its content, its collapsed runs, its marks and its tokens.
   private func showColumnContent() {
-    guard let column = columnLayout, let pane = layout.columnPane else { return }
+    guard let column = columnLayout else { return }
+    showColumn(
+      PreparedSession.column(
+        column, changes: changes, collapsed: collapsed,
+        ignoredDifferences: ignoredDifferences ?? IgnoredDifferences(in: changes.session),
+        showsIgnoredPlaces: showsIgnoredChanges, lines: &lines))
+  }
+
+  /// Gives the single column what `prepared` holds for it, the runs the user expanded, the
+  /// current block and its tokens.
+  func showColumn(_ prepared: PreparedSession.Column) {
+    guard let pane = layout.columnPane else { return }
+    let column = prepared.layout
+    columnLayout = column
     let highlights = BlockHighlights(changes: changes, rows: .column(column))
     columnHighlights = highlights
     pane.highlightProvider = highlights
-    pane.setContent(
-      PaneContent(
-        column: column, of: changes,
-        lineEndings: [.a: lineEndings(of: .a), .b: lineEndings(of: .b)],
-        ignoredDifferences: ignoredDifferences ?? IgnoredDifferences(in: changes.session),
-        showsIgnoredPlaces: showsIgnoredChanges),
-      collapsedRuns: columnRuns(of: collapsed.runs, in: column))
+    if let preparedContent = prepared.prepared {
+      pane.setContent(preparedContent, collapsedRuns: prepared.collapsedRuns)
+    } else {
+      pane.setContent(prepared.content, collapsedRuns: prepared.collapsedRuns)
+    }
     pane.expandedRuns = columnRuns(of: collapsed.expandedRuns, in: column)
     pane.currentBlock = currentBlock
-    columnOverviewBar?.marks = OverviewMarks.column(of: changes, column: column)
+    columnOverviewBar?.marks = prepared.marks
     columnOverviewBar?.currentBlock = currentBlock
     // The tokens of a former layout name its rows.
     columnSyntax = nil
@@ -136,7 +147,7 @@ extension SessionPresentation {
   private func columnRuns(
     of runs: [CollapsedRows.Run], in column: SingleColumnLayout
   ) -> [CollapsedRun] {
-    runs.map { CollapsedRun(rows: collapsed.rows(of: $0, in: column)) }
+    PreparedSession.columnRuns(of: runs, in: column, collapsed: collapsed)
   }
 
   /// Gives the single column, while it shows, the tokens of both files as far as they are

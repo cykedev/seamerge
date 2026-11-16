@@ -121,6 +121,66 @@ struct DiskChangeTests {
     #expect(fixture.conflictState == .open)
   }
 
+  @Test func decisionMadeWhileTheReloadPreparesThePanesIsKept() async throws {
+    let folder = FileManager.default.temporaryDirectory.appending(
+      path: "DiskChangeTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer {
+      do {
+        try FileManager.default.removeItem(at: folder)
+      } catch {
+        Issue.record("Could not remove \(folder.path): \(error)")
+      }
+    }
+    let texts = [
+      ("base.txt", "one\ntwo\nthree\nfour\nfive\nsix\n"),
+      ("a.txt", "one\ntwo A\nthree\nfour\nfive A\nsix\n"),
+      ("b.txt", "one\ntwo B\nthree\nfour\nfive B\nsix\n"),
+    ]
+    for (name, text) in texts {
+      try Data(text.utf8).write(to: folder.appending(path: name))
+    }
+    let file = { (name: String) in SessionFile(url: folder.appending(path: name), label: name) }
+    let prompts = PromptRecorder()
+    prompts.reloadsAnyway = true
+    let controller = try Windows.controller(
+      for: try await Session.loadMerge(
+        base: file("base.txt"), a: file("a.txt"), b: file("b.txt"), mode: .windowDefault),
+      prompts: prompts)
+    defer { controller.window?.close() }
+    func conflicts() -> [Block] {
+      controller.presentation.changes.blocks.filter { $0.kind == .conflict }
+    }
+    func state(of block: Block) -> Segment.State? {
+      controller.presentation.result?.document.segment(for: block).state
+    }
+    let indices = controller.presentation.changes.blocks.indices.filter {
+      controller.presentation.changes.blocks[$0].kind == .conflict
+    }
+    try #require(indices.count == 2)
+    controller.presentation.setCurrentBlock(indices[0])
+    controller.perform(.useB)
+    var intervenes = true
+    prompts.whileAskingToReload = {
+      guard intervenes else { return }
+      intervenes = false
+      // Runs once the answer let the reload go on to make the new panes ready.
+      Task { @MainActor in
+        controller.presentation.setCurrentBlock(indices[1])
+        controller.perform(.useA)
+      }
+    }
+    try Data("one\ntwo, now A\nthree\nfour\nfive A\nsix\n".utf8).write(
+      to: folder.appending(path: "a.txt"), options: .atomic)
+
+    await controller.reloadChangedFiles()
+    #expect(prompts.questions == ["reload a.txt, 1 decisions", "reload a.txt, 1 decisions"])
+    let reloaded = conflicts()
+    try #require(reloaded.count == 2)
+    #expect(state(of: reloaded[0]) == .open)
+    #expect(state(of: reloaded[1]) == .chosen)
+  }
+
   @Test func deletedSourceLeavesTheWindowAsItIs() async throws {
     let fixture = try await Fixture()
     try FileManager.default.removeItem(at: fixture.url("a.txt"))

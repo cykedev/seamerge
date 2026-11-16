@@ -112,6 +112,173 @@ import Testing
     #expect(!controller.isSwitchingComparison)
   }
 
+  @Test func decisionMadeWhileTheSwitchIsUnderWayIsKept() async throws {
+    let controller = try Windows.controller(for: try await SampleMerges.manyBlocks())
+    defer { controller.window?.close() }
+    #expect(controller.presentation.navigation.openConflictCount > 0)
+    let switching = Task {
+      await controller.switchComparison(to: ComparisonOptions(mode: .exact))
+    }
+    await Task.yield()
+    #expect(controller.isSwitchingComparison)
+    controller.resolveOpenConflicts(with: [.a])
+    #expect(controller.presentation.navigation.openConflictCount == 0)
+
+    await switching.value
+    #expect(controller.comparisonOptions.mode == .exact)
+    #expect(controller.presentation.navigation.openConflictCount == 0)
+    #expect(
+      try controller.mergeResult.content.blocks.count
+        == controller.presentation.changes.blocks.count)
+  }
+
+  @Test func arrangementChangedWhileTheSwitchIsUnderWayShowsTheNewComparisonInIt() async throws {
+    let controller = try Windows.controller(for: try await SampleDiffs.everyKindOfChange())
+    defer { controller.window?.close() }
+    #expect(controller.presentation.alignsLines)
+    let switching = Task {
+      await controller.switchComparison(to: ComparisonOptions(mode: .exact))
+    }
+    await Task.yield()
+    #expect(controller.isSwitchingComparison)
+    controller.presentation.setAlignsLines(false)
+
+    await switching.value
+    let presentation = controller.presentation
+    #expect(controller.comparisonOptions.mode == .exact)
+    #expect(!presentation.alignsLines)
+    for (role, pane) in controller.layout.sourcePanes {
+      #expect(
+        pane.content.lineNumbers.count == presentation.changes.session.rowLayout.lineCount(in: role)
+      )
+      #expect(pane.content.blocks.count == presentation.changes.blocks.count)
+    }
+  }
+
+  @Test func switchPreparesWhatThePanesShowAsShowingTheComparisonDirectly() async throws {
+    let session = try await SampleDiffs.everyKindOfChange()
+    let exact = try await session.recomputed(options: ComparisonOptions(mode: .exact))
+    for alignsLines in [true, false] {
+      let prepared = try Windows.controller(for: session)
+      let direct = try Windows.controller(for: session)
+      defer {
+        prepared.window?.close()
+        direct.window?.close()
+      }
+      for controller in [prepared, direct] {
+        controller.presentation.setAlignsLines(alignsLines)
+      }
+      let contents = await prepared.prepared(exact, result: nil)
+      prepared.presentation.showComparedAnew(contents)
+      direct.presentation.show(exact, result: nil)
+      for (shown, expected) in zip(Windows.panes(of: prepared), Windows.panes(of: direct)) {
+        #expect(shown.documentView.string == expected.documentView.string)
+        #expect(shown.content.lineNumbers == expected.content.lineNumbers)
+        #expect(shown.content.blocks == expected.content.blocks)
+        #expect(shown.collapsedRuns == expected.collapsedRuns)
+      }
+      #expect(
+        prepared.presentation.sourcesOverviewBar.marks
+          == direct.presentation.sourcesOverviewBar.marks)
+      #expect(prepared.presentation.currentBlock == direct.presentation.currentBlock)
+    }
+  }
+
+  @Test func decisionMadeWhileTheSwitchPreparesThePanesIsKept() async throws {
+    let prompts = PromptRecorder()
+    prompts.switchesAnyway = true
+    let controller = try Windows.controller(for: try await twoConflicts(), prompts: prompts)
+    defer { controller.window?.close() }
+    let conflicts = conflictIndices(of: controller)
+    try #require(conflicts.count == 2)
+    controller.presentation.setCurrentBlock(conflicts[0])
+    controller.perform(.useA)
+    var intervenes = true
+    prompts.whileAskingToDiscard = {
+      guard intervenes else { return }
+      intervenes = false
+      // Runs as soon as the main actor is free, once the answer let the switch go on to make
+      // the new panes ready away from it.
+      Task { @MainActor in
+        controller.presentation.setCurrentBlock(conflicts[1])
+        controller.perform(.useB)
+      }
+    }
+
+    await controller.switchComparison(to: ComparisonOptions(mode: .exact))
+    #expect(controller.comparisonOptions.mode == .exact)
+    #expect(prompts.discardedCounts == [1, 1])
+    #expect(controller.presentation.navigation.openConflictCount == 1)
+    let decided = try #require(conflictIndices(of: controller).last)
+    let block = controller.presentation.changes.blocks[decided]
+    #expect(controller.presentation.result?.document.segment(for: block).state == .chosen)
+  }
+
+  @Test func decisionMadeWhileTheSwitchAsksGoesIntoTheSwitch() async throws {
+    let prompts = PromptRecorder()
+    prompts.switchesAnyway = true
+    let controller = try Windows.controller(for: try await twoConflicts(), prompts: prompts)
+    defer { controller.window?.close() }
+    let conflicts = conflictIndices(of: controller)
+    controller.presentation.setCurrentBlock(conflicts[0])
+    controller.perform(.useA)
+    var intervenes = true
+    prompts.whileAskingToDiscard = {
+      guard intervenes else { return }
+      intervenes = false
+      controller.presentation.setCurrentBlock(conflicts[1])
+      controller.perform(.useB)
+    }
+
+    await controller.switchComparison(to: ComparisonOptions(mode: .exact))
+    #expect(controller.comparisonOptions.mode == .exact)
+    #expect(prompts.discardedCounts == [1, 1])
+    #expect(controller.presentation.navigation.openConflictCount == 1)
+  }
+
+  @Test func arrangementChangedWhileTheSwitchPreparesThePanesShowsItsNewComparison()
+    async throws
+  {
+    let prompts = PromptRecorder()
+    prompts.switchesAnyway = true
+    let controller = try Windows.controller(for: try await twoConflicts(), prompts: prompts)
+    defer { controller.window?.close() }
+    controller.presentation.setCurrentBlock(conflictIndices(of: controller)[0])
+    controller.perform(.useA)
+    var intervenes = true
+    prompts.whileAskingToDiscard = {
+      guard intervenes else { return }
+      intervenes = false
+      Task { @MainActor in controller.presentation.setAlignsLines(false) }
+    }
+
+    await controller.switchComparison(to: ComparisonOptions(mode: .exact))
+    let presentation = controller.presentation
+    #expect(controller.comparisonOptions.mode == .exact)
+    #expect(!presentation.alignsLines)
+    for (role, pane) in controller.layout.sourcePanes {
+      #expect(
+        pane.content.lineNumbers.count
+          == max(presentation.changes.session.rowLayout.lineCount(in: role), 1))
+    }
+  }
+
+  /// The indices of the conflicts among the changed blocks of the window.
+  private func conflictIndices(of controller: SessionWindowController) -> [Int] {
+    controller.presentation.changes.blocks.indices.filter {
+      controller.presentation.changes.blocks[$0].kind == .conflict
+    }
+  }
+
+  /// A merge with two conflicts: the first, like ``decidedSample()``, takes other lines in the
+  /// exact mode, so that switching to it discards its decision; the second stays as it is.
+  private func twoConflicts() async throws -> Session {
+    try await SampleMerges.merge(
+      base: "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\n",
+      a: "one \nTWO\nthree\nfour\nfive\nsix\nSEVEN\neight\n",
+      b: "one\nTwo\nthree\nfour\nfive\nsix\nSeven\neight\n")
+  }
+
   /// A merge with one conflict in the mode of the window whose lines differ in the exact mode,
   /// where A also adds a trailing space to the line before it.
   private func decidedSample() async throws -> Session {

@@ -65,11 +65,9 @@ final class SessionPresentation {
   /// in the seams between them.
   private(set) var alignsLines: Bool
 
-  /// The text of each input without filler rows, made when a pane first shows it.
-  var lineTexts: [Role: DisplayText] = [:]
-
-  /// How each line of each input ends, worked out when a pane first shows it.
-  var lineEndingsByRole: [Role: [LineEnding]] = [:]
+  /// The lines of the inputs without filler rows and how they end, worked out when a pane first
+  /// needs them.
+  var lines: InputLines
 
   /// The lines that differ in a way that the comparison mode ignores, once the panes side by
   /// side show the session.
@@ -85,15 +83,9 @@ final class SessionPresentation {
   /// comparison mode ignores, which Show Ignored Changes would highlight.
   var hasPlacesOfIgnoredChanges: Bool {
     if let hasIgnoredChangePlaces { return hasIgnoredChangePlaces }
-    guard let ignoredDifferences, !ignoredDifferences.isEmpty else { return false }
-    let session = changes.session
-    let hasPlaces = layout.sourcePanes.contains { role, _ in
-      do {
-        return try !ignoredDifferences.places(in: role, of: session).isEmpty
-      } catch {
-        return false
-      }
-    }
+    guard let ignoredDifferences else { return false }
+    let hasPlaces = PreparedSession.hasPlaces(
+      of: ignoredDifferences, in: layout.sourcePanes.map(\.role), of: changes.session)
     hasIgnoredChangePlaces = hasPlaces
     return hasPlaces
   }
@@ -201,6 +193,7 @@ final class SessionPresentation {
     self.result = result
     changes = SessionChanges(session: session, origin: arrangement.origin)
     collapsed = CollapsedRows(session: session, document: result?.document)
+    lines = InputLines(session: session)
     resultOverviewBar = layout.resultPane.map { _ in OverviewBar() }
     columnOverviewBar = layout.columnPane.map { _ in OverviewBar() }
     decisionColumn = layout.resultPane.map { _ in DecisionColumnView() }
@@ -357,26 +350,76 @@ final class SessionPresentation {
     }
   }
 
-  /// Shows the session in every pane: the contents, the collapsed runs, the marks of the
-  /// overview bars and, in a merge, the signs of the decision column.
+  /// How the panes show the session now, which decides what each of them shows.
+  var setup: PaneSetup {
+    PaneSetup(
+      arrangement: arrangement, alignsLines: alignsLines, baseIsShown: layout.showsBase,
+      showsIgnoredChanges: showsIgnoredChanges,
+      columnFirstSide: columnLayout != nil ? arrangement.leadingRole : nil,
+      seams: layout.seams.compactMap { seam in
+        guard let left = seam.leftPane.flatMap(role(of:)),
+          let right = seam.rightPane.flatMap(role(of:))
+        else { return nil }
+        return PaneSetup.Seam(left: left, right: right)
+      },
+      headers: headers, tabWidth: layout.sourcePanes.first?.pane.theme.tabWidth ?? Theme().tabWidth)
+  }
+
+  /// Shows the session in every pane anew, with the runs collapsed now: the contents, the
+  /// collapsed runs, the marks of the overview bars and, in a merge, the signs of the decision
+  /// column.
   private func showSession() {
+    show(
+      PreparedSession(
+        session: changes.session, result: result, setup: setup, lines: lines,
+        collapsed: collapsed))
+  }
+
+  /// Puts `prepared` in place in every pane: the session and the result it was made for, the
+  /// collapsed runs, the marks of the overview bars and, in a merge, the signs of the decision
+  /// column.
+  ///
+  /// - Precondition: `prepared` was made for the setup of the panes now.
+  private func show(_ prepared: PreparedSession) {
+    precondition(prepared.setup == setup, "Contents made for another setup of the panes")
+    result = prepared.result
+    changes = prepared.changes
+    collapsed = prepared.collapsed
+    ignoredDifferences = prepared.ignoredDifferences
+    hasIgnoredChangePlaces = prepared.hasPlacesOfIgnoredChanges
+    lines = prepared.lines
+    connectPanes()
     defer { updateSearchSections() }
-    showSources()
-    sourcesOverviewBar.marks = OverviewMarks.sources(
-      of: changes, document: result?.document, arrangement: arrangement,
-      baseIsShown: layout.showsBase)
-    showColumn()
+    scrollSync.withoutFollowing {
+      highlights = []
+      for (source, (_, pane)) in zip(prepared.sources, layout.sourcePanes) {
+        show(
+          source.content, prepared: source.prepared, collapsedRuns: source.collapsedRuns,
+          of: source.role, in: pane)
+      }
+    }
+    showSeamBands(prepared.blocksWithoutBand)
+    showOverviewGrid()
+    alignSourcesToB()
+    sourcesOverviewBar.marks = prepared.sourceMarks
+    if let column = prepared.column {
+      showColumn(column)
+    }
     syntax.lexInputs(of: changes.session)
     showSyntax()
-    guard let result, let resultPane = layout.resultPane else { return }
-    let content = ResultPaneContent(result: result, changes: changes, headers: headers)
+    guard let result, let resultPane = layout.resultPane, let resultContent = prepared.resultPane
+    else { return }
     syntax.lexResult(result.rows)
     showSyntax()
-    resultPane.setContent(content.content, collapsedRuns: resultRuns)
+    if let prepared = resultContent.prepared {
+      resultPane.setContent(prepared, collapsedRuns: resultContent.collapsedRuns)
+    } else {
+      resultPane.setContent(
+        resultContent.content.content, collapsedRuns: resultContent.collapsedRuns)
+    }
     resultPane.expandedRuns = resultExpandedRuns
-    resultOverviewBar?.marks = OverviewMarks.result(
-      of: changes, document: result.document, result: content.content)
-    decisionColumn?.decisions = content.decisions
+    resultOverviewBar?.marks = resultContent.marks
+    decisionColumn?.decisions = resultContent.content.decisions
   }
 
   /// Shows the inputs in the panes side by side, on the grid or with the lines of their files as
@@ -397,29 +440,34 @@ final class SessionPresentation {
   private func showSourceContents() {
     let ignoredDifferences = IgnoredDifferences(in: changes.session)
     self.ignoredDifferences = ignoredDifferences
-    let baseIsShown = layout.showsBase
+    let setup = setup
     highlights = []
     for (role, pane) in layout.sourcePanes {
-      let provider = BlockHighlights(
-        changes: changes, rows: alignsLines ? .grid(role) : .lines(role),
-        comparesSides: changes.comparesSides(baseIsShown: baseIsShown))
-      highlights.append(provider)
-      pane.highlightProvider = provider
-      let content =
-        alignsLines
-        ? PaneContent(
-          source: role, of: changes, lineEndings: lineEndings(of: role),
-          document: result?.document,
-          ignoredDifferences: ignoredDifferences, showsIgnoredPlaces: showsIgnoredChanges,
-          baseIsShown: baseIsShown)
-        : PaneContent(
-          lines: role, text: lineText(of: role), of: changes, lineEndings: lineEndings(of: role),
-          document: result?.document,
-          ignoredDifferences: ignoredDifferences, showsIgnoredPlaces: showsIgnoredChanges,
-          baseIsShown: baseIsShown)
-      pane.setContent(content, collapsedRuns: sourceRuns(in: role))
-      pane.expandedRuns = sourceExpandedRuns(in: role)
+      let content = PreparedSession.sourceContent(
+        of: role, setup: setup, changes: changes, document: result?.document,
+        ignoredDifferences: ignoredDifferences, lines: &lines)
+      show(content, collapsedRuns: sourceRuns(in: role), of: role, in: pane)
     }
+  }
+
+  /// Gives `pane`, the pane side by side of `role`, `content` with `collapsedRuns`, the runs
+  /// the user expanded, and the changed runs within the lines of its blocks; `prepared` is the
+  /// content prepared for it away from the main actor, if it was.
+  private func show(
+    _ content: PaneContent, prepared: PreparedPaneContent? = nil, collapsedRuns: [CollapsedRun],
+    of role: Role, in pane: PaneView
+  ) {
+    let provider = BlockHighlights(
+      changes: changes, rows: alignsLines ? .grid(role) : .lines(role),
+      comparesSides: changes.comparesSides(baseIsShown: layout.showsBase))
+    highlights.append(provider)
+    pane.highlightProvider = provider
+    if let prepared {
+      pane.setContent(prepared, collapsedRuns: collapsedRuns)
+    } else {
+      pane.setContent(content, collapsedRuns: collapsedRuns)
+    }
+    pane.expandedRuns = sourceExpandedRuns(in: role)
   }
 
   /// Lines up the lines of the panes side by side on the grid, or shows the lines of their files
@@ -572,7 +620,8 @@ final class SessionPresentation {
   /// The runs that are collapsed now, in the rows of the pane of `role`: rows of the grid, or
   /// lines of its file.
   private func sourceRuns(in role: Role) -> [CollapsedRun] {
-    collapsed.runs.map { CollapsedRun(rows: rows(of: $0, in: role)) }
+    PreparedSession.sourceRuns(
+      of: collapsed.runs, in: role, collapsed: collapsed, alignsLines: alignsLines)
   }
 
   /// The rows of `run` in the pane of `role`: rows of the grid, or lines of its file.
@@ -614,10 +663,7 @@ final class SessionPresentation {
   /// `runs` in lines of the result, if there is one, without those that hide no line there.
   private func resultRuns(of runs: [CollapsedRows.Run]) -> [CollapsedRun] {
     guard let result else { return [] }
-    return runs.compactMap { run in
-      let lines = collapsed.resultLines(of: run, in: result.scrollMap)
-      return lines.isEmpty ? nil : CollapsedRun(rows: lines)
-    }
+    return PreparedSession.resultRuns(of: runs, collapsed: collapsed, result: result)
   }
 
   /// Gives every pane the runs that are collapsed now.
@@ -636,21 +682,35 @@ final class SessionPresentation {
   /// Shows `session`, the same files compared anew, with `result` as the result of a merge,
   /// and keeps the line of B at the reading line where it is.
   ///
+  /// - Precondition: A merge has a result and a comparison none.
+  func show(_ session: Session, result: ResultState?) {
+    showComparedAnew(
+      PreparedSession(session: session, result: result, setup: setup, lines: lines))
+  }
+
+  /// What the panes show for `session`, the same files compared anew, with `result` as the
+  /// result of a merge, made away from the main actor for the setup of the panes now; `nil` if
+  /// the setup changed meanwhile, for which the contents are to be made anew.
+  ///
+  /// - Precondition: A merge has a result and a comparison none.
+  func prepare(_ session: Session, result: ResultState?) async -> PreparedSession? {
+    let setup = setup
+    let prepared = await PreparedSession.concurrently(
+      session: session, result: result, setup: setup, lines: lines)
+    return prepared.setup == self.setup ? prepared : nil
+  }
+
+  /// Shows `prepared`, made for the same files compared anew, and keeps the line of B at the
+  /// reading line where it is.
+  ///
   /// The block that holds the first line of the current block in B stays current, or the next
   /// changed block after it; the runs that the user expanded collapse again.
   ///
-  /// - Precondition: A merge has a result and a comparison none.
-  func show(_ session: Session, result: ResultState?) {
-    precondition((result != nil) == arrangement.showsResult, "Only a merge has a result")
+  /// - Precondition: `prepared` was made for the setup of the panes now.
+  func showComparedAnew(_ prepared: PreparedSession) {
     let currentLineOfB = currentBlock.map { changes.blocks[$0].lines(in: .b).lowerBound }
     keepingTheLineOfBInPlace {
-      self.result = result
-      changes = SessionChanges(session: session, origin: arrangement.origin)
-      lineTexts = [:]
-      lineEndingsByRole = [:]
-      collapsed = CollapsedRows(session: session, document: result?.document)
-      connectPanes()
-      showSession()
+      show(prepared)
     }
     let rowLayout = changes.session.rowLayout
     currentBlock = nil
@@ -669,13 +729,10 @@ final class SessionPresentation {
   /// - Precondition: The window shows a comparison, which has no result.
   func showOtherFiles(_ session: Session) {
     precondition(!arrangement.showsResult, "Only a comparison shows other files in its panes")
-    changes = SessionChanges(session: session, origin: arrangement.origin)
-    lineTexts = [:]
-    lineEndingsByRole = [:]
-    collapsed = CollapsedRows(session: session, document: nil)
-    connectPanes()
+    let prepared = PreparedSession(
+      session: session, result: nil, setup: setup, lines: InputLines(session: session))
     // The panes show the blocks of the old files until each has the new ones.
-    scrollSync.withoutFollowing(showSession)
+    scrollSync.withoutFollowing { show(prepared) }
     currentBlock = nil
     setCurrentBlock(nil)
     leadingPane?.scroll(toPlaceRowAtReadingLine: 0, motion: .cut)
