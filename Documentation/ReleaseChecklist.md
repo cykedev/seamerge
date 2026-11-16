@@ -40,3 +40,12 @@ The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, a min
 - [ ] Commit the version and changelog as `chore(release): <version>`.
 - [ ] Create an annotated tag `v<version>` on that commit. Do not push it until the checks above are complete.
 - [ ] Publish the GitHub release with the changelog section as the release notes, and attach the signed, notarized app.
+
+## Homebrew cask
+
+The cask lives in the tap `cykedev/homebrew-tap`, a clone of which the release script writes into.
+
+- [ ] Before the build, `Scripts/release.sh` checks that `CURRENT_PROJECT_VERSION` is higher than every build number in the feed online, and stops with the reason if it is not.
+- [ ] `Scripts/release.sh <keychain-profile> --tap <tap-folder>` writes `Casks/seamerge.rb` into the tap clone, with the version and the SHA-256 of the zip. To write the cask again for a version that is already built, run `Scripts/release.sh --cask --tap <tap-folder>`; it needs the zip in `.build/release/<version>/`.
+- [ ] After the GitHub release is published, commit and push `Casks/seamerge.rb` in the tap clone. The script leaves that to you.
+- [ ] After the push, run `brew style cykedev/tap` and `brew audit --cask --strict --online cykedev/tap/seamerge`, and check that `brew install --cask cykedev/tap/seamerge` installs the new version.
