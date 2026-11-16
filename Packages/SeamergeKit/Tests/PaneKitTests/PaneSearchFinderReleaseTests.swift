@@ -21,10 +21,15 @@ extension PaneSearchFinderTests {
       panes.search.perform(.hideFindInterface)
       #expect(panes.search.snapshot.withLock(\.length) == 0)
 
+      // The find bar opens with the search text of the find pasteboard and searches for it at
+      // once; typing before that search ends would race with it.
       panes.search.perform(.showFindInterface)
-      try enter("needle", into: findField(of: panes.search), in: panes.window)
       await panes.observer.waitForMatches { panes.search.matches.count == 7 }
-      #expect(panes.search.matches.count == 7)
+      #expect(panes.search.snapshot.withLock(\.length) == 74)
+      try enter("needle tail", into: findField(of: panes.search), in: panes.window)
+      await panes.observer.waitForMatches { panes.search.matches.count == 1 }
+      #expect(
+        panes.search.matches.map { "\(panes.name(of: $0.pane)) \($0.range)" } == ["A 21..<32"])
     }
   }
 }
