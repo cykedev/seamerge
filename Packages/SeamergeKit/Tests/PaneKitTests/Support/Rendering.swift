@@ -44,14 +44,18 @@ enum Rendering {
   ///
   /// With `isKey`, the window acts as the key window, which a window without a screen never
   /// becomes, so that a focused selection shows in the accent color. The window draws in the
-  /// light appearance unless `appearance` says otherwise, whatever the system shows.
+  /// light appearance unless `appearance` says otherwise, whatever the system shows. With
+  /// `scale`, it lies on a screen of that many pixels per point, wherever the tests run.
   static func host(
     _ view: NSView, size: CGSize, appearance: NSAppearance? = NSAppearance(named: .aqua),
-    isKey: Bool = false
+    isKey: Bool = false, scale: CGFloat? = nil
   ) -> NSWindow {
-    let window = (isKey ? KeyWindow.self : NSWindow.self).init(
-      contentRect: CGRect(origin: .zero, size: size), styleMask: [.borderless],
-      backing: .buffered, defer: true)
+    let frame = CGRect(origin: .zero, size: size)
+    let window =
+      isKey
+      ? KeyWindow(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: true)
+      : HostWindow(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: true)
+    window.scale = scale
     window.isReleasedWhenClosed = false
     // Without a screen, the window would blend in a linear color space, which makes every
     // translucent fill lighter than on a display.
@@ -113,8 +117,20 @@ extension Rendering {
   }
 }
 
+/// A window for views that a test draws or scrolls without showing them.
+///
+/// Without a screen, a window takes the scale of the main screen, which is whichever screen the
+/// system counts as main while the tests run. A test that depends on where the pixels of the
+/// screen lie sets `scale`, as places on the screen round to whole pixels.
+class HostWindow: NSWindow {
+  /// The pixels per point of the screen the window lies on, if not those of the main screen.
+  var scale: CGFloat?
+
+  override var backingScaleFactor: CGFloat { scale ?? super.backingScaleFactor }
+}
+
 /// A window that acts as the key window without being shown, until a test makes it give that up.
-final class KeyWindow: NSWindow {
+final class KeyWindow: HostWindow {
   var actsAsKey = true
 
   override var isKeyWindow: Bool { actsAsKey }

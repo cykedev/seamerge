@@ -59,25 +59,28 @@ import Testing
     #expect(marks[0].accessibilityFrameInParentSpace().minY == 16 * pane.theme.rowHeight)
   }
 
-  @Test func resultFollowsTheUpperPaneBetweenTheirCollapsedRows() throws {
-    let (upper, result, window, sync) = Self.coupledPanes()
+  @Test(arguments: WholePixels.scrollerStyles)
+  func resultFollowsTheUpperPaneBetweenTheirCollapsedRows(style: NSScroller.Style) throws {
+    let (upper, result, window, sync) = Self.coupledPanes(style: style)
     defer { withExtendedLifetime(sync) { window.close() } }
     let rowHeight = upper.theme.rowHeight
     upper.documentView.scroll(CGPoint(x: 0, y: 30 * rowHeight))
 
     // The reading line of the upper pane lies near display row 32.5, which is row 231.5, as
     // display row 21 is row 220; the result maps it to row 115.75, which it shows at display row
-    // 16.75, as display row 11 is row 110.
+    // 16.75, as display row 11 is row 110; it stands at the whole pixel nearest to that.
     let upperDisplayRow = Self.readingLineDisplayRow(of: upper)
     try #require(upperDisplayRow > 21)
     let resultDisplayRow = 11 + ((220 + upperDisplayRow - 21) / 2 - 110)
+    let origin = result.documentView.visibleRect.minY
+    let place = Self.origin(of: result, at: resultDisplayRow)
     #expect(
-      abs(result.documentView.visibleRect.minY - Self.origin(of: result, at: resultDisplayRow))
-        < 0.001)
+      WholePixels.isNearest(origin, to: place, scale: Self.scale), "\(origin) for \(place)")
   }
 
-  @Test func placeWithinABarFollowsToTheSameFractionOfTheOtherBar() throws {
-    let (upper, result, window, sync) = Self.coupledPanes()
+  @Test(arguments: WholePixels.scrollerStyles)
+  func placeWithinABarFollowsToTheSameFractionOfTheOtherBar(style: NSScroller.Style) throws {
+    let (upper, result, window, sync) = Self.coupledPanes(style: style)
     defer { withExtendedLifetime(sync) { window.close() } }
     // Display row 20.5, half way through the bar of rows 20 to 219, is row 120; the result maps
     // it to row 60, half way through its bar of rows 10 to 109 at display row 10.
@@ -86,9 +89,10 @@ import Testing
     // The reading line lies near the middle of the bar; the result follows as far through its own.
     let fraction = Self.readingLineDisplayRow(of: upper) - 20
     try #require(abs(fraction - 0.5) < 0.1)
+    let origin = result.documentView.visibleRect.minY
+    let place = Self.origin(of: result, at: 10 + fraction)
     #expect(
-      abs(result.documentView.visibleRect.minY - Self.origin(of: result, at: 10 + fraction)) < 0.001
-    )
+      WholePixels.isNearest(origin, to: place, scale: Self.scale), "\(origin) for \(place)")
   }
 
   @Test func coupledPanesKeepTheirRowsInPlaceWhileTheirRunsChangeOneAfterTheOther() throws {
@@ -117,11 +121,17 @@ import Testing
     #expect(panes[0].documentView.visibleRect.minY == 10 * rowHeight)
   }
 
+  /// The pixels per point of the screen that the coupled panes lie on.
+  private static let scale: CGFloat = 2
+
   /// An upper pane of 400 rows with rows 20 to 219 collapsed, and a result of 200 rows with rows
-  /// 10 to 109 collapsed, coupled so that row *r* above is row *r* / 2 in the result.
+  /// 10 to 109 collapsed, coupled so that row *r* above is row *r* / 2 in the result, their
+  /// scrollers in `style`.
   ///
   /// The panes hold their coupling weakly; the caller keeps it.
-  private static func coupledPanes() -> (PaneView, PaneView, NSWindow, ScrollSync) {
+  private static func coupledPanes(
+    style: NSScroller.Style
+  ) -> (PaneView, PaneView, NSWindow, ScrollSync) {
     let upper = PaneView()
     upper.content = CodeRows.content(count: 400)
     upper.collapsedRuns = [CollapsedRun(rows: 20..<220)]
@@ -137,7 +147,10 @@ import Testing
       sync.add(pane)
     }
     sync.setRowMapping(between: upper, and: result, forward: { $0 / 2 }, backward: { $0 * 2 })
-    let window = Rendering.host(host, size: host.frame.size)
+    let window = Rendering.host(host, size: host.frame.size, scale: scale)
+    for pane in [upper, result] {
+      pane.setScrollerStyle(style)
+    }
     return (upper, result, window, sync)
   }
 

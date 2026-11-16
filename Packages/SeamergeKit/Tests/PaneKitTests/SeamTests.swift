@@ -293,16 +293,28 @@ import Testing
     #expect(layout.left.scrollOrigin.y == (origin * scale).rounded() / scale)
   }
 
-  @Test func paneThatScrollsToAPlaceTakesTheOthersAlongToItsPlaceOnTheTrack() throws {
+  @Test(arguments: WholePixels.scrollerStyles)
+  func paneThatScrollsToAPlaceTakesTheOthersAlongToItsPlaceOnTheTrack(style: NSScroller.Style)
+    throws
+  {
     let (layout, window) = ConnectedLayout.hosted()
     defer { window.close() }
+    for pane in [layout.left, layout.right] {
+      pane.setScrollerStyle(style)
+    }
     // The left pane brings the middle of a removal to its reading line.
     let block = ConnectedLayout.removal + 3
     let span = layout.left.verticalSpan(ofRows: layout.left.content.blocks[block].rows)
     layout.left.placeReadingLine(at: (span.lowerBound + span.upperBound) / 2, x: 0)
     let hairline = layout.right.verticalSpan(ofRows: layout.right.content.blocks[block].rows)
     #expect(layout.right.content.blocks[block].rows.isEmpty)
-    #expect(abs(layout.right.readingLinePlace - hairline.lowerBound) < 0.001)
+    // The right pane brings the hairline of the removal to its reading line, at the nearest
+    // whole pixel.
+    let origin = layout.right.scrollOrigin.y
+    let place = hairline.lowerBound - Theme.readingLine * layout.right.visibleHeight
+    #expect(
+      WholePixels.isNearest(origin, to: place, scale: window.backingScaleFactor),
+      "\(origin) for \(place)")
   }
 }
 
@@ -372,13 +384,14 @@ final class ConnectedLayout: NSView {
       height: bounds.height)
   }
 
-  /// The layout in a window of `height`, laid out, drawn in `appearance`.
+  /// The layout in a window of `height`, laid out, drawn in `appearance`, on a screen of two
+  /// pixels per point, to whose pixels the panes scroll and the seam draws.
   static func hosted(
     height: CGFloat = 500, appearance: NSAppearance? = NSAppearance(named: .aqua)
   ) -> (ConnectedLayout, NSWindow) {
     let layout = ConnectedLayout()
     let window = Rendering.host(
-      layout, size: CGSize(width: 1000, height: height), appearance: appearance)
+      layout, size: CGSize(width: 1000, height: height), appearance: appearance, scale: 2)
     return (layout, window)
   }
 }

@@ -107,7 +107,8 @@ import Testing
     }
   }
 
-  @Test func resultFollowsTheUpperPanesBlockByBlockAtItsReadingLine() throws {
+  @Test(arguments: WholePixels.scrollerStyles)
+  func resultFollowsTheUpperPanesBlockByBlockAtItsReadingLine(style: NSScroller.Style) throws {
     let theme = Theme()
     let upper = PaneView(theme: theme)
     upper.content = CodeRows.content(count: 400)
@@ -122,18 +123,29 @@ import Testing
       sync.add(pane)
     }
     sync.setRowMapping(between: upper, and: result, forward: { $0 / 2 }, backward: { $0 * 2 })
-    let window = Rendering.host(host, size: host.frame.size)
+    let scale: CGFloat = 2
+    let window = Rendering.host(host, size: host.frame.size, scale: scale)
     defer { window.close() }
+    for pane in [upper, result] {
+      pane.setScrollerStyle(style)
+    }
     let rowHeight = theme.rowHeight
     upper.documentView.scroll(CGPoint(x: 0, y: 100 * rowHeight))
-    // Row 100 plus a quarter of the visible height lies at the reading line of the upper pane.
+    // Row 100 plus a quarter of the visible height lies at the reading line of the upper pane;
+    // the result stands at the whole pixel nearest to the place that brings half of it there.
     let upperRow = Self.readingLineRow(of: upper)
+    let resultOrigin = result.documentView.visibleRect.minY
+    let resultPlace = Self.origin(of: result, at: upperRow / 2)
     #expect(
-      abs(result.documentView.visibleRect.minY - Self.origin(of: result, at: upperRow / 2)) < 0.001)
+      WholePixels.isNearest(resultOrigin, to: resultPlace, scale: scale),
+      "\(resultOrigin) for \(resultPlace)")
     result.documentView.scroll(CGPoint(x: 0, y: 40 * rowHeight))
     let resultRow = Self.readingLineRow(of: result)
+    let upperOrigin = upper.documentView.visibleRect.minY
+    let upperPlace = Self.origin(of: upper, at: resultRow * 2)
     #expect(
-      abs(upper.documentView.visibleRect.minY - Self.origin(of: upper, at: resultRow * 2)) < 0.001)
+      WholePixels.isNearest(upperOrigin, to: upperPlace, scale: scale),
+      "\(upperOrigin) for \(upperPlace)")
   }
 
   @Test func panesWhoseMappingEndedTakeEachOthersOrigin() throws {
