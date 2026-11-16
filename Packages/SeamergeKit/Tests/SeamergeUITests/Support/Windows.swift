@@ -20,6 +20,7 @@ enum Windows {
     undoManager: UndoManager = UndoManager(), unavailable: UnavailableComparison? = nil,
     settings: UserSettings = .private(), syntaxChoices: SyntaxChoices = SyntaxChoices()
   ) throws -> SessionWindowController {
+    WindowAnimations.turnOff()
     let controller = SessionWindowController(
       session: session, context: context, undoManager: undoManager, displayOptions: options,
       pasteboard: .withUniqueName(), workspace: workspace, prompts: prompts, doneStyle: .standard,
@@ -298,6 +299,7 @@ extension Windows {
     settings: UserSettings = .private(), window: SessionWindow = SessionWindow(),
     prompts: PromptRecorder = PromptRecorder()
   ) async throws -> SessionWindowController {
+    WindowAnimations.turnOff()
     let opening = try await SessionWindowController.opening(collection, settings: settings)
     let controller = SessionWindowController(
       session: opening.loaded.session, context: opening.context, undoManager: UndoManager(),

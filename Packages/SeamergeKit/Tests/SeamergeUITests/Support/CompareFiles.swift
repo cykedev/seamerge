@@ -21,6 +21,7 @@ final class CompareFilesFixture {
     displayOptions: DisplayOptions = DisplayOptions(),
     integrationStore: (any IntegrationStore)? = nil
   ) throws {
+    WindowAnimations.turnOff()
     defaults = try #require(UserDefaults(suiteName: suiteName))
     recentComparisons = RecentComparisons(defaults: defaults)
     window = CompareFilesWindow()

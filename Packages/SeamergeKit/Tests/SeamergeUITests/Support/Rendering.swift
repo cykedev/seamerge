@@ -47,6 +47,7 @@ struct Look: Sendable, CustomTestStringConvertible {
 enum Rendering {
   /// Prepares `window` to draw as on a display, at `size`, in `appearance`.
   static func prepare(_ window: NSWindow, size: CGSize, appearance: NSAppearance) {
+    WindowAnimations.turnOff()
     // Without a screen, the window would blend in a linear color space, which makes every
     // translucent fill lighter than on a display.
     window.colorSpace = .sRGB
