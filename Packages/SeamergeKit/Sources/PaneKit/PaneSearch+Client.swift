@@ -18,34 +18,17 @@ extension PaneSearch: @MainActor NSTextFinderClient {
     editablePane != nil || replaceablePane?.editingDelegate != nil
   }
 
-  /// The part of the search text that holds `characterIndex`: lines of one pane, which always
-  /// end with a search boundary.
+  /// The search text, as one string that never changes, which the finder reads on threads of its
+  /// own while it searches as the user types, often on two at once; handed to it in parts, the
+  /// text made two searches at once crash.
   ///
-  /// The finder asks from a thread of its own while it searches as the user types, so this reads
-  /// the copy of the text that the search took last, which never changes; the search replaces
-  /// it as a whole.
-  public nonisolated func string(
-    at characterIndex: Int, effectiveRange outRange: NSRangePointer,
-    endsWithSearchBoundary outFlag: UnsafeMutablePointer<ObjCBool>
-  ) -> String {
-    outFlag.pointee = true
-    let (range, string) = snapshot.withLock { text -> (Range<Int>, String) in
-      guard let index = text.partIndex(containing: characterIndex) else {
-        return (text.length..<text.length, "")
-      }
-      return (text.parts[index].range, text.text(ofPart: index))
-    }
-    outRange.pointee = NSRange(range)
-    return string
-  }
-
-  /// The length of the search text.
-  ///
-  /// The finder asks on the main thread before it searches, which is when the search takes the
-  /// text anew after a change; from any other thread, the length of the copy taken last.
-  public nonisolated func stringLength() -> Int {
-    guard Thread.isMainThread else { return snapshot.withLock(\.length) }
-    return MainActor.assumeIsolated { searchText().length }
+  /// A line feed stands between every two pieces of the text, so that no match of a text
+  /// without one reaches from one line, section or pane into the next. The finder asks on the
+  /// main thread before it searches, which is when the search takes the text anew after a
+  /// change; from any other thread, it gets the copy taken last.
+  public nonisolated var string: String {
+    guard Thread.isMainThread else { return snapshot.withLock(\.string) }
+    return MainActor.assumeIsolated { searchText().string }
   }
 
   /// The selection of the pane that Find Next starts from, in the search text: within the piece

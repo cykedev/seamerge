@@ -59,43 +59,20 @@ final class SearchPanes {
     pane === a ? "A" : pane === base ? "Base" : pane === result ? "Result" : "?"
   }
 
-  /// The ranges of the search text where `needle` occurs, found part by part the way the finder
-  /// reads the text: each part on its own, since each ends with a search boundary.
+  /// The ranges of the search text where `needle` occurs, found in the text the way the finder
+  /// reads it.
   func occurrences(of needle: String) -> [NSRange] {
+    let text = search.string as NSString
     var found: [NSRange] = []
-    var index = 0
-    while index < search.stringLength() {
-      var part = NSRange()
-      var boundary = ObjCBool(false)
-      let text =
-        search.string(at: index, effectiveRange: &part, endsWithSearchBoundary: &boundary)
-        as NSString
-      precondition(boundary.boolValue && part.length > 0, "Every part ends with a boundary")
-      var start = 0
-      while start < text.length {
-        let match = text.range(
-          of: needle, range: NSRange(location: start, length: text.length - start))
-        guard match.location != NSNotFound else { break }
-        found.append(NSRange(location: part.location + match.location, length: match.length))
-        start = NSMaxRange(match)
-      }
-      index = NSMaxRange(part)
+    var start = 0
+    while start < text.length {
+      let match = text.range(
+        of: needle, range: NSRange(location: start, length: text.length - start))
+      guard match.location != NSNotFound else { break }
+      found.append(match)
+      start = NSMaxRange(match)
     }
     return found
-  }
-
-  /// The parts of the search text, as the finder reads them.
-  func parts() -> [String] {
-    var parts: [String] = []
-    var index = 0
-    while index < search.stringLength() {
-      var part = NSRange()
-      var boundary = ObjCBool(false)
-      parts.append(
-        search.string(at: index, effectiveRange: &part, endsWithSearchBoundary: &boundary))
-      index = NSMaxRange(part)
-    }
-    return parts
   }
 }
 

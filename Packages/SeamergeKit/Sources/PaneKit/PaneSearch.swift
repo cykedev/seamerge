@@ -243,11 +243,17 @@ public final class PaneSearch: NSObject {
     pane.window?.makeFirstResponder(pane.textView)
   }
 
-  /// Clears the marks of the matches once the find bar closes.
+  /// Clears the marks of the matches once the find bar closes, and lets go of the search text,
+  /// a copy of all the text the search goes through, until the finder asks for it again.
   func findBarDidClose() {
     hasFoundMatches = false
     matchesAreCurrent = false
     showMatches([])
+    guard replacement == nil else { return }
+    // The finder keeps the text it read until it hears of a change.
+    finder.noteClientStringWillChange()
+    isTextStale = true
+    snapshot.withLock { $0 = .empty }
   }
 
   /// Limits the search to the replaceable pane once the field for replacing comes, and searches

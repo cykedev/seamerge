@@ -37,14 +37,12 @@ import Testing
       ])
   }
 
-  @Test func partsHoldTheLinesOfASectionApartByLineFeedsSoNoMatchReachesAcrossALineOrAPane() {
+  @Test func lineFeedsHoldTheLinesApartSoNoMatchReachesAcrossALineOrAPane() {
     let panes = SearchPanes()
     defer { panes.window.close() }
     #expect(
-      panes.parts() == [
-        "alpha needle\nneedle", "needle", "needle", "needle tail", "needle",
-        "pre \n post\nend needle",
-      ])
+      panes.search.string
+        == "alpha needle\nneedle\nneedle\nneedle\nneedle tail\nneedle\npre \n post\nend needle")
     // The end of one line and the start of the next, within a pane and from pane to pane.
     #expect(panes.occurrences(of: "needleneedle").isEmpty)
     #expect(panes.occurrences(of: "tailneedle").isEmpty)
@@ -58,12 +56,8 @@ import Testing
     defer { panes.window.close() }
     // A pattern that matches any whitespace, as a search for a line break might.
     let pattern = try NSRegularExpression(pattern: "alpha needle\\sneedle")
-    var part = NSRange()
-    var boundary = ObjCBool(false)
-    #expect(panes.search.stringLength() == 69)
-    let text =
-      panes.search.string(at: 0, effectiveRange: &part, endsWithSearchBoundary: &boundary)
-      as NSString
+    let text = panes.search.string as NSString
+    #expect(text.length == 74)
     let found = try #require(
       pattern.firstMatch(in: text as String, range: NSRange(location: 0, length: text.length)))
     #expect(found.range == NSRange(location: 0, length: 19))
@@ -74,22 +68,20 @@ import Testing
     #expect(panes.a.documentView.selectedRange() == NSRange(location: 19, length: 0))
     // Any character never matches a line feed.
     let anyCharacter = try NSRegularExpression(pattern: "needle.needle")
-    for part in panes.parts() {
-      #expect(
-        anyCharacter.firstMatch(
-          in: part, range: NSRange(location: 0, length: (part as NSString).length)) == nil)
-    }
+    #expect(
+      anyCharacter.firstMatch(in: text as String, range: NSRange(location: 0, length: text.length))
+        == nil)
   }
 
   @Test func replaceAllReplacesTheMatchesOfAPaneAndLeavesThoseAcrossALine() {
     let panes = SearchPanes()
     defer { panes.window.close() }
     panes.search.scope = .pane(panes.result)
-    #expect(panes.search.stringLength() == 27)
-    // The result alone: "needle" 0..<6; "pre " 6..<10, " post" 11..<16, "end needle" 17..<27,
+    #expect((panes.search.string as NSString).length == 28)
+    // The result alone: "needle" 0..<6; "pre " 7..<11, " post" 12..<17, "end needle" 18..<28,
     // with line feeds between them; "post\nend" reaches across a line.
-    let across = NSRange(location: 12, length: 8)
-    let needle = NSRange(location: 21, length: 6)
+    let across = NSRange(location: 13, length: 8)
+    let needle = NSRange(location: 22, length: 6)
     #expect(
       panes.search.shouldReplaceCharacters(
         inRanges: [NSValue(range: across), NSValue(range: needle)], with: ["x", "pin"]))
@@ -101,7 +93,7 @@ import Testing
     #expect(!panes.search.shouldReplaceCharacters(inRanges: [NSValue(range: across)], with: ["x"]))
   }
 
-  @Test func longTextTakesFewPartsAndEveryLineKeepsItsPlace() {
+  @Test func longTextReadsAsItsLinesAndEveryLineKeepsItsPlace() {
     let lines = (0..<100_000).map { "line \($0)" }
     let text = lines.joined(separator: "\n")
     var offset = 0
@@ -112,10 +104,7 @@ import Testing
     let search = SearchText(
       texts: [text], sections: [SearchText.Section(pane: 0, lines: ranges, excluded: [])])
 
-    #expect(search.parts.count < 20)
-    for (index, part) in search.parts.enumerated() {
-      #expect(search.text(ofPart: index).utf16.count == part.range.count)
-    }
+    #expect(search.string == text)
     for line in [0, 1, 4_242, 99_999] {
       let place = search.searchRange(ofPaneRange: ranges[line], inPane: 0)
       #expect(place.flatMap(search.paneRange(of:))?.range == ranges[line], "\(line)")
@@ -144,7 +133,7 @@ import Testing
     // New content in A, as its owner gives it.
     panes.a.content = PaneContent(text: "nothing here", lineNumbers: [0])
     #expect(panes.occurrences(of: "needle").count == 5)
-    #expect(panes.parts().first == "nothing here")
+    #expect(panes.search.string.hasPrefix("nothing here\n"))
   }
 
   @Test func scopeOfOnePaneSearchesItsSectionsAloneAndAllowsReplacingIfItIsEditable() {
@@ -231,15 +220,15 @@ import Testing
     #expect(!undoManager.canUndo)
   }
 
-  @Test func selectionStartsInThePaneWithTheFocusAtTheNextPartThatIsSearched() {
+  @Test func selectionStartsInThePaneWithTheFocusAtTheNextPieceThatIsSearched() {
     let panes = SearchPanes()
     defer { panes.window.close() }
     panes.window.makeFirstResponder(panes.a.documentView)
     // The filler row between the second and the fourth row of A.
     panes.a.documentView.setSelectedRange(NSRange(location: 20, length: 0))
-    // A's lines take 0..<19 with the line feed between them, the base and the result 19..<31;
-    // the fourth row of A starts at 31.
-    #expect(panes.search.firstSelectedRange == NSRange(location: 31, length: 0))
+    // A's lines take 0..<19, the base and the result 20..<26 and 27..<33, with a line feed
+    // after each; the fourth row of A starts at 34.
+    #expect(panes.search.firstSelectedRange == NSRange(location: 34, length: 0))
     panes.a.documentView.setSelectedRange(NSRange(location: 8, length: 30))
     #expect(panes.search.firstSelectedRange == NSRange(location: 8, length: 4))
   }
@@ -249,7 +238,7 @@ import Testing
     defer { panes.window.close() }
     // The finder selects its current match as the find bar loses the focus to a click in A.
     panes.window.makeFirstResponder(panes.a.documentView)
-    panes.search.selectedRanges = [NSValue(range: NSRange(location: 42, length: 6))]
+    panes.search.selectedRanges = [NSValue(range: NSRange(location: 46, length: 6))]
     #expect(panes.base.documentView.selectedRange() == NSRange(location: 21, length: 6))
     #expect(panes.window.firstResponder === panes.a.documentView)
   }
@@ -258,7 +247,7 @@ import Testing
     let panes = SearchPanes()
     defer { panes.window.close() }
     panes.window.makeFirstResponder(nil)
-    panes.search.selectedRanges = [NSValue(range: NSRange(location: 42, length: 6))]
+    panes.search.selectedRanges = [NSValue(range: NSRange(location: 46, length: 6))]
     #expect(panes.base.documentView.selectedRange() == NSRange(location: 21, length: 6))
     #expect(panes.window.firstResponder === panes.window)
   }
@@ -286,20 +275,24 @@ import Testing
     #expect(
       panes.search.contentView(at: 12, effectiveCharacterRange: &range) === panes.a.documentView)
     #expect(
-      panes.search.contentView(at: 42, effectiveCharacterRange: &range)
+      panes.search.contentView(at: 47, effectiveCharacterRange: &range)
         === panes.base.documentView)
-    #expect(range == NSRange(location: 42, length: 6))
+    #expect(range == NSRange(location: 46, length: 6))
+    // The line feed between A and the base counts with the base.
     #expect(
-      panes.search.contentView(at: 50, effectiveCharacterRange: &range)
+      panes.search.contentView(at: 45, effectiveCharacterRange: &range)
+        === panes.base.documentView)
+    #expect(
+      panes.search.contentView(at: 55, effectiveCharacterRange: &range)
         === panes.result.documentView)
-    #expect(range == NSRange(location: 48, length: 21))
+    #expect(range == NSRange(location: 53, length: 21))
   }
 
   @Test func findIndicatorStandsOnTheRowOfTheMatch() throws {
     let panes = SearchPanes()
     defer { panes.window.close() }
     let rects = try #require(
-      panes.search.rects(forCharacterRange: NSRange(location: 42, length: 6)))
+      panes.search.rects(forCharacterRange: NSRange(location: 46, length: 6)))
     try #require(rects.count == 1, "\(rects)")
     let rect = rects[0].rectValue
     let row = panes.base.verticalSpan(ofRows: 2..<3)
@@ -313,8 +306,8 @@ import Testing
     let panes = SearchPanes()
     defer { panes.window.close() }
     let visible = panes.search.visibleCharacterRanges.map(\.rangeValue)
-    // Every pane shows all of its text, which is all but the three line feeds between lines.
-    #expect(visible.map(\.length).reduce(0, +) == panes.search.stringLength() - 3)
+    // Every pane shows all of its text, which is all but the eight line feeds between pieces.
+    #expect(visible.map(\.length).reduce(0, +) == (panes.search.string as NSString).length - 8)
   }
 
   @Test func findCommandsOfAPaneAmongTheSectionsAreValidatedByTheSearch() {
@@ -367,7 +360,7 @@ import Testing
   @Test func findIndicatorDrawsTheCharactersOfTheMatchInBlack() throws {
     let panes = SearchPanes()
     defer { panes.window.close() }
-    let range = NSRange(location: 42, length: 6)
+    let range = NSRange(location: 46, length: 6)
     let ink = try drawCharacters(of: range, in: panes.base.documentView, panes: panes)
     #expect(ink > 20)
   }

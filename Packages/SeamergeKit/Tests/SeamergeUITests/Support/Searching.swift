@@ -78,8 +78,8 @@ final class SearchDriver {
 
   /// Types `text` into the search field as the user would, over all it held.
   ///
-  /// The search for what the field held before must be over, as after waiting for its matches:
-  /// typing while the finder searches races with that search.
+  /// The finder may still search for what the field held before, and its matches may come after
+  /// the typing; a test that waits for the matches of `text` tells them apart by their places.
   func type(_ text: String) throws {
     try type(text, into: searchField)
   }
