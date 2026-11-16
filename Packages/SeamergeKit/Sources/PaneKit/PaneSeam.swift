@@ -241,10 +241,10 @@ public final class PaneSeam: NSView {
       return path
     }
     func add(from start: CGFloat, to end: CGFloat, to path: CGMutablePath) {
-      let target = CGPoint(x: path.currentPoint.x == left ? right : left, y: end)
-      let middle = (left + right) / 2
-      path.addCurve(
-        to: target, control1: CGPoint(x: middle, y: start), control2: CGPoint(x: middle, y: end))
+      let origin = CGPoint(x: path.currentPoint.x, y: start)
+      let target = CGPoint(x: origin.x == left ? right : left, y: end)
+      let controls = Self.controlPoints(from: origin, to: target)
+      path.addCurve(to: target, control1: controls.first, control2: controls.second)
     }
     let area = CGMutablePath()
     area.move(to: CGPoint(x: left, y: band.left.lowerBound))
@@ -255,6 +255,28 @@ public final class PaneSeam: NSView {
     return (
       area, edge(from: band.left.lowerBound, to: band.right.lowerBound),
       edge(from: band.left.upperBound, to: band.right.upperBound)
+    )
+  }
+
+  /// The control points of the cubic curve of an edge from `start` at one side of the seam to
+  /// `end` at the other, which leaves and reaches the panes level.
+  ///
+  /// The control points lie half way across, as for the bands of a few rows, while the edge
+  /// rises or falls by up to twice the width of the seam. Beyond that they move further across,
+  /// up to nine tenths of the way at eight times the width, so that a steep edge bends over more
+  /// of the width rather than turning sharply where it reaches a pane, as at the point of a
+  /// wedge. They stay at the heights of the ends, so the curve never goes beyond them.
+  static func controlPoints(
+    from start: CGPoint, to end: CGPoint
+  ) -> (first: CGPoint, second: CGPoint) {
+    let width = abs(end.x - start.x)
+    let steepness = width > 0 ? abs(end.y - start.y) / width : 0
+    let progress = min(max((steepness - 2) / 6, 0), 1)
+    let share = 0.5 + 0.4 * progress * progress * (3 - 2 * progress)
+    let across = end.x - start.x
+    return (
+      CGPoint(x: start.x + across * share, y: start.y),
+      CGPoint(x: end.x - across * share, y: end.y)
     )
   }
 

@@ -75,6 +75,46 @@ import Testing
     #expect(layout.seam.bands.map(\.block) == all.filter { $0 != all[1] })
   }
 
+  @Test func edgeOfAFewRowsKeepsItsControlPointsHalfWayAcross() {
+    let width = Theme.seamWidth
+    for rise in [0, 10, 2 * width, -2 * width] {
+      let controls = PaneSeam.controlPoints(
+        from: CGPoint(x: 0, y: 100), to: CGPoint(x: width, y: 100 + rise))
+      #expect(controls.first == CGPoint(x: width / 2, y: 100), "rise \(rise)")
+      #expect(controls.second == CGPoint(x: width / 2, y: 100 + rise), "rise \(rise)")
+    }
+  }
+
+  @Test(arguments: [false, true], [-600.0, -120, 120, 600])
+  func steepEdgeBendsOverMoreOfTheSeamAndStaysWithinIt(leftToRight: Bool, rise: Double) {
+    let width = Theme.seamWidth
+    let (left, right) = (CGFloat(10), 10 + width)
+    let start = CGPoint(x: leftToRight ? left : right, y: 300)
+    let end = CGPoint(x: leftToRight ? right : left, y: 300 + rise)
+    let (first, second) = PaneSeam.controlPoints(from: start, to: end)
+    // The control points move beyond half way, so that the curve turns less sharply at the
+    // ends, and stay level with them.
+    #expect(abs(first.x - start.x) > width / 2 && abs(second.x - end.x) > width / 2)
+    #expect(first.y == start.y && second.y == end.y)
+    // Along the curve, every point lies within the seam and between the heights of its ends,
+    // and the height only ever moves towards the end: no point of a wedge is overshot.
+    var previous = start.y
+    for step in 0...200 {
+      let t = CGFloat(step) / 200
+      let u = 1 - t
+      let a = u * u * u
+      let b = 3 * u * u * t
+      let c = 3 * u * t * t
+      let d = t * t * t
+      let x = a * start.x + b * first.x + c * second.x + d * end.x
+      let y = a * start.y + b * first.y + c * second.y + d * end.y
+      #expect(x >= left - 1e-9 && x <= right + 1e-9, "x \(x) at \(t)")
+      #expect(y >= min(start.y, end.y) - 1e-9 && y <= max(start.y, end.y) + 1e-9, "y \(y)")
+      #expect(rise > 0 ? y >= previous - 1e-9 : y <= previous + 1e-9, "y \(y) at \(t)")
+      previous = y
+    }
+  }
+
   @Test func seamLetsClicksThroughAndVoiceOverPassesItBy() throws {
     let (layout, window) = ConnectedLayout.hosted()
     defer { window.close() }
