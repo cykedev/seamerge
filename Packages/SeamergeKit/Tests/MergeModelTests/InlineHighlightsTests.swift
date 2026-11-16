@@ -87,6 +87,32 @@ struct InlineHighlightsTests {
         == ["2"])
   }
 
+  @Test func mergeComparingTheSidesHighlightsAAgainstBWhicheverSideChanged() async throws {
+    let session = try await merge(
+      base: "x = 1;\nkeep\ny = 1;\nkeep\nz = 1;\nkeep\nw = 1;\n",
+      a: "x = 2;\nkeep\ny = 1;\nkeep\nz = 3;\nkeep\nw = 5;\n",
+      b: "x = 1;\nkeep\ny = 2;\nkeep\nz = 4;\nkeep\nw = 5;\n")
+    func texts(of role: Role, in kind: Block.Kind) throws -> [String] {
+      let block = try #require(session.blocks.first { $0.kind == kind })
+      let text = try session.displayString(of: role)
+      return try session.inlineHighlights(for: block, comparingSides: true).ranges(in: role)
+        .map { text.utf16Substring($0) }
+    }
+
+    // A changed x, B changed y: each side shows where it differs from the other.
+    #expect(try texts(of: .a, in: .changedInA) == ["2"])
+    #expect(try texts(of: .b, in: .changedInA) == ["1"])
+    #expect(try texts(of: .a, in: .changedInB) == ["1"])
+    #expect(try texts(of: .b, in: .changedInB) == ["2"])
+    #expect(try texts(of: .a, in: .conflict) == ["3"])
+    #expect(try texts(of: .b, in: .conflict) == ["4"])
+    // Both changed w alike: the sides do not differ.
+    let same = try #require(session.blocks.first { $0.kind == .changedInBoth })
+    #expect(try session.inlineHighlights(for: same, comparingSides: true).isEmpty)
+    #expect(try !session.inlineHighlights(for: same).isEmpty)
+    #expect(try texts(of: .base, in: .conflict).isEmpty)
+  }
+
   @Test func changeSpanningALineBreakIsHighlightedPerLineWithoutTheLineEnding() async throws {
     let session = try await diff("one two\nend\n", "one\nTWO two\nend\n")
 

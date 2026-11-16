@@ -363,7 +363,8 @@ final class SessionPresentation {
     defer { updateSearchSections() }
     showSources()
     sourcesOverviewBar.marks = OverviewMarks.sources(
-      of: changes, document: result?.document, arrangement: arrangement)
+      of: changes, document: result?.document, arrangement: arrangement,
+      baseIsShown: layout.showsBase)
     showColumn()
     syntax.lexInputs(of: changes.session)
     showSyntax()
@@ -396,11 +397,12 @@ final class SessionPresentation {
   private func showSourceContents() {
     let ignoredDifferences = IgnoredDifferences(in: changes.session)
     self.ignoredDifferences = ignoredDifferences
-    let conflictMarkRole = changes.conflictMarkRole(baseIsShown: layout.showsBase)
+    let baseIsShown = layout.showsBase
     highlights = []
     for (role, pane) in layout.sourcePanes {
       let provider = BlockHighlights(
-        changes: changes, rows: alignsLines ? .grid(role) : .lines(role))
+        changes: changes, rows: alignsLines ? .grid(role) : .lines(role),
+        comparesSides: changes.comparesSides(baseIsShown: baseIsShown))
       highlights.append(provider)
       pane.highlightProvider = provider
       let content =
@@ -409,12 +411,12 @@ final class SessionPresentation {
           source: role, of: changes, lineEndings: lineEndings(of: role),
           document: result?.document,
           ignoredDifferences: ignoredDifferences, showsIgnoredPlaces: showsIgnoredChanges,
-          conflictMarkRole: conflictMarkRole)
+          baseIsShown: baseIsShown)
         : PaneContent(
           lines: role, text: lineText(of: role), of: changes, lineEndings: lineEndings(of: role),
           document: result?.document,
           ignoredDifferences: ignoredDifferences, showsIgnoredPlaces: showsIgnoredChanges,
-          conflictMarkRole: conflictMarkRole)
+          baseIsShown: baseIsShown)
       pane.setContent(content, collapsedRuns: sourceRuns(in: role))
       pane.expandedRuns = sourceExpandedRuns(in: role)
     }
@@ -538,13 +540,13 @@ final class SessionPresentation {
       of: changes, document: result.document, result: content.content)
     decisionColumn?.decisions = content.decisions
     sourcesOverviewBar.marks = OverviewMarks.sources(
-      of: changes, document: result.document, arrangement: arrangement)
-    let conflictMarkRole = changes.conflictMarkRole(baseIsShown: layout.showsBase)
+      of: changes, document: result.document, arrangement: arrangement,
+      baseIsShown: layout.showsBase)
     for (role, pane) in layout.sourcePanes {
       pane.setBlocks(
         PaneContent.blocks(
           source: role, of: changes, document: result.document,
-          conflictMarkRole: conflictMarkRole, alignsLines: alignsLines),
+          baseIsShown: layout.showsBase, alignsLines: alignsLines),
         previews: [], rowTints: [:])
     }
     updateSearchSections()

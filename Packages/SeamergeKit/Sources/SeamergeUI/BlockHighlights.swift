@@ -4,7 +4,8 @@ import os
 
 /// Supplies a pane above the result with the changed runs within the lines of its blocks, as
 /// the merge model finds them: in the text of the grid, in the text without filler rows, or in
-/// the text of a single column.
+/// the text of a single column; against the base, or against the other side while the panes of a
+/// merge compare A with B.
 @MainActor
 final class BlockHighlights: PaneHighlightProvider {
   /// The rows a pane shows, in whose text the runs lie.
@@ -23,17 +24,21 @@ final class BlockHighlights: PaneHighlightProvider {
 
   private let changes: SessionChanges
   private let rows: Rows
+  private let comparesSides: Bool
 
-  /// Creates the provider for a pane that shows `rows`.
-  init(changes: SessionChanges, rows: Rows) {
+  /// Creates the provider for a pane that shows `rows`, whose runs compare A with B if
+  /// `comparesSides`, and each side with the base otherwise.
+  init(changes: SessionChanges, rows: Rows, comparesSides: Bool = false) {
     self.changes = changes
     self.rows = rows
+    self.comparesSides = comparesSides
   }
 
   func highlights(forBlock block: Int) -> [Range<Int>] {
     let block = changes.blocks[block]
     do {
-      let highlights = try changes.session.inlineHighlights(for: block)
+      let highlights = try changes.session.inlineHighlights(
+        for: block, comparingSides: comparesSides)
       switch rows {
       case .grid(let role):
         return highlights.ranges(in: role)

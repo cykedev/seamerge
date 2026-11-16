@@ -8,13 +8,20 @@ import PaneKit
 /// the right the trailing part, so that the place says which side changed even without color; a
 /// change both made takes both. A conflict
 /// takes the full width, red while it is open and in the color of its source once it is decided,
-/// so that it stays visible where conflicts were.
+/// so that it stays visible where conflicts were. While the panes of a merge compare A with B,
+/// without the base, a change of one side takes both parts, as the panes tint it on both sides,
+/// and a change both made alike takes none.
 enum OverviewMarks {
   /// The marks of the bar beside the panes side by side, whose sides stand as `arrangement`
   /// places them; `document` is the result of a merge, or `nil` for a comparison.
+  ///
+  /// - Parameter baseIsShown: Whether the pane of the base is in view; while it is hidden, the
+  ///   panes compare A with B.
   static func sources(
-    of changes: SessionChanges, document: ResultDocument?, arrangement: PaneArrangement
+    of changes: SessionChanges, document: ResultDocument?, arrangement: PaneArrangement,
+    baseIsShown: Bool = true
   ) -> [OverviewMark] {
+    let comparesSides = changes.comparesSides(baseIsShown: baseIsShown)
     let layout = changes.session.rowLayout
     let sides = [
       (arrangement.leadingRole, OverviewMark.Placement.leading),
@@ -31,11 +38,17 @@ enum OverviewMarks {
             line: firstLine(of: block, in: changes.hasBase ? .base : .b)))
         continue
       }
-      for (role, placement) in sides where SessionChanges.changers(of: block).contains(role) {
+      let changers = SessionChanges.changers(of: block)
+      for (role, placement) in sides {
+        let style = changes.style(
+          of: role, in: block, conflictIsOpen: false, comparesSides: comparesSides)
+        guard style != .unchanged else { continue }
+        // A mark names the side that changed the block, as the marks of its gutter do.
+        let changer = changers.contains(role) ? role : role == .a ? Role.b : .a
         marks.append(
           OverviewMark(
-            rows: rows, style: .tinted(role.colorRole), placement: placement, block: index,
-            accessibilityLabel: changeLabel(of: role, line: firstLine(of: block, in: role))))
+            rows: rows, style: style, placement: placement, block: index,
+            accessibilityLabel: changeLabel(of: changer, line: firstLine(of: block, in: changer))))
       }
     }
     return marks

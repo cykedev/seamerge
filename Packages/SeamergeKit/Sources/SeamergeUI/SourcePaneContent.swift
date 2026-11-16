@@ -15,12 +15,13 @@ extension PaneContent {
   ///   - ignoredDifferences: The lines whose differences the comparison ignores, which get a ring
   ///     in the gutter.
   ///   - showsIgnoredPlaces: Whether the places where those lines differ are highlighted.
-  ///   - conflictMarkRole: The pane that carries the mark of a conflict.
+  ///   - baseIsShown: Whether the pane of the base is in view, which decides how the blocks are
+  ///     tinted and which pane carries the mark of a conflict.
   /// - Precondition: `role` takes part in the session.
   init(
     source role: Role, of changes: SessionChanges, lineEndings endingsByLine: [LineEnding],
     document: ResultDocument?, ignoredDifferences: IgnoredDifferences, showsIgnoredPlaces: Bool,
-    conflictMarkRole: Role
+    baseIsShown: Bool
   ) {
     let session = changes.session
     let layout = session.rowLayout
@@ -43,8 +44,7 @@ extension PaneContent {
       line < 0 ? LineEnding.none : endingsByLine[Int(line)]
     }
     let blocks = Self.blocks(
-      source: role, of: changes, document: document, conflictMarkRole: conflictMarkRole,
-      alignsLines: true)
+      source: role, of: changes, document: document, baseIsShown: baseIsShown, alignsLines: true)
     let ignoredRows = IndexSet(
       ignoredDifferences.lines(in: role).map { layout.row(ofLine: $0, in: role) })
     let places =
@@ -71,18 +71,18 @@ extension PaneContent {
   ///   - ignoredDifferences: The lines whose differences the comparison ignores, which get a ring
   ///     in the gutter.
   ///   - showsIgnoredPlaces: Whether the places where those lines differ are highlighted.
-  ///   - conflictMarkRole: The pane that carries the mark of a conflict.
+  ///   - baseIsShown: Whether the pane of the base is in view, which decides how the blocks are
+  ///     tinted and which pane carries the mark of a conflict.
   /// - Precondition: `role` takes part in the session.
   init(
     lines role: Role, text: DisplayText, of changes: SessionChanges, lineEndings: [LineEnding],
     document: ResultDocument?, ignoredDifferences: IgnoredDifferences, showsIgnoredPlaces: Bool,
-    conflictMarkRole: Role
+    baseIsShown: Bool
   ) {
     let session = changes.session
     let lineCount = session.rowLayout.lineCount(in: role)
     let blocks = Self.blocks(
-      source: role, of: changes, document: document, conflictMarkRole: conflictMarkRole,
-      alignsLines: false)
+      source: role, of: changes, document: document, baseIsShown: baseIsShown, alignsLines: false)
     guard lineCount > 0 else {
       self.init(text: "", lineNumbers: [-1], blocks: blocks, marksBlocksWithoutRows: true)
       return
@@ -119,22 +119,28 @@ extension PaneContent {
   private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "SeamergeUI")
 
   /// The blocks of the pane of `role`, one of the inputs of the session: each changed block,
-  /// tinted and marked as the side changed it and as far as its conflict is decided in
-  /// `document`.
+  /// tinted as ``SessionChanges/style(of:in:conflictIsOpen:comparesSides:)`` says, marked as the
+  /// side changed it and as far as its conflict is decided in `document`.
   ///
-  /// - Parameter alignsLines: Whether the pane shows the rows of the grid, or else the lines of
-  ///   its file without filler rows.
+  /// - Parameters:
+  ///   - baseIsShown: Whether the pane of the base is in view; while it is hidden, the panes
+  ///     compare A with B and B carries the mark of a conflict.
+  ///   - alignsLines: Whether the pane shows the rows of the grid, or else the lines of its file
+  ///     without filler rows.
   static func blocks(
     source role: Role, of changes: SessionChanges, document: ResultDocument?,
-    conflictMarkRole: Role, alignsLines: Bool
+    baseIsShown: Bool, alignsLines: Bool
   ) -> [PaneBlock] {
     let layout = changes.session.rowLayout
+    let conflictMarkRole = changes.conflictMarkRole(baseIsShown: baseIsShown)
+    let comparesSides = changes.comparesSides(baseIsShown: baseIsShown)
     return changes.blocks.map { block in
       let isOpen = document?.segment(for: block).state == .open
       let carriesConflictMark = block.kind == .conflict && role == conflictMarkRole
       return PaneBlock(
         rows: alignsLines ? layout.rows(of: block) : block.lines(in: role),
-        style: changes.style(of: role, in: block, conflictIsOpen: isOpen),
+        style: changes.style(
+          of: role, in: block, conflictIsOpen: isOpen, comparesSides: comparesSides),
         marker: changes.marker(of: role, in: block),
         conflict: carriesConflictMark ? (isOpen ? .open : .resolved) : nil,
         move: changes.moveMark(of: role, in: block))

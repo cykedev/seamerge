@@ -70,9 +70,20 @@ struct SessionChanges {
   /// How the rows of `block` are tinted on the pane of `role`.
   ///
   /// A side is tinted where it changed the block; the base is tinted where a side changed it, in
-  /// the conflict color while a conflict is open.
-  func style(of role: Role, in block: Block, conflictIsOpen: Bool) -> BlockStyle {
-    switch role {
+  /// the conflict color while a conflict is open. While the panes compare A with B, each side is
+  /// tinted where its text differs from the other's, whichever side changed it, and neither
+  /// where both made the same change.
+  ///
+  /// - Parameter comparesSides: Whether the panes compare A with B rather than each with the
+  ///   base, ``comparesSides(baseIsShown:)``.
+  func style(
+    of role: Role, in block: Block, conflictIsOpen: Bool, comparesSides: Bool = false
+  ) -> BlockStyle {
+    if comparesSides, role != .base {
+      let differ = block.kind != .unchanged && block.kind != .changedInBoth
+      return differ ? .tinted(role.colorRole) : .unchanged
+    }
+    return switch role {
     case .a: Self.changers(of: block).contains(.a) ? .tinted(.a) : .unchanged
     case .b: Self.changers(of: block).contains(.b) ? .tinted(.b) : .unchanged
     case .base: block.kind == .conflict && conflictIsOpen ? .tinted(.conflict) : .original
@@ -122,6 +133,12 @@ struct SessionChanges {
   func otherEndOfMove(fromBlock index: Int) -> Int? {
     [Role.a, .b].lazy.compactMap { self.moveMark(of: $0, in: self.blocks[index])?.otherBlock }
       .first
+  }
+
+  /// Whether the panes of a merge compare A with B, as a comparison of two files does, rather
+  /// than each with the base: while the pane of the base is hidden.
+  func comparesSides(baseIsShown: Bool) -> Bool {
+    hasBase && !baseIsShown
   }
 
   /// The pane that carries the mark of a conflict: the base, or B where there is no base or

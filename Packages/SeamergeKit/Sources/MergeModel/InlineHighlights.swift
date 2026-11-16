@@ -6,11 +6,13 @@ import Foundation
 /// The text of a block is compared as a whole, in runs of one character class, with the text it
 /// changed: in a merge, A and B each with the base. Without a base, in a merge as in a comparison
 /// of two files, A and B are compared with each other and both are highlighted. The base pane
-/// stays without highlights, and so does a side that did not change the block. Changes that the
-/// comparison mode ignores are not highlighted, nor are lines that ignore rules match entirely
-/// and runs of text that the rules match on both sides. When more than 60 % of the runs of a
-/// comparison changed, removed runs included, it highlights nothing, because the block as a whole
-/// is then the change.
+/// stays without highlights, and so does a side that did not change the block. A merge with a
+/// base can also compare A with B, as panes that show it without its base do: then both sides
+/// are highlighted where they differ, whichever changed the block, and a block in which both
+/// made the same change has no highlights. Changes that the comparison mode ignores are not
+/// highlighted, nor are lines that ignore rules match entirely and runs of text that the rules
+/// match on both sides. When more than 60 % of the runs of a comparison changed, removed runs
+/// included, it highlights nothing, because the block as a whole is then the change.
 ///
 /// A run that one side replaced is highlighted on both sides. A run that one side lacks is
 /// highlighted on the side that has it and marked by an empty range on the side that lacks it,
@@ -37,10 +39,12 @@ public struct InlineHighlights: Sendable, Hashable {
   /// The share of changed runs above which a comparison highlights nothing: three fifths.
   private static let maximumChangedShare = (numerator: 3, denominator: 5)
 
-  /// Compares the texts of `block` in `session`.
-  init(block: Block, in session: Session) throws(MergeModelError) {
+  /// Compares the texts of `block` in `session`: A with B if `comparingSides` or the session
+  /// has no base, and each side with the base otherwise.
+  init(block: Block, in session: Session, comparingSides: Bool = false) throws(MergeModelError) {
     var rangesByRole: [Role: [Range<Int>]] = [:]
-    let comparisons = Self.comparisons(for: block.kind, hasBase: session.files[.base] != nil)
+    let comparisons = Self.comparisons(
+      for: block.kind, hasBase: session.files[.base] != nil, comparingSides: comparingSides)
     for comparison in comparisons {
       guard let firstFile = session.files[comparison.first],
         let secondFile = session.files[comparison.second]
@@ -88,10 +92,17 @@ public struct InlineHighlights: Sendable, Hashable {
     var highlightsFirst: Bool
   }
 
-  /// The comparisons that highlight a block of `kind` in a session with or without a base.
-  private static func comparisons(for kind: Block.Kind, hasBase: Bool) -> [Comparison] {
+  /// The comparisons that highlight a block of `kind` in a session with or without a base, or
+  /// that compare A with B in a session with a base if `comparingSides`.
+  private static func comparisons(
+    for kind: Block.Kind, hasBase: Bool, comparingSides: Bool
+  ) -> [Comparison] {
     guard kind != .unchanged else { return [] }
-    guard hasBase else { return [Comparison(first: .a, second: .b, highlightsFirst: true)] }
+    let sides = Comparison(first: .a, second: .b, highlightsFirst: true)
+    guard hasBase else { return [sides] }
+    if comparingSides {
+      return kind == .changedInBoth ? [] : [sides]
+    }
     let a = Comparison(first: .base, second: .a, highlightsFirst: false)
     let b = Comparison(first: .base, second: .b, highlightsFirst: false)
     return switch kind {
@@ -236,11 +247,16 @@ extension Session {
   /// The comparison takes time in proportion to the size of the block, so it is meant for the
   /// blocks on screen; the result is meant to be kept.
   ///
+  /// - Parameter comparingSides: Whether A is compared with B rather than each side with the
+  ///   base, for panes that show a merge without its base; without a base, A and B are compared
+  ///   anyway.
   /// - Precondition: `block` is one of ``blocks``.
   /// - Throws: The error of the comparison.
-  public func inlineHighlights(for block: Block) throws(MergeModelError) -> InlineHighlights {
+  public func inlineHighlights(
+    for block: Block, comparingSides: Bool = false
+  ) throws(MergeModelError) -> InlineHighlights {
     precondition(blocks.indices.contains(block.id), "Block \(block.id) is not in the session")
-    return try InlineHighlights(block: block, in: self)
+    return try InlineHighlights(block: block, in: self, comparingSides: comparingSides)
   }
 }
 
