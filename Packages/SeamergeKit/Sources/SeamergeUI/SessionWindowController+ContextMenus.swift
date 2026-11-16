@@ -214,10 +214,11 @@ extension SessionWindowController {
   }
 
   /// The pane that Copy Block and Go to Line act in: the one with the focus, or else the pane
-  /// above the result that had it last.
+  /// above the result that had it last, if it is in view, or the first pane in view.
   var focusedPane: PaneView {
     presentation.allPanes.first(where: \.holdsFocus)
-      ?? lastSourcePane ?? layout.sourcePanes[0].pane
+      ?? lastSourcePane.flatMap { $0.isShown ? $0 : nil }
+      ?? presentation.leadingPane ?? layout.sourcePanes[0].pane
   }
 
   /// Whether text is selected in `pane`.

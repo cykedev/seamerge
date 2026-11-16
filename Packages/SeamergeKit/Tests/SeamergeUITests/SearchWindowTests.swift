@@ -499,7 +499,7 @@ struct SearchSectionTests {
     checkSections(of: controller)
     try controller.type("typed\nlines\n", over: 0..<0, with: .insertText)
     checkSections(of: controller)
-    controller.perform(.toggleLineAlignment)
+    controller.perform(.showConnectedSides)
     checkSections(of: controller)
   }
 

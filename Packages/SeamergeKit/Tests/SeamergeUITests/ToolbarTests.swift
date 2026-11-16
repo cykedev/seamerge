@@ -12,7 +12,8 @@ import Testing
   @Test func toolbarHasTheConflictsAndDoneAndMoreToDragIn() throws {
     let toolbar = SessionToolbar(kind: .merge, doneStyle: .standard)
     let defaults = toolbar.toolbarDefaultItemIdentifiers(toolbar.toolbar)
-    #expect(defaults == [.conflictCount, .conflictNavigation, .flexibleSpace, .done])
+    #expect(
+      defaults == [.conflictCount, .conflictNavigation, .flexibleSpace, .lineArrangement, .done])
     #expect(toolbar.toolbar.centeredItemIdentifiers == [.conflictCount, .conflictNavigation])
     let allowed = toolbar.toolbarAllowedItemIdentifiers(toolbar.toolbar)
     #expect(allowed.contains(.changeNavigation))
@@ -73,7 +74,7 @@ import Testing
   @Test func checkmarkStandsAtTheEnd() throws {
     let toolbar = SessionToolbar(kind: .merge, doneStyle: .checkmark)
     let defaults = toolbar.toolbarDefaultItemIdentifiers(toolbar.toolbar)
-    #expect(defaults.suffix(2) == [.flexibleSpace, .done])
+    #expect(defaults.last == .done)
     let done = try #require(
       toolbar.toolbar(
         toolbar.toolbar, itemForItemIdentifier: .done, willBeInsertedIntoToolbar: false))

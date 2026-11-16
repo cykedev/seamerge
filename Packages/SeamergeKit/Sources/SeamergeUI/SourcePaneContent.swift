@@ -9,6 +9,7 @@ extension PaneContent {
   ///
   /// - Parameters:
   ///   - changes: The changed blocks of the session, which become the blocks of the content.
+  ///   - lineEndings: How each line of the file ends, ``lineEndings(of:lineCount:)``.
   ///   - document: The result of a merge, which tells which conflicts are still open; `nil` for
   ///     a comparison.
   ///   - ignoredDifferences: The lines whose differences the comparison ignores, which get a ring
@@ -17,13 +18,13 @@ extension PaneContent {
   ///   - conflictMarkRole: The pane that carries the mark of a conflict.
   /// - Precondition: `role` takes part in the session.
   init(
-    source role: Role, of changes: SessionChanges, document: ResultDocument?,
-    ignoredDifferences: IgnoredDifferences, showsIgnoredPlaces: Bool, conflictMarkRole: Role
+    source role: Role, of changes: SessionChanges, lineEndings endingsByLine: [LineEnding],
+    document: ResultDocument?, ignoredDifferences: IgnoredDifferences, showsIgnoredPlaces: Bool,
+    conflictMarkRole: Role
   ) {
     let session = changes.session
     let layout = session.rowLayout
-    guard let displayText = layout.displayText(for: role), let file = session.file(for: role)
-    else {
+    guard let displayText = layout.displayText(for: role) else {
       preconditionFailure("The session has no input \(role)")
     }
     guard layout.rowCount > 0 else {
@@ -38,7 +39,6 @@ extension PaneContent {
         lineNumbers.append(row < lines.count ? Int32(lines.lowerBound + row) : -1)
       }
     }
-    let endingsByLine = Self.lineEndings(of: file, lineCount: layout.lineCount(in: role))
     let lineEndings = lineNumbers.map { line in
       line < 0 ? LineEnding.none : endingsByLine[Int(line)]
     }
@@ -65,6 +65,7 @@ extension PaneContent {
   /// - Parameters:
   ///   - text: The text of the input without filler rows, ``RowLayout/lineText(for:)``.
   ///   - changes: The changed blocks of the session, which become the blocks of the content.
+  ///   - lineEndings: How each line of the file ends, ``lineEndings(of:lineCount:)``.
   ///   - document: The result of a merge, which tells which conflicts are still open; `nil` for
   ///     a comparison.
   ///   - ignoredDifferences: The lines whose differences the comparison ignores, which get a ring
@@ -73,13 +74,11 @@ extension PaneContent {
   ///   - conflictMarkRole: The pane that carries the mark of a conflict.
   /// - Precondition: `role` takes part in the session.
   init(
-    lines role: Role, text: DisplayText, of changes: SessionChanges, document: ResultDocument?,
-    ignoredDifferences: IgnoredDifferences, showsIgnoredPlaces: Bool, conflictMarkRole: Role
+    lines role: Role, text: DisplayText, of changes: SessionChanges, lineEndings: [LineEnding],
+    document: ResultDocument?, ignoredDifferences: IgnoredDifferences, showsIgnoredPlaces: Bool,
+    conflictMarkRole: Role
   ) {
     let session = changes.session
-    guard let file = session.file(for: role) else {
-      preconditionFailure("The session has no input \(role)")
-    }
     let lineCount = session.rowLayout.lineCount(in: role)
     let blocks = Self.blocks(
       source: role, of: changes, document: document, conflictMarkRole: conflictMarkRole,
@@ -96,8 +95,7 @@ extension PaneContent {
     self.init(
       text: text.string, lineNumbers: (0..<Int32(lineCount)).map(\.self), blocks: blocks,
       ignoredDifferenceRows: ignoredDifferences.lines(in: role), ignoredDifferencePlaces: places,
-      lineEndings: Self.lineEndings(of: file, lineCount: lineCount),
-      marksBlocksWithoutRows: true)
+      lineEndings: lineEndings, marksBlocksWithoutRows: true)
   }
 
   /// The places where the lines of `role` differ in a way that the comparison ignores, as

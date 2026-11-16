@@ -15,6 +15,20 @@ extension SessionPresentation {
     return text
   }
 
+  /// How each line of the input of `role` ends, worked out once.
+  func lineEndings(of role: Role) -> [LineEnding] {
+    if let endings = lineEndingsByRole[role] {
+      return endings
+    }
+    guard let file = changes.session.file(for: role) else {
+      preconditionFailure("The session has no input \(role)")
+    }
+    let endings = PaneContent.lineEndings(
+      of: file, lineCount: changes.session.rowLayout.lineCount(in: role))
+    lineEndingsByRole[role] = endings
+    return endings
+  }
+
   /// The map from rows of the grid to lines of the input of `role`.
   func gridMap(of role: Role) -> ScrollMap {
     ScrollMap(session: changes.session, from: .grid, to: .lines(role))

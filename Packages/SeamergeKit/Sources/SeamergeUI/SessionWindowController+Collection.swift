@@ -11,9 +11,9 @@ struct FilePlace: Equatable {
   var row: Int
   var fraction: CGFloat
 
-  /// Whether the panes lined up their lines, so that the row is one of the grid, or else
-  /// showed the lines of their files, so that it is a line of the left one.
-  var alignsLines: Bool
+  /// How the panes laid out the lines, which tells what the row counts: a row of the grid, a
+  /// line of the left file, or a row of the single column.
+  var lineArrangement: LineArrangement
 }
 
 /// A file of a collection as the window read it: its comparison, or the empty one of a file it
@@ -358,23 +358,23 @@ extension SessionWindowController {
 
   /// The place the window shows now: the current block and the row at the reading line.
   private var currentPlace: FilePlace {
-    let place = layout.sourcePanes.first?.pane.rowAtReadingLine ?? (row: 0, fraction: 0)
+    let place = presentation.leadingPane?.rowAtReadingLine ?? (row: 0, fraction: 0)
     return FilePlace(
       currentBlock: presentation.currentBlock, row: place.row, fraction: place.fraction,
-      alignsLines: presentation.alignsLines)
+      lineArrangement: presentation.lineArrangement)
   }
 
   /// Shows `file` where the window left it, or from its top at its first change.
   private func restorePlace(of file: CollectedFile) {
-    guard let pane = layout.sourcePanes.first?.pane else { return }
+    guard let pane = presentation.leadingPane ?? layout.sourcePanes.first?.pane else { return }
     guard let place = filePlaces[file.path] else {
       presentation.setCurrentBlock(presentation.navigation.firstChange)
       presentation.showCurrentBlock()
       return
     }
     presentation.setCurrentBlock(place.currentBlock)
-    guard place.alignsLines == presentation.alignsLines else {
-      // The row counts otherwise since Align Lines changed; the current block stays in view.
+    guard place.lineArrangement == presentation.lineArrangement else {
+      // The row counts otherwise since the arrangement changed; the current block stays in view.
       presentation.showCurrentBlock()
       return
     }

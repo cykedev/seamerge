@@ -49,6 +49,8 @@ import Testing
     #expect(try Self.keys(of: item(.previousChange)) == "⌥⌘↑")
     #expect(try Self.keys(of: item(.nextConflict)) == "")
     #expect(try Self.keys(of: item(.filterFiles)) == "⇧⌘F")
+    #expect(try Self.keys(of: item(.showSingleColumn)) == "⌥⌘U")
+    #expect(try Self.keys(of: item(.showConnectedSides)) == "⌥⇧⌘A")
     #expect(mainMenu.leaveUnresolvedItem.title == "Skip Remaining Files")
     #expect(mainMenu.leaveUnresolvedItem.action == SessionCommand.skipRemainingFiles.action)
     #expect(Self.keys(of: mainMenu.leaveUnresolvedItem) == "⌘.")
@@ -195,8 +197,11 @@ import Testing
       Hide Base ⌥⌘B
       Maximize Result ⌥⌘R
       ---
+      Aligned Lines ⌥⌘A
+      Connected Sides ⌥⇧⌘A
+      Single Column
+      ---
       Synchronize Scrolling ⌥⌘Y
-      Align Lines ⌥⌘A
       Highlight Syntax
       Syntax ▸
         Automatic

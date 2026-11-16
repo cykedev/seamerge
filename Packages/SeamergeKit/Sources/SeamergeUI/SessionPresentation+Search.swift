@@ -5,10 +5,14 @@ import PaneKit
 /// strokes of its matches in the overview bars.
 extension SessionPresentation {
   /// The panes that the search goes through, in reading order: in a merge A, the base and B,
-  /// then the result; in a comparison the left pane, then the right one.
+  /// then the result; in a comparison the left pane, then the right one, or the single column
+  /// alone while it shows.
   ///
   /// A hidden base is left out, and a maximized result is searched alone.
   var searchedPanes: [PaneView] {
+    if columnLayout != nil, let columnPane = layout.columnPane {
+      return [columnPane]
+    }
     let sources =
       layout.maximizesResult
       ? [] : layout.sourcePanes.filter { $0.role != .base || layout.showsBase }.map(\.pane)
@@ -52,20 +56,25 @@ extension SessionPresentation {
   }
 
   /// Marks the rows of the matches of the search in the overview bars: those of the panes side
-  /// by side on the rows of the grid in their bar, those of the result in its own.
+  /// by side on the rows of the grid in their bar, those of the result and of the single column
+  /// each in its own.
   func showSearchMatches() {
     var sourceRows = IndexSet()
     var resultRows = IndexSet()
+    var columnRows = IndexSet()
     for match in search.matches {
       let row = match.pane.row(containingOffset: match.range.lowerBound)
       if match.pane === layout.resultPane {
         resultRows.insert(row)
+      } else if match.pane === layout.columnPane {
+        columnRows.insert(row)
       } else {
         sourceRows.insert(gridRow(ofRow: row, in: match.pane))
       }
     }
     sourcesOverviewBar.matchRows = sourceRows
     resultOverviewBar?.matchRows = resultRows
+    columnOverviewBar?.matchRows = columnRows
   }
 
   /// The changed block that the match of the search lies in, if any.

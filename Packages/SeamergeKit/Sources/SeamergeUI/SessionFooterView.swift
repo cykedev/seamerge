@@ -37,6 +37,9 @@ final class SessionFooterView: NSView {
     /// Whether a language can be chosen now.
     var canChooseSyntax: Bool
 
+    /// Whether the window shows a single column, in which some toggles cannot act.
+    var showsSingleColumn: Bool
+
     /// The state of a toggle.
     struct Toggle: Equatable {
       /// On, off, or mixed for the collapsed lines while some runs are expanded.
@@ -181,7 +184,9 @@ final class SessionFooterView: NSView {
         toggleState.isEnabled ? Self.symbolColor(in: toggleState.state) : .disabledControlTextColor
       button.action = toggle.command(in: toggleState.state).action
       button.toolTip =
-        toggleState.isEnabled ? toggle.help(in: toggleState.state) : toggle.disabledHelp
+        toggleState.isEnabled
+        ? toggle.help(in: toggleState.state)
+        : toggle.disabledHelp(showsSingleColumn: state.showsSingleColumn)
       button.setAccessibilityValueDescription(toggle.accessibilityValue(in: toggleState.state))
     }
     needsLayout = true

@@ -5,7 +5,7 @@ import Testing
 @testable import PaneKit
 @testable import SeamergeUI
 
-/// The diff window with Align Lines turned off: each pane shows its file without filler rows,
+/// The diff window with Connected Sides: each pane shows its file without filler rows,
 /// a seam between them connects the changes, and the panes couple block by block at the reading
 /// line; turning it on and off keeps the block, the insertion point and the selection.
 @MainActor
@@ -13,7 +13,7 @@ import Testing
   @Test func alignLinesTurnsTheGridIntoTheLinesOfEachFileWithASeamBetween() async throws {
     let controller = try await connectedWindow()
     let (a, b) = try panes(of: controller)
-    #expect(!controller.isSwitchedOn(.toggleLineAlignment))
+    #expect(controller.presentation.lineArrangement == .connected)
     #expect(!a.content.lineNumbers.contains(-1))
     #expect(!b.content.lineNumbers.contains(-1))
     #expect(a.content.marksBlocksWithoutRows && b.content.marksBlocksWithoutRows)
@@ -25,49 +25,52 @@ import Testing
     let gap = b.convert(b.bounds, to: nil).minX - a.convert(a.bounds, to: nil).maxX
     #expect(gap == Theme.seamWidth)
 
-    controller.toggleLineAlignment(nil)
-    #expect(controller.isSwitchedOn(.toggleLineAlignment))
+    controller.showAlignedLines(nil)
+    #expect(controller.presentation.lineArrangement == .aligned)
     #expect(controller.layout.seams.isEmpty)
     #expect(a.content.lineNumbers.contains(-1))
     #expect(a.content.lineNumbers.count == session.rowLayout.rowCount)
   }
 
-  @Test func menuItemIsCheckedWhileLinesLineUpInAComparisonAndAMerge() async throws {
-    let item = NSMenuItem(
-      title: SessionCommand.toggleLineAlignment.title,
-      action: SessionCommand.toggleLineAlignment.action, keyEquivalent: "a")
-    let comparison = try Windows.controller(for: try await SampleDiffs.everyKindOfChange())
-    #expect(comparison.validateUserInterfaceItem(item))
-    #expect(item.state == .on)
-    comparison.toggleLineAlignment(nil)
-    #expect(comparison.validateUserInterfaceItem(item))
-    #expect(item.state == .off)
-
-    let merge = try Windows.controller(for: try await SampleMerges.helloWorld())
-    #expect(merge.validateUserInterfaceItem(item))
-    #expect(item.state == .on)
-    merge.toggleLineAlignment(nil)
-    #expect(!merge.presentation.alignsLines)
-    #expect(merge.validateUserInterfaceItem(item))
-    #expect(item.state == .off)
-    let key = try #require(SessionCommand.toggleLineAlignment.keyEquivalent(in: .diff))
-    #expect(key.key == "a" && key.modifiers == [.option, .command])
+  @Test func menuItemOfTheArrangementIsCheckedInAComparisonAndAMerge() async throws {
+    let aligned = NSMenuItem(
+      title: SessionCommand.showAlignedLines.title,
+      action: SessionCommand.showAlignedLines.action, keyEquivalent: "a")
+    let connected = NSMenuItem(
+      title: SessionCommand.showConnectedSides.title,
+      action: SessionCommand.showConnectedSides.action, keyEquivalent: "A")
+    for session in [try await SampleDiffs.everyKindOfChange(), try await SampleMerges.helloWorld()]
+    {
+      let controller = try Windows.controller(for: session)
+      #expect(controller.validateUserInterfaceItem(aligned) && aligned.state == .on)
+      #expect(controller.validateUserInterfaceItem(connected) && connected.state == .off)
+      controller.showConnectedSides(nil)
+      #expect(!controller.presentation.alignsLines)
+      #expect(controller.validateUserInterfaceItem(aligned) && aligned.state == .off)
+      #expect(controller.validateUserInterfaceItem(connected) && connected.state == .on)
+    }
+    let alignedKey = try #require(SessionCommand.showAlignedLines.keyEquivalent(in: .diff))
+    #expect(alignedKey.key == "a" && alignedKey.modifiers == [.option, .command])
+    let connectedKey = try #require(SessionCommand.showConnectedSides.keyEquivalent(in: .diff))
+    #expect(connectedKey.key == "a" && connectedKey.modifiers == [.shift, .option, .command])
   }
 
-  @Test func footerToggleFollowsAlignLinesInAComparisonAndAMerge() async throws {
-    let comparison = try Windows.controller(for: try await SampleDiffs.everyKindOfChange())
-    let button = try #require(comparison.content.footer.button(of: .lineAlignment))
-    #expect(button.state == .on)
-    #expect(NSApp.sendAction(try #require(button.action), to: comparison, from: button))
-    #expect(!comparison.presentation.alignsLines)
-    #expect(button.state == .off)
-
-    let merge = try Windows.controller(for: try await SampleMerges.helloWorld())
-    let mergeButton = try #require(merge.content.footer.button(of: .lineAlignment))
-    #expect(mergeButton.isEnabled && mergeButton.state == .on)
-    #expect(NSApp.sendAction(try #require(mergeButton.action), to: merge, from: mergeButton))
-    #expect(!merge.presentation.alignsLines)
-    #expect(mergeButton.state == .off)
+  @Test func toolbarChoiceFollowsAlignLinesInAComparisonAndAMerge() async throws {
+    for session in [try await SampleDiffs.everyKindOfChange(), try await SampleMerges.helloWorld()]
+    {
+      let controller = try Windows.controller(for: session)
+      let choice = try #require(
+        controller.window?.toolbar?.items.first { $0.itemIdentifier == .lineArrangement }
+          as? NSToolbarItemGroup)
+      #expect(choice.selectedIndex == 0)
+      controller.showConnectedSides(nil)
+      #expect(!controller.presentation.alignsLines)
+      #expect(choice.selectedIndex == 1)
+      #expect(choice.action == #selector(SessionWindowController.chooseLineArrangement(_:)))
+      choice.selectedIndex = 0
+      controller.chooseLineArrangement(choice)
+      #expect(controller.presentation.alignsLines)
+    }
   }
 
   @Test func settingsDecideHowANewComparisonAndANewMergeStart() async throws {
@@ -241,7 +244,7 @@ import Testing
         CGPoint(x: 0, y: a.documentView.visibleRect.minY + a.theme.rowHeight * 1.5))
       let gridPlace = position(atReadingLineOf: a)
 
-      controller.toggleLineAlignment(nil)
+      controller.showConnectedSides(nil)
       #expect(controller.presentation.currentBlock == block)
       let mostLines = session.rowLayout.block(atRow: Int(gridPlace))
       let leader =
@@ -250,7 +253,7 @@ import Testing
         .sourcePosition(at: position(atReadingLineOf: leader.0))
       #expect(abs(gridAgain - gridPlace) < 0.06, "block \(block): \(gridAgain) for \(gridPlace)")
 
-      controller.toggleLineAlignment(nil)
+      controller.showAlignedLines(nil)
       #expect(abs(position(atReadingLineOf: a) - gridPlace) < 0.06, "block \(block) back")
     }
   }
@@ -263,7 +266,7 @@ import Testing
       let gridPlace = position(atReadingLineOf: a)
       #expect(gridPlace == Double(a.content.blocks[block].rows.lowerBound))
 
-      controller.toggleLineAlignment(nil)
+      controller.showConnectedSides(nil)
       #expect(controller.presentation.currentBlock == block)
       let tops = [a, b].map { pane in
         let span = pane.verticalSpan(ofRows: pane.content.blocks[block].rows)
@@ -273,7 +276,7 @@ import Testing
         #expect(abs(top - readingLine(of: a)) <= 1, "block \(block): \(tops)")
       }
 
-      controller.toggleLineAlignment(nil)
+      controller.showAlignedLines(nil)
       #expect(abs(position(atReadingLineOf: a) - gridPlace) < 0.06, "block \(block) back")
     }
   }
@@ -286,10 +289,10 @@ import Testing
     #expect(atAnEnd(a))
     let gridPlace = position(atReadingLineOf: a)
 
-    controller.toggleLineAlignment(nil)
+    controller.showConnectedSides(nil)
     // At the end, the side with fewer lines stops before the other.
     #expect(atAnEnd(a) || atAnEnd(b))
-    controller.toggleLineAlignment(nil)
+    controller.showAlignedLines(nil)
     let placeAgain = position(atReadingLineOf: a)
     #expect(abs(placeAgain - gridPlace) <= 1, "\(gridPlace) became \(placeAgain)")
   }
@@ -308,12 +311,12 @@ import Testing
     let controller = try Windows.controller(
       for: try await SampleDiffs.diff(old: old, new: new, label: "lines.txt"))
     let (a, b) = try panes(of: controller)
-    controller.toggleLineAlignment(nil)
+    controller.showConnectedSides(nil)
     controller.window?.contentView?.layoutSubtreeIfNeeded()
     a.documentView.scroll(.zero)
     #expect(a.documentView.visibleRect.minY <= 0 && b.documentView.visibleRect.minY <= 0)
 
-    controller.toggleLineAlignment(nil)
+    controller.showAlignedLines(nil)
     #expect(a.documentView.visibleRect.minY <= 0, "\(a.documentView.visibleRect.minY)")
   }
 
@@ -331,8 +334,8 @@ import Testing
     let selected = text.substring(with: selection)
     a.documentView.setSelectedRange(NSRange(location: 17, length: 0))
 
-    for _ in 0..<2 {
-      controller.toggleLineAlignment(nil)
+    for command in [SessionCommand.showConnectedSides, .showAlignedLines] {
+      controller.perform(command)
       let range = b.documentView.selectedRange()
       #expect((b.documentView.string as NSString).substring(with: range) == selected)
       #expect(window.firstResponder === b.documentView)
@@ -347,7 +350,7 @@ import Testing
     let run = try #require(a.collapsedRuns.first)
     controller.presentation.pane(a, didAskToExpand: run)
     let collapsed = controller.presentation.collapsed.runs
-    controller.toggleLineAlignment(nil)
+    controller.showConnectedSides(nil)
     #expect(controller.presentation.collapsed.runs == collapsed)
     #expect(a.collapsedRuns.count == collapsed.count)
   }
@@ -395,7 +398,7 @@ import Testing
     let controller = try Windows.controller(for: try await SampleDiffs.everyKindOfChange())
     let bar = controller.presentation.sourcesOverviewBar
     let marks = bar.marks
-    controller.toggleLineAlignment(nil)
+    controller.showConnectedSides(nil)
     #expect(bar.marks == marks)
     let (_, b) = try panes(of: controller)
     b.documentView.scroll(CGPoint(x: 0, y: b.documentView.frame.height))
@@ -407,14 +410,14 @@ import Testing
   @Test func windowIsWiderAtLeastByTheSeam() async throws {
     let controller = try Windows.controller(for: try await SampleDiffs.everyKindOfChange())
     let aligned = controller.layout.minimumWidth
-    controller.toggleLineAlignment(nil)
+    controller.showConnectedSides(nil)
     #expect(controller.layout.minimumWidth >= aligned + Theme.seamWidth - 1)
   }
 
   @Test func emptyFileShowsAHairlineWhereTheLinesOfTheOtherSideAreMissing() async throws {
     let controller = try Windows.controller(
       for: try await SampleDiffs.diff(old: "", new: "first\nsecond\n"))
-    controller.toggleLineAlignment(nil)
+    controller.showConnectedSides(nil)
     let (a, b) = try panes(of: controller)
     #expect(a.content.text.isEmpty)
     #expect(a.content.blocks.map(\.rows) == [0..<0])
@@ -424,11 +427,11 @@ import Testing
     #expect(band.right.upperBound - band.right.lowerBound > b.theme.rowHeight)
   }
 
-  /// A window of ``SampleDiffs/everyKindOfChange(repeats:longLines:)`` with Align Lines off.
+  /// A window of ``SampleDiffs/everyKindOfChange(repeats:longLines:)`` with Connected Sides.
   private func connectedWindow(longLines: Bool = false) async throws -> SessionWindowController {
     let controller = try Windows.controller(
       for: try await SampleDiffs.everyKindOfChange(repeats: 16, longLines: longLines))
-    controller.toggleLineAlignment(nil)
+    controller.showConnectedSides(nil)
     controller.window?.contentView?.layoutSubtreeIfNeeded()
     return controller
   }

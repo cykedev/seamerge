@@ -5,7 +5,8 @@ import SwiftUI
 
 /// The panes of a session window and how they are laid out: the inputs side by side and equally
 /// wide, A, Base and B in a merge, and below them in a merge the result across the full width,
-/// each pane with its header.
+/// each pane with its header; a comparison shows its two files in a single column instead, on
+/// demand, in a pane of its own below a header that names both.
 ///
 /// The headers are accessories at the top of the split view items, as the system lays them out,
 /// with a hard edge, since dense code would blur under a soft one. Between the inputs lie
@@ -19,6 +20,10 @@ final class SessionSplitViewController: NSSplitViewController {
   /// The result pane, which only a merge has.
   let resultPane: PaneView?
 
+  /// The pane that shows both files of a comparison in a single column, which only a comparison
+  /// of two files has.
+  let columnPane: PaneView?
+
   /// The pane of `role`, if the input takes part.
   func sourcePane(_ role: Role) -> PaneView? {
     sourcePanes.first { $0.role == role }?.pane
@@ -31,15 +36,25 @@ final class SessionSplitViewController: NSSplitViewController {
   var chooseResultFormat: (ResultFormatChoice) -> Void = { _ in }
 
   private let sourcesController = PanesSplitViewController()
+  private let sourcesItem: NSSplitViewItem
   private var viewInPlaceOfTheLines: NSView?
   private let sourceHeaderViews: [HeaderHostingView<SideHeaderView>]
   private let resultHeaderView: HeaderHostingView<ResultHeaderView>?
+  private let columnItem: NSSplitViewItem?
+  private let columnHeaderView: HeaderHostingView<ColumnHeaderView>?
 
   /// Creates the panes for the inputs of `headers`, from left to right, and for the result of
-  /// `resultHeader` below them if there is one, drawn with `theme`.
+  /// `resultHeader` below them if there is one, drawn with `theme`; without a result, two
+  /// inputs get a pane for the single column as well.
   init(headers: [SideHeader], resultHeader: ResultHeader?, theme: Theme) {
     sourcePanes = headers.map { ($0.role, PaneView(theme: theme)) }
     resultPane = resultHeader.map { _ in PaneView(theme: theme) }
+    let hasColumn = resultHeader == nil && headers.count == 2
+    columnPane = hasColumn ? PaneView(theme: theme) : nil
+    columnHeaderView =
+      hasColumn
+      ? HeaderHostingView(rootView: ColumnHeaderView(headers: headers, theme: theme), role: nil)
+      : nil
     sourceHeaderViews = headers.map {
       HeaderHostingView(rootView: SideHeaderView(header: $0, theme: theme), role: $0.role)
     }
@@ -47,7 +62,13 @@ final class SessionSplitViewController: NSSplitViewController {
       HeaderHostingView(
         rootView: ResultHeaderView(header: $0, callerIsGone: false) { _ in }, role: nil)
     }
+    sourcesItem = NSSplitViewItem(viewController: sourcesController)
+    columnItem = columnPane.map { NSSplitViewItem(viewController: PaneItemController(pane: $0)) }
     super.init(nibName: nil, bundle: nil)
+    if let columnItem, let columnHeaderView {
+      columnItem.minimumThickness = WindowMetrics.minimumPaneHeight
+      columnItem.addTopAlignedAccessoryViewController(Self.accessory(columnHeaderView))
+    }
     if let resultHeaderView {
       resultHeaderView.rootView = makeResultHeaderView(
         header: resultHeaderView.rootView.header, callerIsGone: false)
@@ -64,7 +85,6 @@ final class SessionSplitViewController: NSSplitViewController {
       item.addTopAlignedAccessoryViewController(Self.accessory(headerView))
       sourcesController.addSplitViewItem(item)
     }
-    let sourcesItem = NSSplitViewItem(viewController: sourcesController)
     // The headers of the sources lie within this item; the result's lies outside its own.
     sourcesItem.minimumThickness = WindowMetrics.minimumPaneHeight + WindowMetrics.headerHeight
     addSplitViewItem(sourcesItem)
@@ -88,6 +108,31 @@ final class SessionSplitViewController: NSSplitViewController {
       headerView.role = header.role
       headerView.rootView = SideHeaderView(header: header, theme: headerView.rootView.theme)
     }
+    if let columnHeaderView {
+      columnHeaderView.rootView = ColumnHeaderView(
+        headers: headers, theme: columnHeaderView.rootView.theme)
+    }
+  }
+
+  /// Whether the two files of a comparison show in a single column, in place of the panes side
+  /// by side, which keep their content, widths and places meanwhile.
+  ///
+  /// - Precondition: The window has a single column, if it is to show it.
+  var showsSingleColumn: Bool {
+    get { columnItem.map(splitViewItems.contains) ?? false }
+    set {
+      guard newValue != showsSingleColumn else { return }
+      guard let columnItem else {
+        preconditionFailure("Only a comparison of two files shows a single column")
+      }
+      let (shown, hidden) = newValue ? (columnItem, sourcesItem) : (sourcesItem, columnItem)
+      removeSplitViewItem(hidden)
+      insertSplitViewItem(shown, at: 0)
+      if let viewInPlaceOfTheLines {
+        showInPlaceOfTheLines(viewInPlaceOfTheLines)
+      }
+      view.layoutSubtreeIfNeeded()
+    }
   }
 
   /// Shows `view` across the panes side by side, below their headers, in place of their lines,
@@ -95,11 +140,16 @@ final class SessionSplitViewController: NSSplitViewController {
   func showInPlaceOfTheLines(_ view: NSView) {
     viewInPlaceOfTheLines?.removeFromSuperview()
     viewInPlaceOfTheLines = view
-    for (_, pane) in sourcePanes {
+    for pane in sourcePanes.map(\.pane) + [columnPane].compactMap(\.self) {
       pane.isHidden = true
     }
-    guard let header = sourceHeaderViews.first else { return }
-    let container = sourcesController.view
+    let shown: (header: NSView, container: NSView)? =
+      if showsSingleColumn, let columnHeaderView, let columnItem {
+        (columnHeaderView, columnItem.viewController.view)
+      } else {
+        sourceHeaderViews.first.map { ($0, sourcesController.view) }
+      }
+    guard let (header, container) = shown else { return }
     view.translatesAutoresizingMaskIntoConstraints = false
     container.addSubview(view)
     NSLayoutConstraint.activate([
@@ -115,7 +165,7 @@ final class SessionSplitViewController: NSSplitViewController {
   func showLinesAgain() {
     viewInPlaceOfTheLines?.removeFromSuperview()
     viewInPlaceOfTheLines = nil
-    for (_, pane) in sourcePanes {
+    for pane in sourcePanes.map(\.pane) + [columnPane].compactMap(\.self) {
       pane.isHidden = false
     }
   }
@@ -238,8 +288,13 @@ final class SessionSplitViewController: NSSplitViewController {
       seam.theme = theme
     }
     resultPane?.theme = theme
+    columnPane?.theme = theme
     for headerView in sourceHeaderViews {
       headerView.rootView = SideHeaderView(header: headerView.rootView.header, theme: theme)
+    }
+    if let columnHeaderView {
+      columnHeaderView.rootView = ColumnHeaderView(
+        headers: columnHeaderView.rootView.headers, theme: theme)
     }
   }
 
@@ -253,8 +308,12 @@ final class SessionSplitViewController: NSSplitViewController {
   }
 
   /// The narrowest the panes get together: each source pane in view at its least width, with
-  /// the dividers between them, and the result no narrower than it needs.
+  /// the dividers between them, and the result no narrower than it needs; the single column at
+  /// its own least width while it shows.
   var minimumWidth: CGFloat {
+    if showsSingleColumn, let columnPane {
+      return columnPane.minimumWidth
+    }
     // A collapsed pane keeps its divider, which then meets the one beside it.
     let dividers =
       sourcesController.splitView.dividerThickness * CGFloat(max(sourcePanes.count - 1, 0))

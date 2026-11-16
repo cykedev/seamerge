@@ -31,7 +31,9 @@ extension SessionCommand {
     case .toggleResultMaximized: return ("r", [.option, .command])
     case .toggleScrollSynchronization: return ("y", [.option, .command])
     case .toggleLineWrapping: return ("l", [.option, .command])
-    case .toggleLineAlignment: return ("a", [.option, .command])
+    case .showAlignedLines: return ("a", [.option, .command])
+    case .showConnectedSides: return ("a", [.shift, .option, .command])
+    case .showSingleColumn: return kind == .diff ? ("u", [.option, .command]) : nil
     case .showAllLines: return ("l", [.shift, .command])
     case .collapseUnchangedLines: return ("l", [.option, .shift, .command])
     case .toggleFooter: return ("/", [.command])

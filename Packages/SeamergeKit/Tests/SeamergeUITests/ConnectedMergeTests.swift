@@ -5,7 +5,7 @@ import Testing
 @testable import PaneKit
 @testable import SeamergeUI
 
-/// The merge window with Align Lines turned off: A, Base and B show their files without filler
+/// The merge window with Connected Sides: A, Base and B show their files without filler
 /// rows, seams connect A with Base and Base with B, or A with B while the base is hidden, and
 /// the panes side by side and the result scroll over a common track.
 @MainActor
@@ -136,14 +136,14 @@ import Testing
     #expect(![a, base, b].contains { $0.content.lineNumbers.contains(-1) })
     let block = controller.presentation.changes.blocks.count / 2
     controller.presentation.jump(to: block)
-    controller.toggleLineAlignment(nil)
+    controller.showAlignedLines(nil)
     #expect(controller.presentation.alignsLines && controller.layout.seams.isEmpty)
     #expect(base.content.lineNumbers.contains(-1))
     #expect(controller.presentation.currentBlock == block)
     let rows = b.content.blocks[block].rows
     let span = b.verticalSpan(ofRows: rows)
     #expect(span.lowerBound - 0.5 <= b.readingLinePlace && b.readingLinePlace <= span.upperBound)
-    controller.toggleLineAlignment(nil)
+    controller.showConnectedSides(nil)
     #expect(controller.layout.seams.count == 2)
   }
 
@@ -167,7 +167,7 @@ import Testing
       "\(positions)")
   }
 
-  /// A window of the example merge with Align Lines off.
+  /// A window of the example merge with Connected Sides.
   private func connectedWindow() async throws -> SessionWindowController {
     let settings = UserSettings.private()
     settings.alignsLines = false

@@ -1,8 +1,8 @@
 import MergeModel
 import PaneKit
 
-/// The marks of the two overview bars: the bar beside the panes side by side, on their row grid,
-/// and the bar beside the result, on its rows.
+/// The marks of the overview bars: the bar beside the panes side by side, on their row grid, the
+/// bar beside the result, on its rows, and the bar beside a single column, on its rows.
 ///
 /// A change of the side on the left takes the leading part of a bar and a change of the side on
 /// the right the trailing part, so that the place says which side changed even without color; a
@@ -35,10 +35,30 @@ enum OverviewMarks {
         marks.append(
           OverviewMark(
             rows: rows, style: .tinted(role.colorRole), placement: placement, block: index,
-            accessibilityLabel: String(
-              localized: "Change in \(role.letter), line \(firstLine(of: block, in: role))",
-              bundle: .module,
-              comment: "VoiceOver: a mark in the overview bar, such as Change in A, line 12.")))
+            accessibilityLabel: changeLabel(of: role, line: firstLine(of: block, in: role))))
+      }
+    }
+    return marks
+  }
+
+  /// The marks of the bar beside a single column, on its rows: the marks of the two parts of a
+  /// block one below the other, each on the side of the bar where the panes side by side put
+  /// its side, so that the place still says which side changed without color.
+  static func column(of changes: SessionChanges, column: SingleColumnLayout) -> [OverviewMark] {
+    let sides = [
+      (column.firstSide, OverviewMark.Placement.leading),
+      (PaneContent.otherSide(of: column.firstSide), .trailing),
+    ]
+    var marks: [OverviewMark] = []
+    for (index, block) in changes.blocks.enumerated() {
+      for (role, placement) in sides {
+        let rows = column.rows(of: block, showingOnly: role)
+        let style = changes.style(of: role, in: block, conflictIsOpen: false)
+        guard !rows.isEmpty, style != .unchanged else { continue }
+        marks.append(
+          OverviewMark(
+            rows: rows, style: style, placement: placement, block: index,
+            accessibilityLabel: changeLabel(of: role, line: firstLine(of: block, in: role))))
       }
     }
     return marks
@@ -69,6 +89,13 @@ enum OverviewMarks {
       }
     }
     return marks
+  }
+
+  /// What VoiceOver calls the mark of a change of `role` that starts at `line`, counted from 1.
+  private static func changeLabel(of role: Role, line: Int) -> String {
+    String(
+      localized: "Change in \(role.letter), line \(line)", bundle: .module,
+      comment: "VoiceOver: a mark in the overview bar, such as Change in A, line 12.")
   }
 
   /// The mark of a conflict: red while open, in the color of its source once decided.

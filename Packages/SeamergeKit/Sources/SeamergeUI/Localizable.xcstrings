@@ -12,8 +12,22 @@
         }
       }
     },
+    "%@ to %@" : {
+      "comment" : "VoiceOver: the header of a single column that shows both files, such as A, old.swift to B, new.swift.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ to %2$@"
+          }
+        }
+      }
+    },
     "Adds a link at %@ so that you can compare files in Terminal, for example seamerge old.txt new.txt. macOS asks for an administrator’s name and password." : {
       "comment" : "Install the seamerge Command: what installing does; the path of the link."
+    },
+    "Aligned Lines" : {
+      "comment" : "View menu, toolbar and Settings: matching lines of the files side by side."
     },
     "Another file is at %@. Seamerge doesn’t replace it." : {
       "comment" : "Install the seamerge Command: a file of someone else is where the link goes."
@@ -21,11 +35,23 @@
     "Another file is in the way." : {
       "comment" : "Install the seamerge Command: a file appeared where the link goes."
     },
+    "Arrangement" : {
+      "comment" : "Toolbar item: the choice of how the lines of the files are laid out."
+    },
     "Command" : {
       "comment" : "VoiceOver: the command to type in Install the seamerge Command."
     },
+    "Comparisons of two files only; merges show the files side by side." : {
+      "comment" : "Settings: which new windows start with a single column."
+    },
+    "Connected Sides" : {
+      "comment" : "View menu, toolbar and Settings: the files side by side with bands between changes."
+    },
     "Copy the command to paste it into Terminal" : {
       "comment" : "Tooltip of the button Copy in Install the seamerge Command."
+    },
+    "Each window starts like this. The switches in a window’s toolbar and footer change only that window." : {
+      "comment" : "Settings: note below the group of how a new window starts."
     },
     "Homebrew installed the seamerge command." : {
       "comment" : "Install the seamerge Command: Homebrew made the link."
@@ -56,6 +82,18 @@
     },
     "Show Command" : {
       "comment" : "Install the seamerge Command: the triangle that shows the command to type."
+    },
+    "Show removed lines above added lines in one column" : {
+      "comment" : "Help tag of Single Column in the View menu and the toolbar."
+    },
+    "Side by Side" : {
+      "comment" : "Settings: how a new window lays out the files side by side."
+    },
+    "Single Column" : {
+      "comment" : "View menu, toolbar and Settings: both files of a comparison in one column."
+    },
+    "Synchronize scrolling (a single column scrolls alone)" : {
+      "comment" : "Help tag of the footer toggle of synchronized scrolling in a single column."
     },
     "The link couldn’t be changed." : {
       "comment" : "Install the seamerge Command: changing the link failed for another reason."
@@ -460,9 +498,6 @@
     "After Use A, Use B and the like on an open conflict." : {
       "comment" : "Settings: when the window goes on to the next conflict."
     },
-    "Align Lines" : {
-      "comment" : "View menu command, checked while matching lines of the panes stand side by side."
-    },
     "All %lld files received" : {
       "comment" : "VoiceOver: every file of a run has come, such as All 40 files received."
     },
@@ -695,9 +730,6 @@
     "Conflicts" : {
       "comment" : "Toolbar items: the count of the open conflicts and the buttons that go through them."
     },
-    "Connect changes with bands (no lines to show)" : {
-      "comment" : "Help tag of the footer toggle of aligned lines in a window without lines."
-    },
     "Copied the patch" : {
       "comment" : "VoiceOver after copying the patch of a comparison of two files."
     },
@@ -816,9 +848,6 @@
     },
     "Duplicate this rule to change it" : {
       "comment" : "Help tag of the name and pattern of an ignore rule that comes with the app."
-    },
-    "Each window starts like this. The switches in a window’s footer change only that window." : {
-      "comment" : "Settings: note below the group of how a new window starts."
     },
     "Earlier Version" : {
       "comment" : "Role: the file before the change, shown when both sides have the same name."
@@ -1111,7 +1140,7 @@
       "comment" : "Settings: how far apart lines are."
     },
     "Line up matching lines side by side" : {
-      "comment" : "Help tag of the footer toggle of aligned lines while bands connect the changes."
+      "comment" : "Help tag of Aligned Lines in the View menu and the toolbar."
     },
     "List the files that are the same in both folders too" : {
       "comment" : "Help tag of View > Show Identical Files."
@@ -1444,7 +1473,7 @@
       "comment" : "Set Up Git Integration: the triangle that shows the commands of the setup."
     },
     "Show each file without gaps and connect changes with bands" : {
-      "comment" : "Help tag of the footer toggle of aligned lines while matching lines line up."
+      "comment" : "Help tag of Connected Sides in the View menu and the toolbar."
     },
     "Show every line" : {
       "comment" : "Help tag of the footer toggle of collapsed lines while every run is collapsed."

@@ -15,55 +15,9 @@ struct SideHeaderView: View {
 
   var body: some View {
     HStack(spacing: WindowMetrics.headerSpacing) {
-      SideBadge(role: header.role, theme: theme)
-      if let roleText = header.roleText, header.rolePlacement == .beforeName {
-        Text(roleText)
-          .font(.subheadline)
-          .layoutPriority(1)
-      }
-      Text(header.name)
-        .font(.headline)
-        .truncationMode(.middle)
-      if let roleText = header.roleText, header.rolePlacement == .afterName {
-        Text(roleText)
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
-      }
-      if let lineEndings = header.differingLineEndings {
-        Text(lineEndings.name)
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
-          .help(
-            Text(
-              "Differs from the line endings of the other files",
-              bundle: .module,
-              comment: "Help tag of the line endings in a header, shown only where they differ."))
-      }
-      if let encoding = header.differingEncoding {
-        Text(encoding.name)
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
-          .help(
-            Text(
-              "Differs from the encoding of the other files", bundle: .module,
-              comment: "Help tag of the encoding in a header, shown only where it differs."))
-      }
+      SideNamesView(header: header, theme: theme)
       Spacer(minLength: 0)
-      Button {
-        showsDetails = true
-      } label: {
-        Image(systemName: "info.circle")
-          .frame(width: WindowMetrics.minimumHitTarget, height: WindowMetrics.minimumHitTarget)
-          .contentShape(Rectangle())
-      }
-      .buttonStyle(.borderless)
-      .foregroundStyle(.secondary)
-      .help(Text("Show where this side comes from", bundle: .module, comment: "Help tag of ⓘ."))
-      .accessibilityLabel(
-        Text(
-          "Details about \(header.spokenName)", bundle: .module,
-          comment: "VoiceOver: the ⓘ of a header, such as Details about A, main."
-        ))
+      SideDetailsButton(header: header) { showsDetails = true }
     }
     .lineLimit(1)
     .padding(.horizontal, WindowMetrics.headerInset)
@@ -75,6 +29,72 @@ struct SideHeaderView: View {
     }
     .accessibilityElement(children: .contain)
     .accessibilityLabel(Text(header.spokenName))
+  }
+}
+
+/// What a header says about a side: its badge, its real name and role, and its line endings and
+/// encoding where they differ from the other sides.
+struct SideNamesView: View {
+  let header: SideHeader
+  let theme: Theme
+
+  var body: some View {
+    SideBadge(role: header.role, theme: theme)
+    if let roleText = header.roleText, header.rolePlacement == .beforeName {
+      Text(roleText)
+        .font(.subheadline)
+        .layoutPriority(1)
+    }
+    Text(header.name)
+      .font(.headline)
+      .truncationMode(.middle)
+    if let roleText = header.roleText, header.rolePlacement == .afterName {
+      Text(roleText)
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+    }
+    if let lineEndings = header.differingLineEndings {
+      Text(lineEndings.name)
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .help(
+          Text(
+            "Differs from the line endings of the other files",
+            bundle: .module,
+            comment: "Help tag of the line endings in a header, shown only where they differ."))
+    }
+    if let encoding = header.differingEncoding {
+      Text(encoding.name)
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .help(
+          Text(
+            "Differs from the encoding of the other files", bundle: .module,
+            comment: "Help tag of the encoding in a header, shown only where it differs."))
+    }
+  }
+}
+
+/// The quiet button ⓘ of a header, which opens the details of its side, so that the keyboard and
+/// VoiceOver reach them too.
+struct SideDetailsButton: View {
+  let header: SideHeader
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Image(systemName: "info.circle")
+        .frame(width: WindowMetrics.minimumHitTarget, height: WindowMetrics.minimumHitTarget)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.borderless)
+    .foregroundStyle(.secondary)
+    .help(Text("Show where this side comes from", bundle: .module, comment: "Help tag of ⓘ."))
+    .accessibilityLabel(
+      Text(
+        "Details about \(header.spokenName)", bundle: .module,
+        comment: "VoiceOver: the ⓘ of a header, such as Details about A, main."
+      ))
   }
 }
 

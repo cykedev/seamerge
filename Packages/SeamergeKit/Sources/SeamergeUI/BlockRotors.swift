@@ -6,8 +6,8 @@ import PaneKit
 /// decided, and through every change.
 ///
 /// An item is the text of its block in the pane that has the focus, or else in the result of a
-/// merge or the newer side of a comparison. Moving to an item reads the block and leaves the
-/// current block as it is; the commands of the Go menu make a block current.
+/// merge, the single column, or the newer side of a comparison. Moving to an item reads the block
+/// and leaves the current block as it is; the commands of the Go menu make a block current.
 @MainActor
 final class BlockRotors: NSObject, @MainActor NSAccessibilityCustomRotorItemSearchDelegate {
   /// Which blocks a rotor moves through.
@@ -81,11 +81,13 @@ final class BlockRotors: NSObject, @MainActor NSAccessibilityCustomRotorItemSear
     return item
   }
 
-  /// The pane whose text the items are: the pane that has the focus, or else the result, or the
-  /// last pane side by side.
+  /// The pane whose text the items are: the pane that has the focus, or else the result, the
+  /// single column while it shows, or the last pane side by side.
   private static func targetPane(in presentation: SessionPresentation) -> PaneView? {
     presentation.allPanes.first { $0.holdsFocus && $0.isShown }
-      ?? presentation.layout.resultPane ?? presentation.layout.sourcePanes.last?.pane
+      ?? presentation.layout.resultPane
+      ?? (presentation.columnLayout == nil ? nil : presentation.layout.columnPane)
+      ?? presentation.layout.sourcePanes.last?.pane
   }
 
   /// The indices of the changed blocks that a rotor of `kind` moves through.

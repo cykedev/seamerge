@@ -2,11 +2,13 @@ import AppKit
 import MergeModel
 
 /// The toolbar of a session window: in the middle the number of open conflicts with the arrows
-/// that jump between them, at the trailing end the button that saves and closes.
+/// that jump between them, at the trailing end the choice of how the lines are laid out and the
+/// button that saves and closes.
 ///
 /// A comparison of two files has no conflicts and nothing to save: in the middle it says which
-/// change is current, with the arrows that jump between changes, and nothing else. How the
-/// files are compared and shown stands in the footer of the window.
+/// change is current, with the arrows that jump between changes, and at the trailing end the
+/// choice of how the lines are laid out, which offers a single column besides. How the files
+/// are compared stands in the footer of the window.
 ///
 /// The toolbar can be customized, for each kind of window on its own; in a merge, the arrows
 /// between changes can be dragged in, and in both the choice of the comparison mode, but they
@@ -45,6 +47,9 @@ final class SessionToolbar: NSObject {
 
   private let kind: Session.Kind
   private let doneStyle: DoneStyle
+
+  /// The arrangements that the choice in the toolbar offers, in its order.
+  let arrangements: [LineArrangement]
   private let hasSidebar: Bool
   private let countLabel = NSTextField(labelWithString: "")
   private let progressIndicator = NSProgressIndicator()
@@ -56,6 +61,7 @@ final class SessionToolbar: NSObject {
   init(kind: Session.Kind, doneStyle: DoneStyle, hasSidebar: Bool = false) {
     self.kind = kind
     self.doneStyle = doneStyle
+    arrangements = LineArrangement.choices(inMerge: kind == .merge)
     self.hasSidebar = hasSidebar
     toolbar = NSToolbar(
       identifier: kind == .merge
@@ -90,8 +96,13 @@ final class SessionToolbar: NSObject {
   /// - Parameters:
   ///   - count: The conflicts or changes to count.
   ///   - isComparing: Whether the files are being compared anew for long enough to say so.
+  ///   - lineArrangement: How the lines are laid out now.
+  ///   - canShow: Whether the lines can be laid out in an arrangement now.
   ///   - isValid: Whether a command can act now.
-  func update(count: Count, isComparing: Bool, isValid: (SessionCommand) -> Bool) {
+  func update(
+    count: Count, isComparing: Bool, lineArrangement: LineArrangement,
+    canShow: (LineArrangement) -> Bool, isValid: (SessionCommand) -> Bool
+  ) {
     countLabel.stringValue =
       isComparing
       ? String(
@@ -112,6 +123,12 @@ final class SessionToolbar: NSObject {
     for item in [items[.conflictNavigation], items[.changeNavigation]] {
       for subitem in (item as? NSToolbarItemGroup)?.subitems ?? [] {
         subitem.isEnabled = SessionCommand(action: subitem.action).map(isValid) ?? false
+      }
+    }
+    if let group = items[.lineArrangement] as? NSToolbarItemGroup {
+      group.selectedIndex = arrangements.firstIndex(of: lineArrangement) ?? -1
+      for (subitem, arrangement) in zip(group.subitems, arrangements) {
+        subitem.isEnabled = canShow(arrangement)
       }
     }
     if let done = items[.done] {
@@ -222,6 +239,8 @@ final class SessionToolbar: NSObject {
       item.toolTip = SessionCommand.comparisonModeHelp
       item.menu = Self.menu(of: SessionCommand.groups(in: .compare))
       return item
+    case .lineArrangement:
+      return arrangementGroup()
     case .done:
       let item = NSToolbarItem(itemIdentifier: identifier)
       let title = String(
@@ -272,6 +291,44 @@ final class SessionToolbar: NSObject {
     return group
   }
 
+  /// The choice of how the lines are laid out: one segment for each arrangement, with its
+  /// symbol, of which the one in effect is selected.
+  ///
+  /// A click sends ``SessionWindowController/chooseLineArrangement(_:)`` with the group, whose
+  /// selected segment names the arrangement; the View menu offers the same arrangements in the
+  /// same words.
+  private func arrangementGroup() -> NSToolbarItemGroup {
+    let group = NSToolbarItemGroup(
+      itemIdentifier: .lineArrangement,
+      images: arrangements.map { arrangement in
+        NSImage(
+          systemSymbolName: arrangement.symbolName, accessibilityDescription: arrangement.title)
+          ?? NSImage()
+      },
+      selectionMode: .selectOne, labels: arrangements.map(\.title), target: nil,
+      action: #selector(SessionWindowController.chooseLineArrangement(_:)))
+    for (subitem, arrangement) in zip(group.subitems, arrangements) {
+      subitem.toolTip = arrangement.help
+      subitem.autovalidates = false
+    }
+    group.label = Self.arrangementLabel
+    group.paletteLabel = Self.arrangementLabel
+    group.autovalidates = false
+    return group
+  }
+
+  /// The label of the choice of how the lines are laid out.
+  static var arrangementLabel: String {
+    String(
+      localized: "Arrangement", bundle: .module,
+      comment: "Toolbar item: the choice of how the lines of the files are laid out.")
+  }
+
+  /// The arrangement whose segment is selected in `group`, the choice of the toolbar, if any.
+  func arrangement(chosenIn group: NSToolbarItemGroup) -> LineArrangement? {
+    arrangements.indices.contains(group.selectedIndex) ? arrangements[group.selectedIndex] : nil
+  }
+
   /// A menu of `groups` of commands, with a separator between groups.
   private static func menu(of groups: [[SessionCommand]]) -> NSMenu {
     let menu = NSMenu()
@@ -307,8 +364,8 @@ extension SessionToolbar: NSToolbarDelegate {
     let sidebarItems: [NSToolbarItem.Identifier] =
       hasSidebar ? [.toggleSidebar, .sidebarTrackingSeparator] : []
     return switch kind {
-    case .merge: [.conflictCount, .conflictNavigation, .flexibleSpace, .done]
-    case .diff: sidebarItems + [.changeCount, .changeNavigation]
+    case .merge: [.conflictCount, .conflictNavigation, .flexibleSpace, .lineArrangement, .done]
+    case .diff: sidebarItems + [.changeCount, .changeNavigation, .flexibleSpace, .lineArrangement]
     }
   }
 
@@ -316,13 +373,30 @@ extension SessionToolbar: NSToolbarDelegate {
     switch kind {
     case .merge:
       [
-        .conflictCount, .conflictNavigation, .changeNavigation, .comparison, .done,
-        .flexibleSpace, .space,
+        .conflictCount, .conflictNavigation, .changeNavigation, .lineArrangement, .comparison,
+        .done, .flexibleSpace, .space,
       ]
     case .diff:
       (hasSidebar ? [.toggleSidebar, .sidebarTrackingSeparator] : [])
-        + [.changeCount, .changeNavigation, .comparison, .flexibleSpace, .space]
+        + [.changeCount, .changeNavigation, .lineArrangement, .comparison, .flexibleSpace, .space]
     }
+  }
+
+  /// Adds the choice of the arrangement to the toolbar once, if a configuration that the user
+  /// saved before the choice existed leaves it out, before the button that saves and closes or at
+  /// the end; the rest of the configuration stays.
+  ///
+  /// Each kind of toolbar does so once, as `settings` remember, so that a user who removes the
+  /// choice later does not get it back.
+  func insertArrangementOnce(rememberingIn settings: UserSettings) {
+    let identifier = toolbar.identifier
+    guard !settings.toolbarsWithArrangement.contains(identifier) else { return }
+    settings.toolbarsWithArrangement.insert(identifier)
+    let identifiers = toolbar.items.map(\.itemIdentifier)
+    guard !identifiers.contains(.lineArrangement) else { return }
+    toolbar.insertItem(
+      withItemIdentifier: .lineArrangement,
+      at: identifiers.firstIndex(of: .done) ?? identifiers.count)
   }
 
   /// Shows the button that shows and hides the sidebar, or hides it while the window has too
@@ -345,5 +419,6 @@ extension NSToolbarItem.Identifier {
   static let conflictNavigation = Self("conflictNavigation")
   static let changeNavigation = Self("changeNavigation")
   static let comparison = Self("comparison")
+  static let lineArrangement = Self("lineArrangement")
   static let done = Self("done")
 }

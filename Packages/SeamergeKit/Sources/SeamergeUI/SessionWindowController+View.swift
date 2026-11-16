@@ -36,16 +36,63 @@ extension SessionWindowController {
 
   /// Turns the coupling of the panes while they scroll off or on.
   @objc func toggleScrollSynchronization(_ sender: Any?) {
+    guard canPerform(.toggleScrollSynchronization) else { return }
     presentation.scrollSync.isEnabled.toggle()
     updateFooter()
   }
 
-  /// Lines up the lines of the panes side by side, or connects their changes with bands.
-  @objc func toggleLineAlignment(_ sender: Any?) {
-    guard canPerform(.toggleLineAlignment) else { return }
-    presentation.setAlignsLines(!presentation.alignsLines)
+  /// Lines up the lines of the panes side by side.
+  @objc func showAlignedLines(_ sender: Any?) {
+    show(.aligned)
+  }
+
+  /// Shows the lines of the files side by side as they are, with bands between their changes.
+  @objc func showConnectedSides(_ sender: Any?) {
+    show(.connected)
+  }
+
+  /// Shows both files of a comparison in a single column.
+  @objc func showSingleColumn(_ sender: Any?) {
+    show(.singleColumn)
+  }
+
+  /// Lays out the lines as `arrangement` says, as its command in the View menu and the choice of
+  /// the toolbar do, keeping the current block, the block at the reading line and the selection;
+  /// the focus moves along to the pane that shows what the pane with it showed.
+  func show(_ arrangement: LineArrangement) {
+    guard arrangement != presentation.lineArrangement, canShow(arrangement) else { return }
+    let hadFocus = presentation.allPanes.contains { $0.isShown && $0.holdsFocus }
+    if arrangement != .singleColumn {
+      presentation.setAlignsLines(arrangement == .aligned)
+    }
+    let paneWithFocus = presentation.setShowsSingleColumn(arrangement == .singleColumn)
+    if hadFocus, let paneWithFocus {
+      window?.makeFirstResponder(paneWithFocus.documentView)
+    }
+    announce(arrangement)
     updateMinimumSize()
-    updateFooter()
+    stateDidChange()
+  }
+
+  /// Lays out the lines as the choice of the toolbar that sends it says.
+  @objc func chooseLineArrangement(_ sender: Any?) {
+    guard let group = sender as? NSToolbarItemGroup,
+      let arrangement = toolbar.arrangement(chosenIn: group), canShow(arrangement)
+    else {
+      stateDidChange()
+      return
+    }
+    show(arrangement)
+  }
+
+  /// Whether the lines can be laid out as `arrangement` says, as its command can.
+  func canShow(_ arrangement: LineArrangement) -> Bool {
+    canPerform(arrangement.command)
+  }
+
+  /// Tells VoiceOver which arrangement the panes show now, in the words of its command.
+  private func announce(_ arrangement: LineArrangement) {
+    presentation.announce(arrangement.title)
   }
 
   /// Shows spaces, tabs and line endings as quiet symbols, or hides them.

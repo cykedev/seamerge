@@ -104,6 +104,20 @@ public final class UserSettings {
     didSet { defaults.set(!alignsLines, forKey: Key.connectsChanges) }
   }
 
+  /// Whether a new window of a comparison of two files shows both files in a single column; a
+  /// merge, which has no single column, lines up its lines as ``alignsLines`` says, as does a
+  /// comparison when the user leaves the single column.
+  public var showsSingleColumn: Bool {
+    didSet { defaults.set(showsSingleColumn, forKey: Key.showsSingleColumn) }
+  }
+
+  /// The toolbars, by their identifiers, that have shown the choice of the arrangement once, by
+  /// default or added to a configuration the user saved before it existed; the user may remove it
+  /// from them for good.
+  var toolbarsWithArrangement: Set<String> {
+    didSet { defaults.set(toolbarsWithArrangement.sorted(), forKey: Key.toolbarsWithArrangement) }
+  }
+
   /// Whether a new window shows spaces, tabs and line endings.
   public var showsInvisibles: Bool {
     didSet { defaults.set(showsInvisibles, forKey: Key.showsInvisibles) }
@@ -213,6 +227,8 @@ public final class UserSettings {
     highlightsSyntax = !defaults.bool(forKey: Key.highlightsNoSyntax)
     wrapsLines = defaults.bool(forKey: Key.wrapsLines)
     alignsLines = !defaults.bool(forKey: Key.connectsChanges)
+    showsSingleColumn = defaults.bool(forKey: Key.showsSingleColumn)
+    toolbarsWithArrangement = Set(defaults.stringArray(forKey: Key.toolbarsWithArrangement) ?? [])
     showsInvisibles = defaults.bool(forKey: Key.showsInvisibles)
     goesToNextConflict = !defaults.bool(forKey: Key.staysOnDecidedConflict)
     showsFooter = !defaults.bool(forKey: Key.hidesFooter)
@@ -291,6 +307,8 @@ public final class UserSettings {
     static let highlightsNoSyntax = "HighlightsNoSyntax"
     static let wrapsLines = "WrapsLines"
     static let connectsChanges = "ConnectsChanges"
+    static let showsSingleColumn = "ShowsSingleColumn"
+    static let toolbarsWithArrangement = "ToolbarsWithArrangement"
     static let showsInvisibles = "ShowsInvisibles"
     static let staysOnDecidedConflict = "StaysOnDecidedConflict"
     static let hidesFooter = "HidesFooter"

@@ -14,12 +14,12 @@ import Testing
     let merge = try Windows.controller(for: try await SampleMerges.helloWorld())
     #expect(
       merge.content.footer.toggles == [
-        .invisibles, .lineWrapping, .collapsedLines, .scrollSynchronization, .lineAlignment, .base,
+        .invisibles, .lineWrapping, .collapsedLines, .scrollSynchronization, .base,
       ])
     let comparison = try Windows.controller(for: try await SampleDiffs.greeting())
     #expect(
       comparison.content.footer.toggles == [
-        .invisibles, .lineWrapping, .collapsedLines, .scrollSynchronization, .lineAlignment,
+        .invisibles, .lineWrapping, .collapsedLines, .scrollSynchronization,
       ])
     #expect(comparison.content.footer.button(of: .base) == nil)
   }
@@ -145,8 +145,11 @@ import Testing
     #expect(footer.comparisonModeButton.accessibilityLabel() == "Comparison")
     for toggle in FooterToggle.allCases {
       // What the toggle does, then why it cannot now, in parentheses.
-      #expect(toggle.disabledHelp.count <= 75, "\(toggle)")
-      #expect(toggle.disabledHelp.hasSuffix(")") && toggle.disabledHelp.contains(" ("))
+      for showsSingleColumn in [false, true] {
+        let help = toggle.disabledHelp(showsSingleColumn: showsSingleColumn)
+        #expect(help.count <= 75, "\(toggle)")
+        #expect(help.hasSuffix(")") && help.contains(" ("))
+      }
       for state in [NSControl.StateValue.off, .on] {
         let help = toggle.help(in: state)
         #expect(help.count <= 75, "\(toggle)")

@@ -39,7 +39,8 @@ extension SessionWindowController {
         mode: mode, canChangeMode: canPerform(.compareExactly), toggles: toggles,
         syntaxChoice: syntaxChoice, language: syntaxChoice.languageTitle(of: language),
         automaticTitle: SyntaxChoice.automatic.title(detected: detectedLanguage),
-        canChooseSyntax: canChooseSyntax))
+        canChooseSyntax: canChooseSyntax,
+        showsSingleColumn: presentation.lineArrangement == .singleColumn))
   }
 
   /// The state of `toggle`, as the main menu shows it with a checkmark or a title.
@@ -48,7 +49,6 @@ extension SessionWindowController {
     case .invisibles: isSwitchedOn(.toggleInvisibles) ? .on : .off
     case .lineWrapping: isSwitchedOn(.toggleLineWrapping) ? .on : .off
     case .scrollSynchronization: isSwitchedOn(.toggleScrollSynchronization) ? .on : .off
-    case .lineAlignment: isSwitchedOn(.toggleLineAlignment) ? .on : .off
     case .base: layout.showsBase ? .on : .off
     case .collapsedLines:
       switch (canPerform(.showAllLines), canPerform(.collapseUnchangedLines)) {

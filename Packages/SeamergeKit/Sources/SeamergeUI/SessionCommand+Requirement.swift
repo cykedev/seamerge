@@ -41,6 +41,13 @@ extension SessionCommand {
     /// Hiding or showing the base needs a base and the panes above the result in view.
     case basePane
 
+    /// Coupling the panes while they scroll needs the panes side by side in view, not the single
+    /// column.
+    case panesSideBySide
+
+    /// Showing a single column needs a comparison of two files.
+    case singleColumn
+
     /// Showing all lines needs a collapsed run.
     case collapsedRows
 
@@ -140,6 +147,8 @@ extension SessionCommand {
       .noComparisonUnderWay
     case .toggleIgnoreRules: .ignoreRules
     case .toggleBase: .basePane
+    case .toggleScrollSynchronization: .panesSideBySide
+    case .showSingleColumn: .singleColumn
     case .showAllLines: .collapsedRows
     case .collapseUnchangedLines: .collapsibleRows
     case .zoomIn: .largerFontSize
@@ -156,8 +165,8 @@ extension SessionCommand {
     case .leaveUnresolved: .waitingCaller
     case .changeFiles: .ownFiles
     case .toggleIgnoredChanges: .ignoredChanges
-    case .toggleScrollSynchronization, .toggleSyntaxHighlighting, .toggleInvisibles,
-      .toggleLineWrapping, .toggleLineAlignment, .toggleFooter, .goToLine, .find:
+    case .showAlignedLines, .showConnectedSides, .toggleSyntaxHighlighting, .toggleInvisibles,
+      .toggleLineWrapping, .toggleFooter, .goToLine, .find:
       .nothing
     case .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone: .choice(chosenRoles ?? [])
     case .toggleSourceA: .toggle(.a)

@@ -97,6 +97,24 @@ struct UserSettingsTests {
     #expect(!settings.showsFileList)
   }
 
+  @Test func connectedSidesOfEarlierVersionsStayAndTheSingleColumnStartsOnItsOwn() {
+    let defaults = UserDefaults.privateSuite()
+    // The key that versions before the single column wrote for Align Lines turned off.
+    defaults.set(true, forKey: "ConnectsChanges")
+
+    let settings = UserSettings(defaults: defaults)
+    #expect(!settings.alignsLines)
+    #expect(!settings.showsSingleColumn)
+    settings.showsSingleColumn = true
+    #expect(defaults.bool(forKey: "ShowsSingleColumn"))
+    #expect(defaults.bool(forKey: "ConnectsChanges"))
+
+    let again = UserSettings(defaults: defaults)
+    #expect(!again.alignsLines && again.showsSingleColumn)
+    again.alignsLines = true
+    #expect(!defaults.bool(forKey: "ConnectsChanges") && defaults.bool(forKey: "ShowsSingleColumn"))
+  }
+
   @Test func chosenFamilyGivesTheCodeFontAtEverySize() throws {
     let settings = UserSettings.private()
     let family = try #require(UserSettings.monospacedFamilies.first, "a font of fixed width")

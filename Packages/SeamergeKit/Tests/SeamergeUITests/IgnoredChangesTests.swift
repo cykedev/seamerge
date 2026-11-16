@@ -60,7 +60,7 @@ import Testing
     let controller = try Windows.controller(for: try await Self.diff())
     defer { controller.window?.close() }
     controller.toggleIgnoredChanges(nil)
-    controller.toggleLineAlignment(nil)
+    controller.showConnectedSides(nil)
     let pane = try #require(controller.presentation.layout.sourcePanes.last?.pane)
     let text = pane.content.text as NSString
 

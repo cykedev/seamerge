@@ -27,7 +27,20 @@ struct SettingsView: View {
         }
         Toggle(SessionCommand.toggleSyntaxHighlighting.title, isOn: $settings.highlightsSyntax)
         Toggle(SessionCommand.toggleLineWrapping.title, isOn: $settings.wrapsLines)
-        Toggle(SessionCommand.toggleLineAlignment.title, isOn: $settings.alignsLines)
+        Picker(selection: $settings.alignsLines) {
+          Text(LineArrangement.aligned.title).tag(true)
+          Text(LineArrangement.connected.title).tag(false)
+        } label: {
+          Text(
+            "Side by Side", bundle: .module,
+            comment: "Settings: how a new window lays out the files side by side.")
+        }
+        Toggle(isOn: $settings.showsSingleColumn) {
+          Text(LineArrangement.singleColumn.title)
+          Text(
+            "Comparisons of two files only; merges show the files side by side.", bundle: .module,
+            comment: "Settings: which new windows start with a single column.")
+        }
         Toggle(SessionCommand.toggleInvisibles.title, isOn: $settings.showsInvisibles)
         Toggle(isOn: $settings.showsBase) {
           Text(
@@ -40,7 +53,7 @@ struct SettingsView: View {
           comment: "Settings: heading of the group of how a new window starts.")
       } footer: {
         Text(
-          "Each window starts like this. The switches in a window’s footer change only that window.",
+          "Each window starts like this. The switches in a window’s toolbar and footer change only that window.",
           bundle: .module, comment: "Settings: note below the group of how a new window starts.")
       }
       Section {

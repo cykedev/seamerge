@@ -70,7 +70,9 @@ import Testing
     let (previous, next) = (navigation.subitems[0], navigation.subitems[1])
 
     #expect(
-      toolbar.toolbarDefaultItemIdentifiers(toolbar.toolbar) == [.changeCount, .changeNavigation])
+      toolbar.toolbarDefaultItemIdentifiers(toolbar.toolbar) == [
+        .changeCount, .changeNavigation, .flexibleSpace, .lineArrangement,
+      ])
     #expect(toolbar.toolbar.centeredItemIdentifiers == [.changeCount, .changeNavigation])
     #expect(items[.done] == nil)
     #expect(items[.conflictCount] == nil)

@@ -40,10 +40,10 @@ extension SessionCommand {
     case .view:
       [
         [.toggleBase, .toggleResultMaximized],
+        [.showAlignedLines, .showConnectedSides, .showSingleColumn],
         [
-          .toggleScrollSynchronization, .toggleLineAlignment, .toggleSyntaxHighlighting,
-          .toggleInvisibles, .toggleLineWrapping, .toggleIgnoredChanges, .showAllLines,
-          .collapseUnchangedLines,
+          .toggleScrollSynchronization, .toggleSyntaxHighlighting, .toggleInvisibles,
+          .toggleLineWrapping, .toggleIgnoredChanges, .showAllLines, .collapseUnchangedLines,
         ],
         [.zoomIn, .zoomOut, .actualSize],
         [.toggleFooter],

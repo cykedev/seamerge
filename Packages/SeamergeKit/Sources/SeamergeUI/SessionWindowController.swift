@@ -374,6 +374,7 @@ public final class SessionWindowController: NSWindowController {
     window.contentViewController = collectionLayout ?? content
     content.showsFooter = settings.showsFooter
     window.toolbar = toolbar.toolbar
+    toolbar.insertArrangementOnce(rememberingIn: settings)
     window.setContentSize(WindowMetrics.defaultContentSize)
     window.contentMinSize = minimumContentSize
     window.title = summary.title
@@ -385,15 +386,17 @@ public final class SessionWindowController: NSWindowController {
       layout.showsBase = false
       presentation.showSourcesAgain()
     }
+    if settings.showsSingleColumn, presentation.canShowSingleColumn {
+      presentation.setShowsSingleColumn(true)
+      updateMinimumSize()
+    }
     sessionDidChange()
     presentation.showCurrentBlock()
     presentation.delegate = self
     layout.delegate = self
     layout.chooseResultFormat = { [weak self] choice in self?.choose(choice) }
     window.keyHandler = self
-    if unavailable == nil, binaryMerge == nil,
-      let first = layout.sourcePanes.first?.pane.documentView
-    {
+    if unavailable == nil, binaryMerge == nil, let first = presentation.leadingPane?.documentView {
       window.initialFirstResponder = first
       window.makeFirstResponder(first)
     }
@@ -409,7 +412,9 @@ public final class SessionWindowController: NSWindowController {
   /// Shows in the toolbar what changed: the open conflicts or the current change, the arrows
   /// that lead anywhere, a comparison under way, and whether the window can save and close.
   func stateDidChange() {
-    toolbar.update(count: toolbarCount, isComparing: showsComparisonProgress, isValid: canPerform)
+    toolbar.update(
+      count: toolbarCount, isComparing: showsComparisonProgress,
+      lineArrangement: presentation.lineArrangement, canShow: canShow, isValid: canPerform)
     window?.isDocumentEdited = isResultEdited
     updateFooter()
     updateSubtitle()
@@ -434,9 +439,11 @@ public final class SessionWindowController: NSWindowController {
   /// Remembers which pane above the result has the focus, which gets it back when text mode
   /// ends.
   func windowDidChangeFirstResponder(_ window: NSWindow) {
-    let focused = layout.sourcePanes.first { window.firstResponder === $0.pane.documentView }
+    let focused = presentation.allPanes.first {
+      $0 !== layout.resultPane && window.firstResponder === $0.documentView
+    }
     if let focused {
-      lastSourcePane = focused.pane
+      lastSourcePane = focused
     }
     presentation.updateResultExpandedRuns()
   }
@@ -584,10 +591,14 @@ extension SessionWindowController: NSUserInterfaceValidations {
     if let menuItem = item as? NSMenuItem {
       if let mode = command.comparisonMode {
         menuItem.state = mode == comparisonOptions.mode ? .on : .off
+      } else if let arrangement = command.lineArrangement {
+        menuItem.state = arrangement == presentation.lineArrangement ? .on : .off
       } else if [
-        .toggleScrollSynchronization, .toggleLineAlignment, .toggleSyntaxHighlighting,
-        .toggleLineWrapping, .toggleIdenticalFiles,
+        .toggleScrollSynchronization, .toggleSyntaxHighlighting, .toggleLineWrapping,
+        .toggleIdenticalFiles,
       ].contains(command) {
+        // The window's own state, also while the command can have no effect, as Synchronize
+        // Scrolling in a single column, which the panes side by side keep for their return.
         menuItem.state = isSwitchedOn(command) ? .on : .off
       }
       if command == .toggleIgnoreRules {
@@ -622,7 +633,6 @@ extension SessionWindowController: NSUserInterfaceValidations {
     case .toggleScrollSynchronization: presentation.scrollSync.isEnabled
     case .toggleSyntaxHighlighting: highlightsSyntax
     case .toggleLineWrapping: presentation.wrapsLines
-    case .toggleLineAlignment: presentation.alignsLines
     case .toggleIdenticalFiles: fileFilter.showsIdenticalFiles
     default: false
     }
@@ -667,6 +677,10 @@ extension SessionWindowController: NSUserInterfaceValidations {
         && !isSwitchingComparison
     case .basePane:
       presentation.changes.hasBase && !layout.maximizesResult
+    case .panesSideBySide:
+      presentation.lineArrangement != .singleColumn
+    case .singleColumn:
+      presentation.canShowSingleColumn
     case .collapsedRows:
       presentation.canShowAllRows
     case .ignoredChanges:

@@ -158,7 +158,8 @@ final class MainMenu {
       Titles.view,
       [
         commands(.toggleBase, .toggleResultMaximized),
-        commands(.toggleScrollSynchronization, .toggleLineAlignment, .toggleSyntaxHighlighting)
+        commands(.showAlignedLines, .showConnectedSides, .showSingleColumn),
+        commands(.toggleScrollSynchronization, .toggleSyntaxHighlighting)
           + [Self.syntaxSubmenu()]
           + commands(
             .toggleInvisibles, .toggleLineWrapping, .toggleIgnoredChanges, .showAllLines,

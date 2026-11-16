@@ -11,7 +11,9 @@ import os
 ///
 /// The panes side by side share one row grid while they line up their lines; otherwise each
 /// shows the lines of its file, and the seams between them connect their changes. The result of
-/// a merge has rows of its own, which its scroll map relates to the grid.
+/// a merge has rows of its own, which its scroll map relates to the grid. A comparison can show
+/// both files in a single column instead, whose rows relate to the grid through the lines they
+/// show.
 @MainActor
 final class SessionPresentation {
   /// The changed blocks, as every pane numbers them.
@@ -37,6 +39,18 @@ final class SessionPresentation {
   /// The decision column beside the result, if there is a result.
   let decisionColumn: DecisionColumnView?
 
+  /// The bar beside the single column, which is its scroller, if the window can show one.
+  let columnOverviewBar: OverviewBar?
+
+  /// The layout of the single column while it shows, or `nil` while the panes side by side do.
+  var columnLayout: SingleColumnLayout?
+
+  /// The changed runs of the single column while it shows, which its pane does not retain.
+  var columnHighlights: BlockHighlights?
+
+  /// The tokens of the single column while it shows, which its pane does not retain.
+  var columnSyntax: ColumnSyntaxTokens?
+
   /// The coupling of the panes, which keeps them at the same place while one of them scrolls.
   let scrollSync = ScrollSync()
 
@@ -53,6 +67,9 @@ final class SessionPresentation {
 
   /// The text of each input without filler rows, made when a pane first shows it.
   var lineTexts: [Role: DisplayText] = [:]
+
+  /// How each line of each input ends, worked out when a pane first shows it.
+  var lineEndingsByRole: [Role: [LineEnding]] = [:]
 
   /// The lines that differ in a way that the comparison mode ignores, once the panes side by
   /// side show the session.
@@ -81,12 +98,13 @@ final class SessionPresentation {
     return hasPlaces
   }
 
-  /// Whether the panes side by side highlight the places where their lines differ in a way that
-  /// the comparison mode ignores.
+  /// Whether the panes above the result highlight the places where their lines differ in a way
+  /// that the comparison mode ignores.
   var showsIgnoredChanges = false {
     didSet {
       guard showsIgnoredChanges != oldValue else { return }
       scrollSync.withoutFollowing(showSourceContents)
+      showColumn()
     }
   }
 
@@ -184,25 +202,30 @@ final class SessionPresentation {
     changes = SessionChanges(session: session, origin: arrangement.origin)
     collapsed = CollapsedRows(session: session, document: result?.document)
     resultOverviewBar = layout.resultPane.map { _ in OverviewBar() }
+    columnOverviewBar = layout.columnPane.map { _ in OverviewBar() }
     decisionColumn = layout.resultPane.map { _ in DecisionColumnView() }
     syntax = SessionSyntax(language: language)
 
     nameSourcePanes()
     layout.resultPane?.setAccessibilityLabel(resultHeader?.spokenName)
     let theme = displayOptions.theme
-    for bar in [sourcesOverviewBar] + [resultOverviewBar].compactMap(\.self) {
+    for bar in overviewBars {
       bar.theme = theme
       bar.delegate = self
     }
     layout.sourcePanes.last?.pane.overviewBar = sourcesOverviewBar
     layout.resultPane?.overviewBar = resultOverviewBar
+    layout.columnPane?.overviewBar = columnOverviewBar
     decisionColumn?.theme = theme
     decisionColumn?.navigatesWithKeyboard = displayOptions.navigatesWithKeyboard
     decisionColumn?.delegate = self
     layout.resultPane?.decisionColumn = decisionColumn
     for pane in allPanes {
-      scrollSync.add(pane)
       pane.delegate = self
+    }
+    // The single column couples with nothing.
+    for pane in allPanes where pane !== layout.columnPane {
+      scrollSync.add(pane)
     }
     if alignsLines {
       for (_, pane) in layout.sourcePanes {
@@ -275,14 +298,22 @@ final class SessionPresentation {
 
   /// Draws the overview bars and the decision column with `theme`.
   func apply(_ theme: Theme) {
-    sourcesOverviewBar.theme = theme
-    resultOverviewBar?.theme = theme
+    for bar in overviewBars {
+      bar.theme = theme
+    }
     decisionColumn?.theme = theme
   }
 
-  /// Every pane: the inputs from left to right, then the result, if there is one.
+  /// The overview bars: beside the panes side by side, beside the result and beside the single
+  /// column, as far as the window has them.
+  private var overviewBars: [OverviewBar] {
+    [sourcesOverviewBar] + [resultOverviewBar, columnOverviewBar].compactMap(\.self)
+  }
+
+  /// Every pane: the inputs from left to right, then the single column and the result, as far as
+  /// the window has them, whether they are in view or not.
   var allPanes: [PaneView] {
-    layout.sourcePanes.map(\.pane) + [layout.resultPane].compactMap(\.self)
+    layout.sourcePanes.map(\.pane) + [layout.columnPane, layout.resultPane].compactMap(\.self)
   }
 
   /// Where the current block lies among the changed blocks, and where the others lie.
@@ -304,8 +335,9 @@ final class SessionPresentation {
     for pane in allPanes {
       pane.currentBlock = block
     }
-    sourcesOverviewBar.currentBlock = block
-    resultOverviewBar?.currentBlock = block
+    for bar in overviewBars {
+      bar.currentBlock = block
+    }
     delegate?.presentationDidChangeCurrentBlock(self)
   }
 
@@ -332,6 +364,7 @@ final class SessionPresentation {
     showSources()
     sourcesOverviewBar.marks = OverviewMarks.sources(
       of: changes, document: result?.document, arrangement: arrangement)
+    showColumn()
     syntax.lexInputs(of: changes.session)
     showSyntax()
     guard let result, let resultPane = layout.resultPane else { return }
@@ -366,17 +399,20 @@ final class SessionPresentation {
     let conflictMarkRole = changes.conflictMarkRole(baseIsShown: layout.showsBase)
     highlights = []
     for (role, pane) in layout.sourcePanes {
-      let provider = BlockHighlights(changes: changes, role: role, alignsLines: alignsLines)
+      let provider = BlockHighlights(
+        changes: changes, rows: alignsLines ? .grid(role) : .lines(role))
       highlights.append(provider)
       pane.highlightProvider = provider
       let content =
         alignsLines
         ? PaneContent(
-          source: role, of: changes, document: result?.document,
+          source: role, of: changes, lineEndings: lineEndings(of: role),
+          document: result?.document,
           ignoredDifferences: ignoredDifferences, showsIgnoredPlaces: showsIgnoredChanges,
           conflictMarkRole: conflictMarkRole)
         : PaneContent(
-          lines: role, text: lineText(of: role), of: changes, document: result?.document,
+          lines: role, text: lineText(of: role), of: changes, lineEndings: lineEndings(of: role),
+          document: result?.document,
           ignoredDifferences: ignoredDifferences, showsIgnoredPlaces: showsIgnoredChanges,
           conflictMarkRole: conflictMarkRole)
       pane.setContent(content, collapsedRuns: sourceRuns(in: role))
@@ -447,6 +483,7 @@ final class SessionPresentation {
     if let resultPane = layout.resultPane, resultPane.syntaxProvider !== syntax.resultTokens {
       resultPane.syntaxProvider = syntax.resultTokens
     }
+    showColumnSyntax()
   }
 
   /// Shows `result`, the result after an edit that the result pane has carried out already, or
@@ -589,6 +626,7 @@ final class SessionPresentation {
     }
     showOverviewGrid()
     alignSourcesToB()
+    showColumnRuns()
     layout.resultPane?.collapsedRuns = resultRuns
     layout.resultPane?.expandedRuns = resultExpandedRuns
   }
@@ -607,6 +645,7 @@ final class SessionPresentation {
       self.result = result
       changes = SessionChanges(session: session, origin: arrangement.origin)
       lineTexts = [:]
+      lineEndingsByRole = [:]
       collapsed = CollapsedRows(session: session, document: result?.document)
       connectPanes()
       showSession()
@@ -630,6 +669,7 @@ final class SessionPresentation {
     precondition(!arrangement.showsResult, "Only a comparison shows other files in its panes")
     changes = SessionChanges(session: session, origin: arrangement.origin)
     lineTexts = [:]
+    lineEndingsByRole = [:]
     collapsed = CollapsedRows(session: session, document: nil)
     connectPanes()
     // The panes show the blocks of the old files until each has the new ones.
@@ -712,11 +752,15 @@ final class SessionPresentation {
   }
 
   /// The row of the grid at `row` of `pane`: the same row in a pane side by side on the grid,
-  /// the row of the line in one without filler rows, and the row that a line of the result lies
-  /// on.
+  /// the row of the line in one without filler rows, the row that a line of the result lies on,
+  /// and the row of the line that a row of the single column shows.
   func gridRow(ofRow row: Int, in pane: PaneView) -> Int {
     if pane === layout.resultPane, let result {
       return result.gridRow(ofLine: row)
+    }
+    if pane === layout.columnPane, let columnLayout {
+      return columnLayout.rowCount > 0
+        ? gridRow(ofColumnRow: min(max(row, 0), columnLayout.rowCount - 1), in: columnLayout) : 0
     }
     guard !alignsLines, let role = role(of: pane) else { return row }
     let rowLayout = changes.session.rowLayout
@@ -726,11 +770,14 @@ final class SessionPresentation {
   }
 
   /// The row of `pane` at `gridRow` of the grid: the same row in a pane side by side on the
-  /// grid, the line at the same place of the block in one without filler rows, and the line of
-  /// the result that lies there.
+  /// grid, the line at the same place of the block in one without filler rows, the line of the
+  /// result that lies there, and the row of the single column at the same place of the block.
   func row(ofGridRow gridRow: Int, in pane: PaneView) -> Int {
     if pane === layout.resultPane, let result {
       return result.line(ofGridRow: gridRow)
+    }
+    if pane === layout.columnPane, let columnLayout {
+      return columnRow(ofGridRow: gridRow, in: columnLayout)
     }
     guard !alignsLines, let role = role(of: pane) else { return gridRow }
     let line = Int(gridMap(of: role).targetPosition(at: Double(gridRow)).rounded(.down))
@@ -753,6 +800,13 @@ final class SessionPresentation {
     let row: Int
     if pane === layout.resultPane {
       row = min(max(line, 0), pane.content.lineNumbers.count - 1)
+    } else if pane === layout.columnPane, let columnLayout {
+      // The line counts in the file on the right, the newer one, whose numbers the column shows
+      // in its right column.
+      let role = PaneContent.otherSide(of: columnLayout.firstSide)
+      let lineCount = rowLayout.lineCount(in: role)
+      guard lineCount > 0 else { return 0 }
+      row = columnLayout.row(ofLine: min(max(line, 0), lineCount - 1), in: role)
     } else if let role = role(of: pane) {
       let lineCount = rowLayout.lineCount(in: role)
       let clamped = min(max(line, 0), max(lineCount - 1, 0))
@@ -845,12 +899,12 @@ final class SessionPresentation {
     allPanes.first(where: \.isShown)
   }
 
-  /// The pane that the others follow when the window scrolls to `block`: on the grid the
-  /// ``leadingPane``; otherwise the pane side by side in view with the most lines in the block,
-  /// so that the block comes to the reading line in every pane rather than the boundary of a
-  /// pane without its lines, past which the others would follow.
+  /// The pane that the others follow when the window scrolls to `block`: on the grid and in the
+  /// single column the ``leadingPane``; otherwise the pane side by side in view with the most
+  /// lines in the block, so that the block comes to the reading line in every pane rather than
+  /// the boundary of a pane without its lines, past which the others would follow.
   func leadingPane(toward block: Int) -> PaneView? {
-    guard !alignsLines else { return leadingPane }
+    guard !alignsLines, columnLayout == nil else { return leadingPane }
     return paneWithMostLines(in: changes.blocks[block])?.pane ?? leadingPane
   }
 

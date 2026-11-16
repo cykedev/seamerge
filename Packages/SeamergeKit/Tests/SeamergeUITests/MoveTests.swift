@@ -130,7 +130,7 @@ import Testing
 
   @Test func connectedSidesShowTheArrowsWithoutABandBetweenTheEnds() async throws {
     let controller = try Windows.controller(for: try await MoveSamples.movedDown())
-    controller.toggleLineAlignment(nil)
+    controller.showConnectedSides(nil)
     controller.window?.contentView?.layoutSubtreeIfNeeded()
     let (a, b) = try Self.panes(of: controller)
     let (source, destination) = try Self.ends(in: a, b)

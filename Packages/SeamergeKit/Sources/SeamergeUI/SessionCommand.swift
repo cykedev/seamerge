@@ -85,9 +85,15 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// Wraps long lines at the width of their panes in every session window, or lets them run on.
   case toggleLineWrapping
 
-  /// Lines up the lines of the panes side by side, or shows the lines of their files as they are
-  /// and connects their changes with bands.
-  case toggleLineAlignment
+  /// Lines up the lines of the panes side by side, with filler rows where a side has fewer.
+  case showAlignedLines
+
+  /// Shows the lines of the files side by side as they are and connects their changes with
+  /// bands.
+  case showConnectedSides
+
+  /// Shows both files of a comparison in a single column.
+  case showSingleColumn
 
   /// Shows every line, the collapsed runs of unchanged lines expanded.
   case showAllLines
@@ -273,10 +279,9 @@ public enum SessionCommand: CaseIterable, Sendable {
         comment: "View menu command: highlights where lines differ in ignored ways.")
     case .toggleLineWrapping:
       String(localized: "Wrap Lines", bundle: .module, comment: "View menu command.")
-    case .toggleLineAlignment:
-      String(
-        localized: "Align Lines", bundle: .module,
-        comment: "View menu command, checked while matching lines of the panes stand side by side.")
+    case .showAlignedLines: LineArrangement.aligned.title
+    case .showConnectedSides: LineArrangement.connected.title
+    case .showSingleColumn: LineArrangement.singleColumn.title
     case .showAllLines:
       String(localized: "Show All Lines", bundle: .module, comment: "View menu command.")
     case .collapseUnchangedLines:
@@ -560,6 +565,9 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Records every byte, whatever the comparison mode", bundle: .module,
         comment: "Help tag of Copy as Patch and Export as Patch.")
+    case .showAlignedLines: LineArrangement.aligned.help
+    case .showConnectedSides: LineArrangement.connected.help
+    case .showSingleColumn: LineArrangement.singleColumn.help
     case .saveAndClose:
       String(
         localized: "Save and close", bundle: .module,
@@ -570,6 +578,16 @@ public enum SessionCommand: CaseIterable, Sendable {
         comment: "Help tag of File > Leave Unresolved.")
     default:
       nil
+    }
+  }
+
+  /// The arrangement of the lines that the command chooses, if it is one of the View menu.
+  var lineArrangement: LineArrangement? {
+    switch self {
+    case .showAlignedLines: .aligned
+    case .showConnectedSides: .connected
+    case .showSingleColumn: .singleColumn
+    default: nil
     }
   }
 
@@ -613,7 +631,9 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .toggleInvisibles: #selector(SessionWindowController.toggleInvisibles(_:))
     case .toggleIgnoredChanges: #selector(SessionWindowController.toggleIgnoredChanges(_:))
     case .toggleLineWrapping: #selector(SessionWindowController.toggleLineWrapping(_:))
-    case .toggleLineAlignment: #selector(SessionWindowController.toggleLineAlignment(_:))
+    case .showAlignedLines: #selector(SessionWindowController.showAlignedLines(_:))
+    case .showConnectedSides: #selector(SessionWindowController.showConnectedSides(_:))
+    case .showSingleColumn: #selector(SessionWindowController.showSingleColumn(_:))
     case .showAllLines: #selector(SessionWindowController.showAllLines(_:))
     case .collapseUnchangedLines: #selector(SessionWindowController.collapseUnchangedLines(_:))
     case .toggleFooter: #selector(SessionWindowController.toggleFooter(_:))

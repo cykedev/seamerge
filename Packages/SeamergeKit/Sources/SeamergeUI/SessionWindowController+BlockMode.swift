@@ -59,8 +59,8 @@ extension SessionWindowController: SessionKeyHandling {
   /// The fields of the find bar lie below the panes and take every key, as a field does
   /// anywhere.
   var isInBlockMode: Bool {
-    let isInSource = layout.sourcePanes.contains {
-      $0.pane.isShown && window?.firstResponder === $0.pane.documentView
+    let isInSource = presentation.allPanes.contains {
+      $0 !== layout.resultPane && $0.isShown && window?.firstResponder === $0.documentView
     }
     let isBesideResult =
       layout.resultPane.map { $0.isShown && $0.holdsFocus } == true && !isInTextMode

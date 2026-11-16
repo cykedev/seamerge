@@ -68,6 +68,18 @@ import Testing
     #expect(nextChange?.shortcut == "⌥⌘↓")
   }
 
+  @Test func arrangementsStandInTheViewGroupWithTheirShortcuts() throws {
+    func view(_ kind: Session.Kind) -> [ShortcutOverview.Entry] {
+      ShortcutOverview(kind: kind).groups.first { $0.menu == .view }?.entries ?? []
+    }
+    let comparison = view(.diff).filter { $0.command.lineArrangement != nil }
+    #expect(comparison.map(\.title) == ["Aligned Lines", "Connected Sides", "Single Column"])
+    #expect(comparison.map(\.shortcut) == ["⌥⌘A", "⌥⇧⌘A", "⌥⌘U"])
+    // A merge has no single column.
+    let merge = view(.merge).filter { $0.command.lineArrangement != nil }
+    #expect(merge.map(\.title) == ["Aligned Lines", "Connected Sides"])
+  }
+
   @Test func windowStartsWithTheKindOfTheWindowInFrontAndFitsItsContent() throws {
     let controller = ShortcutOverviewWindowController(kind: .diff)
     let window = try #require(controller.window)
