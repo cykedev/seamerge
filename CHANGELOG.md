@@ -2,6 +2,31 @@
 
 All notable changes to Seamerge are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-11-16
+
+Users of 0.3.0 get this version through Seamerge ▸ Check for Updates… or the automatic check.
+
+### Added
+
+- Find in a window. Find (`⌘F`) searches all panes, Find Next and Find Previous are `⌘G` and `⇧⌘G`, and Find and Replace (`⌥⌘F`) replaces in the result of a merge. Replace All is one undo step.
+- Ignore rules. Settings ▸ Ignored Text holds the rules that a comparison leaves out. Timestamps, UUIDs and memory addresses come with the app, and Compare ▸ Use Ignore Rules applies the rules to a comparison.
+- Export as Patch (File menu) and Copy as Patch (Edit menu) write the changes as a unified diff, which `git apply` takes.
+- Terminal. Seamerge ▸ Install Command Line Tool… puts the `seamerge` command into `/usr/local/bin`, and Remove Command Line Tool… takes it out again.
+- Finder. Compare with Seamerge in the Services menu compares two or three files, or two folders. Files and folders dropped on the Dock icon fill Compare Files.
+- Single Column. View ▸ Single Column (`⌥⌘U`) shows a comparison in one column. A segment in the toolbar chooses between Aligned Lines, Connected Sides and Single Column.
+- Homebrew. The app is available as a cask: `brew install --cask cykedev/tap/seamerge`.
+
+### Changed
+
+- View ▸ Aligned Lines (`⌥⌘A`) chooses the aligned arrangement instead of switching the alignment on and off. View ▸ Connected Sides is `⌥⇧⌘A`.
+- The button `=` in the footer is gone. The toolbar segment replaces it.
+- Settings has two pages, General and Ignored Text.
+- `git difftool --dir-diff` and `seamerge` with two folders open the folder comparison, as File ▸ Compare Folders… does.
+
+### Fixed
+
+- Seamerge no longer crashes when a comparison is switched to another mode, or reloaded, after the last change removed the end of the newer file. The crash has been in Seamerge since 0.1.0.
+
 ## [0.3.0] - 2026-11-15
 
 Users of 0.2.0 download 0.3.0 once by hand from [GitHub Releases](https://github.com/cykedev/seamerge/releases). Version 0.2.0 has no update check, so it cannot offer this version.
