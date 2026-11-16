@@ -49,7 +49,12 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
 - **Collapsed unchanged lines.** Long stretches without changes fold into a bar that opens where you need it.
 - **Syntax colors with a language choice.** Common languages are highlighted, and you choose the language in the footer or switch the highlighting off.
 - **Line wrapping.** Wrap long lines in all panes, with the rows kept aligned.
-- **Connected sides.** View ▸ Align Lines (`⌥⌘A`) joins the panes with bands that show which lines belong together, in a comparison and in a merge. Each side flows as continuous text with its own line numbers, and the bands connect the blocks that belong together.
+- **Line arrangement.** The toolbar segment Aligned Lines · Connected Sides · Single Column chooses how the lines are laid out. Aligned Lines (`⌥⌘A`) keeps matching lines at the same height. Connected Sides (`⌥⇧⌘A`) shows each side as continuous text, joined by bands that show which lines belong together, in a comparison and in a merge. Single Column (`⌥⌘U`) shows a comparison in one column.
+- **Find and replace.** Find (`⌘F`) searches all panes of a window, and Find and Replace (`⌥⌘F`) in a merge replaces in the result only. Replace All is one undo step.
+- **Ignore rules.** Settings ▸ Ignored Text holds rules for text that a comparison should leave out, such as timestamps, UUIDs and memory addresses, and your own patterns. Compare ▸ Use Ignore Rules applies them to a comparison.
+- **Export as patch.** File ▸ Export as Patch… and Edit ▸ Copy as Patch write the changes as a unified diff. `git apply` takes the patch; see the [user guide](Documentation/UserGuide.md#export-as-patch).
+- **Terminal command.** Seamerge ▸ Install Command Line Tool… installs `seamerge` in `/usr/local/bin`, so you can compare files and folders from Terminal.
+- **Finder and Dock.** Select two or three files, or two folders, in Finder and choose Compare with Seamerge from the Services menu. Drop folders on the Seamerge icon in the Dock to fill Compare Files.
 - **Encoding and line endings of the result.** Choose the encoding and the line endings the result is saved with.
 - **Settings.** Choose the font, size, line spacing and tab width of the code, and how each new window starts. See [Settings](#settings).
 - **Accessibility.** VoiceOver rotors for conflicts and changes, a window of all keyboard shortcuts, and support for Reduce Motion and Increase Contrast. See [Accessibility](#accessibility).
@@ -68,6 +73,14 @@ Seamerge also keeps the panes aligned row by row and gives an editable result, w
 ### Release download
 
 Download the latest release from [GitHub Releases](https://github.com/cykedev/seamerge/releases) and move `Seamerge.app` into your Applications folder. The app is signed and notarized. Later versions can be installed from within the app; see [Updates](#updates).
+
+### Homebrew
+
+```bash
+brew install --cask cykedev/tap/seamerge
+```
+
+The cask is published in the tap `cykedev/homebrew-tap` with each release.
 
 ### Build from source
 
@@ -121,6 +134,12 @@ Seamerge then writes the entries for `merge.tool` and `diff.tool` to your global
 
 If Tower is installed, the sheet also has **Add Seamerge to Tower**. Tick it before you click **Set Up**. Then restart Tower, and in Tower's settings, under Git Config, choose Seamerge as the diff tool and as the merge tool. To compare folders in Tower, turn on **Perform directory diff**.
 
+## Terminal and Finder
+
+**Seamerge ▸ Install Command Line Tool…** puts a `seamerge` command into `/usr/local/bin`. The app asks for an administrator password before it changes that folder, and **Remove Command Line Tool…** takes the command out again. With the command, you can compare two files or two folders from Terminal, for example `seamerge old.txt new.txt`. The app also recognizes a command that Homebrew has linked there.
+
+In Finder, select files or folders and choose **Compare with Seamerge** from the Services menu. Two files open at once, with the older one on the left; two folders open in the folder comparison; three files fill Compare Files. Seamerge must be in the Applications folder, and it registers the service when it starts.
+
 ## Try it with the example
 
 The `Examples` folder holds one Java file in three versions (`Base`, `A` and `B`) and a script that makes a throwaway repository in which a merge stops with ten conflicts:
@@ -155,6 +174,7 @@ Choose **Seamerge ▸ Settings…** (`⌘,`) to change how the code looks and ho
 - **Text:** the font of the code (SF Mono, or another monospaced font installed on the Mac), its size from 9 to 24 pt, the line spacing (compact, standard or spacious) and the tab width from 2 to 8 spaces. A window keeps the zoom you chose until the size in Settings changes.
 - **New Windows:** how each new window starts: the comparison mode, and whether it highlights syntax, wraps lines, aligns the sides, shows invisible characters and shows the base. The switches in a window's footer change only that window.
 - **Merging:** **Go to Next Conflict After Choosing**: whether a choice on an open conflict moves on to the next open conflict.
+- **Ignored Text:** the rules for text that a comparison leaves out, with a field to try a rule on sample text. Three rules come with the app; each can be switched on or off.
 - **Updates:** **Check for Updates Automatically**, see [Updates](#updates).
 
 Each window opens where the last window of its kind was closed, with the size it had and, for a merge, the split above the result. Hiding the footer and the sidebar applies to all windows.
@@ -180,9 +200,9 @@ Each window opens where the last window of its kind was closed, with the size it
 | Take nothing | ⌘6 |
 | Switch the source A, the base, B of a block on or off | ⌥⌘1, ⌥⌘2, ⌥⌘3 |
 | Reset the current block | ⌥⌘⌫ |
-| Reset all decisions | ⇧⌥⌘⌫ |
+| Reset all decisions | ⌥⇧⌘⌫ |
 | Next or previous conflict | ⌥⌘↓, ⌥⌘↑ (in a pane above the result: N, ⇧N) |
-| Next or previous change | ⇧⌥⌘↓, ⇧⌥⌘↑ in a merge; in a pane above the result ↓, ↑ |
+| Next or previous change | ⌥⇧⌘↓, ⌥⇧⌘↑ in a merge; in a pane above the result ↓, ↑ |
 | First or last change | Home, End in a pane above the result |
 | Next or previous pane | ⌃Tab, ⇧⌃Tab |
 | Undo, redo | ⌘Z, ⇧⌘Z |
@@ -194,7 +214,10 @@ Each window opens where the last window of its kind was closed, with the size it
 | Save and close | ⌘↩ |
 | Leave unresolved and close (merge) | ⌘. |
 | Show or hide the base | ⌥⌘B |
-| Align the sides with bands, or back to the grid | ⌥⌘A |
+| Find, Find and Replace (replaces in the result) | ⌘F, ⌥⌘F |
+| Find Next, Find Previous | ⌘G, ⇧⌘G |
+| Filter Files (list of files) | ⇧⌘F |
+| Aligned Lines, Connected Sides, Single Column (comparison only) | ⌥⌘A, ⌥⇧⌘A, ⌥⌘U |
 | Maximize the result | ⌥⌘R |
 | Wrap lines | ⌥⌘L |
 | Show all lines, or collapse unchanged lines | ⇧⌘L, ⌥⇧⌘L |
@@ -214,6 +237,6 @@ Seamerge checks for new versions with [Sparkle](https://sparkle-project.org), on
 
 ## Status and limits
 
-The current release is Seamerge 0.3.0. It runs on macOS 27 only.
+The current release is Seamerge 0.4.0. It runs on macOS 27 only.
 
 Read [CHANGELOG.md](CHANGELOG.md) for what changed in each release, and [CONTRIBUTING.md](CONTRIBUTING.md) if you want to work on the code. The [user guide](Documentation/UserGuide.md) describes the window in more detail, and [Documentation/Architecture.md](Documentation/Architecture.md) describes how the code is organized.

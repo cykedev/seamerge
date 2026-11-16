@@ -92,7 +92,7 @@ Lines longer than 20,000 UTF-16 units are cut for display by `LongLine` (`PaneKi
 
 ## Connected sides
 
-Align Lines replaces the row grid with the connected layout. Each pane then shows its own lines as continuous text, and the panes are linked along one common track. The switch is in `SessionPresentation+LineAlignment.swift`.
+The arrangement Connected Sides (`LineArrangement`, `SeamergeUI/LineArrangement.swift`) replaces the row grid of Aligned Lines with the connected layout. Each pane then shows its own lines as continuous text, and the panes are linked along one common track. The switch is in `SessionPresentation+LineAlignment.swift`.
 
 - `RowLayout.lineText(for:)` in `MergeModel` gives the text of one side without filler rows. `ScrollMap` maps a position in one side to the matching position in another, in blocks and lines, from the starts of the blocks in both sides.
 - `PaneKit/ScrollTrack.swift` is the common track, and it measures collapsed runs and wrapped lines in the heights of the panes. It consists of stretches that alternate between unchanged lines and changed blocks. Each stretch is as long on the track as in the pane that shows it highest. A pane takes each place on the track to a place of its own, moving more slowly across a stretch that it shows lower, and standing still across a stretch without rows. `ScrollSync.setTrack(for:)` installs the track in place of the row mapping. `ScrollTrack(panes:)` returns `nil` when the panes do not have the same number of blocks, and the panes then stay still rather than follow a track measured from mixed content.
@@ -130,21 +130,27 @@ Ignore rules (`IgnoreRule.swift`) are patterns whose matches the comparison disr
 
 - `RuleMatcher` finds the matches per line with a time limit of one second per rule and file. A rule that is too slow has no effect on that file, and `Session.ignoreRuleProblems` reports why a rule had no effect.
 - Lines that a rule matches entirely are removed from the edges of changed blocks and become unchanged blocks (`EntirelyMatchedLines.swift`). `IgnoredDifferences` marks the matched places for the panes.
-- `Session.diff(old:new:mode:ignoring:)` takes the rules. `Session.merge` takes none, so a merge compares all text. No window offers the rules yet.
+- `Session.diff(old:new:mode:ignoring:)` takes the rules. `Session.merge` takes none, so a merge compares all text.
+
+The window's **Use Ignore Rules** command (`SeamergeUI/SessionWindowController+IgnoreRules.swift`) passes the switched-on rules to `Session.loadDiff(old:new:mode:ignoring:)`; the same file bundles the logic that a change of the rules in Settings triggers. The rules are kept in `UserSettings.ignoreRules`, with the built-in rules first, and the built-in patterns are in `BuiltInIgnoreRule.swift`. The Ignored Text page of Settings (`IgnoredTextViewController`) edits them. `IgnoreRule.trial(on:mode:)` (`MergeModel/IgnoreRule+Trial.swift`) applies the same mask as a comparison to sample text, for the trial field; it returns the matched UTF-16 ranges or the problem with the rule.
 
 ## Single-column layout
 
 `SingleColumnLayout` (`MergeModel/SingleColumnLayout.swift`) arranges a comparison in one column. An unchanged pair of lines appears once, with the text of the second side. A changed block shows the lines of the first side, then those of the second. The layout is derived from `Session.blocks`, and it maps rows to blocks and lines in both directions by binary search (`place(atRow:)`, `row(ofLine:in:)`).
 
-`PaneKit` draws two line-number columns for it (`SideLineNumbers`) and the second part of a block as its own `PaneBlockPart`. No window shows the layout yet.
+`PaneKit` draws two line-number columns for it (`SideLineNumbers`) and the second part of a block as its own `PaneBlockPart`.
+
+The window offers the layout as the arrangement Single Column. `LineArrangement` (`SeamergeUI/LineArrangement.swift`) names the three arrangements, Aligned Lines, Connected Sides and Single Column, with one set of titles for the toolbar segment, the View menu and Settings. `SessionSplitViewController.columnPane` shows the column with its own header, and `SessionPresentation+SingleColumn.swift` switches the arrangement while it keeps the current block and the reading line. The column maps its rows to the grid of the other arrangements with `gridRow(ofColumnRow:)` and `columnRow(ofGridRow:)`; collapsing, search, jumps and reloading all go through these mappings.
 
 ## Search across panes
 
-The find bar of a pane uses `NSTextFinder`. The window still has one find bar per pane.
+The window has one find bar, the standard `NSTextFinder` bar in the container `SessionContentController` above the footer. The panes have no bar of their own. `SessionWindowController+Search` owns the commands Find, Find and Replace, Replace All, Find Next and Find Previous, and Use Selection for Find, which work regardless of which pane has the focus.
 
-`PaneSearch` (`PaneKit`) runs one finder over several pane views. Its owner gives the sections and their order. Each row is a part of its own, so a match cannot reach across a row or a pane, and filler rows and previews are not searched.
+`PaneSearch` (`PaneKit`) runs one finder over several pane views. Its owner gives the sections and their order. `SessionPresentation+Search.swift` gives the sections of a window: for each stretch, the unchanged lines before a block, then the block, with the base left out while it is hidden and a maximized result searched alone. The sections are set again after each show, change of alignment, base, maximizing and file change, and only when they differ. Filler rows and previews are not searched.
 
-`SearchText` is an immutable snapshot of a pane's text, guarded by a lock, which the finder reads on its own thread. The snapshot is renewed on the main thread at the next request. Replacing goes through `PaneEditingDelegate` of the pane that is editable, and a replace-all forms one undo step. `OverviewBar.matchRows` marks the matches in the overview bar. No window uses `PaneSearch` yet.
+The finder receives parts of at most 65,536 characters per section, not one part per line. Lines inside a part are separated by line feeds, so a match cannot reach across a line break; a match that holds one belongs to no pane, and Find Next moves to its end. `PaneSearch` keeps the matches while the finder drops them on losing focus, and drops them on a change of the text.
+
+`SearchText` is an immutable snapshot of a pane's text, kept behind a `Mutex`. Only the main thread replaces the snapshot, as a whole, and `string(at:)` may be called on the finder's threads. Replacing goes through `PaneEditingDelegate` of the pane that is editable, and a replace-all forms one undo step named Replace All, which the controller collects from the steps of the replacement. `PaneSearch.close()` removes the find indicator and detaches the finder from the window; the window calls it when it closes and in its deinit, because the finder otherwise uses a released indicator. `OverviewBar.matchRows` marks the matches in the overview bar.
 
 ## Updates
 
@@ -178,9 +184,27 @@ Git and Tower start one `difftool` call for each file of a run, and each call ma
 - **Sidebar.** `SeamergeUI/CollectionSplitViewController.swift` and `SeamergeUI/FileListViewController.swift` show the sidebar; View ▸ Show Sidebar (`⌃⌘S`) is in `App/Seamerge/MainMenu.swift`. Go ▸ Next File and Previous File are `SessionCommand` cases with keys in `SeamergeUI/SessionCommand+Keys.swift`.
 - **Renames.** There is no renamed state. Git's difftool does not pass renames on, so a renamed file appears as a deleted file and a new file.
 
-**Directory diff.** `git difftool --dir-diff` gives two folders, and the helper compares them in one window. `SeamergeUI/FolderComparison.swift` pairs the files of the two folders by their path: a file only on the right is new, one only on the left is deleted. A file of the working tree is linked by Git instead of copied, and the link is followed, so that the side is the working copy. Any other link is compared by its target and never followed. Two folders always count as a directory diff, even without `--collect`. If no file differs, the command opens no window and exits with 0.
+**Directory diff.** `git difftool --dir-diff` gives two folders, and the helper compares them in one window. `SeamergeCLI` sets `SessionRequest.Folders.isFromGit` when the command runs with `--collect` or `--path`; a missing key means the folders are not from Git. `SessionCoordinator.serveFolders` opens the window with `FileCollection(comparing:linkFolder:workingTree:)`, the same window as File ▸ Compare Folders…, and answers `.saved` when it closes. `SeamergeUI/FolderComparer.swift` pairs the files of the two folders by their path: a file only on the right is new, one only on the left is deleted. Under Git, a file of the working tree is linked by Git instead of copied, and the link is followed, so that the side is the working copy (`FolderItem.Kind.workingCopy`); `FileCollection.namingFolders` is `nil` then, and the sides take Git's names. Any other link is compared by its target and never followed. Two folders always count as a directory diff, even without `--collect`. If no file differs, the command opens no window and exits with 0.
 
 Tower passes two folders to the launch script when its setting "Perform directory diff" is on. The script is written by `GitSupport/TowerConfiguration.swift`.
+
+## Patches
+
+`MergeModel/UnifiedDiff.swift` and `UnifiedDiff+File.swift` write a unified diff. Each pair of files is compared again with `EngineAdapter.diff(… mode: .exact)`, on the raw bytes and not on the decoded text, so the patch records every byte whatever the comparison mode of the window. Hunks, headers and quoting are only the formatting; there is no second diff logic. `UnifiedDiff.data(of:)` returns bytes, and `text(of:)` returns the text with each file in its detected encoding.
+
+- `SeamergeUI/PatchContent.swift` reads, compares and writes outside the main actor (`@concurrent`). `SessionWindowController+Patch.swift` and `SessionSheets+Patch.swift` hold the commands Export as Patch and Copy as Patch, the save panel and the failure sheet. The commands are valid only where the bytes of a file pair differ.
+- New and deleted files get `new file mode 100644` or `deleted file mode 100644` lines, because `git apply` rejects `/dev/null` under `diff --git` without them. The patch therefore carries no file mode, and an executable file comes out as 644.
+- The patch uses the paths Git would quote. The `patch` of macOS does not read quoted paths, but `git apply` does.
+
+## Finder service and Dock
+
+`App/Config/Info.plist` declares the service **Compare with Seamerge** (`NSServices`, message `compareWithSeamerge`) for public data and folders, and a document type Folder with rank None, so Seamerge takes files and folders from the Dock without becoming their default app.
+
+- `App/Seamerge/AppDelegate+Service.swift` reads the file URLs from the pasteboard and brings the app to the front. `AppDelegate` is the `servicesProvider`.
+- `App/Seamerge/ServiceSelection.swift` sorts a selection into one entry, two files, two folders, three files or other. Two files open at once through `SessionCoordinator.open`, the older on the left; an error opens Compare Files with the reason beside the field. Other selections say so in Compare Files.
+- `registerServiceIfInstalled()` calls `NSUpdateDynamicServices` only for an app in `/Applications` or `~/Applications`, at each start, so an update refreshes the entry.
+- At launch, Compare Files appears only if neither the service nor an open event arrived in time (`hasReceivedTask`) and no session window is open (`startWindowTask`).
+- Files and folders dropped on the Dock icon fill the outer fields of Compare Files and open nothing.
 
 ## Tests
 
