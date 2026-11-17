@@ -477,11 +477,33 @@ final class PaneTextView: NSTextView {
       + 2 * Theme.textInset).rounded(.up)
   }
 
-  /// Colors the rows anew that waited for an edit to be over, before TextKit lays out the text
-  /// that the edit changed.
+  /// Colors the rows anew that waited for an edit to be over and lays out the first row in view,
+  /// before TextKit lays out the visible text.
   override func layout() {
     recolorWaitingRows()
+    layOutFirstVisibleRow()
     super.layout()
+  }
+
+  /// Lays out the paragraph of the first row in view, which the grid knows, so that TextKit finds
+  /// the visible text there.
+  ///
+  /// TextKit finds the paragraph at the top of the view among those it has laid out. After a
+  /// jump, or once collapsed rows show or the panes show other text, it has laid out none there
+  /// and would lay out every paragraph from the last one it knows above the view down to it: in
+  /// a long file with large blocks, thousands each time.
+  private func layOutFirstVisibleRow() {
+    guard let textLayoutManager, grid.rowCount > 0 else { return }
+    let line = Int((visibleRect.minY / theme.rowHeight).rounded(.down))
+    let row = displayRows.row(atDisplayRow: displayRows.clampedDisplayRow(atLine: line))
+    let offsets = grid.paragraphOffsets(ofRows: row..<row + 1)
+    let documentStart = textLayoutManager.documentRange.location
+    guard
+      let start = textLayoutManager.location(documentStart, offsetBy: offsets.lowerBound),
+      let end = textLayoutManager.location(documentStart, offsetBy: offsets.upperBound),
+      let range = NSTextRange(location: start, end: end)
+    else { return }
+    textLayoutManager.ensureLayout(for: range)
   }
 
   /// The origin of the text, fixed by the inset.
