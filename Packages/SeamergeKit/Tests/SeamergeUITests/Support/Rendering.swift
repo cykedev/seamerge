@@ -60,10 +60,33 @@ enum Rendering {
   static func bitmap(of window: NSWindow) throws -> NSBitmapImageRep {
     let frameView = try #require(window.contentView?.superview)
     frameView.layoutSubtreeIfNeeded()
+    orderToolbarGlass(in: frameView)
     let bitmap = try #require(frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds))
     frameView.cacheDisplay(in: frameView.bounds, to: bitmap)
     try drawGlassContents(of: frameView, into: bitmap)
     return bitmap
+  }
+
+  /// Puts the glass behind the items of the toolbar in order from left to right, so that the
+  /// same window draws the same picture each time.
+  ///
+  /// The toolbar adds the glass of its items to their common superview in an order of its own,
+  /// which changes from one window to the next. Where the edges of two pieces of glass meet,
+  /// the pixels then differ by one, depending on which of them is drawn first.
+  private static func orderToolbarGlass(in frameView: NSView) {
+    let glass = descendants(of: frameView).filter { $0 is NSGlassEffectView }
+    let pieces = Set(glass.compactMap(\.superview).map(ObjectIdentifier.init))
+    let groups = Set(glass.compactMap(\.superview?.superview))
+    for group in groups
+    where group.subviews.count > 1
+      && group.subviews.allSatisfy({ pieces.contains(ObjectIdentifier($0)) })
+    {
+      group.sortSubviews(
+        { first, second, _ in
+          if first.frame.minX == second.frame.minX { return .orderedSame }
+          return first.frame.minX < second.frame.minX ? .orderedAscending : .orderedDescending
+        }, context: nil)
+    }
   }
 
   /// Draws the sidebar over the bitmap of the window: caching the display skips the glass of the
