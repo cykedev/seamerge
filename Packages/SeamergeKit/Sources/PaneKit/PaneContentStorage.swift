@@ -112,21 +112,30 @@ final class PaneContentStorage: NSTextContentStorage {
   /// again. Hidden paragraphs have no elements, as the storage steps over them, and are left
   /// alone, so that TextKit never handles them.
   func discardElements(in range: Range<Int>) {
-    guard let textStorage, !range.isEmpty else { return }
+    discardElements(in: [range])
+  }
+
+  /// Lets go of the paragraph elements of the shown paragraphs in `ranges`, sorted and apart, in
+  /// one edit, as ``discardElements(in:)-(Range<Int>)`` does for one range.
+  func discardElements(in ranges: [Range<Int>]) {
+    guard let textStorage, ranges.contains(where: { !$0.isEmpty }) else { return }
     assert(textStorage.editedMask.isEmpty, "Paragraph elements cannot be dropped during an edit")
     guard textStorage.editedMask.isEmpty else { return }
     var shownParts: [Range<Int>] = []
-    var start = range.lowerBound
-    var index = hiddenRanges.partitioningIndex { $0.upperBound > start }
-    while start < range.upperBound {
-      let hidden = index < hiddenRanges.count ? hiddenRanges[index] : nil
-      let end = min(hidden.map { max($0.lowerBound, start) } ?? range.upperBound, range.upperBound)
-      if start < end {
-        shownParts.append(start..<end)
+    for range in ranges {
+      var start = range.lowerBound
+      var index = hiddenRanges.partitioningIndex { $0.upperBound > start }
+      while start < range.upperBound {
+        let hidden = index < hiddenRanges.count ? hiddenRanges[index] : nil
+        let end = min(
+          hidden.map { max($0.lowerBound, start) } ?? range.upperBound, range.upperBound)
+        if start < end {
+          shownParts.append(start..<end)
+        }
+        guard let hidden else { break }
+        start = max(start, hidden.upperBound)
+        index += 1
       }
-      guard let hidden else { break }
-      start = max(start, hidden.upperBound)
-      index += 1
     }
     guard !shownParts.isEmpty else { return }
     textStorage.beginEditing()

@@ -57,23 +57,6 @@ import Testing
     return manager.textLayoutFragment(for: location)?.state == .layoutAvailable
   }
 
-  /// The offsets that are drawn in the preview color.
-  private func coloredOffsets(of textView: PaneTextView) throws -> [Range<Int>] {
-    let manager = try #require(textView.textLayoutManager)
-    let start = manager.documentRange.location
-    var ranges: [Range<Int>] = []
-    manager.enumerateRenderingAttributes(from: start, reverse: false) {
-      manager, attributes, range in
-      if attributes[.foregroundColor] != nil {
-        ranges.append(
-          manager.offset(
-            from: start, to: range.location)..<manager.offset(from: start, to: range.endLocation))
-      }
-      return true
-    }
-    return ranges
-  }
-
   @Test func scrollingThroughAndBackDiscardsTheLayoutFarBelowTheView() throws {
     let (pane, window, _) = EditingTests.editablePane(text: Self.text)
     defer { window.close() }
@@ -185,7 +168,7 @@ import Testing
     scrollThrough(pane, in: window, backTo: origin)
     letScrollingRest(textView)
     textView.setSelectedRange(NSRange(location: 30, length: 4))
-    let colored = try coloredOffsets(of: textView)
+    let colored = try DrawnColors.coloredRanges(in: textView)
     let accessibilityValue = textView.accessibilityValue()
 
     discardEverything(in: textView)
@@ -204,7 +187,7 @@ import Testing
       pane.content.previews == [PanePreview(range: previewStart..<Self.text.utf16.count, role: .b)])
     #expect(pane.content.rowTints == [400: .handwritten])
     #expect(pane.collapsedRuns == [CollapsedRun(rows: 100..<200)])
-    #expect(try coloredOffsets(of: textView) == colored)
+    #expect(try DrawnColors.coloredRanges(in: textView) == colored)
     #expect(!colored.isEmpty)
   }
 

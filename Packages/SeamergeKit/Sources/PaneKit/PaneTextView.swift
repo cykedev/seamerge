@@ -109,9 +109,9 @@ final class PaneTextView: NSTextView {
   /// The version of the text, after whose changes fragments find their rows again.
   private let textVersion = TextVersion()
 
-  /// Whether text has been given a color of its own since the pane last had neither previews
-  /// nor a syntax provider.
-  var hasColoredText = false
+  /// The rows whose paragraphs wait to be colored anew until an edit or the marking of the input
+  /// method is over.
+  var rowsToRecolor = IndexSet()
 
   /// The previews as the pane's owner gave them last, before edits moved them along with the
   /// text.
@@ -226,12 +226,13 @@ final class PaneTextView: NSTextView {
     highlightsByBlock.removeAll()
     cachedPreviewSpans = nil
     cachedPreviewRows = nil
-    updateTextColorValidation()
     let attributes = textAttributes
     font = theme.font
     defaultParagraphStyle = attributes[.paragraphStyle] as? NSParagraphStyle
     typingAttributes = attributes
     guard let textStorage else { return }
+    // Every paragraph is made anew, with the colors of the new content.
+    rowsToRecolor = []
     isShowingContent = true
     defer { isShowingContent = false }
     if keepsText {
@@ -239,13 +240,10 @@ final class PaneTextView: NSTextView {
       if previewsChanged {
         fadeAfterPreviewChange()
       }
+      // Setting the attributes makes TextKit make every paragraph anew, with its colors.
       textStorage.setAttributes(attributes, range: NSRange(location: 0, length: textStorage.length))
       if let textLayoutManager {
         textLayoutManager.invalidateLayout(for: textLayoutManager.documentRange)
-        textLayoutManager.invalidateRenderingAttributes(for: textLayoutManager.documentRange)
-        // Setting the attributes makes TextKit lay out every paragraph anew, which gives the
-        // tokens their colors.
-        applyTextColors(in: 0..<textStorage.length, syntaxIn: 0..<0)
       }
     } else {
       textStorage.setAttributedString(
@@ -271,6 +269,7 @@ final class PaneTextView: NSTextView {
       rowTints.keys.allSatisfy { $0 < grid.rowCount },
       "Row tints reach beyond the \(grid.rowCount) rows")
     let oldBlocks = content.blocks
+    let oldPreviews = content.previews
     let previewsChanged = previews != content.previews
     // Previews that an edit moved along with the text keep the look their fragments had where
     // they stood before, so their rows draw again although they are as the edit left them.
@@ -290,17 +289,26 @@ final class PaneTextView: NSTextView {
     cachedPreviewRows = nil
     if previewsChanged {
       fadeAfterPreviewChange()
-      updateTextColorValidation()
     }
     if previewsChanged || previewsMoved {
       changedRows += previewRows().map(\.rows)
+    }
+    // Only the previews that came or went change the colors of their rows.
+    var recoloredRows = Set(oldPreviews).symmetricDifference(previews).map { preview in
+      grid.row(containingOffset: preview.range.lowerBound)..<grid.row(
+        containingOffset: max(preview.range.upperBound - 1, preview.range.lowerBound)) + 1
     }
     for index in 0..<max(oldBlocks.count, blocks.count) {
       let old = index < oldBlocks.count ? oldBlocks[index] : nil
       let new = index < blocks.count ? blocks[index] : nil
       guard old != new else { continue }
       changedRows += [old?.rows, new?.rows].compactMap { $0.map(drawnRows(of:)) }
+      // The changed runs of the block, which tokens leave out, may have changed.
+      if syntaxProvider != nil {
+        recoloredRows += [old?.rows, new?.rows].compactMap(\.self)
+      }
     }
+    recolor(recoloredRows.sorted { $0.lowerBound < $1.lowerBound })
     // The row after a block draws the edge between them, whose color depends on both.
     for rows in changedRows where !rows.isEmpty {
       redraw(rows: (rows.lowerBound..<rows.upperBound + 1).clamped(to: 0..<grid.rowCount))
@@ -314,6 +322,7 @@ final class PaneTextView: NSTextView {
   /// A collapsed run that the change reached into is expanded: its rows are no longer unchanged.
   func takeOver(_ change: RowChange, replacing range: Range<Int>, length: Int, text: String) {
     content.takeOver(change, replacing: range, length: length, text: text)
+    takeOverRowsToRecolor(change)
     // A line that is typed in stays whole until the selection says where it is now.
     var whole = IndexSet()
     for row in wholeRows.rows {
@@ -468,6 +477,13 @@ final class PaneTextView: NSTextView {
       + 2 * Theme.textInset).rounded(.up)
   }
 
+  /// Colors the rows anew that waited for an edit to be over, before TextKit lays out the text
+  /// that the edit changed.
+  override func layout() {
+    recolorWaitingRows()
+    super.layout()
+  }
+
   /// The origin of the text, fixed by the inset.
   ///
   /// `NSTextView` would derive it from the extent of the laid-out text, and to find that, lay
@@ -614,6 +630,10 @@ final class PaneTextView: NSTextView {
     highlightsByBlock.removeAll()
     guard let textLayoutManager else { return }
     textLayoutManager.invalidateLayout(for: textLayoutManager.documentRange)
+    // Tokens leave out the changed runs.
+    if syntaxProvider != nil {
+      recolor(rows: nil)
+    }
   }
 
   /// Whether the selection shows in the accent color, as the focused selection of the key window,
@@ -660,7 +680,6 @@ final class PaneTextView: NSTextView {
     else { return }
     // Draws the fragments of the rows again, which ask for their painting as they draw.
     textLayoutManager.invalidateRenderingAttributes(for: range)
-    applyTextColors(in: offsets)
     let lines = displayRows.lines(ofRows: rows)
     setNeedsDisplayOfFragments(
       in: CGRect(
@@ -900,9 +919,12 @@ extension PaneTextView: @MainActor NSTextContentStorageDelegate {
       paragraph.addAttribute(
         .paragraphStyle, value: indented, range: NSRange(location: 0, length: paragraph.length))
     }
+    let lineLength = LongLine.textLength(of: paragraph.string as NSString)
+    var shownLength = lineLength
     if !wholeRows.rows.contains(grid.row(containingOffset: range.location)) {
-      cutLongLine(paragraph)
+      shownLength = cutLongLine(paragraph) ?? lineLength
     }
+    color(paragraph, at: range.location, shownLength: shownLength)
     return NSTextParagraph(attributedString: paragraph)
   }
 

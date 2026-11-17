@@ -152,14 +152,14 @@ import Testing
     let manager = try #require(pane.documentView.textLayoutManager)
     let start = manager.documentRange.location
     let location = try #require(manager.location(start, offsetBy: offset))
-    var color: NSColor?
-    manager.enumerateRenderingAttributes(from: location, reverse: false) { _, attributes, range in
-      if manager.offset(from: start, to: range.location) <= offset {
-        color = attributes[.foregroundColor] as? NSColor
-      }
-      return false
-    }
-    return color
+    let fragment = try #require(manager.textLayoutFragment(for: location))
+    let paragraph = try #require(fragment.textElement as? NSTextParagraph)
+    let paragraphStart = manager.offset(
+      from: start, to: try #require(paragraph.elementRange).location)
+    let color =
+      paragraph.attributedString.attribute(
+        .foregroundColor, at: offset - paragraphStart, effectiveRange: nil) as? NSColor
+    return color == NSColor.textColor ? nil : color
   }
 
   /// A menu item of the main menu that sends `command`.

@@ -2,9 +2,9 @@ import AppKit
 import PaneKit
 import Testing
 
-/// Checks how a pane colors its code by the tokens of its syntax provider: as rendering
-/// attributes in the colors of the theme, by the line number of each row, never within the
-/// changed runs of a block or within previews, and anew when the tokens change.
+/// Checks how a pane colors its code by the tokens of its syntax provider: in the colors of the
+/// theme, by the line number of each row, never within the changed runs of a block, within
+/// previews or beyond the cut of a long line, and anew when the tokens change.
 @MainActor
 @Suite struct SyntaxColoringTests {
   /// Two lines of code around a comment; the rows start at 0, 10 and 18.
@@ -132,6 +132,106 @@ import Testing
     #expect(try Self.color(at: 12, in: pane) == nil)
   }
 
+  @Test func tokensTakeTheChangedRunsOfABlockThatChangedIntoAccount() throws {
+    var content = Self.content()
+    content.blocks = [PaneBlock(rows: 2..<3, style: .tinted(.b))]
+    let highlights = Highlights([:])
+    let shown = Self.show(content, tokens: Tokens(Self.tokens), highlights: highlights)
+    defer { shown.window.close() }
+    let pane = shown.pane
+    let keyword = Self.resolved(pane.theme.syntaxColor(for: .keyword))
+    #expect(try Self.color(at: 18, in: pane) == keyword)
+
+    // The block changes, and with it its changed runs, which now cover the keyword.
+    highlights.runs = [0: [18..<21]]
+    pane.setBlocks([PaneBlock(rows: 2..<3, style: .tinted(.a))], previews: [], rowTints: [:])
+    Self.layOut(pane)
+    #expect(try Self.color(at: 18, in: pane) == nil)
+
+    highlights.runs = [:]
+    pane.setBlocks([PaneBlock(rows: 2..<3, style: .tinted(.b))], previews: [], rowTints: [:])
+    Self.layOut(pane)
+    #expect(try Self.color(at: 18, in: pane) == keyword)
+  }
+
+  @Test func tokensTakeTheChangedRunsOfANewHighlightProviderIntoAccount() throws {
+    var content = Self.content()
+    content.blocks = [PaneBlock(rows: 2..<3, style: .tinted(.b))]
+    let shown = Self.show(content, tokens: Tokens(Self.tokens), highlights: Highlights([:]))
+    defer { shown.window.close() }
+    let pane = shown.pane
+    let highlights = Highlights([0: [18..<21]])
+
+    pane.highlightProvider = highlights
+    Self.layOut(pane)
+
+    #expect(try Self.color(at: 18, in: pane) == nil)
+  }
+
+  @Test func tokensThatChangeDuringAnEditAreDrawnOnceTheEditIsOver() throws {
+    let shown = Self.show(Self.content(), tokens: Tokens(Self.tokens))
+    defer { shown.window.close() }
+    let pane = shown.pane
+    let storage = try #require(pane.documentView.textStorage)
+    storage.beginEditing()
+    storage.replaceCharacters(in: NSRange(location: 4, length: 1), with: "z")
+    // The owner learns of new tokens while the edit is under way.
+    shown.tokens.tokens[2] = [PaneToken(range: 4..<5, kind: .string)]
+    pane.syntaxDidChange(inRows: 2..<3)
+    storage.endEditing()
+    Self.layOut(pane)
+
+    #expect(try Self.color(at: 22, in: pane) == Self.resolved(pane.theme.syntaxColor(for: .string)))
+    #expect(try Self.color(at: 18, in: pane) == nil)
+  }
+
+  @Test func rowsThatWaitForAnEditMoveAlongWithIt() throws {
+    let shown = Self.show(Self.content(), tokens: Tokens(Self.tokens))
+    defer { shown.window.close() }
+    let pane = shown.pane
+    let storage = try #require(pane.documentView.textStorage)
+    let inserted = "a\nb\nc\n"
+    storage.beginEditing()
+    storage.replaceCharacters(in: NSRange(location: 0, length: 0), with: inserted)
+    // The last row, row 2 before the edit, gets new tokens while the edit is under way; after
+    // it, the row is row 5 and shows line 5.
+    shown.tokens.tokens[5] = [PaneToken(range: 4..<5, kind: .string)]
+    pane.syntaxDidChange(inRows: 2..<3)
+    storage.endEditing()
+    Self.layOut(pane)
+
+    let lastRow = inserted.utf16.count + 18
+    #expect(
+      try Self.color(at: lastRow + 4, in: pane)
+        == Self.resolved(pane.theme.syntaxColor(for: .string)))
+  }
+
+  @Test func tokensBeyondTheCutOfALongLineAreLeftOut() throws {
+    let length = PaneView.maximumShownLineLength + 5_000
+    let line = String(repeating: "a", count: length)
+    let tokens = stride(from: 0, to: length, by: 10).map {
+      PaneToken(range: $0..<$0 + 5, kind: .string)
+    }
+    let shown = Self.show(
+      PaneContent(text: line, lineNumbers: [0]), tokens: Tokens([0: tokens]))
+    defer { shown.window.close() }
+    let pane = shown.pane
+    let manager = try #require(pane.documentView.textLayoutManager)
+    let fragment = try #require(manager.textLayoutFragment(for: manager.documentRange.location))
+    let paragraph = try #require(fragment.textElement as? NSTextParagraph)
+    let string = Self.resolved(pane.theme.syntaxColor(for: .string))
+    var colored = 0
+    paragraph.attributedString.enumerateAttribute(
+      .foregroundColor, in: NSRange(location: 0, length: paragraph.attributedString.length)
+    ) { value, range, _ in
+      if let color = value as? NSColor, Self.resolved(color) == string {
+        colored += 1
+        #expect(range.upperBound <= PaneView.maximumShownLineLength)
+      }
+    }
+    #expect(colored == PaneView.maximumShownLineLength / 10)
+  }
+
   /// The content of ``text``, one line per row.
   private static func content() -> PaneContent {
     PaneContent(text: text, lineNumbers: [0, 1, 2])
@@ -177,17 +277,7 @@ import Testing
   /// The color that the text at `offset` is drawn in, resolved in the light appearance, or `nil`
   /// for the color of text.
   private static func color(at offset: Int, in pane: PaneView) throws -> [CGFloat]? {
-    let manager = try #require(pane.documentView.textLayoutManager)
-    let start = manager.documentRange.location
-    let location = try #require(manager.location(start, offsetBy: offset))
-    var color: NSColor?
-    manager.enumerateRenderingAttributes(from: location, reverse: false) { _, attributes, range in
-      if manager.offset(from: start, to: range.location) <= offset {
-        color = attributes[.foregroundColor] as? NSColor
-      }
-      return false
-    }
-    return color.map(resolved)
+    try DrawnColors.color(at: offset, in: pane.documentView).map(resolved)
   }
 
   /// The sRGB components of `color` in the light appearance.
@@ -220,7 +310,7 @@ private final class Tokens: PaneSyntaxProvider {
 /// Changed runs by block, as a test sets them.
 @MainActor
 private final class Highlights: PaneHighlightProvider {
-  let runs: [Int: [Range<Int>]]
+  var runs: [Int: [Range<Int>]]
 
   init(_ runs: [Int: [Range<Int>]]) {
     self.runs = runs

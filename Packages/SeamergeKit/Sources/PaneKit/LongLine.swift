@@ -30,6 +30,11 @@ enum LongLine {
     ).location - range.lowerBound
   }
 
+  /// The number of code units of `line`, a line with or without its line feed, without it.
+  static func textLength(of line: NSString) -> Int {
+    line.length > 0 && line.character(at: line.length - 1) == 0x0A ? line.length - 1 : line.length
+  }
+
   /// Whether the line in `range` of `string` is cut.
   static func isCut(_ string: NSString, in range: Range<Int>) -> Bool {
     range.count > PaneView.maximumShownLineLength
@@ -55,10 +60,12 @@ enum LongLine {
 extension PaneTextView {
   /// Cuts `paragraph`, a paragraph of the pane's text, if it is too long to show whole, and puts
   /// the ellipsis in the color of previews in place of the rest; its line feed stays.
-  func cutLongLine(_ paragraph: NSMutableAttributedString) {
+  ///
+  /// Returns the length of the text before the cut, or `nil` if the paragraph is not cut.
+  func cutLongLine(_ paragraph: NSMutableAttributedString) -> Int? {
     let string = paragraph.string as NSString
     let whole = 0..<string.length
-    guard LongLine.isCut(string, in: whole) else { return }
+    guard LongLine.isCut(string, in: whole) else { return nil }
     let cut = LongLine.shownLength(of: string, in: whole)
     let lineEnd =
       string.character(at: string.length - 1) == 0x0A ? string.length - 1 : string.length
@@ -67,6 +74,7 @@ extension PaneTextView {
     paragraph.replaceCharacters(
       in: NSRange(location: cut, length: lineEnd - cut),
       with: NSAttributedString(string: LongLine.mark, attributes: attributes))
+    return cut
   }
 
   /// The part of the paragraph at `offsets` in the pane's text that the pane shows as it is:
