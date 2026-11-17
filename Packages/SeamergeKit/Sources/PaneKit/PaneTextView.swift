@@ -56,10 +56,16 @@ final class PaneTextView: NSTextView {
   weak var search: PaneSearch?
 
   /// The matches of a search that the view marks, as ranges of its text, sorted and apart.
+  ///
+  /// A change draws the rows from the first match to the last, old or new, again in one go:
+  /// the fragments ask for the matches as they draw, and only those in view draw now.
   var searchMatches: [Range<Int>] = [] {
     didSet {
-      guard searchMatches != oldValue else { return }
-      redraw(ranges: oldValue + searchMatches)
+      guard searchMatches != oldValue,
+        let start = [oldValue.first, searchMatches.first].compactMap({ $0?.lowerBound }).min(),
+        let end = [oldValue.last, searchMatches.last].compactMap({ $0?.upperBound }).max()
+      else { return }
+      redraw(range: start..<end)
     }
   }
 

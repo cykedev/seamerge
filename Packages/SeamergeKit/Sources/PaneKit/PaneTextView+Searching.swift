@@ -98,18 +98,11 @@ extension PaneTextView {
     interaction.didCarryOut(plan, replacing: replacedTexts)
   }
 
-  /// Draws the rows that `ranges` of the text touch again.
-  func redraw(ranges: [Range<Int>]) {
-    var rows = IndexSet()
-    for range in ranges {
-      let start = min(range.lowerBound, grid.textLength)
-      let end = min(range.upperBound, grid.textLength)
-      rows.insert(
-        integersIn: grid.row(containingOffset: start)...grid.row(containingOffset: end))
-    }
-    for rows in rows.rangeView {
-      redraw(rows: rows)
-    }
+  /// Draws the rows that `range` of the text touches again.
+  func redraw(range: Range<Int>) {
+    let start = grid.row(containingOffset: min(range.lowerBound, grid.textLength))
+    let end = grid.row(containingOffset: min(range.upperBound, grid.textLength))
+    redraw(rows: start..<end + 1)
   }
 
   /// The matches of the search within the paragraph of `paragraph`, with their fill.
