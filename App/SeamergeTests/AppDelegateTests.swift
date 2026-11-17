@@ -4,11 +4,11 @@ import SeamergeUI
 import SessionIPC
 import Testing
 
-/// When the window Compare Files appears, and what happens to the files it opens.
+/// When the welcome window appears, and what happens to the files it opens.
 @MainActor
 @Suite(.serialized, .timeLimit(.minutes(1)))
 struct AppDelegateTests {
-  @Test func startWithoutATaskShowsCompareFiles() async throws {
+  @Test func startWithoutATaskShowsTheWelcomeWindow() async throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge"])
 
@@ -16,11 +16,30 @@ struct AppDelegateTests {
       Notification(name: NSApplication.didFinishLaunchingNotification))
     await delegate.startWindowTask?.value
 
-    let window = try #require(delegate.compareFilesWindowController?.window)
+    let window = try #require(delegate.welcomeWindowController?.window)
     #expect(window.isVisible)
-    #expect(window.title == "Compare Files")
+    #expect(window.title == "Welcome")
+    #expect(window.attachedSheet == nil)
     window.close()
     await delegate.coordinator.finish()
+  }
+
+  @Test func commandsOfTheFileMenuShowTheWelcomeWindowWithTheirSheet() throws {
+    let sandbox = try AppSandbox()
+    let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
+    let fileMenu = try #require(delegate.mainMenu.menu.items[1].submenu)
+    let compare = try #require(fileMenu.items.first { $0.keyEquivalent == "o" })
+    #expect(compare.keyEquivalentModifierMask == .command)
+    let merge = try #require(fileMenu.items.first { $0.title == "Merge Files…" })
+
+    for (item, title) in [(compare, "Compare Files"), (merge, "Merge Files")] {
+      let action = try #require(item.action)
+      NSApplication.shared.sendAction(action, to: delegate, from: item)
+      let window = try #require(delegate.welcomeWindowController?.window)
+      #expect(window.isVisible)
+      #expect(window.attachedSheet?.title == title)
+    }
+    delegate.welcomeWindowController?.close()
   }
 
   @Test func startByTheHelperShowsNoWindow() async throws {
@@ -30,20 +49,20 @@ struct AppDelegateTests {
     delegate.applicationDidFinishLaunching(
       Notification(name: NSApplication.didFinishLaunchingNotification))
 
-    #expect(delegate.compareFilesWindowController == nil)
+    #expect(delegate.welcomeWindowController == nil)
     #expect(FileManager.default.fileExists(atPath: sandbox.socketURL.path(percentEncoded: false)))
     await delegate.coordinator.finish()
   }
 
-  @Test func clickOnTheDockIconWithoutAWindowShowsCompareFiles() throws {
+  @Test func clickOnTheDockIconWithoutAWindowShowsTheWelcomeWindow() throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
 
     #expect(delegate.applicationShouldHandleReopen(.shared, hasVisibleWindows: true))
-    #expect(delegate.compareFilesWindowController == nil)
+    #expect(delegate.welcomeWindowController == nil)
     #expect(delegate.applicationShouldHandleReopen(.shared, hasVisibleWindows: false))
 
-    let window = try #require(delegate.compareFilesWindowController?.window)
+    let window = try #require(delegate.welcomeWindowController?.window)
     #expect(window.isVisible)
     window.close()
     #expect(!delegate.applicationShouldTerminateAfterLastWindowClosed(.shared))
@@ -57,7 +76,7 @@ struct AppDelegateTests {
     #expect(delegate.openFiles(files))
     #expect(!delegate.openFiles(files + [try sandbox.file("d.txt")]))
 
-    let window = try #require(delegate.compareFilesWindowController?.window)
+    let window = try #require(delegate.welcomeWindowController?.window)
     #expect(window.isVisible)
     window.close()
   }
@@ -93,24 +112,24 @@ struct AppDelegateTests {
     controller.close()
   }
 
-  @Test func filesThatCannotBeOpenedFailTheOpeningOfTheWindowCompareFiles() async throws {
+  @Test func filesThatCannotBeOpenedFailTheOpeningOfTheWelcomeWindow() async throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
-    let controller = CompareFilesWindowController(
+    let controller = WelcomeWindowController(
       recentComparisons: delegate.recentComparisons, integrationStore: sandbox.integrationStore)
     let binary = try sandbox.file("image.png", "\u{0}\u{1}PNG\u{0}")
     let merge = FileComparison(
       left: binary, base: try sandbox.file("base.txt"), right: try sandbox.file("mine.txt"))
 
     await #expect(throws: SessionLoadingError.binaryFile(binary)) {
-      try await delegate.compareFilesWindowController(controller, open: merge)
+      try await delegate.welcomeWindowController(controller, open: merge)
     }
     #expect(delegate.coordinator.windowControllers.isEmpty)
     #expect(delegate.recentComparisons.comparisons.isEmpty)
     #expect(sandbox.presenter.errors.isEmpty)
   }
 
-  @Test func appHidesAfterItsLastSessionWindowUnlessCompareFilesIsOpen() async throws {
+  @Test func appHidesAfterItsLastSessionWindowUnlessTheWelcomeWindowIsOpen() async throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
     let recorder = WindowRecorder()
@@ -132,10 +151,10 @@ struct AppDelegateTests {
     try await delegate.coordinator.open(merge)
     let last = await recorder.nextOpened()
     delegate.coordinator.delegate = delegate
-    delegate.showCompareFiles(nil)
+    delegate.showWelcome()
     last.close()
     #expect(sandbox.presenter.hideCount == 1)
-    delegate.compareFilesWindowController?.close()
+    delegate.welcomeWindowController?.close()
   }
 
   @Test func commandsTakeTheKeysAndNamesOfTheWindowInFront() async throws {
@@ -203,17 +222,17 @@ struct AppDelegateTests {
     #expect(!delegate.recentComparisonsMenu.validateMenuItem(menu.items[0]))
   }
 
-  @Test func comparisonOfTwoFilesOpensFromTheWindowCompareFilesAndFromOpenRecent() async throws {
+  @Test func comparisonOfTwoFilesOpensFromTheWelcomeWindowAndFromOpenRecent() async throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
     let recorder = WindowRecorder()
     delegate.coordinator.delegate = recorder
     let comparison = FileComparison(
       left: try sandbox.file("old.txt", "a\n"), right: try sandbox.file("new.txt", "b\n"))
-    let controller = CompareFilesWindowController(
+    let controller = WelcomeWindowController(
       recentComparisons: delegate.recentComparisons, integrationStore: sandbox.integrationStore)
 
-    try await delegate.compareFilesWindowController(controller, open: comparison)
+    try await delegate.welcomeWindowController(controller, open: comparison)
     let first = await recorder.nextOpened()
     first.close()
     delegate.recentComparisons.add(comparison)
@@ -235,10 +254,10 @@ struct AppDelegateTests {
     delegate.coordinator.delegate = recorder
     let folders = try sandbox.folders()
     let comparison = FileComparison(folders: folders)
-    let controller = CompareFilesWindowController(
+    let controller = WelcomeWindowController(
       recentComparisons: delegate.recentComparisons, integrationStore: sandbox.integrationStore)
 
-    try await delegate.compareFilesWindowController(controller, open: comparison)
+    try await delegate.welcomeWindowController(controller, open: comparison)
     let first = await recorder.nextOpened()
     #expect(first.collection?.folders == folders)
     #expect(first.window?.title == "Old ↔ New")
@@ -266,14 +285,12 @@ struct AppDelegateTests {
 
     delegate.application(.shared, open: plain)
 
-    let window = try #require(delegate.compareFilesWindowController?.window)
+    let window = try #require(delegate.welcomeWindowController?.window)
     defer { window.close() }
     #expect(window.isVisible)
     let fields = fileFields(in: window)
-    #expect(fields.map(\.label) == ["Left Folder", "Base, optional", "Right Folder"])
-    #expect(
-      fields.map(\.value)
-        == [fileFieldValue(of: folders.left), "empty", fileFieldValue(of: folders.right)])
+    #expect(fields.map(\.label) == ["Left Folder", "Right Folder"])
+    #expect(fields.map(\.value) == [folders.left, folders.right].map(fileFieldValue(of:)))
     #expect(delegate.coordinator.windowControllers.isEmpty)
   }
 
@@ -327,7 +344,7 @@ struct AppDelegateTests {
     #expect(delegate.shortcutOverviewWindowController?.window === window)
   }
 
-  @Test func commandLineToolShowsItsSheetOnCompareFilesAndIsNamedByWhatItOffers() throws {
+  @Test func commandLineToolShowsItsSheetOnTheWelcomeWindowAndIsNamedByWhatItOffers() throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
     let item = NSMenuItem(
@@ -337,7 +354,7 @@ struct AppDelegateTests {
 
     delegate.showCommandLineTool(item)
 
-    let window = try #require(delegate.compareFilesWindowController?.window)
+    let window = try #require(delegate.welcomeWindowController?.window)
     defer { window.close() }
     let sheet = try #require(window.attachedSheet)
     #expect(window.isVisible)

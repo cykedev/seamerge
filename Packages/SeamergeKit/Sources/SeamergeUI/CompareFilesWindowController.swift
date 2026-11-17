@@ -1,35 +1,75 @@
 import AppKit
 import MergeModel
 
-/// What the window Compare Files asks of the app: to open a session.
-@MainActor
-public protocol CompareFilesWindowControllerDelegate: AnyObject {
-  /// Opens a session for the files of `comparison`, in their roles, and returns once its window
-  /// shows.
-  ///
-  /// - Throws: Why the files cannot be opened; the window shows it in a sheet and keeps them.
-  func compareFilesWindowController(
-    _ controller: CompareFilesWindowController, open comparison: FileComparison) async throws
-}
-
-/// The window Compare Files: the start window of the app and the window of File > Compare Files…
-/// and File > Compare Folders….
+/// The sheet Compare Files, Merge Files or Change Files: fields for the files of a session in
+/// their roles, and the default button that opens them.
 ///
-/// It has three fields in the order of the panes, Left, Base and Right. Two outer files are
-/// compared, three are merged, two outer folders are compared file by file; the button below says
-/// which and opens them in exactly the roles shown. Once the session window shows, the window
-/// closes and lists the files among the comparisons opened last; if they cannot be opened, it says
-/// why and keeps them. The window never opens anything by itself.
+/// To compare, it has two fields, Left and Right, which take two files or two folders; to merge,
+/// three, A, Base and B, which take files. Change Files has the fields of the kind of its window
+/// and takes no folders. The button opens the files in exactly the roles shown; if they cannot
+/// be opened, a sheet on the sheet says why and the files stay. The sheet opens nothing by
+/// itself, and the window it hangs on ends it once the files show.
 @MainActor
-public final class CompareFilesWindowController: NSWindowController {
-  /// Opens the sessions of the window; the window does not retain it, and opens nothing
-  /// without one.
-  public weak var delegate: (any CompareFilesWindowControllerDelegate)? {
-    didSet { selectionDidChange() }
+final class CompareFilesWindowController: NSWindowController {
+  /// What a sheet of files is for.
+  enum Purpose: Equatable {
+    /// Two files or two folders to compare in a window of their own.
+    case compare
+
+    /// Three files to merge in a window of their own.
+    case merge
+
+    /// Other files for a session window of `kind`; the kind stays.
+    case change(Session.Kind)
+
+    /// The kind of session the fields are for.
+    var kind: Session.Kind {
+      switch self {
+      case .compare: .diff
+      case .merge: .merge
+      case .change(let kind): kind
+      }
+    }
+
+    /// Whether the fields take folders, which only a comparison in a window of its own does.
+    var acceptsFolders: Bool { self == .compare }
+
+    /// The title of the sheet, which VoiceOver says.
+    var title: String {
+      switch self {
+      case .compare: CompareFilesWindowController.compareFilesTitle
+      case .merge: CompareFilesWindowController.mergeFilesTitle
+      case .change:
+        String(
+          localized: "Change Files", bundle: .module,
+          comment: "The title of the sheet that chooses other files for a session window.")
+      }
+    }
+
+    /// The title of the default button.
+    var openTitle: String {
+      switch self {
+      case .compare:
+        String(
+          localized: "Compare", bundle: .module,
+          comment: "Sheet Compare Files: the default button, which compares the files.")
+      case .merge:
+        String(
+          localized: "Merge", bundle: .module,
+          comment: "Sheet Merge Files: the default button, which merges the files.")
+      case .change:
+        String(
+          localized: "Change", bundle: .module,
+          comment: "Sheet Change Files: the default button, which shows the files in the window.")
+      }
+    }
   }
 
+  /// What the sheet is for.
+  let purpose: Purpose
+
   /// The files in the fields.
-  var selection = FileSelection() {
+  var selection: FileSelection {
     didSet {
       if selection != oldValue {
         showsUnsupportedSelection = false
@@ -37,26 +77,27 @@ public final class CompareFilesWindowController: NSWindowController {
     }
   }
 
-  /// Whether the window says what Seamerge compares, after it was handed a selection it does
-  /// not compare; until the fields change.
+  /// Whether the sheet says what Seamerge compares, after it was handed a selection it does not
+  /// compare; until the fields change.
   var showsUnsupportedSelection = false
 
   /// The fields, by their place.
   let fields: [FileSlot: FileField]
 
-  /// The default button, Compare or Merge, which opens the files in the fields.
-  let openButton: NSButton
-
-  /// The comparisons opened last.
-  let recentList = RecentComparisonsList()
-
   /// The words below the fields, which say their roles.
   let captions: [FileSlot: NSTextField]
+
+  /// The default button, Compare, Merge or Change, which opens the files in the fields.
+  let openButton: NSButton
+
+  /// The note beside the buttons that says why the fields cannot be opened, while they do not go
+  /// together.
+  let problemLabel = NSTextField(labelWithString: "")
 
   /// Whether the files of the fields are being opened.
   private(set) var isOpening = false
 
-  /// The accessibility settings the window draws with.
+  /// The accessibility settings the sheet draws with.
   var displayOptions: DisplayOptions {
     didSet { applyColors() }
   }
@@ -66,98 +107,30 @@ public final class CompareFilesWindowController: NSWindowController {
     didSet { showDropTargets() }
   }
 
-  /// The comparisons opened last, which the window lists and adds to.
-  let recentComparisons: RecentComparisons
-
   /// The open panel and the sheet of a failure.
   let panels: any CompareFilesPanels
 
   /// Tells VoiceOver what changed.
   let announce: (String) -> Void
 
-  /// What the window is for.
-  let purpose: Purpose
-
-  /// Shows the files of a comparison in the window that the sheet of Change Files belongs to,
-  /// and returns once it does.
+  /// Opens the files of a comparison and returns once they show.
   ///
   /// - Throws: Why the files cannot be opened; the sheet shows it and keeps them.
-  var onChange: (FileComparison) async throws -> Void = { _ in }
+  var onOpen: (FileComparison) async throws -> Void = { _ in }
 
-  /// Reads and writes the settings of Git and Tower, or `nil` for a window without the line
-  /// about Git.
-  let integrationStore: (any IntegrationStore)?
-
-  /// What the settings of Git and Tower said when they were last read, `nil` until then.
-  var integrationStatus: IntegrationStatus?
-
-  /// The line at the bottom: whether Git opens Seamerge.
-  let gitStatusLabel = NSTextField(labelWithString: "")
-
-  /// The button next to the line, which shows the sheet Set Up Git Integration.
-  let gitSetUpButton: NSButton
-
-  /// The sheet Set Up Git Integration while it is shown.
-  var integrationSheet: GitIntegrationSheet?
-
-  /// The note beside the buttons that says why the fields cannot be opened, while they do not go
-  /// together.
-  let problemLabel = NSTextField(labelWithString: "")
-
-  private let heading: NSTextField
-  private let recentSection: NSStackView
   private let cancelButton: NSButton
 
-  /// What a window of Compare Files is for.
-  enum Purpose: Equatable {
-    /// Putting files together to open a session in a window of its own.
-    case compare
-
-    /// Choosing other files for a session window of `kind`, as its sheet; the kind stays.
-    case change(Session.Kind)
-  }
-
-  /// Creates the window, which lists the comparisons of `recentComparisons`, says at the bottom
-  /// what the settings in `integrationStore` say about Git, and draws with the accessibility
-  /// settings of the system.
-  public convenience init(
-    recentComparisons: RecentComparisons, integrationStore: SystemIntegrationStore
-  ) {
-    let window = CompareFilesWindow()
-    self.init(
-      recentComparisons: recentComparisons, displayOptions: .current(in: .shared),
-      panels: SystemPanels(), window: window, integrationStore: integrationStore
-    ) { text in
-      NSAccessibility.post(
-        element: window, notification: .announcementRequested,
-        userInfo: [
-          .announcement: text, .priority: NSAccessibilityPriorityLevel.high.rawValue,
-        ])
-    }
-    NSWorkspace.shared.notificationCenter.addObserver(
-      self, selector: #selector(accessibilityDisplayOptionsDidChange(_:)),
-      name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
-  }
-
-  /// Creates the window, which draws with `displayOptions`, asks with `panels`, reads and writes
-  /// the settings of Git with `integrationStore` and tells VoiceOver what changed through
-  /// `announce`.
+  /// Creates the sheet for `purpose` in `window`, which draws with `displayOptions`, asks with
+  /// `panels` and tells VoiceOver what changed through `announce`.
   init(
-    recentComparisons: RecentComparisons, displayOptions: DisplayOptions,
-    panels: any CompareFilesPanels, window: CompareFilesWindow, purpose: Purpose = .compare,
-    integrationStore: (any IntegrationStore)? = nil, announce: @escaping (String) -> Void
+    purpose: Purpose, displayOptions: DisplayOptions, panels: any CompareFilesPanels,
+    window: CompareFilesWindow, announce: @escaping (String) -> Void
   ) {
-    self.recentComparisons = recentComparisons
-    self.integrationStore = purpose == .compare ? integrationStore : nil
-    gitSetUpButton = NSButton(
-      title: String(
-        localized: "Set Up Git Integration…", bundle: .module,
-        comment: "Compare Files: the button next to the line about Git."),
-      target: nil, action: nil)
+    self.purpose = purpose
+    selection = FileSelection(kind: purpose.kind)
     self.displayOptions = displayOptions
     self.panels = panels
     self.announce = announce
-    self.purpose = purpose
     cancelButton = NSButton(
       title: String(
         localized: "Cancel", bundle: .module, comment: "Button: close the sheet and do nothing."),
@@ -165,8 +138,8 @@ public final class CompareFilesWindowController: NSWindowController {
     let colors = CompareFilesColors(displayOptions)
     var fields: [FileSlot: FileField] = [:]
     var captions: [FileSlot: NSTextField] = [:]
-    for slot in FileSlot.allCases {
-      fields[slot] = FileField(slot: slot, colors: colors)
+    for slot in FileSlot.slots(for: purpose.kind) {
+      fields[slot] = FileField(slot: slot, acceptsFolders: purpose.acceptsFolders, colors: colors)
       let caption = NSTextField(labelWithString: "")
       caption.alignment = .center
       caption.setAccessibilityElement(false)
@@ -174,17 +147,10 @@ public final class CompareFilesWindowController: NSWindowController {
     }
     self.fields = fields
     self.captions = captions
-    openButton = NSButton(title: "", target: nil, action: nil)
-    heading = NSTextField(
-      labelWithString: String(
-        localized: "Recent", bundle: .module,
-        comment: "Compare Files: the heading of the comparisons opened last."))
-    heading.font = .boldSystemFont(ofSize: NSFont.smallSystemFontSize)
-    heading.setAccessibilityElement(false)
-    recentSection = NSStackView(views: [heading, recentList.scrollView])
+    openButton = NSButton(title: purpose.openTitle, target: nil, action: nil)
     super.init(window: window)
 
-    window.delegate = self
+    window.title = purpose.title
     window.contentView = makeContent()
     for field in fields.values {
       field.delegate = self
@@ -195,27 +161,19 @@ public final class CompareFilesWindowController: NSWindowController {
     cancelButton.target = self
     cancelButton.action = #selector(cancelOperation(_:))
     cancelButton.keyEquivalent = "\u{1B}"
-    cancelButton.isHidden = purpose == .compare
-    gitSetUpButton.target = self
-    gitSetUpButton.action = #selector(showGitIntegration(_:))
-    gitSetUpButton.isHidden = true
-    recentList.onOpen = { [weak self] comparison in self?.open(comparison) }
-    NotificationCenter.default.addObserver(
-      self, selector: #selector(recentComparisonsDidChange(_:)),
-      name: RecentComparisons.didChangeNotification, object: recentComparisons)
     applyColors()
-    showRecentComparisons(fitting: true)
     selectionDidChange()
-    window.center()
+    window.contentView?.layoutSubtreeIfNeeded()
+    window.setContentSize(window.contentView?.fittingSize ?? .zero)
   }
 
-  /// Windows of Compare Files are never archived.
-  public required init?(coder: NSCoder) {
+  /// Sheets of files are never archived.
+  required init?(coder: NSCoder) {
     nil
   }
 
   private func makeContent() -> NSView {
-    let columns = FileSlot.allCases.compactMap { slot -> NSView? in
+    let columns = selection.slots.compactMap { slot -> NSView? in
       guard let field = fields[slot], let caption = captions[slot] else { return nil }
       let column = NSStackView(views: [field, caption])
       column.orientation = .vertical
@@ -230,63 +188,32 @@ public final class CompareFilesWindowController: NSWindowController {
     problemLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     let buttonRow = NSStackView(views: [problemLabel, NSView(), cancelButton, openButton])
     buttonRow.distribution = .fill
-    recentSection.orientation = .vertical
-    recentSection.alignment = .leading
-    recentSection.spacing = CompareFilesMetrics.headingSpacing
-    recentList.scrollView.widthAnchor.constraint(equalTo: recentSection.widthAnchor)
-      .isActive = true
 
-    let stack = NSStackView(views: [fieldsRow, buttonRow, recentSection])
+    let stack = NSStackView(views: [fieldsRow, buttonRow])
     stack.orientation = .vertical
     stack.alignment = .leading
     stack.spacing = CompareFilesMetrics.sectionSpacing
     let margin = CompareFilesMetrics.margin
-    // A sheet has no line about Git below.
-    let gitStatusHeight = purpose == .compare ? CompareFilesMetrics.gitStatusHeight : 0
-    stack.edgeInsets = NSEdgeInsets(
-      top: margin, left: margin, bottom: margin + gitStatusHeight, right: margin)
+    stack.edgeInsets = NSEdgeInsets(top: margin, left: margin, bottom: margin, right: margin)
     stack.translatesAutoresizingMaskIntoConstraints = false
-    for row in [buttonRow, recentSection] {
-      row.widthAnchor.constraint(equalTo: fieldsRow.widthAnchor).isActive = true
-    }
+    buttonRow.widthAnchor.constraint(equalTo: fieldsRow.widthAnchor).isActive = true
 
     let content = FileDropView()
     content.delegate = self
     content.addSubview(stack)
-    if purpose == .compare {
-      addGitStatusRow(to: content)
-    }
-    // The window takes the height of its content when it appears and keeps it while it is open;
-    // a list that empties then leaves room below rather than moving the window.
-    let fittingBottom = stack.bottomAnchor.constraint(equalTo: content.bottomAnchor)
-    fittingBottom.priority = .defaultLow
     NSLayoutConstraint.activate([
       stack.topAnchor.constraint(equalTo: content.topAnchor),
       stack.leadingAnchor.constraint(equalTo: content.leadingAnchor),
       stack.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-      stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor), fittingBottom,
+      stack.bottomAnchor.constraint(equalTo: content.bottomAnchor),
     ])
     return content
   }
 
-  /// Shows the window in front, at the height of its content, with the focus on the first empty
-  /// field, and reads again what Git says.
-  public override func showWindow(_ sender: Any?) {
-    if window?.isVisible != true {
-      showRecentComparisons(fitting: true)
-    }
-    selectionDidChange()
-    super.showWindow(sender)
-    focusFirstEmptyField()
-    if integrationSheet == nil {
-      Task { await readIntegrationStatus() }
-    }
-  }
-
-  /// Puts `urls` in the fields as if they were dropped on the window and tells whether the
-  /// window took them; it takes no more than three files, or two folders.
+  /// Puts `urls` in the fields as if they were dropped on the sheet and tells whether the sheet
+  /// took them.
   @discardableResult
-  public func fill(with urls: [URL]) -> Bool {
+  func fill(with urls: [URL]) -> Bool {
     // A folder is known as one by its directory path; whatever cannot be looked at counts as a
     // file, which opening then reports.
     let entries = urls.map { FileDrop.entry(at: $0) ?? $0 }
@@ -295,83 +222,20 @@ public final class CompareFilesWindowController: NSWindowController {
     return true
   }
 
-  /// Empties the fields and lets the user choose the left folder, as File > Compare Folders…
-  /// does.
-  public func compareFolders() {
-    selection = FileSelection()
-    selectionDidChange()
-    showWindow(nil)
-    choose(.folder, for: .left)
-  }
-
-  /// Whether the fields take folders, which only a window that opens a session of its own does.
-  var acceptsFolders: Bool {
-    purpose == .compare
-  }
-
-  /// Swaps the files of the outer fields.
-  @objc public func swapSides(_ sender: Any?) {
-    selection.swap(.left, .right)
-    selectionDidChange()
-    announceSwap(of: .left, and: .right)
-  }
-
-  /// Opens the files of the fields in their roles and closes the window.
-  @objc func openComparison(_ sender: Any?) {
-    guard let comparison = selection.comparison else { return }
-    open(comparison)
-  }
-
-  /// Opens `comparison`; once its window shows, remembers it and closes, and otherwise says why
-  /// in a sheet and keeps the files.
-  ///
-  /// The sheet of Change Files shows the files in its window instead, which ends the sheet.
-  func open(_ comparison: FileComparison) {
-    guard !isOpening, let window, purpose != .compare || delegate != nil else { return }
-    isOpening = true
-    selectionDidChange()
-    Task {
-      defer {
-        isOpening = false
-        selectionDidChange()
-      }
-      do {
-        if purpose == .compare, let delegate {
-          try await delegate.compareFilesWindowController(self, open: comparison)
-        } else {
-          try await onChange(comparison)
-        }
-      } catch {
-        await panels.showFailure(error, in: window)
-        return
-      }
-      guard purpose == .compare else { return }
-      recentComparisons.add(comparison)
-      selection = FileSelection()
-      close()
-    }
-  }
-
-  /// Ends the sheet of Change Files without changing anything.
-  @objc override public func cancelOperation(_ sender: Any?) {
-    guard purpose != .compare, let window else { return }
-    window.sheetParent?.endSheet(window, returnCode: .cancel)
-  }
-
-  /// Puts the files of `comparison` in their fields, as the sheet of Change Files opens with
-  /// them.
+  /// Puts the files of `comparison` in their fields.
   func fill(_ comparison: FileComparison) {
     var places: [FileSlot: URL] = [.left: comparison.left, .right: comparison.right]
     places[.base] = comparison.base
-    selection.fill(places)
+    selection.fill(places.filter { selection.slots.contains($0.key) })
     selectionDidChange()
   }
 
+  /// Puts the files of `places` in their fields and tells VoiceOver where each went.
   func fill(_ places: [FileSlot: URL]) {
     selection.fill(places)
     selectionDidChange()
     announce(
-      FileSlot.allCases.compactMap { slot in
+      selection.slots.compactMap { slot in
         places[slot].map { url in
           String(
             localized: "\(url.lastPathComponent) added as \(selection.title(of: slot))",
@@ -381,6 +245,7 @@ public final class CompareFilesWindowController: NSWindowController {
       }.joined(separator: ". "))
   }
 
+  /// Empties the field `slot` and tells VoiceOver.
   func clear(_ slot: FileSlot) {
     guard let url = selection[slot] else { return }
     let role = selection.title(of: slot)
@@ -392,6 +257,56 @@ public final class CompareFilesWindowController: NSWindowController {
         comment: "VoiceOver: a field was emptied, such as LoginView.swift removed from Left."))
   }
 
+  /// Empties the fields and says what Seamerge compares, until the fields change.
+  func showUnsupportedSelection() {
+    selection = FileSelection(kind: purpose.kind)
+    showsUnsupportedSelection = true
+    selectionDidChange()
+  }
+
+  /// Puts the focus on the first empty field, or on the first field if none is empty.
+  func focusFirstEmptyField() {
+    let field = selection.slots.first { selection[$0] == nil }.flatMap { fields[$0] }
+    window?.makeFirstResponder(field ?? fields[.left])
+  }
+
+  /// Swaps the files of the outer fields.
+  @objc func swapSides(_ sender: Any?) {
+    selection.swap(.left, .right)
+    selectionDidChange()
+    announceSwap(of: .left, and: .right)
+  }
+
+  /// Opens the files of the fields in their roles.
+  @objc func openComparison(_ sender: Any?) {
+    guard let comparison = selection.comparison else { return }
+    open(comparison)
+  }
+
+  /// Opens `comparison`; if it cannot be opened, says why in a sheet and keeps the files.
+  private func open(_ comparison: FileComparison) {
+    guard !isOpening, let window else { return }
+    isOpening = true
+    selectionDidChange()
+    Task {
+      defer {
+        isOpening = false
+        selectionDidChange()
+      }
+      do {
+        try await onOpen(comparison)
+      } catch {
+        await panels.showFailure(error, in: window)
+      }
+    }
+  }
+
+  /// Ends the sheet without opening anything.
+  @objc override func cancelOperation(_ sender: Any?) {
+    guard let window else { return }
+    window.sheetParent?.endSheet(window, returnCode: .cancel)
+  }
+
   func announceSwap(of first: FileSlot, and second: FileSlot) {
     announce(
       String(
@@ -399,42 +314,24 @@ public final class CompareFilesWindowController: NSWindowController {
         bundle: .module, comment: "VoiceOver: two fields swapped their files."))
   }
 
-  /// Shows the files of the fields, the roles they have now and what the button would open.
+  /// Shows the files of the fields, the roles they have now and whether the button opens them.
   func selectionDidChange() {
-    let hasBase = selection.hasBase
-    fields[.base]?.isEnabled = !selection.hasFolder || hasBase
-    for slot in FileSlot.allCases {
-      fields[slot]?.update(
-        url: selection[slot], hasBase: hasBase, isFolder: selection.namesFolder(slot))
+    for slot in selection.slots {
+      fields[slot]?.update(url: selection[slot], role: selection.title(of: slot))
     }
     showDropTargets()
     problemLabel.stringValue =
       selection.problem?.message
       ?? (showsUnsupportedSelection ? Self.unsupportedSelectionMessage : "")
-    switch purpose {
-    case .compare:
-      openButton.title =
-        hasBase
-        ? String(
-          localized: "Merge", bundle: .module,
-          comment: "Compare Files: the default button with three files.")
-        : String(
-          localized: "Compare", bundle: .module,
-          comment: "Compare Files: the default button with two files.")
-      openButton.isEnabled = !isOpening && selection.comparison != nil && delegate != nil
-    case .change(let kind):
-      openButton.title = String(
-        localized: "Change", bundle: .module,
-        comment: "Sheet Change Files: the default button, which shows the files in the window.")
-      openButton.isEnabled =
-        !isOpening && selection.comparison.map { $0.kind == kind && !$0.comparesFolders } ?? false
-    }
+    let comparison = selection.comparison
+    openButton.isEnabled =
+      !isOpening && comparison.map { purpose.acceptsFolders || !$0.comparesFolders } ?? false
   }
 
   /// Says below each field its role, or the role a drop would give it while one would fill it,
   /// next to the border of the field.
   private func showDropTargets() {
-    for slot in FileSlot.allCases {
+    for slot in selection.slots {
       fields[slot]?.isDropTarget = dropTargets[slot] != nil
       captions[slot]?.stringValue = dropTargets[slot] ?? selection.title(of: slot)
     }
@@ -448,59 +345,41 @@ public final class CompareFilesWindowController: NSWindowController {
     for caption in captions.values {
       caption.textColor = colors.quietText
     }
-    heading.textColor = colors.quietText
     problemLabel.textColor = colors.quietText
-    gitStatusLabel.textColor = colors.quietText
-    recentList.quietTextColor = colors.quietText
-  }
-
-  private func focusFirstEmptyField() {
-    let field = FileSlot.allCases.first { selection[$0] == nil }.flatMap { fields[$0] }
-    window?.makeFirstResponder(field ?? fields[.left])
-  }
-
-  /// Lists the recent comparisons; with `fitting`, at the height of their lines, with the window
-  /// at the height of its content.
-  private func showRecentComparisons(fitting: Bool) {
-    let comparisons = recentComparisons.comparisons
-    recentList.show(comparisons, fitting: fitting)
-    recentSection.isHidden = comparisons.isEmpty || purpose != .compare
-    if fitting {
-      fitWindowToContent()
-    }
-  }
-
-  /// Sizes the window to its content and keeps its top edge in place.
-  private func fitWindowToContent() {
-    guard let window, let content = window.contentView else { return }
-    content.layoutSubtreeIfNeeded()
-    let top = window.frame.maxY
-    var frame = window.frameRect(
-      forContentRect: CGRect(origin: window.frame.origin, size: content.fittingSize))
-    frame.origin.y = top - frame.height
-    window.setFrame(frame, display: true)
-  }
-
-  @objc private func recentComparisonsDidChange(_ notification: Notification) {
-    showRecentComparisons(fitting: window?.isVisible != true)
-  }
-
-  @objc private func accessibilityDisplayOptionsDidChange(_ notification: Notification) {
-    displayOptions = .current(in: .shared)
   }
 }
 
-extension CompareFilesWindowController: NSWindowDelegate {}
+extension CompareFilesWindowController {
+  /// The title of the sheet Compare Files and of the command that shows it.
+  nonisolated static var compareFilesTitle: String {
+    String(
+      localized: "Compare Files", bundle: .module,
+      comment: "The title of the sheet that puts two files or folders together to compare.")
+  }
+
+  /// The title of the sheet Merge Files and of the command that shows it.
+  nonisolated static var mergeFilesTitle: String {
+    String(
+      localized: "Merge Files", bundle: .module,
+      comment: "The title of the sheet that puts three files together to merge.")
+  }
+
+  /// The sentence below the fields after the sheet was handed a selection it does not compare.
+  static var unsupportedSelectionMessage: String {
+    String(
+      localized: "Seamerge compares two or three files, or two folders.", bundle: .module,
+      comment:
+        "Compare Files: below the fields after Compare with Seamerge in the Finder was used on a selection that Seamerge does not compare."
+    )
+  }
+}
 
 extension CompareFilesWindowController: NSUserInterfaceValidations {
-  /// Swap Sides needs a file in an outer field, and Set Up Git Integration… needs Git and no
-  /// sheet on the window; the other commands of the window always work.
-  public func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
+  /// Swap Sides needs a file in an outer field; the other commands of the sheet always work.
+  func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
     switch item.action {
     case #selector(swapSides(_:)): selection[.left] != nil || selection[.right] != nil
     case #selector(openComparison(_:)): openButton.isEnabled
-    case #selector(showGitIntegration(_:)):
-      canSetUpGitIntegration && integrationSheet == nil && window?.attachedSheet == nil
     default: true
     }
   }

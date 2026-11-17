@@ -73,11 +73,11 @@ extension IntegrationStatus {
     backup: GitBackup(values: ["merge.tool": "Kaleidoscope", "diff.tool": "Kaleidoscope"]))
 }
 
-/// A window Compare Files whose settings of Git come from `store`.
+/// A welcome window whose settings of Git come from `store`.
 @MainActor
 func integrationFixture(
   _ status: IntegrationStatus, displayOptions: DisplayOptions = DisplayOptions()
-) throws -> (fixture: CompareFilesFixture, store: IntegrationStoreRecorder) {
+) throws -> (fixture: WelcomeFixture, store: IntegrationStoreRecorder) {
   let store = IntegrationStoreRecorder(status)
-  return (try CompareFilesFixture(displayOptions: displayOptions, integrationStore: store), store)
+  return (try WelcomeFixture(displayOptions: displayOptions, integrationStore: store), store)
 }

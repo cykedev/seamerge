@@ -436,12 +436,12 @@ import Testing
   private func presentedSheet(
     _ prepare: (CommandLineToolFolder) throws -> Void = { _ in }
   ) throws -> (
-    folder: CommandLineToolFolder, fixture: CompareFilesFixture, tool: CommandLineTool,
+    folder: CommandLineToolFolder, fixture: WelcomeFixture, tool: CommandLineTool,
     sheet: CommandLineToolSheet
   ) {
     let folder = try CommandLineToolFolder()
     try prepare(folder)
-    let fixture = try CompareFilesFixture()
+    let fixture = try WelcomeFixture()
     let tool = folder.tool()
     tool.presentSheet(
       on: fixture.window, colors: CompareFilesColors(DisplayOptions()),

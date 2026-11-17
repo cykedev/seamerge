@@ -1,8 +1,8 @@
 import Foundation
 import MergeModel
 
-/// Files that the user put together in the window Compare Files, each in its role: two to compare,
-/// three to merge, or two folders to compare file by file.
+/// Files that the user put together in the welcome window, each in its role: two to compare, three
+/// to merge, or two folders to compare file by file.
 public struct FileComparison: Sendable, Hashable {
   /// The file on the left: the older one of a comparison, A of a merge.
   public var left: URL
@@ -22,6 +22,27 @@ public struct FileComparison: Sendable, Hashable {
     self.base = base
     self.right = right
     comparesFolders = false
+  }
+
+  /// Puts two files together to compare them, the older one on the left; files of the same age,
+  /// or of an age they do not tell, keep their order.
+  public init(olderOf first: URL, and second: URL) {
+    let modified = { (url: URL) -> Date? in
+      do {
+        return try url.resourceValues(forKeys: [.contentModificationDateKey])
+          .contentModificationDate
+      } catch {
+        // A file that does not say when it changed keeps its place.
+        return nil
+      }
+    }
+    let isSecondOlder =
+      if let firstDate = modified(first), let secondDate = modified(second) {
+        secondDate < firstDate
+      } else {
+        false
+      }
+    self.init(left: isSecondOlder ? second : first, right: isSecondOlder ? first : second)
   }
 
   /// Puts the two folders of `folders` together, to compare their files.

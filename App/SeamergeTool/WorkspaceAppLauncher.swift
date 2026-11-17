@@ -17,7 +17,7 @@ struct WorkspaceAppLauncher: AppLauncher {
 
   /// Brings a running copy of the app to the front, or starts it.
   ///
-  /// Opening an app that runs already asks it to reopen, which shows the window Compare Files;
+  /// Opening an app that runs already asks it to reopen, which shows the welcome window;
   /// the session on its way shows its own window instead.
   func openApp() async throws {
     if let running = runningCopy() {

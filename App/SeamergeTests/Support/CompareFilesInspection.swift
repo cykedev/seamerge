@@ -1,13 +1,13 @@
 import AppKit
 
-/// The fields of the window Compare Files in `window` from left to right, as VoiceOver names
-/// them and their files.
+/// The fields of the sheet of files on `window` from left to right, as VoiceOver names them and
+/// their files.
 @MainActor
 func fileFields(in window: NSWindow) -> [(label: String?, value: String?)] {
   func find(in view: NSView) -> [NSView] {
     String(describing: type(of: view)) == "FileField" ? [view] : view.subviews.flatMap(find)
   }
-  return (window.contentView.map(find) ?? []).map {
+  return (window.attachedSheet?.contentView.map(find) ?? []).map {
     ($0.accessibilityLabel(), $0.accessibilityValue() as? String)
   }
 }
@@ -20,11 +20,11 @@ func fileFieldValue(of url: URL) -> String {
   return "\(url.lastPathComponent), in \(folder)"
 }
 
-/// The texts of the labels in `window`.
+/// The texts of the labels in `window` and in the sheet on it.
 @MainActor
 func labelTexts(in window: NSWindow) -> [String] {
   func find(in view: NSView) -> [String] {
     ((view as? NSTextField).map { [$0.stringValue] } ?? []) + view.subviews.flatMap(find)
   }
-  return window.contentView.map(find) ?? []
+  return [window.contentView, window.attachedSheet?.contentView].compactMap(\.self).flatMap(find)
 }

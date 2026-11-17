@@ -3,26 +3,34 @@ import Testing
 
 @testable import SeamergeUI
 
-/// Draws the pictures of the window Compare Files for the visual review: empty, with two and
-/// with three files, with recent comparisons, as the service leaves it, in every look; and checks
-/// the contrast of what the fields draw.
+/// Draws the pictures of the sheets Compare Files and Merge Files for the visual review: empty,
+/// filled, as the service leaves them, in every look, each on the welcome window it hangs on;
+/// and checks the contrast of what the fields draw.
 @MainActor
 @Suite(.serialized) struct CompareFilesPicturesTests {
-  /// What the fields hold in a picture.
+  /// What the sheet is for and what its fields hold in a picture.
   enum Filling: String, CaseIterable, CustomTestStringConvertible {
-    case empty
-    case twoFiles = "two-files"
-    case threeFiles = "three-files"
+    case compareEmpty = "compare-empty"
+    case compareFilled = "compare-two-files"
+    case mergeEmpty = "merge-empty"
+    case mergeFilled = "merge-three-files"
 
     var testDescription: String { rawValue }
+
+    var purpose: CompareFilesWindowController.Purpose {
+      switch self {
+      case .compareEmpty, .compareFilled: .compare
+      case .mergeEmpty, .mergeFilled: .merge
+      }
+    }
 
     var files: [URL] {
       let folder = URL(filePath: NSHomeDirectory()).appending(path: "Projects/app")
       return switch self {
-      case .empty: []
-      case .twoFiles:
+      case .compareEmpty, .mergeEmpty: []
+      case .compareFilled:
         [folder.appending(path: "LoginView.swift"), folder.appending(path: "LoginView copy.swift")]
-      case .threeFiles:
+      case .mergeFilled:
         [
           folder.appending(path: "Theme.json"), folder.appending(path: "Theme base.json"),
           folder.appending(path: "Theme mine.json"),
@@ -32,63 +40,50 @@ import Testing
   }
 
   @Test(arguments: Filling.allCases, Look.all)
-  func windowIsPictured(filling: Filling, look: Look) throws {
-    let fixture = try CompareFilesFixture(
+  func sheetIsPictured(filling: Filling, look: Look) throws {
+    let fixture = try WelcomeFixture(
       displayOptions: DisplayOptions(increasesContrast: look.increasesContrast))
-    if filling != .empty {
-      #expect(fixture.controller.fill(with: filling.files))
+    fixture.controller.showFilesSheet(filling.purpose)
+    if filling != .compareEmpty, filling != .mergeEmpty {
+      #expect(try fixture.sheet().fill(with: filling.files))
     }
-    try picture(fixture, look: look, named: "compare-files-\(filling.rawValue)-\(look.name)")
+    try picture(fixture, look: look, named: "sheet-\(filling.rawValue)-\(look.name)")
   }
 
-  /// The window draws nothing translucent and marks nothing with color alone, so these look as
-  /// the plain pictures do; they are drawn to show that.
+  /// The sheets draw nothing translucent and mark nothing with color alone, so these look as the
+  /// plain pictures do; they are drawn to show that.
   @Test(arguments: [
     ("without-color", DisplayOptions(differentiatesWithoutColor: true)),
     ("reduced-transparency", DisplayOptions(reducesTransparency: true)),
   ])
-  func windowIsPicturedWithTheOtherSettings(setting: (name: String, options: DisplayOptions))
+  func sheetIsPicturedWithTheOtherSettings(setting: (name: String, options: DisplayOptions))
     throws
   {
-    let fixture = try CompareFilesFixture(displayOptions: setting.options)
-    #expect(fixture.controller.fill(with: Array(Filling.twoFiles.files.prefix(1))))
-    fixture.controller.dropTargets = [.right: "Drop to Use as Right"]
-    try picture(fixture, look: .light, named: "compare-files-\(setting.name)-light")
+    for filling in [Filling.compareFilled, .mergeFilled] {
+      let fixture = try WelcomeFixture(displayOptions: setting.options)
+      fixture.controller.showFilesSheet(filling.purpose)
+      let sheet = try fixture.sheet()
+      #expect(sheet.fill(with: Array(filling.files.prefix(1))))
+      sheet.dropTargets = [.right: "Drop to Use as \(filling == .mergeFilled ? "B" : "Right")"]
+      try picture(fixture, look: .light, named: "sheet-\(filling.purpose)-\(setting.name)-light")
+    }
   }
 
-  @Test(arguments: [Look.light, .dark])
-  func windowWithRecentComparisonsIsPictured(look: Look) throws {
-    let files = try SampleFiles()
-    let fixture = try CompareFilesFixture()
-    fixture.recentComparisons.add(
-      FileComparison(left: try files.file("Theme.json"), right: try files.file("Theme old.json")))
-    fixture.recentComparisons.add(
-      FileComparison(
-        left: try files.file("Package.swift"), base: try files.file("Package base.swift"),
-        right: try files.file("Package mine.swift")))
-    fixture.recentComparisons.add(
-      FileComparison(
-        left: try files.file("LoginView.swift"), right: try files.file("LoginView copy.swift")))
-    #expect(fixture.controller.fill(with: Array(Filling.twoFiles.files.prefix(1))))
-    try picture(fixture, look: look, named: "compare-files-recent-\(look.name)")
-  }
-
-  /// What the service Compare with Seamerge leaves in the window: one file to compare with the
+  /// What the service Compare with Seamerge leaves in the sheet: one file to compare with the
   /// next, or the sentence about a selection it does not compare.
   @Test(arguments: Look.all)
   func selectionsOfTheServiceArePictured(look: Look) throws {
-    let fixture = try CompareFilesFixture(
+    let fixture = try WelcomeFixture(
       displayOptions: DisplayOptions(increasesContrast: look.increasesContrast))
-    defer { fixture.window.close() }
-    fixture.controller.compare(with: Filling.twoFiles.files[0])
-    try picture(fixture, look: look, named: "compare-files-service-one-\(look.name)")
+    fixture.controller.compare(with: Filling.compareFilled.files[0])
+    try picture(fixture, look: look, named: "sheet-service-one-\(look.name)")
 
     fixture.controller.showUnsupportedSelection()
-    try picture(fixture, look: look, named: "compare-files-service-unsupported-\(look.name)")
+    try picture(fixture, look: look, named: "sheet-service-unsupported-\(look.name)")
   }
 
   @Test func longNamesAreShortenedInTheMiddle() throws {
-    let fixture = try CompareFilesFixture()
+    let fixture = try WelcomeFixture()
     let folder = URL(filePath: NSHomeDirectory()).appending(
       path: "Projects/a-project-with-a-long-name/Sources/Features/Authentication/Views")
     let files = [
@@ -97,9 +92,10 @@ import Testing
     ].map { folder.appending(path: $0) }
     #expect(fixture.controller.fill(with: files))
 
-    try picture(fixture, look: .light, named: "compare-files-long-names-light")
-    let labels = try fixture.field(.left).subviews.compactMap { $0 as? NSStackView }
-      .flatMap(\.arrangedSubviews).compactMap { $0 as? NSTextField }
+    try picture(fixture, look: .light, named: "sheet-long-names-light")
+    let labels = try #require(fixture.sheet().fields[.left]).subviews
+      .compactMap { $0 as? NSStackView }.flatMap(\.arrangedSubviews)
+      .compactMap { $0 as? NSTextField }
     let name = try #require(labels.first { $0.stringValue == files[0].lastPathComponent })
     #expect(name.lineBreakMode == .byTruncatingMiddle)
     #expect(name.frame.width <= CompareFilesMetrics.fieldSize.width)
@@ -108,18 +104,22 @@ import Testing
   @Test(arguments: [Look.light, .dark])
   func dropTargetIsPicturedWithItsWords(look: Look) throws {
     let files = try SampleFiles()
-    let fixture = try CompareFilesFixture()
+    let fixture = try WelcomeFixture()
     #expect(fixture.controller.fill(with: [try files.file("LoginView.swift")]))
+    fixture.controller.showMergeFiles(nil)
+    let sheet = try fixture.sheet()
+    #expect(sheet.fill(with: [try files.file("LoginView.swift")]))
     let drag = DragInTest(files: [
       try files.file("base.swift"), try files.file("theirs.swift"), try files.file("mine.swift"),
     ])
 
-    #expect(fixture.controller.operation(forDrag: drag, onto: nil) == .copy)
+    #expect(sheet.operation(forDrag: drag, onto: nil) == .copy)
 
-    #expect(fixture.captions == ["Drop to Use as A", "Drop to Use as Base", "Drop to Use as B"])
-    try picture(fixture, look: look, named: "compare-files-drop-target-\(look.name)")
-    fixture.controller.dragDidEnd()
-    #expect(fixture.captions == ["Left", "Base (Optional)", "Right"])
+    #expect(
+      try fixture.captions() == ["Drop to Use as A", "Drop to Use as Base", "Drop to Use as B"])
+    try picture(fixture, look: look, named: "sheet-drop-target-\(look.name)")
+    sheet.dragDidEnd()
+    #expect(try fixture.captions() == ["A", "Base", "B"])
   }
 
   /// The border of an empty field and that of a drop target stand out from the window and from
@@ -136,6 +136,10 @@ import Testing
     let accents: [NSColor] = [
       .systemBlue, .systemPurple, .systemPink, .systemRed, .systemOrange, .systemYellow,
       .systemGreen, .systemGray,
+      NSColor(srgbRed: 0x0A / 255, green: 0x62 / 255, blue: 0xCC / 255, alpha: 1),
+      NSColor(srgbRed: 0x1F / 255, green: 0x6F / 255, blue: 0xE0 / 255, alpha: 1),
+      NSColor(srgbRed: 0x00 / 255, green: 0x47 / 255, blue: 0xA3 / 255, alpha: 1),
+      NSColor(srgbRed: 0x26 / 255, green: 0x72 / 255, blue: 0xE4 / 255, alpha: 1),
     ]
     let options = DisplayOptions(increasesContrast: look.increasesContrast)
     let borders =
@@ -177,11 +181,7 @@ import Testing
     }
   }
 
-  private func picture(_ fixture: CompareFilesFixture, look: Look, named name: String) throws {
-    let window = fixture.window
-    window.colorSpace = .sRGB
-    window.appearance = look.appearance
-    window.contentView?.layoutSubtreeIfNeeded()
-    try Rendering.write(try Rendering.bitmap(of: window), named: name)
+  private func picture(_ fixture: WelcomeFixture, look: Look, named name: String) throws {
+    try fixture.picture(look: look, named: name)
   }
 }

@@ -102,6 +102,7 @@ final class MainMenu {
         [
           Self.item(Titles.compareFiles, #selector(AppDelegate.showCompareFiles(_:)), key: "o"),
           Self.item(Titles.compareFolders, #selector(AppDelegate.showCompareFolders(_:))),
+          Self.item(Titles.mergeFiles, #selector(AppDelegate.showMergeFiles(_:))),
           openRecent,
         ] + commands(.changeFiles),
         commands(.openInEditor),
@@ -190,7 +191,7 @@ final class MainMenu {
     Self.menu(Titles.go, SessionCommand.groups(in: .go).map { commands($0) })
   }
 
-  /// The Compare menu, whose Swap Sides also swaps the outer files of the window Compare Files,
+  /// The Compare menu, whose Swap Sides also swaps the outer files of a sheet of files,
   /// which has an action of the same name.
   private func compareMenu() -> NSMenu {
     Self.menu(Titles.compare, SessionCommand.groups(in: .compare).map { commands($0) })

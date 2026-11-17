@@ -50,7 +50,7 @@ struct IntegrationStatus: Sendable, Equatable {
     gitState?.merge == .seamerge && gitState?.diff == .seamerge
   }
 
-  /// The line at the bottom of the window Compare Files: whether Git opens Seamerge.
+  /// The line at the bottom of the welcome window: whether Git opens Seamerge.
   var line: String {
     guard let state = gitState else {
       return String(

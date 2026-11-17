@@ -3,53 +3,46 @@ import Testing
 
 @testable import SeamergeUI
 
-/// Folders in the window Compare Files: two of them are compared without a base, a folder with a
-/// file or with itself is not, and File > Compare Folders… asks for the left folder.
+/// Folders in the sheet Compare Files: two of them are compared file by file, a folder with a
+/// file or with itself is not, and Compare Folders… asks for the left folder.
 @MainActor
 @Suite(.serialized, .timeLimit(.minutes(1))) struct CompareFoldersTests {
-  @Test func twoFoldersAreComparedWithoutABaseAndRemembered() async throws {
+  @Test func twoFoldersAreComparedFileByFile() async throws {
     let folders = try SampleFolders()
-    let files = try SampleFiles()
-    let fixture = try CompareFilesFixture()
+    let fixture = CompareFilesFixture()
 
     #expect(fixture.controller.fill(with: [folders.left, folders.right]))
 
-    #expect(fixture.captions == ["Left Folder", "Base (Optional)", "Right Folder"])
-    #expect(try !fixture.field(.base).isEnabled)
-    #expect(try fixture.field(.base).toolTip == "Folders are compared without a base.")
-    #expect(try !fixture.field(.base).acceptsFirstResponder)
+    #expect(fixture.captions == ["Left Folder", "Right Folder"])
     #expect(fixture.controller.openButton.title == "Compare")
     #expect(fixture.controller.openButton.isEnabled)
     #expect(fixture.controller.problemLabel.stringValue.isEmpty)
-    let file = DragInTest(files: [try files.file("base.txt")])
-    #expect(fixture.controller.operation(forDrag: file, onto: .base) == [])
 
     fixture.controller.openComparison(nil)
-    await fixture.delegate.nextOpening()
+    await fixture.opener.nextOpening()
 
     let expected = FileComparison(folders: folders.pair)
-    #expect(fixture.delegate.opened == [expected])
+    #expect(fixture.opener.opened == [expected])
     #expect(expected.kind == .diff)
-    #expect(fixture.recentComparisons.comparisons == [expected])
   }
 
   @Test func folderAndFileAreNotCompared() throws {
     let folders = try SampleFolders()
     try folders.write("notes.txt", left: "notes\n", right: nil)
-    let fixture = try CompareFilesFixture()
+    let fixture = CompareFilesFixture()
 
     #expect(
       fixture.controller.fill(with: [folders.left, folders.left.appending(path: "notes.txt")]))
 
     #expect(!fixture.controller.openButton.isEnabled)
     #expect(fixture.controller.problemLabel.stringValue == "Choose two files or two folders.")
-    #expect(fixture.captions == ["Left Folder", "Base (Optional)", "Right"])
+    #expect(fixture.captions == ["Left Folder", "Right"])
     #expect(fixture.controller.selection.comparison == nil)
   }
 
   @Test func sameFolderTwiceIsNotCompared() throws {
     let folders = try SampleFolders()
-    let fixture = try CompareFilesFixture()
+    let fixture = CompareFilesFixture()
 
     #expect(fixture.controller.fill(with: [folders.left, folders.left]))
 
@@ -57,55 +50,57 @@ import Testing
     #expect(fixture.controller.problemLabel.stringValue == "Choose two different folders.")
   }
 
-  @Test func baseThatHoldsAFileStopsAComparisonOfFolders() throws {
+  @Test func fieldsOfAComparisonChooseFilesOrFolders() async throws {
     let folders = try SampleFolders()
-    let files = try SampleFiles()
-    let fixture = try CompareFilesFixture()
-    #expect(fixture.controller.fill(with: [try files.file("base.txt")]))
-    fixture.controller.fill([.base: try #require(fixture.controller.selection[.left])])
-    fixture.controller.clear(.left)
-
-    #expect(fixture.controller.fill(with: [folders.left, folders.right]))
-
-    #expect(try fixture.field(.base).isEnabled, "The base stays clearable")
-    #expect(!fixture.controller.openButton.isEnabled)
-    #expect(fixture.controller.problemLabel.stringValue == "Folders are compared without a base.")
-  }
-
-  @Test func outerFieldsChooseFilesOrFoldersAndTheBaseFilesOnly() async throws {
-    let folders = try SampleFolders()
-    let fixture = try CompareFilesFixture()
+    let fixture = CompareFilesFixture()
     fixture.panels.files = [folders.left]
 
     fixture.controller.fileFieldDidAskToChoose(try fixture.field(.left))
     await fixture.panels.nextChoice()
-    fixture.controller.fileFieldDidAskToChoose(try fixture.field(.base))
+    fixture.controller.fileFieldDidAskToChoose(try fixture.field(.right))
     await fixture.panels.nextChoice()
 
-    #expect(fixture.panels.fileChoices == [.fileOrFolder, .file])
+    #expect(fixture.panels.fileChoices == [.fileOrFolder, .fileOrFolder])
+    #expect(fixture.panels.roles == ["Left", "Right Folder"])
     #expect(fixture.controller.selection[.left] == folders.left)
   }
 
-  @Test func compareFoldersEmptiesTheFieldsAndAsksForTheLeftFolder() async throws {
+  @Test func compareFoldersAsksForTheLeftFolder() async throws {
     let folders = try SampleFolders()
-    let files = try SampleFiles()
-    let fixture = try CompareFilesFixture()
-    #expect(fixture.controller.fill(with: [try files.file("a.txt"), try files.file("b.txt")]))
+    let fixture = try WelcomeFixture()
     fixture.panels.files = [folders.left]
 
-    fixture.controller.compareFolders()
-    #expect(fixture.controller.selection[.right] == nil)
+    fixture.controller.showCompareFolders(nil)
+    let sheet = try fixture.sheet()
+    #expect(sheet.selection.isEmpty)
     await fixture.panels.nextChoice()
 
     #expect(fixture.panels.fileChoices == [.folder])
     #expect(fixture.panels.roles == ["Left Folder"])
-    #expect(fixture.controller.selection[.left] == folders.left)
-    #expect(fixture.captions == ["Left Folder", "Base (Optional)", "Right Folder"])
+    #expect(sheet.selection[.left] == folders.left)
+    #expect(fixture.window.attachedSheet === sheet.window)
   }
 
-  @Test func folderDroppedOnTheWindowTakesTheFirstFreeOuterField() throws {
+  @Test func compareFoldersKeepsWhatTheSheetHoldsUntilAFolderIsChosen() async throws {
     let folders = try SampleFolders()
-    let fixture = try CompareFilesFixture()
+    let files = try SampleFiles()
+    let fixture = try WelcomeFixture()
+    let (a, b) = (try files.file("a.txt"), try files.file("b.txt"))
+    #expect(fixture.controller.fill(with: [a, b]))
+
+    fixture.controller.showCompareFolders(nil)
+    await fixture.panels.nextChoice()
+    #expect(try fixture.files() == [a, b], "cancelled: nothing is lost")
+
+    fixture.panels.files = [folders.left]
+    fixture.controller.showCompareFolders(nil)
+    await fixture.panels.nextChoice()
+    #expect(try fixture.files() == [folders.left, b])
+  }
+
+  @Test func folderDroppedOnTheSheetTakesTheFirstFreeField() throws {
+    let folders = try SampleFolders()
+    let fixture = CompareFilesFixture()
 
     let drag = DragInTest(files: [folders.left])
     #expect(fixture.controller.operation(forDrag: drag, onto: nil) == .copy)

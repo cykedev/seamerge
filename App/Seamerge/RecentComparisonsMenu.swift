@@ -1,8 +1,8 @@
 import AppKit
 import SeamergeUI
 
-/// File > Open Recent: the comparisons last opened from the window Compare Files, up to ten, those
-/// of folders with a folder symbol, and Clear Menu, which forgets them here and in the window.
+/// File > Open Recent: the comparisons last opened from the welcome window, up to ten, those of
+/// folders with a folder symbol, and Clear Menu, which forgets them here and in the window.
 @MainActor
 final class RecentComparisonsMenu: NSObject {
   /// The submenu of File > Open Recent.

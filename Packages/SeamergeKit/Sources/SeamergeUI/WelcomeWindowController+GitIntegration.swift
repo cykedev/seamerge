@@ -2,33 +2,26 @@ import AppKit
 import os
 
 /// The line about Git at the bottom of the window and the sheet Set Up Git Integration.
-extension CompareFilesWindowController {
-  private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "CompareFiles")
+extension WelcomeWindowController {
+  private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "Welcome")
 
-  /// The line about Git at the bottom of the window, below a separator, with its button at the
-  /// trailing edge.
-  func addGitStatusRow(to content: NSView) {
-    let separator = NSBox()
-    separator.boxType = .separator
+  /// The line about Git at the bottom of the window, beside `sidebar`, in small type, with its
+  /// button at the trailing edge.
+  func addGitStatusRow(to content: NSView, after sidebar: NSView) {
+    gitStatusLabel.font = .preferredFont(forTextStyle: .subheadline)
     gitStatusLabel.lineBreakMode = .byTruncatingMiddle
     gitStatusLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    gitSetUpButton.controlSize = .small
     let row = NSStackView(views: [gitStatusLabel, NSView(), gitSetUpButton])
     row.distribution = .fill
-    row.edgeInsets = NSEdgeInsets(
-      top: 0, left: CompareFilesMetrics.margin, bottom: 0, right: CompareFilesMetrics.margin)
-    for view in [separator, row] {
-      view.translatesAutoresizingMaskIntoConstraints = false
-      content.addSubview(view)
-    }
+    row.translatesAutoresizingMaskIntoConstraints = false
+    content.addSubview(row)
+    let margin = WelcomeMetrics.listMargin
     NSLayoutConstraint.activate([
-      separator.leadingAnchor.constraint(equalTo: content.leadingAnchor),
-      separator.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-      separator.bottomAnchor.constraint(
-        equalTo: content.bottomAnchor, constant: -CompareFilesMetrics.gitStatusHeight),
-      row.leadingAnchor.constraint(equalTo: content.leadingAnchor),
-      row.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-      row.topAnchor.constraint(equalTo: separator.bottomAnchor),
+      row.leadingAnchor.constraint(equalTo: sidebar.trailingAnchor, constant: margin),
+      row.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -margin),
       row.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+      row.heightAnchor.constraint(equalToConstant: WelcomeMetrics.gitStatusHeight),
     ])
   }
 
@@ -37,12 +30,11 @@ extension CompareFilesWindowController {
     integrationStore != nil && (integrationStatus.map { $0.gitState != nil } ?? true)
   }
 
-  /// Shows the window and on it the sheet Set Up Git Integration, once the settings are read.
+  /// Shows the window in front and on it the sheet Set Up Git Integration, once the settings are
+  /// read.
   @objc public func showGitIntegration(_ sender: Any?) {
     guard integrationSheet == nil, integrationStore != nil else { return }
-    if window?.isVisible != true {
-      showWindow(sender)
-    }
+    showWindow(sender)
     Task { await presentGitIntegration() }
   }
 

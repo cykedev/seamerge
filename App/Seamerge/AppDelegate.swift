@@ -4,13 +4,14 @@ import SeamergeUI
 import os
 
 /// The delegate of the app: builds the main menu, starts the coordinator of the sessions, and
-/// shows the window Compare Files where nothing else is to be done.
+/// shows the welcome window where nothing else is to be done.
 ///
-/// The window Compare Files appears when the app starts without a task, when the Dock icon is
-/// clicked while no window is open, with File > Compare Files… and File > Compare Folders…, and
-/// with files or folders dropped on the Dock icon. It does not appear when the helper starts the
-/// app, nor after the helper's last window; then the app hides, so that the terminal is in front
-/// again. The service Compare with Seamerge shows it only for what it does not open at once.
+/// The welcome window appears when the app starts without a task and when the Dock icon is
+/// clicked while no window is open; with File > Compare Files…, Compare Folders… and Merge
+/// Files…, and with files or folders dropped on the Dock icon, it appears with the sheet of
+/// files. It does not appear when the helper starts the app, nor after the helper's last window;
+/// then the app hides, so that the terminal is in front again. The service Compare with Seamerge
+/// shows it only for what it does not open at once.
 @MainActor
 final class AppDelegate: NSObject {
   /// Opens a window for each session.
@@ -19,7 +20,7 @@ final class AppDelegate: NSObject {
   /// The menu bar.
   let mainMenu: MainMenu
 
-  /// The comparisons opened last from the window Compare Files.
+  /// The comparisons opened last from the welcome window.
   let recentComparisons: RecentComparisons
 
   /// File > Open Recent.
@@ -31,8 +32,8 @@ final class AppDelegate: NSObject {
   /// Finds and installs new versions of the app.
   let updater: Updater
 
-  /// The window Compare Files, once it has appeared.
-  private(set) var compareFilesWindowController: CompareFilesWindowController?
+  /// The welcome window, once it has appeared.
+  private(set) var welcomeWindowController: WelcomeWindowController?
 
   /// The window Settings, once it has appeared.
   private(set) var settingsWindowController: SettingsWindowController?
@@ -44,10 +45,10 @@ final class AppDelegate: NSObject {
   private let isLaunchedForSession: Bool
 
   /// Whether the service or files to open handed the app something to do, which shows what it
-  /// needs instead of the empty window Compare Files after the launch.
+  /// needs instead of the welcome window alone after the launch.
   var hasReceivedTask = false
 
-  /// The window Compare Files appearing after the launch, until it has.
+  /// The welcome window appearing after the launch, until it has.
   private(set) var startWindowTask: Task<Void, Never>?
 
   /// Shows alerts, hides the app and brings it to the front.
@@ -60,10 +61,10 @@ final class AppDelegate: NSObject {
   /// Has the system read the services of the apps again.
   let updateServices: @MainActor () -> Void
 
-  /// The settings of Git and Tower that the window Compare Files reads and writes.
+  /// The settings of Git and Tower that the welcome window reads and writes.
   private let integrationStore: SystemIntegrationStore
 
-  /// The seamerge command in Terminal, whose sheet the window Compare Files shows.
+  /// The seamerge command in Terminal, whose sheet the welcome window shows.
   private let commandLineTool: CommandLineTool
 
   private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "App")
@@ -106,14 +107,25 @@ final class AppDelegate: NSObject {
       object: nil)
   }
 
-  /// Shows the window Compare Files in front.
-  @objc func showCompareFiles(_ sender: Any?) {
-    compareFiles().showWindow(sender)
+  /// Shows the welcome window in front.
+  func showWelcome() {
+    welcome().showWindow(nil)
   }
 
-  /// Shows the window Compare Files in front, empty, with the open panel for the left folder.
+  /// Shows the welcome window in front with the sheet Compare Files.
+  @objc func showCompareFiles(_ sender: Any?) {
+    welcome().showCompareFiles(sender)
+  }
+
+  /// Shows the welcome window in front with the sheet Compare Files, empty, and the open panel
+  /// for the left folder.
   @objc func showCompareFolders(_ sender: Any?) {
-    compareFiles().compareFolders()
+    welcome().showCompareFolders(sender)
+  }
+
+  /// Shows the welcome window in front with the sheet Merge Files.
+  @objc func showMergeFiles(_ sender: Any?) {
+    welcome().showMergeFiles(sender)
   }
 
   /// Shows the window Settings in front, made the first time it is needed.
@@ -140,42 +152,44 @@ final class AppDelegate: NSObject {
     controller.showWindow(sender)
   }
 
-  /// Shows the window Compare Files and on it the sheet Set Up Git Integration.
+  /// Shows the welcome window and on it the sheet Set Up Git Integration.
   @objc func showGitIntegration(_ sender: Any?) {
-    compareFiles().showGitIntegration(sender)
+    welcome().showGitIntegration(sender)
   }
 
-  /// Shows the window Compare Files and on it the sheet that installs, updates or removes the
+  /// Shows the welcome window and on it the sheet that installs, updates or removes the
   /// seamerge command.
   @objc func showCommandLineTool(_ sender: Any?) {
-    compareFiles().showCommandLineTool(commandLineTool)
+    welcome().showCommandLineTool(commandLineTool)
   }
 
-  /// Puts `urls` in the fields of the window Compare Files and shows it, and tells whether the
-  /// window took them.
+  /// Puts `urls` in the fields of a sheet of the welcome window and shows it, and tells whether
+  /// the window took them; the window shows without a sheet if it did not.
   @discardableResult
   func openFiles(_ urls: [URL]) -> Bool {
-    let took = compareFiles().fill(with: urls)
-    showCompareFiles(nil)
+    let took = welcome().fill(with: urls)
+    if !took {
+      showWelcome()
+    }
     return took
   }
 
-  /// Shows the window Compare Files after the launch, unless the app was handed something to do
-  /// or a session window shows.
-  private func showCompareFilesUnlessBusy() {
+  /// Shows the welcome window after the launch, unless the app was handed something to do or a
+  /// session window shows.
+  private func showWelcomeUnlessBusy() {
     guard !hasReceivedTask, coordinator.windowControllers.isEmpty else { return }
-    showCompareFiles(nil)
+    showWelcome()
   }
 
-  /// The window Compare Files, made the first time it is needed.
-  func compareFiles() -> CompareFilesWindowController {
-    if let compareFilesWindowController {
-      return compareFilesWindowController
+  /// The welcome window, made the first time it is needed.
+  func welcome() -> WelcomeWindowController {
+    if let welcomeWindowController {
+      return welcomeWindowController
     }
-    let controller = CompareFilesWindowController(
+    let controller = WelcomeWindowController(
       recentComparisons: recentComparisons, integrationStore: integrationStore)
     controller.delegate = self
-    compareFilesWindowController = controller
+    welcomeWindowController = controller
     return controller
   }
 
@@ -225,8 +239,8 @@ extension AppDelegate: NSApplicationDelegate {
     application.servicesMenu = mainMenu.servicesMenu
   }
 
-  /// Listens for the helper, serves the service and shows the window Compare Files, unless the
-  /// helper, the service or files to open started the app, which show what they need.
+  /// Listens for the helper, serves the service and shows the welcome window, unless the helper,
+  /// the service or files to open started the app, which show what they need.
   ///
   /// The service hands over its selection only once the run loop turns after the launch, so the
   /// window waits that long, and does not stand empty behind what the service opens.
@@ -240,14 +254,14 @@ extension AppDelegate: NSApplicationDelegate {
     NSApplication.shared.servicesProvider = self
     registerServiceIfInstalled()
     if !isLaunchedForSession {
-      startWindowTask = Task { showCompareFilesUnlessBusy() }
+      startWindowTask = Task { showWelcomeUnlessBusy() }
     }
     updater.start()
   }
 
   func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
     if !hasVisibleWindows {
-      showCompareFiles(nil)
+      showWelcome()
     }
     return true
   }
@@ -255,7 +269,7 @@ extension AppDelegate: NSApplicationDelegate {
   func application(_ application: NSApplication, open urls: [URL]) {
     hasReceivedTask = true
     if !openFiles(urls) {
-      Self.logger.notice("The window Compare Files takes up to three files or two folders")
+      Self.logger.notice("The welcome window takes up to three files or two folders")
     }
   }
 
@@ -286,13 +300,13 @@ extension AppDelegate: NSApplicationDelegate {
 
 extension AppDelegate: NSMenuItemValidation {
   /// Set Up Git Integration… works while Git is not known to be missing and its sheet is not
-  /// shown, Install Command Line Tool… while no sheet hangs on the window Compare Files, and is
+  /// shown, Install Command Line Tool… while no sheet hangs on the welcome window, and is
   /// called Remove Command Line Tool… once the command of this copy is installed; Check for
   /// Updates… works while no check runs; the other commands of the app always work.
   func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
     switch menuItem.action {
     case #selector(showGitIntegration(_:)):
-      compareFilesWindowController?.validateUserInterfaceItem(menuItem) ?? true
+      welcomeWindowController?.validateUserInterfaceItem(menuItem) ?? true
     case #selector(showCommandLineTool(_:)):
       validateCommandLineTool(menuItem)
     case #selector(checkForUpdates(_:)):
@@ -309,24 +323,24 @@ extension AppDelegate {
     menuItem.title =
       commandLineTool.isInstalled
       ? MainMenu.Titles.removeCommandLineTool : MainMenu.Titles.installCommandLineTool
-    return compareFilesWindowController?.canShowCommandLineTool(commandLineTool) ?? true
+    return welcomeWindowController?.canShowCommandLineTool(commandLineTool) ?? true
   }
 }
 
 extension AppDelegate: SessionCoordinatorDelegate {
-  /// Hides the app after its last session window has closed, unless the window Compare Files
-  /// is open, so that the terminal that waited is in front again.
+  /// Hides the app after its last session window has closed, unless the welcome window is open,
+  /// so that the terminal that waited is in front again.
   func sessionCoordinatorDidChangeWindows(_ coordinator: SessionCoordinator) {
-    let comparesFiles = compareFilesWindowController?.window?.isVisible == true
-    if coordinator.windowControllers.isEmpty, !comparesFiles {
+    let welcomes = welcomeWindowController?.window?.isVisible == true
+    if coordinator.windowControllers.isEmpty, !welcomes {
       presenter.hide()
     }
   }
 }
 
-extension AppDelegate: CompareFilesWindowControllerDelegate {
-  func compareFilesWindowController(
-    _ controller: CompareFilesWindowController, open comparison: FileComparison
+extension AppDelegate: WelcomeWindowControllerDelegate {
+  func welcomeWindowController(
+    _ controller: WelcomeWindowController, open comparison: FileComparison
   ) async throws {
     try await coordinator.open(comparison)
   }

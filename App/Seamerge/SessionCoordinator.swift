@@ -14,7 +14,7 @@ protocol SessionCoordinatorDelegate: AnyObject {
 }
 
 /// Opens a window for each session: those the helper hands over through the socket, and those
-/// the window Compare Files puts together.
+/// the welcome window puts together.
 ///
 /// Every session, a merge or a comparison of two files, gets a window of its own with an undo
 /// manager of its own, built in the comparison mode of the window. For the helper, the

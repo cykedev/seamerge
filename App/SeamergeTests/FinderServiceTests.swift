@@ -46,7 +46,7 @@ struct FinderServiceTests {
     }
   }
 
-  @Test func launchForTheServiceLeavesNoEmptyCompareFilesBehindWhatItOpens() async throws {
+  @Test func launchForTheServiceLeavesNoWelcomeWindowBehindWhatItOpens() async throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox)
     let recorder = WindowRecorder()
@@ -58,12 +58,12 @@ struct FinderServiceTests {
     await delegate.startWindowTask?.value
     let opened = await recorder.nextOpened()
 
-    #expect(delegate.compareFilesWindowController == nil)
+    #expect(delegate.welcomeWindowController == nil)
     opened.close()
     await delegate.coordinator.finish()
   }
 
-  @Test func launchWithFilesToOpenShowsThemInCompareFiles() async throws {
+  @Test func launchWithFilesToOpenShowsThemInTheSheetCompareFiles() async throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox)
     let file = try sandbox.file("a.txt")
@@ -72,14 +72,14 @@ struct FinderServiceTests {
     delegate.applicationDidFinishLaunching(launch)
     await delegate.startWindowTask?.value
 
-    let window = try #require(delegate.compareFilesWindowController?.window)
+    let window = try #require(delegate.welcomeWindowController?.window)
     defer { window.close() }
     #expect(window.isVisible)
     #expect(fileFields(in: window).first?.value == fileFieldValue(of: file))
     await delegate.coordinator.finish()
   }
 
-  @Test func launchWithASessionWindowAlreadyShowingShowsNoCompareFiles() async throws {
+  @Test func launchWithASessionWindowAlreadyShowingShowsNoWelcomeWindow() async throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox)
     let recorder = WindowRecorder()
@@ -91,7 +91,7 @@ struct FinderServiceTests {
     delegate.applicationDidFinishLaunching(launch)
     await delegate.startWindowTask?.value
 
-    #expect(delegate.compareFilesWindowController == nil)
+    #expect(delegate.welcomeWindowController == nil)
     restored.close()
     await delegate.coordinator.finish()
   }
@@ -120,7 +120,7 @@ struct FinderServiceTests {
     #expect(delegate.coordinator.windowControllers.count == 2)
     #expect(
       delegate.recentComparisons.comparisons == [FileComparison(left: older, right: newer)])
-    #expect(delegate.compareFilesWindowController == nil)
+    #expect(delegate.welcomeWindowController == nil)
     opened.close()
     session.close()
   }
@@ -136,7 +136,7 @@ struct FinderServiceTests {
     let opened = await recorder.nextOpened()
 
     #expect(opened.collection?.folders == folders)
-    #expect(delegate.compareFilesWindowController == nil)
+    #expect(delegate.welcomeWindowController == nil)
     opened.close()
   }
 
@@ -147,12 +147,12 @@ struct FinderServiceTests {
 
     await delegate.compare(.one(file))
 
-    let window = try #require(delegate.compareFilesWindowController?.window)
+    let window = try #require(delegate.welcomeWindowController?.window)
     defer { window.close() }
     #expect(window.isVisible)
-    #expect(
-      fileFields(in: window).map(\.value) == [fileFieldValue(of: file), "empty", "empty"])
-    #expect((window.firstResponder as? NSView)?.accessibilityLabel() == "Right")
+    #expect(fileFields(in: window).map(\.value) == [fileFieldValue(of: file), "empty"])
+    let sheet = try #require(window.attachedSheet)
+    #expect((sheet.firstResponder as? NSView)?.accessibilityLabel() == "Right")
   }
 
   @Test func threeFilesFillEveryFieldToShowTheirRolesBeforeTheMerge() async throws {
@@ -162,7 +162,7 @@ struct FinderServiceTests {
 
     await delegate.compare(.threeFiles(files))
 
-    let window = try #require(delegate.compareFilesWindowController?.window)
+    let window = try #require(delegate.welcomeWindowController?.window)
     defer { window.close() }
     #expect(fileFields(in: window).map(\.label) == ["A", "Base", "B"])
     #expect(
@@ -177,15 +177,15 @@ struct FinderServiceTests {
 
     await delegate.compare(.unsupported)
 
-    let window = try #require(delegate.compareFilesWindowController?.window)
+    let window = try #require(delegate.welcomeWindowController?.window)
     defer { window.close() }
     #expect(window.isVisible)
     #expect(
       labelTexts(in: window).contains("Seamerge compares two or three files, or two folders."))
-    #expect(fileFields(in: window).map(\.value) == ["empty", "empty", "empty"])
+    #expect(fileFields(in: window).map(\.value) == ["empty", "empty"])
   }
 
-  @Test func filesThatCannotBeOpenedStandInCompareFilesWithTheReason() async throws {
+  @Test func filesThatCannotBeOpenedStandInTheSheetCompareFilesWithTheReason() async throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox)
     let binary = try sandbox.file("image.png", "\u{0}\u{1}PNG\u{0}")
@@ -193,20 +193,22 @@ struct FinderServiceTests {
 
     await delegate.compare(.comparison(FileComparison(left: binary, right: text)))
 
-    let window = try #require(delegate.compareFilesWindowController?.window)
+    let window = try #require(delegate.welcomeWindowController?.window)
     defer { window.close() }
+    let sheet = try #require(window.attachedSheet)
     var turns = 0
-    while window.attachedSheet == nil && turns < 1000 {
+    while sheet.attachedSheet == nil && turns < 1000 {
       await Task.yield()
       turns += 1
     }
-    let sheet = try #require(window.attachedSheet)
+    let alert = try #require(sheet.attachedSheet)
     #expect(window.isVisible)
-    #expect(fileFields(in: window).map(\.label) == ["Left", "Base, optional", "Right"])
+    #expect(fileFields(in: window).map(\.label) == ["Left", "Right"])
     #expect(fileFields(in: window).first?.value == fileFieldValue(of: binary))
     #expect(delegate.coordinator.windowControllers.isEmpty)
     #expect(delegate.recentComparisons.comparisons.isEmpty)
     #expect(sandbox.presenter.errors.isEmpty)
+    sheet.endSheet(alert)
     window.endSheet(sheet)
   }
 

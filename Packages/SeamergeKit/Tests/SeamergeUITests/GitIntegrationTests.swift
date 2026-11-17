@@ -4,7 +4,7 @@ import Testing
 
 @testable import SeamergeUI
 
-/// The line about Git in the window Compare Files and the sheet Set Up Git Integration: what
+/// The line about Git in the welcome window and the sheet Set Up Git Integration: what
 /// they say for each state, and that nothing changes before the user confirms.
 @MainActor
 @Suite(.serialized, .timeLimit(.minutes(1))) struct GitIntegrationTests {
@@ -299,9 +299,9 @@ import Testing
     #expect(problem("/Applications/Seamerge.app", helper: false) == .incomplete)
   }
 
-  /// A window Compare Files for `status` with its sheet shown.
+  /// A welcome window for `status` with its sheet shown.
   private func presentedSheet(for status: IntegrationStatus) async throws -> (
-    fixture: CompareFilesFixture, store: IntegrationStoreRecorder, sheet: GitIntegrationSheet
+    fixture: WelcomeFixture, store: IntegrationStoreRecorder, sheet: GitIntegrationSheet
   ) {
     let (fixture, store) = try integrationFixture(status)
     await fixture.controller.presentGitIntegration()

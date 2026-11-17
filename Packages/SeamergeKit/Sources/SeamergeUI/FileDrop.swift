@@ -1,7 +1,7 @@
 import AppKit
 
-/// What the window Compare Files does with files dragged onto one of its fields or anywhere else
-/// on it.
+/// What a sheet of files or the welcome window does with files dragged onto a field or anywhere
+/// else on it.
 @MainActor
 protocol FileDropDelegate: AnyObject {
   /// What a drop of `info` would do, as the pointer shows it; `slot` is the field under the
@@ -40,8 +40,8 @@ enum FileDrop {
   }
 }
 
-/// The content of the window Compare Files, which takes files dropped anywhere outside the
-/// fields.
+/// The content of a sheet of files or of the welcome window, which takes files dropped anywhere
+/// outside the fields.
 final class FileDropView: NSView {
   /// Decides what a drop does; the view does not retain it.
   weak var delegate: (any FileDropDelegate)?

@@ -38,8 +38,14 @@
     "Arrangement" : {
       "comment" : "Toolbar item: the choice of how the lines of the files are laid out."
     },
+    "Change Files" : {
+      "comment" : "The title of the sheet that chooses other files for a session window."
+    },
     "Command" : {
       "comment" : "VoiceOver: the command to type in Install the seamerge Command."
+    },
+    "Compare Folders…" : {
+      "comment" : "Welcome window: the button that chooses two folders to compare."
     },
     "Comparisons of two files only; merges show the files side by side." : {
       "comment" : "Settings: which new windows start with a single column."
@@ -49,6 +55,15 @@
     },
     "Copy the command to paste it into Terminal" : {
       "comment" : "Tooltip of the button Copy in Install the seamerge Command."
+    },
+    "Drop to Compare" : {
+      "comment" : "Welcome window: the place to drop files while a drop would compare them."
+    },
+    "Drop to Merge" : {
+      "comment" : "Welcome window: the place to drop files while a drop would merge them."
+    },
+    "Drop two files or folders" : {
+      "comment" : "Welcome window: the place that invites files dropped on the window."
     },
     "Each window starts like this. The switches in a window’s toolbar and footer change only that window." : {
       "comment" : "Settings: note below the group of how a new window starts."
@@ -67,6 +82,9 @@
     },
     "macOS didn’t allow the change." : {
       "comment" : "Install the seamerge Command: the dialog for the password was cancelled."
+    },
+    "Merge Files" : {
+      "comment" : "The title of the sheet that puts three files together to merge."
     },
     "OK" : {
       "comment" : "Install the seamerge Command: the button that closes the sheet."
@@ -116,8 +134,14 @@
     "Update the seamerge Command" : {
       "comment" : "Install the seamerge Command: the title when the link names a moved copy."
     },
+    "Version %@" : {
+      "comment" : "Welcome window: the version of the app below its name, such as Version 0.6.0."
+    },
     "Waiting for macOS" : {
       "comment" : "VoiceOver: the change waits for the dialog of macOS that asks for a password."
+    },
+    "Welcome" : {
+      "comment" : "The title of the window that starts a comparison or a merge and lists the recent ones; shown in the Window menu, not in the title bar."
     },
     "You can compare files in Terminal, for example seamerge old.txt new.txt. Removing deletes the link at %@. macOS asks for an administrator’s name and password." : {
       "comment" : "Install the seamerge Command: what removing does; the path of the link."
@@ -525,12 +549,6 @@
     "Base" : {
       "comment" : "The badge of the common ancestor."
     },
-    "Base (Optional)" : {
-      "comment" : "Compare Files: the role of the middle field, which may stay empty."
-    },
-    "Base, optional" : {
-      "comment" : "VoiceOver: the role of the empty middle field of Compare Files."
-    },
     "Can’t Read" : {
       "comment" : "A file or folder in the sidebar of which a side cannot be read."
     },
@@ -603,7 +621,7 @@
       "comment" : "The button of the open panel of a field."
     },
     "Choose a file or folder, or drop one here" : {
-      "comment" : "VoiceOver hint of an outer field of Compare Files."
+      "comment" : "VoiceOver hint of a field of Compare Files that takes a folder as well."
     },
     "Choose a file, or drop one here" : {
       "comment" : "VoiceOver hint of a field of Compare Files."
@@ -695,13 +713,13 @@
       "comment" : "Settings: lines close together."
     },
     "Compare" : {
-      "comment" : "Compare Files: the default button with two files.\nMenu bar: the comparison modes."
+      "comment" : "Menu bar: the comparison modes.\nSheet Compare Files: the default button, which compares the files."
     },
     "Compare %@ with %@" : {
       "comment" : "VoiceOver: a recent comparison, with the names of the left and the right file."
     },
     "Compare Files" : {
-      "comment" : "The title of the window that puts files together to compare or merge."
+      "comment" : "The title of the sheet that puts two files or folders together to compare."
     },
     "Compare the folder %@ with %@" : {
       "comment" : "VoiceOver: a recent comparison of two folders, with their names."
@@ -832,7 +850,7 @@
       "comment" : "Compare Files: an empty field, which takes a file dragged onto it."
     },
     "Drop a File or Folder" : {
-      "comment" : "Compare Files: an empty outer field, which takes a file or a folder."
+      "comment" : "Compare Files: an empty field that takes a file or a folder."
     },
     "Drop to Swap" : {
       "comment" : "Compare Files: below two fields while one is dragged onto the other."
@@ -911,9 +929,6 @@
     },
     "First Change" : {
       "comment" : "Go menu command."
-    },
-    "Folders are compared without a base." : {
-      "comment" : "Compare Files: help tag of the base field, and the note below the fields, while folders are chosen."
     },
     "Font" : {
       "comment" : "Settings: the font of the code."
@@ -1161,7 +1176,7 @@
       "comment" : "Settings: an ignore rule that comes with the app, for addresses such as 0x7ff8."
     },
     "Merge" : {
-      "comment" : "Compare Files: the default button with three files.\nKeyboard Shortcuts: the shortcuts of a merge.\nMenu bar: the decisions of a merge."
+      "comment" : "Keyboard Shortcuts: the shortcuts of a merge.\nMenu bar: the decisions of a merge.\nSheet Merge Files: the default button, which merges the files."
     },
     "Merge %@ and %@ with the base %@" : {
       "comment" : "VoiceOver: a recent merge, with the names of A, B and the base."
@@ -1293,7 +1308,7 @@
       "comment" : "Sidebar: files still come and it is not known how many."
     },
     "Recent" : {
-      "comment" : "Compare Files: the heading of the comparisons opened last."
+      "comment" : "Welcome window: the heading of the comparisons opened last."
     },
     "Records every byte, whatever the comparison mode" : {
       "comment" : "Help tag of Copy as Patch and Export as Patch."
@@ -1464,7 +1479,7 @@
       "comment" : "Set Up Git Integration: the button that makes Git use the app."
     },
     "Set Up Git Integration…" : {
-      "comment" : "Compare Files: the button next to the line about Git."
+      "comment" : "Welcome window: the button next to the line about Git."
     },
     "SF Mono" : {
       "comment" : "Settings: the monospaced font of the system."

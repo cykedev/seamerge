@@ -32,7 +32,7 @@ final class RecentComparisonsList: NSObject {
     tableView.headerView = nil
     tableView.style = .plain
     tableView.intercellSpacing = CGSize(width: 0, height: tableView.intercellSpacing.height)
-    tableView.rowHeight = CompareFilesMetrics.recentRowHeight
+    tableView.rowHeight = WelcomeMetrics.recentRowHeight
     tableView.backgroundColor = .clear
     tableView.allowsEmptySelection = true
     tableView.dataSource = self
@@ -57,10 +57,10 @@ final class RecentComparisonsList: NSObject {
   /// With `fitting`, the list takes the height of its lines; otherwise it keeps its height, so
   /// that nothing moves while the window is open.
   func show(_ comparisons: [FileComparison], fitting: Bool) {
-    self.comparisons = Array(comparisons.prefix(CompareFilesMetrics.recentRowCount))
+    self.comparisons = Array(comparisons.prefix(WelcomeMetrics.recentRowCount))
     tableView.reloadData()
     if fitting {
-      let rowHeight = CompareFilesMetrics.recentRowHeight + tableView.intercellSpacing.height
+      let rowHeight = WelcomeMetrics.recentRowHeight + tableView.intercellSpacing.height
       heightConstraint?.constant = CGFloat(self.comparisons.count) * rowHeight
     }
   }

@@ -21,22 +21,22 @@ extension AppDelegate {
   /// Does with `selection` what the service promises, beside any session that is open.
   ///
   /// Two files or two folders open at once and join the recent comparisons; if they cannot be
-  /// opened, they stand in the window Compare Files with the reason, as if its button had failed
-  /// to open them. Everything else goes into the window Compare Files.
+  /// opened, they stand in a sheet of the welcome window with the reason, as if its button had
+  /// failed to open them. Everything else goes into a sheet of the welcome window.
   func compare(_ selection: ServiceSelection) async {
     switch selection {
     case .one(let entry):
-      compareFiles().compare(with: entry)
+      welcome().compare(with: entry)
     case .threeFiles(let files):
-      compareFiles().show(replacingFilesWith: files)
+      welcome().show(replacingFilesWith: files)
     case .unsupported:
-      compareFiles().showUnsupportedSelection()
+      welcome().showUnsupportedSelection()
     case .comparison(let comparison):
       do {
         try await coordinator.open(comparison)
         recentComparisons.add(comparison)
       } catch {
-        compareFiles().showFailure(error, opening: comparison)
+        welcome().showFailure(error, opening: comparison)
       }
     }
   }

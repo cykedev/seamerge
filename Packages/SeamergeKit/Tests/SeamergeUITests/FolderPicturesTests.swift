@@ -3,14 +3,14 @@ import Testing
 
 @testable import SeamergeUI
 
-/// Draws the pictures of comparisons of folders: Compare Files with two folders, the window with
+/// Draws the pictures of comparisons of folders: the sheet Compare Files with two folders, the window with
 /// identical files listed, while the folders are compared, filtered, and in the smallest window.
 @MainActor
 @Suite(.serialized, .timeLimit(.minutes(1))) struct FolderPicturesTests {
   @Test(arguments: Look.all)
   func compareFilesWithFoldersIsPictured(look: Look) throws {
     let folders = try SampleFolders(left: "Seamerge 0.2", right: "Seamerge 0.3")
-    let fixture = try CompareFilesFixture(
+    let fixture = try WelcomeFixture(
       displayOptions: DisplayOptions(increasesContrast: look.increasesContrast))
     #expect(fixture.controller.fill(with: [folders.left, folders.right]))
     try picture(fixture, look: look, named: "folders-compare-files-\(look.name)")
@@ -20,7 +20,7 @@ import Testing
   func compareFilesWithAFileAndAFolderIsPictured(look: Look) throws {
     let folders = try SampleFolders(left: "Seamerge 0.2", right: "Seamerge 0.3")
     try folders.write("Notes.txt", left: "notes\n", right: nil)
-    let fixture = try CompareFilesFixture()
+    let fixture = try WelcomeFixture()
     #expect(
       fixture.controller.fill(with: [folders.left, folders.left.appending(path: "Notes.txt")]))
     try picture(fixture, look: look, named: "folders-compare-files-mixed-\(look.name)")
@@ -117,11 +117,7 @@ import Testing
     }
   }
 
-  private func picture(_ fixture: CompareFilesFixture, look: Look, named name: String) throws {
-    let window = fixture.window
-    window.colorSpace = .sRGB
-    window.appearance = look.appearance
-    window.contentView?.layoutSubtreeIfNeeded()
-    try Rendering.write(try Rendering.bitmap(of: window), named: name)
+  private func picture(_ fixture: WelcomeFixture, look: Look, named name: String) throws {
+    try fixture.picture(look: look, named: name)
   }
 }

@@ -1,8 +1,8 @@
 import AppKit
 import PaneKit
 
-/// The colors of the window Compare Files, made from the system's label and fill colors so that
-/// they follow the appearance and the contrast setting.
+/// The colors of the sheets of files and of the other sheets of the welcome window, made from the
+/// system's label and fill colors so that they follow the appearance and the contrast setting.
 ///
 /// Text that is quieter than the file names still reaches 4.5 : 1 on the window and on a filled
 /// field; `secondaryLabelColor` reaches only 3.9 : 1 in the light appearance.

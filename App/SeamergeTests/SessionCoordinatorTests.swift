@@ -236,7 +236,7 @@ struct SessionCoordinatorTests {
     NSMenuItem(title: command.title, action: command.action, keyEquivalent: "")
   }
 
-  @Test func filesFromTheWindowCompareFilesOpenAMergeInTheirRoles() async throws {
+  @Test func filesFromTheWelcomeWindowOpenAMergeInTheirRoles() async throws {
     let sandbox = try AppSandbox()
     let recorder = WindowRecorder()
     let coordinator = SessionCoordinator(
@@ -257,7 +257,7 @@ struct SessionCoordinatorTests {
     controller.close()
   }
 
-  @Test func twoFilesFromTheWindowCompareFilesOpenAComparisonInTheirRoles() async throws {
+  @Test func twoFilesFromTheWelcomeWindowOpenAComparisonInTheirRoles() async throws {
     let sandbox = try AppSandbox()
     let recorder = WindowRecorder()
     let coordinator = SessionCoordinator(

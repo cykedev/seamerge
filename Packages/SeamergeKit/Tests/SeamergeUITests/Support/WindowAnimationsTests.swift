@@ -35,8 +35,8 @@ import Testing
     try await expectTurnedOff { _ = try await Windows.controller(for: collection) }
   }
 
-  @Test func theWindowCompareFilesTurnsThemOff() async throws {
-    try await expectTurnedOff { _ = try CompareFilesFixture() }
+  @Test func theWelcomeWindowTurnsThemOff() async throws {
+    try await expectTurnedOff { _ = try WelcomeFixture() }
   }
 
   @Test func preparingAWindowForAPictureTurnsThemOff() async throws {

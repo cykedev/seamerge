@@ -23,10 +23,10 @@
       "comment": "Menu bar: the comparison modes."
     },
     "Compare Files…": {
-      "comment": "File menu: open the window Compare Files."
+      "comment": "File menu: show the welcome window with the sheet Compare Files."
     },
     "Compare Folders…": {
-      "comment": "File menu: open the window Compare Files to choose two folders."
+      "comment": "File menu: show the welcome window with the sheet Compare Files to choose two folders."
     },
     "Comparing files still works. Quit Seamerge and open it again to merge from the command line.": {
       "comment": "Alert at launch: what to do when the app cannot listen for the command line."
@@ -78,6 +78,9 @@
     },
     "Merge": {
       "comment": "Menu bar: the decisions of a merge."
+    },
+    "Merge Files…": {
+      "comment": "File menu: show the welcome window with the sheet Merge Files."
     },
     "Merges from the command line open in the other copy. Quit it, then open this one again.": {
       "comment": "Alert at launch: what to do when another copy runs."

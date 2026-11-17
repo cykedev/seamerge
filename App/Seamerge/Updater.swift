@@ -36,9 +36,10 @@ protocol SoftwareUpdater: AnyObject {
 /// The updater starts with the app, so that the daily check runs also when only Git opens it.
 /// Every window of Sparkle that the app does not ask for, the question whether to check
 /// automatically and a version that the daily check found, waits until a window other than a
-/// session window is in front, such as Compare Files. Installing goes through the usual quitting
-/// of the app, which asks about unsaved merges and tells every waiting helper how its session
-/// ended. While a helper waits, the app does not relaunch: the update installs when the app quits.
+/// session window is in front, such as the welcome window. Installing goes through the usual
+/// quitting of the app, which asks about unsaved merges and tells every waiting helper how its
+/// session ended. While a helper waits, the app does not relaunch: the update installs when the
+/// app quits.
 @MainActor
 @Observable
 final class Updater: NSObject, AutomaticUpdateSetting {

@@ -1,6 +1,6 @@
 import AppKit
 
-/// What the open panel of a field of the window Compare Files lets the user choose.
+/// What the open panel of a field of a sheet of files lets the user choose.
 enum FileChoice: Equatable {
   /// A file only, as for the base.
   case file
@@ -12,8 +12,8 @@ enum FileChoice: Equatable {
   case folder
 }
 
-/// The panels and sheets of the window Compare Files: the open panel of a field, and the sheet
-/// that says why files could not be opened.
+/// The panels and sheets of a sheet of files: the open panel of a field, and the sheet that says
+/// why files could not be opened.
 @MainActor
 protocol CompareFilesPanels {
   /// Lets the user choose what `choice` allows for the field `role` of `window`, and returns it,

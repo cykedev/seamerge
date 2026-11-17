@@ -6,8 +6,8 @@ import SeamergeUI
 ///
 /// The system shows the service for any selection of files and folders, so the app sorts out
 /// what it can compare: two files or two folders open at once, the older file on the left; one
-/// entry or three files go into the window Compare Files, where the user chooses the next file or
-/// sees the roles before a merge; anything else gets a sentence there.
+/// entry or three files go into a sheet of the welcome window, where the user chooses the next
+/// file or sees the roles before a merge; anything else gets a sentence there.
 enum ServiceSelection: Equatable {
   /// One file or folder, to be compared with the one the user chooses next.
   case one(URL)
@@ -30,16 +30,8 @@ enum ServiceSelection: Equatable {
     case (1, _):
       self = .one(entries[0].url)
     case (2, 0):
-      let (first, second) = (entries[0], entries[1])
       // Files of the same age, or of an age they do not tell, keep the order of the Finder.
-      let isSecondOlder =
-        if let firstDate = first.modified, let secondDate = second.modified {
-          secondDate < firstDate
-        } else {
-          false
-        }
-      let (older, newer) = isSecondOlder ? (second, first) : (first, second)
-      self = .comparison(FileComparison(left: older.url, right: newer.url))
+      self = .comparison(FileComparison(olderOf: entries[0].url, and: entries[1].url))
     case (2, 2):
       self = .comparison(FileComparison(folders: FolderPair(left: folders[0], right: folders[1])))
     case (3, 0):
@@ -57,9 +49,6 @@ enum ServiceSelection: Equatable {
     /// Whether the entry is a folder.
     let isFolder: Bool
 
-    /// When the file was last changed, if it says.
-    let modified: Date?
-
     init(_ url: URL) {
       var isDirectory: ObjCBool = false
       let path = url.path(percentEncoded: false)
@@ -67,13 +56,6 @@ enum ServiceSelection: Equatable {
         FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
         && isDirectory.boolValue
       self.url = URL(filePath: path, directoryHint: isFolder ? .isDirectory : .notDirectory)
-      do {
-        modified = try url.resourceValues(forKeys: [.contentModificationDateKey])
-          .contentModificationDate
-      } catch {
-        // A file that does not say when it changed keeps its place in the selection.
-        modified = nil
-      }
     }
   }
 }

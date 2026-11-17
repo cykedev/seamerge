@@ -42,13 +42,13 @@ struct UpdaterTests {
     #expect(softwareUpdater.checkCount == 0)
     window.endSheet(alert.window)
 
-    delegate.showCompareFiles(nil)
-    let compareFiles = try #require(delegate.compareFilesWindowController?.window)
-    NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: compareFiles)
+    delegate.showWelcome()
+    let welcome = try #require(delegate.welcomeWindowController?.window)
+    NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: welcome)
     #expect(softwareUpdater.checkCount == 1)
 
     window.close()
-    compareFiles.close()
+    welcome.close()
     _ = try await outcome.value
     await delegate.coordinator.finish()
   }

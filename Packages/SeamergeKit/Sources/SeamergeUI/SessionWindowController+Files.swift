@@ -220,12 +220,11 @@ extension SessionWindowController {
     else { return }
     let sheetWindow = CompareFilesWindow()
     let sheet = CompareFilesWindowController(
-      recentComparisons: RecentComparisons(defaults: settings.defaults),
-      displayOptions: displayOptions, panels: SystemPanels(), window: sheetWindow,
-      purpose: .change(presentation.changes.session.kind)
+      purpose: .change(presentation.changes.session.kind), displayOptions: displayOptions,
+      panels: SystemPanels(), window: sheetWindow
     ) { [weak self] text in self?.presentation.announce(text) }
     sheet.fill(comparison)
-    sheet.onChange = { [weak self] comparison in try await self?.changeFiles(to: comparison) }
+    sheet.onOpen = { [weak self] comparison in try await self?.changeFiles(to: comparison) }
     changeFilesSheet = sheet
     window.beginSheet(sheetWindow) { [weak self] _ in self?.changeFilesSheet = nil }
   }

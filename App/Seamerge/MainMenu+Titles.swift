@@ -24,10 +24,15 @@ extension MainMenu {
 
     static let file = String(localized: "File", comment: "Menu bar.")
     static let compareFiles = String(
-      localized: "Compare Files…", comment: "File menu: open the window Compare Files.")
+      localized: "Compare Files…",
+      comment: "File menu: show the welcome window with the sheet Compare Files.")
     static let compareFolders = String(
       localized: "Compare Folders…",
-      comment: "File menu: open the window Compare Files to choose two folders.")
+      comment:
+        "File menu: show the welcome window with the sheet Compare Files to choose two folders.")
+    static let mergeFiles = String(
+      localized: "Merge Files…",
+      comment: "File menu: show the welcome window with the sheet Merge Files.")
     static let openRecent = String(localized: "Open Recent", comment: "File menu.")
     static let folderComparison = String(
       localized: "Folders", comment: "VoiceOver: the symbol of a recent comparison of two folders.")
