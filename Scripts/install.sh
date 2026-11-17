@@ -50,6 +50,16 @@ if ! xcodebuild -project App/Seamerge.xcodeproj -scheme Seamerge -configuration 
 fi
 app=$build/DerivedData/Build/Products/Release/Seamerge.app
 
+# Xcode signs the app ad hoc with the Hardened Runtime but leaves Sparkle with
+# the signature of its developer, and the runtime then refuses to load it. An
+# app signed ad hoc can load no framework under the runtime at all, so the
+# whole bundle is signed ad hoc without it; the notarized release keeps it.
+codesign --force --deep --sign - --preserve-metadata=entitlements "$app" \
+  >> "$log" 2>&1 || {
+  echo "error: the app could not be signed; the full log is $log" >&2
+  exit 1
+}
+
 target=$destination/Seamerge.app
 if [ -e "$target" ]; then
   if pgrep -qf "^$target/Contents/MacOS/Seamerge"; then
