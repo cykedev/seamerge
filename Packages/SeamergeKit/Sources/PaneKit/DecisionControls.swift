@@ -284,7 +284,16 @@ final class DecisionToggleButton: DecisionControl {
 final class ResetBlockButton: DecisionControl {
   /// The size of the arrow, that of the letters of the bar beside it.
   var symbolSize = Theme.smallestFontSize {
-    didSet { needsDisplay = true }
+    didSet {
+      if symbolSize != oldValue {
+        symbols.removeAll()
+      }
+      needsDisplay = true
+    }
+  }
+
+  override var theme: Theme {
+    didSet { symbols.removeAll() }
   }
 
   /// The arrow as an image, made once rather than on every step of scrolling.

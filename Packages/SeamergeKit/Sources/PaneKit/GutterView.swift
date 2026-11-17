@@ -44,7 +44,7 @@ final class GutterView: NSView {
   /// The gutter draws on every step of scrolling, and a symbol made anew is looked up and rendered
   /// anew as well. The colors are resolved as the rings draw, so one image serves every
   /// appearance.
-  private var ringImages: [NSColor: NSImage] = [:]
+  private(set) var ringImages: [NSColor: NSImage] = [:]
 
   var currentBlock: Int? {
     didSet { needsDisplay = true }
