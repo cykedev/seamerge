@@ -2,6 +2,26 @@
 
 All notable changes to Seamerge are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-11-17
+
+Users of 0.4.1 get this version through Seamerge ▸ Check for Updates… or the automatic check. This release is about speed: large files open, scroll, switch and search much faster.
+
+### Changed
+
+- Scrolling is smoother. The margins no longer redraw their symbols on every step, and the overview bar no longer walks all its marks.
+- A comparison window opens before the comparison is ready. If the comparison takes longer than a moment, the window shows its headers right away, says "Comparing…" and fills in; small comparisons open filled as before.
+- Changing the comparison mode, reloading, applying ignore rules and undoing a mode change are prepared in the background, so the window stays responsive.
+- Long lines and large blocks are much faster: jumping to a change, showing all lines and switching the line arrangement take milliseconds instead of seconds, and syntax colors are applied without delay even to a single line of megabytes.
+- Searching in large files no longer blocks the window, and closing the find bar is immediate.
+- Blocks over 64 KiB get no word marks, like blocks that changed almost entirely.
+
+### Fixed
+
+- Searching could crash the app, most often right after changing the comparison mode in a large file.
+- The edges of bands between panes now meet the lines of their blocks exactly instead of a pixel apart.
+- Word marks and removal marks of a line that starts with a combining mark no longer reach into the line before.
+- `Scripts/install.sh` built an app that quit at launch since the update framework was added.
+
 ## [0.4.1] - 2026-11-16
 
 Users of 0.4.0 get this version through Seamerge ▸ Check for Updates… or the automatic check.
