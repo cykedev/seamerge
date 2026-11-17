@@ -90,6 +90,12 @@ final class GutterView: NSView {
   /// Whether the areas of the help tags lie where the marks were before the text scrolled.
   private var toolTipsAreStale = false
 
+  /// The areas of the help tags as they were last given, or `nil` while the view has none.
+  private var toolTipAreas: [CGRect]?
+
+  /// How often the help tags were given new areas.
+  private(set) var toolTipAreaChanges = 0
+
   /// The runs that the user expanded and that may collapse again, in rows of the content.
   var expandedRuns: [CollapsedRun] = [] {
     didSet {
@@ -179,6 +185,7 @@ final class GutterView: NSView {
   /// Gives the marks their help tags again in the new window, which keeps the areas of tags.
   override func viewDidMoveToWindow() {
     super.viewDidMoveToWindow()
+    toolTipAreas = nil
     updateToolTips()
   }
 
@@ -284,28 +291,36 @@ final class GutterView: NSView {
   }
 
   /// Gives each mark in view, and the sign that collapses a run, an area of its own for a help
-  /// tag, whose text ``view(_:stringForToolTip:point:userData:)`` finds.
+  /// tag, whose text ``view(_:stringForToolTip:point:userData:)`` finds when the tag shows.
+  ///
+  /// Areas that are already there stay: each change of them has the window find its areas under
+  /// the pointer anew.
   private func updateToolTips() {
     toolTipsAreStale = false
-    removeAllToolTips()
+    var areas: [CGRect] = []
     for row in visibleRows {
       let rowRect = rect(ofRow: row)
       for (index, entry) in marks(ofRow: row).enumerated() {
         if case .move = entry.mark { continue }
-        addToolTip(markerSlot(index, in: rowRect), owner: self, userData: nil)
+        areas.append(markerSlot(index, in: rowRect))
       }
     }
     for mark in boundaryMarks {
       if case .move = mark.mark { continue }
-      addToolTip(mark.slot, owner: self, userData: nil)
+      areas.append(mark.slot)
     }
     // The help tag of an arrow covers all that a click on it takes.
-    for arrow in moveArrows {
-      addToolTip(arrow.target, owner: self, userData: nil)
-    }
+    areas += moveArrows.map(\.target)
     if let hoveredRun {
-      addToolTip(collapseSignRect(ofRun: hoveredRun), owner: self, userData: nil)
+      areas.append(collapseSignRect(ofRun: hoveredRun))
     }
+    guard areas != toolTipAreas else { return }
+    removeAllToolTips()
+    for area in areas {
+      addToolTip(area, owner: self, userData: nil)
+    }
+    toolTipAreas = areas
+    toolTipAreaChanges += 1
   }
 
   /// Gives the pane the focus, then collapses the run whose sign is clicked, goes to the other
