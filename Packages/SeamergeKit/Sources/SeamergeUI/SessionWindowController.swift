@@ -144,6 +144,11 @@ public final class SessionWindowController: NSWindowController {
   /// The reading of the file the window is about to show, while it runs.
   var fileLoad: Task<Void, Never>?
 
+  /// How long the window waits for another file of its collection to be ready before it shows
+  /// the headers of the file above empty panes meanwhile, in seconds; for none, it shows them at
+  /// once.
+  var fileWait = SessionWindowController.comparisonWait
+
   /// The merge of a file that is not text, whose window asks which side to take, or `nil`.
   let binaryMerge: BinaryMerge?
 
@@ -289,7 +294,8 @@ public final class SessionWindowController: NSWindowController {
   /// makes.
   ///
   /// For a `collection`, the window shows `session`, one of its files, beside the list of the
-  /// files.
+  /// files; with a `pendingFile`, `session` names that file without its lines, and the window
+  /// waits for its comparison as for a `pendingComparison`.
   init(
     session: Session, context: SessionContext, undoManager: UndoManager,
     displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace,
@@ -297,7 +303,7 @@ public final class SessionWindowController: NSWindowController {
     syntaxChoices: SyntaxChoices = SyntaxChoices(),
     window: SessionWindow, unavailable: UnavailableComparison? = nil,
     binaryMerge: BinaryMerge? = nil, collection: FileCollection? = nil,
-    pendingComparison: PendingComparison? = nil,
+    pendingComparison: PendingComparison? = nil, pendingFile: PendingFile? = nil,
     now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
   ) {
     let theme = displayOptions.theme(settings: settings, fontSize: settings.fontSize)
@@ -421,7 +427,7 @@ public final class SessionWindowController: NSWindowController {
     observeFooterVisibility()
     observeTextSettings()
     observeIgnoreRules()
-    setUpCollection()
+    setUpCollection(comparingFirstFile: pendingFile)
     if let pendingComparison {
       wait(for: pendingComparison)
     }
@@ -565,6 +571,7 @@ extension SessionWindowController: NSWindowDelegate {
   /// file.
   public func windowWillClose(_ notification: Notification) {
     stopBringingBack()
+    fileLoad?.cancel()
     presentation.search.close()
     rememberPlace()
     fileWatchers = []

@@ -24,7 +24,8 @@ struct PaneSetup: Equatable, Sendable {
   /// The inputs on the left and on the right of each seam in view, from left to right.
   var seams: [Seam]
 
-  /// The headers of the inputs, whose names the decision column of a merge uses.
+  /// The headers of the inputs, whose names the decision column of a merge uses; none for a
+  /// comparison, which has no such column.
   var headers: [Role: SideHeader]
 
   /// The width of a tab in the panes, in columns.

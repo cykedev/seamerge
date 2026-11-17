@@ -23,6 +23,29 @@ struct LoadedFile {
   var unavailable: UnavailableComparison?
 }
 
+/// The comparison of the first file of a collection, which a window that opens without its lines
+/// waits for; `nil` if the file cannot even be shown as a file that cannot be compared.
+typealias PendingFile = Task<LoadedFile?, Never>
+
+/// What a window of a collection opens with: the files it names in its headers, without their
+/// lines, and the comparison of its first file, while it runs.
+struct CollectionOpening {
+  /// The empty comparison of the first file that the list shows, or of the two folders while no
+  /// such file is known.
+  var session: Session
+
+  var context: SessionContext
+
+  /// The comparison of the first file, or `nil` while there is none.
+  var comparison: PendingFile?
+}
+
+/// A file of a collection ready to show: as the window read it, and what its panes show.
+private struct ReadyFile {
+  var loaded: LoadedFile
+  var prepared: PreparedSession
+}
+
 extension SessionWindowController {
   /// Opens a window for `collection`: the list of its files in the sidebar, once there are two
   /// or the collection compares folders, and the first file beside it, drawn and started as
@@ -32,47 +55,75 @@ extension SessionWindowController {
   /// two folders is known, it says that it compares them, and shows the first file that differs
   /// once there is one.
   ///
+  /// The window waits for the comparison of its first file as a window of one comparison does:
+  /// one that is ready within ``comparisonWait`` fills the window before it shows; otherwise it
+  /// shows with the headers of the file and empty panes, which fill once the file is compared.
+  ///
   /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the headers of the first file
   ///   can be made.
   public convenience init(
     collection: FileCollection, undoManager: UndoManager, settings: UserSettings
   ) async throws(SessionLoadingError) {
+    let start = ContinuousClock.now
     let opening = try await Self.opening(collection, settings: settings)
     self.init(
-      session: opening.loaded.session, context: opening.context, undoManager: undoManager,
+      session: opening.session, context: opening.context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general,
       workspace: NSWorkspace.shared, prompts: SessionSheets(), doneStyle: .standard,
       settings: settings, syntaxChoices: .shared, window: SessionWindow(),
-      unavailable: opening.loaded.unavailable, collection: collection)
+      collection: collection, pendingFile: opening.comparison)
     observeDisplayOptions()
+    await fillIfReady(
+      opening, within: Self.comparisonWait - (ContinuousClock.now - start) / .seconds(1))
   }
 
-  /// What a window of `collection` opens with: its first file that the list shows, read in the
-  /// comparison mode and with the ignore rules of `settings`, or the empty comparison of its two
-  /// folders while no such file is known.
+  /// What a window of `collection` opens with: the headers of its first file that the list
+  /// shows, and the comparison of that file in the comparison mode and with the ignore rules of
+  /// `settings` begun away from the main actor; or the empty comparison of its two folders while
+  /// no such file is known.
   ///
   /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the headers can be made.
   static func opening(
     _ collection: FileCollection, settings: UserSettings
-  ) async throws(SessionLoadingError) -> (loaded: LoadedFile, context: SessionContext) {
+  ) async throws(SessionLoadingError) -> CollectionOpening {
     let filter = FileFilter(showsIdenticalFiles: settings.showsIdenticalFiles)
     let listed = collection.files.filter(filter.includes)
     guard let file = listed.first else {
       guard let folders = collection.folders else {
         preconditionFailure("A window of a collection needs a file to show")
       }
-      return (
-        LoadedFile(session: try await emptySession(of: folders), unavailable: nil),
-        SessionContext(folders: folders)
-      )
+      return CollectionOpening(
+        session: try await emptySession(of: folders), context: SessionContext(folders: folders))
+    }
+    let (mode, rules) = (settings.comparisonMode, settings.ignoreRules)
+    // The comparison runs while the window is made, as that of a window of one comparison does.
+    // It runs to its end even once the window shows another file or closed, since the engine
+    // cannot stop midway; the window keeps what it finds, or drops it once closed.
+    let comparison = PendingFile.detached(priority: .userInitiated) {
+      do {
+        return try await Self.load(file, mode: mode, ignoring: rules)
+      } catch {
+        Self.logger.error("Cannot show \(file.path, privacy: .public): \(error, privacy: .public)")
+        return nil
+      }
     }
     var difftool = file.difftool
     difftool.filePosition = FilePosition(
       number: 1, count: max(collection.expectedCount ?? 0, listed.count))
-    return (
-      try await load(file, mode: settings.comparisonMode, ignoring: settings.ignoreRules),
-      SessionContext(difftool: difftool, folders: collection.namingFolders)
-    )
+    return CollectionOpening(
+      session: try await emptySession(
+        of: [.a: file.old, .b: file.new], kind: .diff, mode: mode),
+      context: SessionContext(difftool: difftool, folders: collection.namingFolders),
+      comparison: comparison)
+  }
+
+  /// Fills the window, which waits for the comparison of the first file of `opening`, before it
+  /// shows if the comparison is there within `wait` seconds.
+  func fillIfReady(_ opening: CollectionOpening, within wait: TimeInterval) async {
+    guard let comparison = opening.comparison, wait > 0,
+      await Self.outcome(of: comparison, within: wait) != nil
+    else { return }
+    await comparisonFill?.value
   }
 
   /// Shows the file after the one in view in the list.
@@ -125,7 +176,7 @@ extension SessionWindowController {
     guard let collection, collection.files.indices.contains(index),
       index != fileIndex || shownFile == nil
     else { return }
-    if let shownFile {
+    if let shownFile, !waitsForComparison {
       filePlaces[shownFile.path] = currentPlace
     }
     let file = collection.files[index]
@@ -135,30 +186,160 @@ extension SessionWindowController {
     load(file)
   }
 
-  /// Reads `file`, the file the window is about to show, and shows it.
-  private func load(_ file: CollectedFile) {
+  /// Reads `file`, the file the window is about to show, or waits for its `comparison` that
+  /// runs already, makes its panes away from the main actor and shows it.
+  ///
+  /// A file that is not ready within ``fileWait`` shows its headers and empty panes
+  /// meanwhile, as a window of one comparison that opens does; one with a `comparison` does so
+  /// at once, since the window opened with them. Another file to show, or closing the window,
+  /// cancels the reading: the comparison under way runs to its end, but neither shows nor is
+  /// made ready for the panes.
+  private func load(_ file: CollectedFile, comparing comparison: PendingFile? = nil) {
     fileLoad?.cancel()
+    let ready = readying(file, comparing: comparison)
+    let filling = comparison.map { _ in fill(from: ready, of: file) }
     fileLoad = Task { [weak self] in
-      guard let self, let loaded = await self.loaded(file), !Task.isCancelled,
-        shownFile == file
-      else { return }
-      show(loaded, of: file)
-      await readAhead(after: file)
+      await withTaskCancellationHandler {
+        if let filling {
+          await filling.value
+        } else {
+          await self?.show(from: ready, of: file)
+        }
+      } onCancel: {
+        ready.cancel()
+      }
+      guard !Task.isCancelled else { return }
+      await self?.readAhead(after: file)
+    }
+    if let filling {
+      beginWaiting(filling: filling)
     }
   }
 
-  /// Sets up the list of the files and follows the collection as it receives more.
-  func setUpCollection() {
+  /// Reads `file`, or waits for its `comparison`, and makes its panes away from the main actor;
+  /// `nil` if it cannot even be shown as a file that cannot be compared, or the reading was
+  /// cancelled.
+  private func readying(
+    _ file: CollectedFile, comparing comparison: PendingFile?
+  ) -> Task<ReadyFile?, Never> {
+    let generation = diskGeneration
+    return Task { [weak self] in
+      let loaded: LoadedFile?
+      if let comparison {
+        loaded = await comparison.value
+        if let loaded, let self, !hasFinished {
+          keep(loaded, of: file, readIn: generation)
+        }
+      } else {
+        loaded = await self?.loaded(file)
+      }
+      guard let self, let loaded, !Task.isCancelled, !hasFinished else { return nil }
+      return ReadyFile(loaded: loaded, prepared: await presentation.prepareLoaded(loaded.session))
+    }
+  }
+
+  /// Shows `file` once `ready` has it: at once if that is within ``fileWait``, otherwise after
+  /// waiting for it with the headers of the file and empty panes.
+  private func show(from ready: Task<ReadyFile?, Never>, of file: CollectedFile) async {
+    if fileWait > 0, let outcome = await Self.outcome(of: ready, within: fileWait) {
+      await show(outcome, of: file, from: ready)
+      return
+    }
+    guard await showWithoutLines(file), !ready.isCancelled else { return }
+    let filling = fill(from: ready, of: file)
+    beginWaiting(filling: filling)
+    await filling.value
+  }
+
+  /// Fills the panes, which wait with the headers of `file`, once `ready` has it.
+  private func fill(from ready: Task<ReadyFile?, Never>, of file: CollectedFile) -> Task<
+    Void, Never
+  > {
+    Task { [weak self] in
+      await self?.show(await ready.value, of: file, from: ready)
+    }
+  }
+
+  /// Shows `outcome`, which `ready` had for `file`, with its panes made for the setup they have
+  /// now, which may have changed since, as the headers of the file showed meanwhile; shows
+  /// nothing once the window shows another file or closed.
+  private func show(
+    _ outcome: ReadyFile?, of file: CollectedFile, from ready: Task<ReadyFile?, Never>
+  ) async {
+    var outcome = outcome
+    if let made = outcome, made.prepared.setup != presentation.setup {
+      outcome = ReadyFile(
+        loaded: made.loaded, prepared: await presentation.prepareLoaded(made.loaded.session))
+    }
+    guard !ready.isCancelled, shownFile == file, !hasFinished else { return }
+    show(outcome, of: file)
+  }
+
+  /// Shows the headers of `file` above empty panes in place of the file in view, while it is
+  /// read; tells whether it did, which it does not once the window shows another file or closed.
+  private func showWithoutLines(_ file: CollectedFile) async -> Bool {
+    guard
+      let empty = try? await Self.emptySession(
+        of: [.a: file.old, .b: file.new], kind: .diff, mode: comparisonOptions.mode)
+    else { return false }
+    let prepared = await presentation.prepareLoaded(empty)
+    guard !Task.isCancelled, shownFile == file, !hasFinished else { return false }
+    show(LoadedFile(session: empty, unavailable: nil), prepared: prepared, of: file, placing: false)
+    return true
+  }
+
+  /// Shows `ready`, the file in view ready to show, or, for `nil`, that it cannot be shown; a
+  /// window that waited for it lets the lines fade in, does what it put off meanwhile, and tells
+  /// VoiceOver once it shows.
+  private func show(_ ready: ReadyFile?, of file: CollectedFile) {
+    let waited = waitsForComparison
+    if waited {
+      endWaiting()
+    }
+    guard let ready else {
+      guard waited else { return }
+      // The headers of the file stand above empty panes; they say why they stay empty.
+      let comparison = UnavailableComparison(
+        old: file.old, new: file.new, reason: .comparisonFailed)
+      unavailable = comparison
+      layout.showInPlaceOfTheLines(
+        UnavailableComparisonView(
+          title: comparison.title, message: comparison.message(in: SessionContext())))
+      sessionDidChange()
+      stateDidChange()
+      return
+    }
+    if waited {
+      fadeInTheLines()
+    }
+    show(ready.loaded, prepared: ready.prepared, of: file)
+    guard waited else { return }
+    lookAtFilesAgainIfAsked()
+    followIgnoreRules()
+    guard window?.isVisible == true else { return }
+    presentation.announce(unavailable?.title ?? comparedAnnouncement)
+  }
+
+  /// Sets up the list of the files and follows the collection as it receives more; the window
+  /// shows the file whose `comparison` runs once it is there.
+  func setUpCollection(comparingFirstFile comparison: PendingFile?) {
     guard let collection, let collectionLayout else { return }
     fileFilter.showsIdenticalFiles = settings.showsIdenticalFiles
-    // Files may have come while the window read the first one, some of them before it.
+    // Files may have come while the window was made, some of them before the first.
     if let path = context.difftool?.path,
       let index = collection.files.firstIndex(where: { $0.path == path })
     {
       fileIndex = index
       shownFile = collection.files[index]
-      loadedFiles[collection.files[index]] = LoadedFile(
-        session: presentation.changes.session, unavailable: unavailable)
+      if let comparison {
+        load(collection.files[index], comparing: comparison)
+      } else {
+        loadedFiles[collection.files[index]] = LoadedFile(
+          session: presentation.changes.session, unavailable: unavailable)
+      }
+    } else {
+      // Files only come; the one whose comparison the window opened with is among them.
+      assert(comparison == nil, "The first file of a collection stays in it")
     }
     collectionLayout.fileList.delegate = self
     collectionLayout.sidebarDidChange = { [weak self] in self?.updateMinimumSize() }
@@ -211,7 +392,10 @@ extension SessionWindowController {
       if file.old.url != shown.old.url || file.new.url != shown.new.url
         || isUnreadable(file) != isUnreadable(shown)
       {
-        filePlaces[file.path] = currentPlace
+        // A window that waits for the file has no place in it yet.
+        if !waitsForComparison {
+          filePlaces[file.path] = currentPlace
+        }
         load(file)
       }
       return
@@ -316,8 +500,11 @@ extension SessionWindowController {
     return FileListViewController.differingText(differing, of: collection.files.count)
   }
 
-  /// Shows `loaded`, the comparison of `file`, in place of the file in view.
-  private func show(_ loaded: LoadedFile, of file: CollectedFile) {
+  /// Shows `loaded`, the comparison of `file` whose panes show `prepared`, in place of the file
+  /// in view; with `placing`, where the window left the file, or at its first change.
+  private func show(
+    _ loaded: LoadedFile, prepared: PreparedSession, of file: CollectedFile, placing: Bool = true
+  ) {
     guard collection != nil else { return }
     stopBringingBack()
     var difftool = file.difftool
@@ -334,7 +521,7 @@ extension SessionWindowController {
       layout.showLinesAgain()
     }
     typingRun = nil
-    presentation.showOtherFiles(session)
+    presentation.showOtherFiles(prepared)
     presentation.show(
       Dictionary(
         uniqueKeysWithValues: session.roles.map { role in
@@ -346,7 +533,9 @@ extension SessionWindowController {
     sessionUndoManager.removeAllActions()
     sessionDidChange()
     watchFiles()
-    restorePlace(of: file)
+    if placing {
+      restorePlace(of: file)
+    }
     window?.representedURL = editableFileURL
     if unavailable != nil, let window,
       layout.sourcePanes.contains(where: { window.firstResponder === $0.pane.documentView })

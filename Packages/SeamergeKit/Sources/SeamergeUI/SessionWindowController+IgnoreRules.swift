@@ -57,11 +57,11 @@ extension SessionWindowController {
 
   /// Compares anew, as no step of undo, if the comparison does not use the rules the window
   /// should use, such as after they changed in Settings; while another comparison is under way,
-  /// the window does so once that is over.
+  /// or the window waits for the lines of its files, it does so once that is over.
   ///
   /// A rule that was only renamed changes nothing.
   func followIgnoreRules() {
-    guard !isSwitchingComparison, showsComparedLines,
+    guard !isSwitchingComparison, !waitsForComparison, showsComparedLines,
       !Self.haveTheSameEffect(presentation.changes.session.ignoreRules, requestedIgnoreRules)
     else { return }
     Task { await compareWithRequestedRules(usingIgnoreRules: nil) }

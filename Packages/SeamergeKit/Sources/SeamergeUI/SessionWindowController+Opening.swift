@@ -131,10 +131,10 @@ extension SessionWindowController {
   static let openingProgressDelay: TimeInterval = 0.5
 
   /// The outcome of `comparison` if it is there within `delay` seconds, or `nil`.
-  static func outcome(
-    of comparison: PendingComparison, within delay: TimeInterval
-  ) async -> Result<Session, SessionLoadingError>? {
-    let first = FirstOutcome()
+  static func outcome<Outcome: Sendable>(
+    of comparison: Task<Outcome, Never>, within delay: TimeInterval
+  ) async -> Outcome? {
+    let first = FirstOutcome<Outcome>()
     return await withCheckedContinuation { continuation in
       first.continuation = continuation
       let timer = Timer(timeInterval: delay, repeats: false) { _ in
@@ -185,6 +185,19 @@ extension SessionWindowController {
   /// Waits for `comparison` with the headers of the files and empty panes, which say so to
   /// VoiceOver; once the comparison has taken a moment, the toolbar says so too.
   func wait(for comparison: PendingComparison) {
+    beginWaiting(
+      filling: Task { [weak self] in
+        let outcome = await comparison.value
+        await self?.fill(with: outcome)
+      })
+  }
+
+  /// Waits with the headers of the files and empty panes, which say so to VoiceOver, while
+  /// `filling` gets the lines ready; once that has taken a moment, the toolbar says so too.
+  ///
+  /// The window takes no command of the lines until ``endWaiting()``. A wait that begins while
+  /// another goes on takes its place.
+  func beginWaiting(filling: Task<Void, Never>) {
     for pane in presentation.allPanes {
       pane.documentView.setAccessibilityPlaceholderValue(SessionToolbar.comparingText)
     }
@@ -194,22 +207,27 @@ extension SessionWindowController {
       header.format = nil
       layout.show(header)
     }
+    comparisonFill = filling
     let progressTimer = Timer(timeInterval: Self.openingProgressDelay, repeats: false) {
       [weak self] _ in
       // Timers of the main run loop fire on the main thread.
       MainActor.assumeIsolated {
-        guard let self, self.waitsForComparison else { return }
+        guard let self, self.comparisonFill == filling else { return }
         self.showsComparisonProgress = true
         self.stateDidChange()
       }
     }
     RunLoop.main.add(progressTimer, forMode: .common)
-    comparisonFill = Task { [weak self] in
-      let outcome = await comparison.value
-      progressTimer.invalidate()
-      await self?.fill(with: outcome)
-    }
     sessionDidChange()
+  }
+
+  /// Ends the wait for the lines, which are there now or cannot be.
+  func endWaiting() {
+    for pane in presentation.allPanes {
+      pane.documentView.setAccessibilityPlaceholderValue(nil)
+    }
+    comparisonFill = nil
+    showsComparisonProgress = false
   }
 
   /// Shows the outcome of the comparison the window waited for: the session in every pane, from
@@ -257,11 +275,7 @@ extension SessionWindowController {
         UnavailableComparisonView(title: title, message: comparison.message(in: context)))
       failure = title
     }
-    for pane in presentation.allPanes {
-      pane.documentView.setAccessibilityPlaceholderValue(nil)
-    }
-    comparisonFill = nil
-    showsComparisonProgress = false
+    endWaiting()
     sessionDidChange()
     showResultFormat()
     watchFiles()
@@ -275,7 +289,7 @@ extension SessionWindowController {
 
   /// What VoiceOver hears once the files of a window that showed without their lines are
   /// compared: that they are, and how many changes or open conflicts they have.
-  private var comparedAnnouncement: String {
+  var comparedAnnouncement: String {
     let count =
       switch toolbarCount {
       case .changes(_, let total): SessionToolbar.countText(currentChange: nil, changeCount: total)
@@ -296,7 +310,7 @@ extension SessionWindowController {
 
   /// Lets the lines fade in where the empty panes stood, unless movement is reduced or the
   /// window does not show yet.
-  private func fadeInTheLines() {
+  func fadeInTheLines() {
     guard !displayOptions.reducesMotion, window?.isVisible == true, let layer = layout.view.layer
     else { return }
     let transition = CATransition()
@@ -311,10 +325,10 @@ extension SessionWindowController {
 
 /// The first of two outcomes, which resumes the one waiting for it; the later one goes unheard.
 @MainActor
-private final class FirstOutcome {
-  var continuation: CheckedContinuation<Result<Session, SessionLoadingError>?, Never>?
+private final class FirstOutcome<Outcome: Sendable> {
+  var continuation: CheckedContinuation<Outcome?, Never>?
 
-  func resume(with outcome: Result<Session, SessionLoadingError>?) {
+  func resume(with outcome: Outcome?) {
     continuation?.resume(returning: outcome)
     continuation = nil
   }

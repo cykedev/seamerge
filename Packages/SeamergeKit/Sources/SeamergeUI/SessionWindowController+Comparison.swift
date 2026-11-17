@@ -280,7 +280,7 @@ extension SessionWindowController {
   /// How long a comparison runs before the toolbar says that it is under way.
   static let progressDelay: TimeInterval = 0.15
 
-  static let logger = Logger(subsystem: "app.eiden.seamerge", category: "SeamergeUI")
+  nonisolated static let logger = Logger(subsystem: "app.eiden.seamerge", category: "SeamergeUI")
 }
 
 /// A comparison that the window showed, with all that undo and redo bring back of it.

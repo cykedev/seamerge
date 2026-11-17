@@ -305,19 +305,23 @@ extension SessionPresentation {
 }
 
 extension Windows {
-  /// A window for `collection`, laid out without a screen, that asks `prompts`.
+  /// A window for `collection`, laid out without a screen, that asks `prompts`; with
+  /// `fillsFirstFile`, once it shows its first file, otherwise while it may wait for it.
   static func controller(
     for collection: FileCollection, options: DisplayOptions = DisplayOptions(reducesMotion: true),
     settings: UserSettings = .private(), window: SessionWindow = SessionWindow(),
-    prompts: PromptRecorder = PromptRecorder()
+    prompts: PromptRecorder = PromptRecorder(), fillsFirstFile: Bool = true
   ) async throws -> SessionWindowController {
     WindowAnimations.turnOff()
     let opening = try await SessionWindowController.opening(collection, settings: settings)
     let controller = SessionWindowController(
-      session: opening.loaded.session, context: opening.context, undoManager: UndoManager(),
+      session: opening.session, context: opening.context, undoManager: UndoManager(),
       displayOptions: options, pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(),
       prompts: prompts, doneStyle: .standard, settings: settings, window: window,
-      unavailable: opening.loaded.unavailable, collection: collection)
+      collection: collection, pendingFile: opening.comparison)
+    if fillsFirstFile {
+      await controller.comparisonFill?.value
+    }
     controller.window?.contentView?.layoutSubtreeIfNeeded()
     return controller
   }

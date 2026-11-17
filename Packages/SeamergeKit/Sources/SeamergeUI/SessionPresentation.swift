@@ -369,7 +369,11 @@ final class SessionPresentation {
         else { return nil }
         return PaneSetup.Seam(left: left, right: right)
       },
-      headers: headers, tabWidth: layout.sourcePanes.first?.pane.theme.tabWidth ?? Theme().tabWidth)
+      // Only the decision column of a merge names the inputs; the panes of a comparison are the
+      // same whatever its files are called, also while a window shows the names of files it
+      // waits for.
+      headers: arrangement.showsResult ? headers : [:],
+      tabWidth: layout.sourcePanes.first?.pane.theme.tabWidth ?? Theme().tabWidth)
   }
 
   /// Shows the session in every pane anew, with the runs collapsed now: the contents, the
@@ -707,9 +711,10 @@ final class SessionPresentation {
     return prepared.setup == self.setup ? prepared : nil
   }
 
-  /// What the panes show for `session`, the comparison that a window without lines waited for,
-  /// as loaded, made away from the main actor for the setup of the panes once it is ready: a
-  /// merge with every conflict open and every other change taken as the merge takes it.
+  /// What the panes show for `session`, the comparison that a window without lines waited for or
+  /// another file of a window that compares several, as loaded, made away from the main actor
+  /// for the setup of the panes once it is ready: a merge with every conflict open and every
+  /// other change taken as the merge takes it.
   func prepareLoaded(_ session: Session) async -> PreparedSession {
     while true {
       let setup = setup
@@ -767,14 +772,13 @@ final class SessionPresentation {
       })
   }
 
-  /// Shows `session`, the comparison of other files, from its top with no current block, as a
+  /// Shows `prepared`, the comparison of other files, from its top with no current block, as a
   /// window that compares several files does when the user goes to another file.
   ///
-  /// - Precondition: The window shows a comparison, which has no result.
-  func showOtherFiles(_ session: Session) {
+  /// - Precondition: The window shows a comparison, which has no result, and `prepared` was made
+  ///   for the setup of the panes now, as ``prepareLoaded(_:)`` makes it.
+  func showOtherFiles(_ prepared: PreparedSession) {
     precondition(!arrangement.showsResult, "Only a comparison shows other files in its panes")
-    let prepared = PreparedSession(
-      session: session, result: nil, setup: setup, lines: InputLines(session: session))
     // The panes show the blocks of the old files until each has the new ones.
     scrollSync.withoutFollowing { show(prepared) }
     currentBlock = nil
