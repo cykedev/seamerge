@@ -43,26 +43,145 @@ import Testing
     #expect(fixture.recentComparisons.comparisons == [kept])
   }
 
-  @Test func windowListsTheFiveNewestAndHidesTheListWithoutAny() throws {
+  @Test func windowListsEveryKeptComparisonAndNamesTheNextStepWithoutAny() throws {
     let files = try SampleFiles()
     let fixture = try WelcomeFixture()
     let list = fixture.controller.recentList
-    #expect(list.scrollView.superview?.isHidden == true)
+    let empty = fixture.controller.emptyListView
+    #expect(list.scrollView.isHidden)
+    #expect(!empty.isHidden)
+    #expect(
+      empty.arrangedSubviews.compactMap { ($0 as? NSTextField)?.stringValue } == [
+        "No Recent Comparisons", "Choose Compare Files… or drop two files on this window.",
+      ])
+    // Quiet text that reaches 4.5 : 1, which the secondary label color does not in light mode.
+    let light = try #require(NSAppearance(named: .aqua))
+    let quietText = Contrast.resolve(CompareFilesColors(DisplayOptions()).quietText, in: light)
+    for case let label as NSTextField in empty.arrangedSubviews {
+      #expect(Contrast.resolve(label.textColor, in: light) == quietText)
+    }
 
-    for number in 1...7 {
+    for number in 1...12 {
       fixture.recentComparisons.add(
         FileComparison(left: try files.file("\(number).txt"), right: try files.file("new.txt")))
     }
 
-    #expect(list.scrollView.superview?.isHidden == false)
+    #expect(!list.scrollView.isHidden)
+    #expect(empty.isHidden)
     #expect(
-      list.comparisons.map(\.left.lastPathComponent) == [
-        "7.txt", "6.txt", "5.txt", "4.txt", "3.txt",
-      ])
+      list.comparisons.map(\.left.lastPathComponent)
+        == (3...12).reversed().map { "\($0).txt" })
 
     fixture.recentComparisons.clear()
-    #expect(list.scrollView.superview?.isHidden == true)
+    #expect(list.scrollView.isHidden)
+    #expect(!empty.isHidden)
     #expect(list.comparisons.isEmpty)
+  }
+
+  @Test func listGroupsTodayAndEarlierWithTheTimeOrTheDay() throws {
+    let files = try SampleFiles()
+    let list = RecentComparisonsList()
+    list.calendar = Self.calendar
+    let now = try Self.date("2026-11-17T15:30:00Z")
+    let entries = [
+      RecentComparisons.Entry(
+        comparison: FileComparison(left: try files.file("a.txt"), right: try files.file("b.txt")),
+        opened: try Self.date("2026-11-17T09:05:00Z")),
+      RecentComparisons.Entry(
+        comparison: FileComparison(
+          left: try files.file("x.txt"), base: try files.file("o.txt"),
+          right: try files.file("y.txt")),
+        opened: try Self.date("2026-11-16T23:59:00Z")),
+      RecentComparisons.Entry(
+        comparison: FileComparison(left: try files.file("c.txt"), right: try files.file("d.txt")),
+        opened: nil),
+    ]
+
+    list.show(entries, now: now)
+
+    #expect(
+      list.rows == [
+        .heading("Today"), .comparison(entries[0]), .heading("Earlier"), .comparison(entries[1]),
+        .comparison(entries[2]),
+      ])
+    #expect(list.tableView(list.tableView, isGroupRow: 0))
+    #expect(!list.tableView(list.tableView, shouldSelectRow: 0))
+    #expect(list.tableView(list.tableView, shouldSelectRow: 1))
+    // The format of the system puts a narrow no-break space before AM.
+    #expect(list.dateText(of: entries[0].opened) == "9:05\u{202F}AM")
+    #expect(list.dateText(of: entries[1].opened) == "Nov 16, 2026")
+    #expect(list.dateText(of: nil).isEmpty)
+  }
+
+  @Test func lineShowsTheKindTheNamesTheFolderAndTheTime() throws {
+    let files = try SampleFiles()
+    let fixture = try WelcomeFixture()
+    let folder = FileField.folderName(of: try files.file("a.txt"))
+    let merge = FileComparison(
+      left: try files.file("Theirs.json"), base: try files.file("Base.json"),
+      right: try files.file("Mine.json"))
+    let folders = FileComparison(
+      folders: FolderPair(left: try files.subfolder("old"), right: try files.subfolder("new")))
+    let comparison = FileComparison(
+      left: try files.file("LoginView.swift"), right: try files.file("LoginView copy.swift"))
+    for added in [merge, folders, comparison] {
+      fixture.recentComparisons.add(added)
+    }
+    let table = fixture.controller.recentList.tableView
+
+    let cells = try (1...3).map { row in
+      try #require(
+        table.view(atColumn: 0, row: row, makeIfNecessary: true) as? RecentComparisonCell)
+    }
+
+    #expect(cells.map(\.namesLabel.stringValue) == [comparison, folders, merge].map(\.title))
+    #expect(
+      cells.map(\.kindLabel.stringValue) == ["Comparison ·", "Folder Comparison ·", "Merge ·"])
+    #expect(cells.allSatisfy { $0.folderLabel.stringValue == folder })
+    #expect(
+      [comparison, folders, merge].map(\.symbolName) == [
+        "doc.on.doc", "folder", "arrow.triangle.merge",
+      ])
+    #expect(cells.allSatisfy { $0.symbolView.image != nil })
+    #expect(
+      cells.allSatisfy {
+        $0.namesLabel.font?.fontDescriptor.symbolicTraits.contains(.bold) == true
+      })
+    #expect(cells.allSatisfy { !$0.dateLabel.stringValue.isEmpty })
+  }
+
+  @Test func comparisonKeptWithoutItsTimeIsListedUnderEarlier() throws {
+    let files = try SampleFiles()
+    let name = "SeamergeUITests.\(UUID().uuidString)"
+    let defaults = UserDefaults.privateSuite(named: name)
+    defer { defaults.removePersistentDomain(forName: name) }
+    let (left, right) = (try files.file("a.txt"), try files.file("b.txt"))
+    defaults.set(
+      [["left": left.path(percentEncoded: false), "right": right.path(percentEncoded: false)]],
+      forKey: "RecentComparisons")
+    let list = RecentComparisonsList()
+
+    list.show(RecentComparisons(defaults: defaults).entries)
+
+    let entry = RecentComparisons.Entry(
+      comparison: FileComparison(left: left, right: right), opened: nil)
+    #expect(list.rows == [.heading("Earlier"), .comparison(entry)])
+  }
+
+  @Test func timeOfAnOpeningIsKept() throws {
+    let files = try SampleFiles()
+    let name = "SeamergeUITests.\(UUID().uuidString)"
+    let defaults = UserDefaults.privateSuite(named: name)
+    defer { defaults.removePersistentDomain(forName: name) }
+    let comparison = FileComparison(left: try files.file("a.txt"), right: try files.file("b.txt"))
+    let opened = try Self.date("2026-11-17T09:05:00Z")
+
+    RecentComparisons(defaults: defaults).add(comparison, openedAt: opened)
+
+    #expect(
+      RecentComparisons(defaults: defaults).entries == [
+        .init(comparison: comparison, opened: opened)
+      ])
   }
 
   @Test func windowKeepsItsSizeWhateverTheList() throws {
@@ -114,7 +233,7 @@ import Testing
     fixture.recentComparisons.add(other)
     fixture.controller.showWindow(nil)
     let table = fixture.controller.recentList.tableView
-    table.selectRowIndexes([1], byExtendingSelection: false)
+    table.selectRowIndexes([2], byExtendingSelection: false)
     fixture.window.makeFirstResponder(table)
 
     #expect(fixture.window.performKeyEquivalent(with: try keyEvent("\r", in: fixture.window)))
@@ -153,15 +272,29 @@ import Testing
     #expect(fixture.panels.failures == ["“a.png” isn’t a text file."])
   }
 
-  @Test func lineOfTheListTellsVoiceOverWhatItOpens() throws {
+  @Test func lineOfTheListTellsVoiceOverWhatItOpensAndWhen() throws {
     let files = try SampleFiles()
     let fixture = try WelcomeFixture()
-    fixture.recentComparisons.add(
-      FileComparison(left: try files.file("a.txt"), right: try files.file("b.txt")))
-    let table = fixture.controller.recentList.tableView
+    let comparison = FileComparison(left: try files.file("a.txt"), right: try files.file("b.txt"))
+    fixture.recentComparisons.add(comparison)
+    let list = fixture.controller.recentList
 
-    let cell = try #require(table.view(atColumn: 0, row: 0, makeIfNecessary: true))
+    let cell = try #require(list.tableView.view(atColumn: 0, row: 1, makeIfNecessary: true))
 
     #expect(cell.accessibilityLabel() == "Compare a.txt with b.txt")
+    let time = list.dateText(of: try #require(fixture.recentComparisons.entries.first?.opened))
+    #expect(cell.accessibilityValue() as? String == "\(comparison.folder), \(time)")
+  }
+
+  /// A calendar of fixed place and language, so that times read the same on every Mac.
+  private static var calendar: Calendar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "UTC") ?? .gmt
+    calendar.locale = Locale(identifier: "en_US")
+    return calendar
+  }
+
+  private static func date(_ text: String) throws -> Date {
+    try Date(text, strategy: .iso8601)
   }
 }

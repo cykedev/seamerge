@@ -72,8 +72,8 @@ public final class WelcomeWindowController: NSWindowController {
   /// A sheet of files waiting for another sheet of the window to end.
   var pendingFilesSheet: (() -> Void)?
 
-  private let heading: NSTextField
-  private let recentSection: NSStackView
+  /// The words in place of the list while it is empty, which name the next step.
+  let emptyListView: NSStackView
 
   /// Creates the window, which lists the comparisons of `recentComparisons`, says at the bottom
   /// what the settings in `integrationStore` say about Git, and draws with the accessibility
@@ -119,13 +119,7 @@ public final class WelcomeWindowController: NSWindowController {
         localized: "Set Up Git Integration…", bundle: .module,
         comment: "Welcome window: the button next to the line about Git."),
       target: nil, action: nil)
-    heading = NSTextField(
-      labelWithString: String(
-        localized: "Recent", bundle: .module,
-        comment: "Welcome window: the heading of the comparisons opened last."))
-    heading.font = .boldSystemFont(ofSize: NSFont.smallSystemFontSize)
-    heading.setAccessibilityElement(false)
-    recentSection = NSStackView(views: [heading, recentList.scrollView])
+    emptyListView = Self.makeEmptyListView()
     super.init(window: window)
 
     window.delegate = self
@@ -155,15 +149,10 @@ public final class WelcomeWindowController: NSWindowController {
   }
 
   private func makeContent() -> NSView {
-    recentSection.orientation = .vertical
-    recentSection.alignment = .leading
-    recentSection.spacing = WelcomeMetrics.headingSpacing
-    recentList.scrollView.widthAnchor.constraint(equalTo: recentSection.widthAnchor)
-      .isActive = true
-
     let content = FileDropView()
     content.delegate = self
-    for view in [sidebar, recentSection] as [NSView] {
+    let list = recentList.scrollView
+    for view in [sidebar, list, emptyListView] as [NSView] {
       view.translatesAutoresizingMaskIntoConstraints = false
       content.addSubview(view)
     }
@@ -173,19 +162,42 @@ public final class WelcomeWindowController: NSWindowController {
       sidebar.bottomAnchor.constraint(equalTo: content.bottomAnchor),
       sidebar.leadingAnchor.constraint(equalTo: content.leadingAnchor),
       sidebar.widthAnchor.constraint(equalToConstant: WelcomeMetrics.sidebarWidth),
-      recentSection.topAnchor.constraint(
+      list.topAnchor.constraint(
         equalTo: content.topAnchor, constant: WelcomeMetrics.titleBarHeight),
-      recentSection.leadingAnchor.constraint(equalTo: sidebar.trailingAnchor, constant: margin),
-      recentSection.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -margin),
-      recentSection.bottomAnchor.constraint(
-        lessThanOrEqualTo: content.bottomAnchor, constant: -WelcomeMetrics.gitStatusHeight),
+      list.leadingAnchor.constraint(equalTo: sidebar.trailingAnchor, constant: margin / 2),
+      list.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -margin / 2),
+      list.bottomAnchor.constraint(
+        equalTo: content.bottomAnchor, constant: -WelcomeMetrics.gitStatusHeight),
+      emptyListView.centerXAnchor.constraint(equalTo: list.centerXAnchor),
+      emptyListView.centerYAnchor.constraint(equalTo: list.centerYAnchor),
+      emptyListView.widthAnchor.constraint(lessThanOrEqualTo: list.widthAnchor, constant: -margin),
     ])
     addGitStatusRow(to: content, after: sidebar)
     return content
   }
 
-  /// Shows the window in front and reads again what Git says.
+  /// The words of the empty list: that there are no recent comparisons, and how to start one.
+  private static func makeEmptyListView() -> NSStackView {
+    let title = NSTextField(
+      labelWithString: String(
+        localized: "No Recent Comparisons", bundle: .module,
+        comment: "Welcome window: the list of recent comparisons while it is empty."))
+    title.font = .preferredFont(forTextStyle: .title3)
+    let hint = NSTextField(
+      wrappingLabelWithString: String(
+        localized: "Choose Compare Files… or drop two files on this window.", bundle: .module,
+        comment: "Welcome window: the next step below No Recent Comparisons."))
+    hint.alignment = .center
+    let stack = NSStackView(views: [title, hint])
+    stack.orientation = .vertical
+    stack.spacing = WelcomeMetrics.emptyListSpacing
+    return stack
+  }
+
+  /// Shows the window in front with the recent comparisons as of now, and reads again what Git
+  /// says.
   public override func showWindow(_ sender: Any?) {
+    showRecentComparisons()
     super.showWindow(sender)
     if integrationSheet == nil {
       Task { await readIntegrationStatus() }
@@ -221,17 +233,20 @@ public final class WelcomeWindowController: NSWindowController {
   private func applyColors() {
     let colors = CompareFilesColors(displayOptions)
     sidebar.colors = WelcomeColors(displayOptions)
-    heading.textColor = colors.quietText
     gitStatusLabel.textColor = colors.quietText
     recentList.quietTextColor = colors.quietText
+    for case let label as NSTextField in emptyListView.arrangedSubviews {
+      label.textColor = colors.quietText
+    }
     filesSheet?.displayOptions = displayOptions
   }
 
-  /// Lists the recent comparisons.
+  /// Lists the recent comparisons, or says how to start one while there are none.
   private func showRecentComparisons() {
-    let comparisons = recentComparisons.comparisons
-    recentList.show(comparisons, fitting: true)
-    recentSection.isHidden = comparisons.isEmpty
+    let entries = recentComparisons.entries
+    recentList.show(entries)
+    recentList.scrollView.isHidden = entries.isEmpty
+    emptyListView.isHidden = !entries.isEmpty
   }
 
   @objc private func recentComparisonsDidChange(_ notification: Notification) {

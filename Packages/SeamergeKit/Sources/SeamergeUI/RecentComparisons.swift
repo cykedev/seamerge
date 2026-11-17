@@ -1,8 +1,9 @@
 import Foundation
 import os
 
-/// The comparisons and merges last opened from the window Compare Files, newest first, which the
-/// window lists and File > Open Recent offers; comparisons of folders among them.
+/// The comparisons and merges last opened from the welcome window, newest first, each with the
+/// time it was opened, which the window lists and File > Open Recent offers; comparisons of
+/// folders among them.
 ///
 /// They are kept in the user defaults. A comparison whose files or folders are no longer all
 /// there is left out. Sessions that Git starts never get here: their files are temporary copies.
@@ -25,19 +26,37 @@ public final class RecentComparisons {
     self.defaults = defaults
   }
 
+  /// A comparison in the list and when it was opened.
+  public struct Entry: Equatable, Sendable {
+    /// The files or folders in their roles.
+    public var comparison: FileComparison
+
+    /// When the comparison was last opened; `nil` for one kept by a version that did not note
+    /// the time.
+    public var opened: Date?
+  }
+
   /// The comparisons, newest first, whose files are all still there.
   public var comparisons: [FileComparison] {
-    stored.filter { comparison in
-      comparison.files.allSatisfy {
+    entries.map(\.comparison)
+  }
+
+  /// The comparisons, newest first, whose files are all still there, with when they were opened.
+  public var entries: [Entry] {
+    stored.filter { entry in
+      entry.comparison.files.allSatisfy {
         FileManager.default.fileExists(atPath: $0.path(percentEncoded: false))
       }
     }
   }
 
-  /// Puts `comparison` first, in place of an earlier entry of the same files in the same roles.
-  public func add(_ comparison: FileComparison) {
-    let comparisons = [comparison] + self.comparisons.filter { $0 != comparison }
-    store(Array(comparisons.prefix(Self.maximumCount)))
+  /// Puts `comparison`, opened at `date`, first, in place of an earlier entry of the same files
+  /// in the same roles.
+  public func add(_ comparison: FileComparison, openedAt date: Date = .now) {
+    let entries =
+      [Entry(comparison: comparison, opened: date)]
+      + self.entries.filter { $0.comparison != comparison }
+    store(Array(entries.prefix(Self.maximumCount)))
   }
 
   /// Removes every comparison.
@@ -45,36 +64,40 @@ public final class RecentComparisons {
     store([])
   }
 
-  private var stored: [FileComparison] {
+  private var stored: [Entry] {
     guard let entries = defaults.array(forKey: Self.key) as? [[String: String]] else { return [] }
     return entries.compactMap { entry in
       guard let left = entry[Field.left], let right = entry[Field.right] else {
         Self.logger.error("Skipping a recent comparison without both sides")
         return nil
       }
+      let opened = entry[Field.opened].flatMap { try? Date($0, strategy: .iso8601) }
       if entry[Field.folders] != nil {
-        return FileComparison(
-          folders: FolderPair(
-            left: URL(filePath: left, directoryHint: .isDirectory),
-            right: URL(filePath: right, directoryHint: .isDirectory)))
+        let folders = FolderPair(
+          left: URL(filePath: left, directoryHint: .isDirectory),
+          right: URL(filePath: right, directoryHint: .isDirectory))
+        return Entry(comparison: FileComparison(folders: folders), opened: opened)
       }
-      return FileComparison(
+      let comparison = FileComparison(
         left: URL(filePath: left), base: entry[Field.base].map { URL(filePath: $0) },
         right: URL(filePath: right))
+      return Entry(comparison: comparison, opened: opened)
     }
   }
 
-  private func store(_ comparisons: [FileComparison]) {
-    let entries = comparisons.map { comparison in
-      var entry = [
+  private func store(_ entries: [Entry]) {
+    let values = entries.map { entry in
+      let comparison = entry.comparison
+      var value = [
         Field.left: comparison.left.path(percentEncoded: false),
         Field.right: comparison.right.path(percentEncoded: false),
       ]
-      entry[Field.base] = comparison.base?.path(percentEncoded: false)
-      entry[Field.folders] = comparison.comparesFolders ? Field.folders : nil
-      return entry
+      value[Field.base] = comparison.base?.path(percentEncoded: false)
+      value[Field.folders] = comparison.comparesFolders ? Field.folders : nil
+      value[Field.opened] = entry.opened?.formatted(.iso8601)
+      return value
     }
-    defaults.set(entries, forKey: Self.key)
+    defaults.set(values, forKey: Self.key)
     NotificationCenter.default.post(name: Self.didChangeNotification, object: self)
   }
 
@@ -83,5 +106,6 @@ public final class RecentComparisons {
     static let base = "base"
     static let right = "right"
     static let folders = "folders"
+    static let opened = "opened"
   }
 }

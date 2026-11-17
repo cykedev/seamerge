@@ -32,6 +32,54 @@ import Testing
     try picture(fixture, look: look, named: "welcome-drop-target-\(look.name)")
   }
 
+  /// A selected line, as the list in the key window draws it: its quiet text turns to the text
+  /// color of a selection, as its names do.
+  @Test(arguments: [Look.light, .dark])
+  func selectedLineIsPictured(look: Look) async throws {
+    let files = try SampleFiles()
+    let fixture = try await fixture(look: look, options: DisplayOptions())
+    try addRecentComparisons(to: fixture, in: files)
+    let table = fixture.controller.recentList.tableView
+    table.selectRowIndexes([2], byExtendingSelection: false)
+    let row = try #require(table.rowView(atRow: 2, makeIfNecessary: true))
+    fixture.window.contentView?.layoutSubtreeIfNeeded()
+    #expect(row.isSelected)
+    row.isEmphasized = true
+    let cell = try #require(row.view(atColumn: 0) as? RecentComparisonCell)
+
+    #expect(cell.backgroundStyle == .emphasized)
+    for label in [cell.namesLabel, cell.kindLabel, cell.folderLabel, cell.dateLabel] {
+      #expect(label.textColor == .alternateSelectedControlTextColor, "\(label.stringValue)")
+    }
+    #expect(cell.symbolView.contentTintColor == .alternateSelectedControlTextColor)
+    try pictureWithSelection(
+      of: row, in: fixture, look: look, named: "welcome-selected-line-\(look.name)")
+
+    row.isEmphasized = false
+    #expect(cell.backgroundStyle == .normal)
+    #expect(cell.folderLabel.textColor != .alternateSelectedControlTextColor)
+  }
+
+  /// The quiet text of a line reaches 4.5 : 1 where it stands: on the list, on the gray of a
+  /// line selected in a window in the background, and, in the text color of a selection, on the
+  /// accent color of a line selected in the key window.
+  @Test(arguments: Look.all)
+  func quietTextOfALineIsLegibleSelectedOrNot(look: Look) throws {
+    let options = DisplayOptions(increasesContrast: look.increasesContrast)
+    let quiet = Contrast.resolve(CompareFilesColors(options).quietText, in: look.appearance)
+    let selected = Contrast.resolve(.alternateSelectedControlTextColor, in: look.appearance)
+    let pairs: [(String, NSColor?, NSColor)] = [
+      ("list", quiet, .windowBackgroundColor),
+      ("line in the background", quiet, .unemphasizedSelectedContentBackgroundColor),
+      ("selected line", selected, .selectedContentBackgroundColor),
+    ]
+    for (name, text, background) in pairs {
+      let surface = try #require(Contrast.resolve(background, in: look.appearance))
+      let ratio = Contrast.ratio(Contrast.over(text, surface), surface)
+      #expect(ratio >= 4.5, "\(name): \(String(format: "%.2f", ratio))")
+    }
+  }
+
   /// Without color the window looks as the plain picture does; with Reduce Transparency the
   /// column is one color instead of the gradient.
   @Test(arguments: [
@@ -101,6 +149,42 @@ import Testing
     fixture.recentComparisons.add(
       FileComparison(
         left: try files.file("LoginView.swift"), right: try files.file("LoginView copy.swift")))
+  }
+
+  /// Draws the window with `row` on the selection of the key window: caching the display skips
+  /// the selection, which the system draws in a layer of its own, so the picture draws it as the
+  /// pictures of sidebars do, and the line on top of it.
+  private func pictureWithSelection(
+    of row: NSTableRowView, in fixture: WelcomeFixture, look: Look, named name: String
+  ) throws {
+    let window = fixture.window
+    window.colorSpace = .sRGB
+    window.appearance = look.appearance
+    window.contentView?.layoutSubtreeIfNeeded()
+    let bitmap = try Rendering.bitmap(of: window)
+    let frameView = try #require(window.contentView?.superview)
+    let cell = try #require(row.view(atColumn: 0) as? RecentComparisonCell)
+    var selection = NSColor.selectedContentBackgroundColor
+    look.appearance.performAsCurrentDrawingAppearance {
+      selection = NSColor.selectedContentBackgroundColor.usingColorSpace(.sRGB) ?? selection
+    }
+    NSGraphicsContext.saveGraphicsState()
+    defer { NSGraphicsContext.restoreGraphicsState() }
+    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)
+    selection.setFill()
+    NSBezierPath(
+      roundedRect: row.convert(row.bounds, to: frameView).insetBy(dx: 10, dy: 0), xRadius: 6,
+      yRadius: 6
+    ).fill()
+    // The line alone, without the window behind it that caching its display would draw.
+    let origin = cell.convert(cell.bounds, to: frameView).origin
+    let transform = NSAffineTransform()
+    transform.translateX(by: origin.x, yBy: origin.y)
+    transform.concat()
+    if let context = NSGraphicsContext.current {
+      cell.displayIgnoringOpacity(cell.bounds, in: context)
+    }
+    try Rendering.write(bitmap, named: name)
   }
 
   private func picture(_ fixture: WelcomeFixture, look: Look, named name: String) throws {

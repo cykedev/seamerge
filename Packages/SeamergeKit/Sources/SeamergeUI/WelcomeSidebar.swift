@@ -60,13 +60,13 @@ final class WelcomeSidebar: NSView {
   }
 
   /// The symbol of a comparison of two files, on its button and in the recent comparisons.
-  static let compareSymbol = "doc.on.doc"
+  nonisolated static let compareSymbol = "doc.on.doc"
 
   /// The symbol of a comparison of two folders.
-  static let foldersSymbol = "folder"
+  nonisolated static let foldersSymbol = "folder"
 
   /// The symbol of a merge.
-  static let mergeSymbol = "arrow.triangle.merge"
+  nonisolated static let mergeSymbol = "arrow.triangle.merge"
 
   private static func button(_ title: String, symbol: String) -> NSButton {
     let button = NSButton(title: title, target: nil, action: nil)

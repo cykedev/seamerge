@@ -38,14 +38,20 @@ enum WelcomeMetrics {
   /// The margin between the list and the edges of the window.
   static let listMargin: CGFloat = 20
 
-  /// The distance between the heading of the recent comparisons and their list.
-  static let headingSpacing: CGFloat = 4
+  /// The height of a line of the recent comparisons, which has two lines of text.
+  static let recentRowHeight: CGFloat = 44
 
-  /// The height of a line of the recent comparisons.
-  static let recentRowHeight: CGFloat = 24
+  /// The height of the heading Today or Earlier above the recent comparisons.
+  static let recentHeadingHeight: CGFloat = 28
 
-  /// How many recent comparisons the window lists.
-  static let recentRowCount = 5
+  /// The width of the symbol of a recent comparison.
+  static let recentSymbolWidth: CGFloat = 20
+
+  /// The distance between the symbol, the text and the time of a recent comparison.
+  static let recentColumnSpacing: CGFloat = 8
+
+  /// The distance between the two lines of the words of an empty list.
+  static let emptyListSpacing: CGFloat = 4
 
   /// The room at the bottom of the list that the line about Git takes.
   static let gitStatusHeight: CGFloat = 40

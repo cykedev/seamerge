@@ -23,6 +23,9 @@
         }
       }
     },
+    "%@ ·" : {
+      "comment" : "Welcome window: the kind of a recent comparison before its folder, such as Merge ·."
+    },
     "Adds a link at %@ so that you can compare files in Terminal, for example seamerge old.txt new.txt. macOS asks for an administrator’s name and password." : {
       "comment" : "Install the seamerge Command: what installing does; the path of the link."
     },
@@ -40,6 +43,9 @@
     },
     "Change Files" : {
       "comment" : "The title of the sheet that chooses other files for a session window."
+    },
+    "Choose Compare Files… or drop two files on this window." : {
+      "comment" : "Welcome window: the next step below No Recent Comparisons."
     },
     "Command" : {
       "comment" : "VoiceOver: the command to type in Install the seamerge Command."
@@ -68,6 +74,12 @@
     "Each window starts like this. The switches in a window’s toolbar and footer change only that window." : {
       "comment" : "Settings: note below the group of how a new window starts."
     },
+    "Earlier" : {
+      "comment" : "Welcome window: the heading of the comparisons opened before today."
+    },
+    "Folder Comparison" : {
+      "comment" : "Welcome window: the kind of a recent comparison of two folders."
+    },
     "Homebrew installed the seamerge command." : {
       "comment" : "Install the seamerge Command: Homebrew made the link."
     },
@@ -86,8 +98,14 @@
     "Merge Files" : {
       "comment" : "The title of the sheet that puts three files together to merge."
     },
+    "No Recent Comparisons" : {
+      "comment" : "Welcome window: the list of recent comparisons while it is empty."
+    },
     "OK" : {
       "comment" : "Install the seamerge Command: the button that closes the sheet."
+    },
+    "Recent Comparisons" : {
+      "comment" : "VoiceOver: the list of the comparisons opened last in the welcome window."
     },
     "Seamerge wants to install the seamerge command in %@." : {
       "comment" : "The dialog of macOS that asks for an administrator's password; a folder."
@@ -127,6 +145,9 @@
     },
     "The seamerge command points to a copy of Seamerge that has moved. Updating points it to this copy. macOS asks for an administrator’s name and password." : {
       "comment" : "Install the seamerge Command: the link names another copy of the app."
+    },
+    "Today" : {
+      "comment" : "Welcome window: the heading of the comparisons opened today."
     },
     "Update" : {
       "comment" : "Install the seamerge Command: the button that points the link to this copy."
@@ -737,7 +758,7 @@
       "comment" : "Toolbar, and empty panes for VoiceOver: the files are being compared.\nWindow of two folders: no file is shown yet while the folders are compared."
     },
     "Comparison" : {
-      "comment" : "Keyboard Shortcuts: the shortcuts of a comparison of two files.\nThe choice of the comparison mode: a toolbar item and the pop-up button of the footer."
+      "comment" : "Keyboard Shortcuts: the shortcuts of a comparison of two files.\nThe choice of the comparison mode: a toolbar item and the pop-up button of the footer.\nWelcome window: the kind of a recent comparison of two files."
     },
     "Conflict %lld of %lld, open" : {
       "comment" : "VoiceOver: an item of the rotor of conflicts that awaits a decision."
@@ -1176,7 +1197,7 @@
       "comment" : "Settings: an ignore rule that comes with the app, for addresses such as 0x7ff8."
     },
     "Merge" : {
-      "comment" : "Keyboard Shortcuts: the shortcuts of a merge.\nMenu bar: the decisions of a merge.\nSheet Merge Files: the default button, which merges the files."
+      "comment" : "Keyboard Shortcuts: the shortcuts of a merge.\nMenu bar: the decisions of a merge.\nSheet Merge Files: the default button, which merges the files.\nWelcome window: the kind of a recent merge of three files."
     },
     "Merge %@ and %@ with the base %@" : {
       "comment" : "VoiceOver: a recent merge, with the names of A, B and the base."
@@ -1306,9 +1327,6 @@
     },
     "Receiving Files…" : {
       "comment" : "Sidebar: files still come and it is not known how many."
-    },
-    "Recent" : {
-      "comment" : "Welcome window: the heading of the comparisons opened last."
     },
     "Records every byte, whatever the comparison mode" : {
       "comment" : "Help tag of Copy as Patch and Export as Patch."
