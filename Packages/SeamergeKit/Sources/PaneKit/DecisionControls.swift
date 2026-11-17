@@ -288,7 +288,7 @@ final class ResetBlockButton: DecisionControl {
   }
 
   /// The arrow as an image, made once rather than on every step of scrolling.
-  private let symbols = SymbolImages()
+  let symbols = SymbolImages()
 
   override init(block: Int, theme: Theme) {
     super.init(block: block, theme: theme)

@@ -24,7 +24,7 @@ final class DecisionRow: NSView {
   }
 
   /// The signs of the bar, made once rather than on every step of scrolling.
-  private let symbols = SymbolImages()
+  let symbols = SymbolImages()
 
   /// Where the parts of the row stand.
   private var layout: DecisionColumnLayout {
