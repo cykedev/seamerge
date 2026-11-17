@@ -25,12 +25,13 @@ final class RowLayoutFragment: NSTextLayoutFragment {
   }
 
   /// How far the fragment's drawing reaches beyond its glyphs, which changes only with the width
-  /// of the pane and the theme.
+  /// of the pane, the part of it in view and the theme.
   struct Extent: Sendable {
     /// The distance from the left edge of the text view to the text container.
     var containerInset: CGFloat
-    /// The width of the text view, across which the rows are filled.
-    var width: CGFloat
+    /// The part of the width of the text view that the fragments draw, from its left edge:
+    /// across it the rows are filled, and beyond it, far out of view, a long line draws nothing.
+    var drawnSpan: Range<CGFloat>
     /// How far the text is drawn above the place where TextKit lays it out, so that it sits in
     /// the middle of the row.
     var textLift: CGFloat
@@ -151,6 +152,31 @@ final class RowLayoutFragment: NSTextLayoutFragment {
   /// The line of the empty last row as TextKit laid it out, and as the fragment moved it.
   private var movedLine: (original: NSTextLineFragment, line: NSTextLineFragment)?
 
+  /// The places of the characters of each of the fragment's lines, found once for the lines
+  /// that TextKit laid out.
+  ///
+  /// Finding them takes time in proportion to the length of the lines, and a fragment draws
+  /// whenever its rows are drawn again: on a change of the selection, the current block or the
+  /// matches of a search.
+  private var lineCarets: [LineCarets] {
+    let lines = textLineFragments
+    if let cachedCarets, cachedCarets.lines.elementsEqual(lines, by: ===) {
+      return cachedCarets.carets
+    }
+    let carets = lines.map(LineCarets.init)
+    cachedCarets = (lines, carets)
+    return carets
+  }
+
+  private var cachedCarets: (lines: [NSTextLineFragment], carets: [LineCarets])?
+
+  /// Lets go of the places of the characters along with the lines that TextKit lays out anew,
+  /// so that the old lines do not outlive the layout.
+  override func invalidateLayout() {
+    cachedCarets = nil
+    super.invalidateLayout()
+  }
+
   /// Where the fragment's paragraph starts and the rows it lays out.
   ///
   /// TextKit keeps the fragments of paragraphs that an edit does not touch and moves their
@@ -218,12 +244,19 @@ final class RowLayoutFragment: NSTextLayoutFragment {
       height: CGFloat(lines.count) * rowHeight)
   }
 
+  /// The glyphs and the marks of the fragment within the drawn span, and its rows across it.
+  ///
+  /// TextKit makes a surface as large as this for each fragment in view, so a line thousands of
+  /// characters long would take one as wide as all of them.
   override var renderingSurfaceBounds: CGRect {
     guard let extent else { return super.renderingSurfaceBounds }
     let markReach = extent.removalMarkWidth + extent.removalMarkSeam
-    return super.renderingSurfaceBounds.offsetBy(dx: 0, dy: -extent.textLift)
+    let rows = rowsBounds(extent)
+    let text = super.renderingSurfaceBounds.offsetBy(dx: 0, dy: -extent.textLift)
       .insetBy(dx: -markReach, dy: -extent.removalMarkSeam)
-      .union(rowsBounds(extent))
+    let drawnText = text.intersection(
+      CGRect(x: rows.minX, y: text.minY, width: rows.width, height: text.height))
+    return drawnText.isNull ? rows : drawnText.union(rows)
   }
 
   override func draw(at point: CGPoint, in context: CGContext) {
@@ -243,7 +276,10 @@ final class RowLayoutFragment: NSTextLayoutFragment {
         context: context)
       top += height
     }
-    let carets = textLineFragments.map(LineCarets.init)
+    let needsCarets =
+      !painting.runs.isEmpty || !painting.matches.isEmpty || !painting.selections.isEmpty
+      || painting.invisibles != nil
+    let carets = needsCarets ? lineCarets : []
     for run in painting.runs {
       for rect in runRects(run.range, fullHeight: false, painting, carets: carets) {
         context.setFillColor(run.fill.cgColor)
@@ -276,11 +312,12 @@ final class RowLayoutFragment: NSTextLayoutFragment {
     }
   }
 
-  /// The rows of the fragment across the full width of the text view, relative to its origin.
+  /// The rows of the fragment across the drawn span of the text view, relative to its origin.
   private func rowsBounds(_ extent: Extent) -> CGRect {
     CGRect(
-      x: -(super.layoutFragmentFrame.minX + extent.containerInset), y: 0,
-      width: extent.width, height: CGFloat(lines.count) * rowHeight)
+      x: extent.drawnSpan.lowerBound - (super.layoutFragmentFrame.minX + extent.containerInset),
+      y: 0, width: extent.drawnSpan.upperBound - extent.drawnSpan.lowerBound,
+      height: CGFloat(lines.count) * rowHeight)
   }
 
   /// The number of screen lines that TextKit gives the text of each of the fragment's `count`

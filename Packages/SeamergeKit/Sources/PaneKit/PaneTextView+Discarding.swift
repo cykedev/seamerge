@@ -22,6 +22,7 @@ extension PaneTextView {
   /// below it then. The elements above the visible text stay: TextKit finds the place of the
   /// view from them.
   func visibleTextDidMove() {
+    updateDrawnSpan()
     if let lastShownRow {
       farthestRowShown = max(min(farthestRowShown, grid.rowCount - 1), lastShownRow)
     }

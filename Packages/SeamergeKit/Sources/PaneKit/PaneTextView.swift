@@ -109,6 +109,9 @@ final class PaneTextView: NSTextView {
   /// The version of the text, after whose changes fragments find their rows again.
   private let textVersion = TextVersion()
 
+  /// The part of the width of the view that its fragments draw, around the part in view.
+  var drawnSpan: Range<CGFloat> = 0..<0
+
   /// The rows whose paragraphs wait to be colored anew until an edit or the marking of the input
   /// method is over.
   var rowsToRecolor = IndexSet()
@@ -477,10 +480,11 @@ final class PaneTextView: NSTextView {
       + 2 * Theme.textInset).rounded(.up)
   }
 
-  /// Colors the rows anew that waited for an edit to be over and lays out the first row in view,
-  /// before TextKit lays out the visible text.
+  /// Colors the rows anew that waited for an edit to be over, fits the span that the fragments
+  /// draw and lays out the first row in view, before TextKit lays out the visible text.
   override func layout() {
     recolorWaitingRows()
+    updateDrawnSpan()
     layOutFirstVisibleRow()
     super.layout()
   }
@@ -613,6 +617,7 @@ final class PaneTextView: NSTextView {
     let newSize = NSSize(width: newSize.width, height: max(newSize.height, rowsHeight))
     let widthChanged = newSize.width != frame.width
     super.setFrameSize(newSize)
+    updateDrawnSpan()
     // The fragments in view lay out again, so that their rendering surfaces take the new width;
     // the others ask for it when they come into view. Laying out the whole text again would make
     // TextKit lay out every paragraph above the visible part, as often as a line typed at the
@@ -974,7 +979,7 @@ extension PaneTextView: RowPainter {
 
   var extent: RowLayoutFragment.Extent {
     RowLayoutFragment.Extent(
-      containerInset: textContainerOrigin.x, width: bounds.width, textLift: theme.textLift,
+      containerInset: textContainerOrigin.x, drawnSpan: drawnSpan, textLift: theme.textLift,
       removalMarkWidth: Theme.removalMarkWidth, removalMarkSeam: Theme.markSeam,
       hairline: RowShading.hairline(in: window))
   }
