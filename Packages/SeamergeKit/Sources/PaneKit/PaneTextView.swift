@@ -167,6 +167,8 @@ final class PaneTextView: NSTextView {
     isContinuousSpellCheckingEnabled = false
     isGrammarCheckingEnabled = false
     smartInsertDeleteEnabled = false
+    inlinePredictionType = .no
+    mathExpressionCompletionType = .no
     writingToolsBehavior = .none
     drawsBackground = true
     backgroundColor = Theme.backgroundColor
@@ -555,6 +557,21 @@ final class PaneTextView: NSTextView {
     actualRange?.pointee = range
     let inView = place.offsetBy(dx: textContainerOrigin.x, dy: textContainerOrigin.y)
     return window.convertToScreen(convert(inView, to: nil))
+  }
+
+  /// The text around `range` with its marks for the text checking controller: none, as a pane
+  /// checks nothing.
+  ///
+  /// The controller asks for the text around every viewport the view has laid out, even with
+  /// every check off, and building it walks the attributes of the whole range: up to a tenth of
+  /// the main thread while scrolling. ``configure(theme:)`` turns every check off, and the app
+  /// has no menu that turns one on. The method is the one of `NSTextCheckingClient`, which
+  /// `NSTextView` implements without declaring it.
+  @objc(annotatedSubstringForProposedRange:actualRange:)
+  func annotatedSubstring(forProposedRange range: NSRange, actualRange: NSRangePointer?)
+    -> NSAttributedString?
+  {
+    nil
   }
 
   override func mouseDown(with event: NSEvent) {
