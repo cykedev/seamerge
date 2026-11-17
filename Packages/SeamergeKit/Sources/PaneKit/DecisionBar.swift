@@ -28,6 +28,9 @@ struct DecisionBar {
   /// The colors of the column.
   var theme: Theme
 
+  /// The signs of the bar as images, kept by its row across drawings.
+  var symbols: SymbolImages
+
   /// Where the parts of the row stand, for the rows of the text of `theme`.
   var layout: DecisionColumnLayout {
     DecisionColumnLayout(theme: theme)
@@ -128,13 +131,13 @@ struct DecisionBar {
     let font = Self.font(of: layout)
     let symbol: NSImage? =
       if segment.removesLines {
-        Self.symbol(
-          "trash", pointSize: font.pointSize - Theme.trashSymbolSizeReduction, scale: .small,
-          color: color)
+        symbols.image(
+          named: "trash", pointSize: font.pointSize - Theme.trashSymbolSizeReduction,
+          scale: .small, color: color)
       } else if segment.role == .base {
-        Self.symbol(
-          "circle", pointSize: font.pointSize - Theme.baseSymbolSizeReduction, scale: .medium,
-          color: color)
+        symbols.image(
+          named: "circle", pointSize: font.pointSize - Theme.baseSymbolSizeReduction,
+          scale: .medium, color: color)
       } else {
         nil
       }
@@ -166,16 +169,6 @@ struct DecisionBar {
   /// The tint that the rows of `role` take.
   private static func style(of role: ColorRole) -> BlockStyle {
     role == .base ? .original : .tinted(role)
-  }
-
-  /// The symbol `name` at `pointSize` and `scale` in the weight of the letters, in `color`.
-  private static func symbol(
-    _ name: String, pointSize: CGFloat, scale: NSImage.SymbolScale, color: NSColor
-  ) -> NSImage? {
-    NSImage(systemSymbolName: name, accessibilityDescription: nil)?
-      .withSymbolConfiguration(
-        NSImage.SymbolConfiguration(pointSize: pointSize, weight: .medium, scale: scale)
-          .applying(NSImage.SymbolConfiguration(paletteColors: [color])))
   }
 
   /// The font of the letters on a bar of `layout`.

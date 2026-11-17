@@ -64,10 +64,31 @@ final class GutterView: NSView {
       needsDisplay = true
       if scrollOffset != oldValue {
         followPointer()
+        if isScrolling {
+          toolTipsAreStale = true
+        } else {
+          updateToolTips()
+        }
+      }
+    }
+  }
+
+  /// Whether the text beside the gutter is scrolling, or moved a moment ago.
+  ///
+  /// The areas of the help tags move with the marks once the text rests rather than at every
+  /// step: each change of them has the window find its areas under the pointer anew, and no help
+  /// tag shows while the text moves anyway. Until then, a help tag that shows names the mark
+  /// under the pointer now.
+  var isScrolling = false {
+    didSet {
+      if !isScrolling && toolTipsAreStale {
         updateToolTips()
       }
     }
   }
+
+  /// Whether the areas of the help tags lie where the marks were before the text scrolled.
+  private var toolTipsAreStale = false
 
   /// The runs that the user expanded and that may collapse again, in rows of the content.
   var expandedRuns: [CollapsedRun] = [] {
@@ -265,6 +286,7 @@ final class GutterView: NSView {
   /// Gives each mark in view, and the sign that collapses a run, an area of its own for a help
   /// tag, whose text ``view(_:stringForToolTip:point:userData:)`` finds.
   private func updateToolTips() {
+    toolTipsAreStale = false
     removeAllToolTips()
     for row in visibleRows {
       let rowRect = rect(ofRow: row)

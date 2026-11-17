@@ -17,10 +17,14 @@ final class DecisionRow: NSView {
       for control in controls {
         control.theme = theme
       }
+      symbols.removeAll()
       placeControls()
       needsDisplay = true
     }
   }
+
+  /// The signs of the bar, made once rather than on every step of scrolling.
+  private let symbols = SymbolImages()
 
   /// Where the parts of the row stand.
   private var layout: DecisionColumnLayout {
@@ -173,8 +177,10 @@ final class DecisionRow: NSView {
           slot: slot, role: $0.role, face: $0.face, removesLines: $0.toggle.isDeletion)
       }
     }
-    DecisionBar(segments: segments, isOpenConflict: isOpenConflict, theme: theme)
-      .draw(at: window?.backingScaleFactor ?? 1)
+    DecisionBar(
+      segments: segments, isOpenConflict: isOpenConflict, theme: theme, symbols: symbols
+    )
+    .draw(at: window?.backingScaleFactor ?? 1)
   }
 
   /// Passes clicks beside the controls on to the column.

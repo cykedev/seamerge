@@ -287,6 +287,9 @@ final class ResetBlockButton: DecisionControl {
     didSet { needsDisplay = true }
   }
 
+  /// The arrow as an image, made once rather than on every step of scrolling.
+  private let symbols = SymbolImages()
+
   override init(block: Int, theme: Theme) {
     super.init(block: block, theme: theme)
     toolTip = Self.help
@@ -306,11 +309,8 @@ final class ResetBlockButton: DecisionControl {
   override func draw(_ dirtyRect: NSRect) {
     drawPressedFill()
     guard
-      let symbol = NSImage(
-        systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)?
-        .withSymbolConfiguration(
-          NSImage.SymbolConfiguration(pointSize: symbolSize, weight: .medium)
-            .applying(NSImage.SymbolConfiguration(paletteColors: [Theme.secondaryMarkColor])))
+      let symbol = symbols.image(
+        named: "arrow.uturn.backward", pointSize: symbolSize, color: Theme.secondaryMarkColor)
     else { return }
     let size = symbol.size
     symbol.draw(

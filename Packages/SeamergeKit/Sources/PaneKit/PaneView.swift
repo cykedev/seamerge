@@ -555,12 +555,14 @@ public final class PaneView: NSView {
   }
 
   @objc private func clipViewBoundsDidChange(_ notification: Notification) {
-    textDidScroll()
     textView.visibleTextDidMove()
+    gutterView.isScrolling = textView.isScrolling
+    textDidScroll()
   }
 
   @objc private func liveScrollDidStart(_ notification: Notification) {
     textView.liveScrollDidStart()
+    gutterView.isScrolling = true
   }
 
   @objc private func liveScrollDidEnd(_ notification: Notification) {
@@ -690,6 +692,10 @@ extension PaneView: RowInteraction {
     showDisplayRows()
     decisionColumn?.update()
     needsLayout = true
+  }
+
+  func scrollingDidRest() {
+    gutterView.isScrolling = false
   }
 
   private func hit(atRow row: Int) -> PaneHit {

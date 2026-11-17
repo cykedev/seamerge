@@ -63,6 +63,7 @@ extension PaneTextView {
   /// farthest row that has been in view, as TextKit lays out somewhat beyond the visible text.
   @objc func scrollingDidRest(_ timer: Timer) {
     scrollRestTimer = nil
+    interaction?.scrollingDidRest()
     guard let firstRow = firstRowBelowViewToDiscard else {
       finishDiscarding()
       return

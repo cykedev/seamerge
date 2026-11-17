@@ -45,4 +45,7 @@ protocol RowInteraction: AnyObject {
 
   /// Tells that the text changed and with it the rows, so that what stands beside them follows.
   func textDidChange()
+
+  /// Learns that the visible text has come to rest after it moved.
+  func scrollingDidRest()
 }
