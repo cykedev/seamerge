@@ -116,6 +116,10 @@ import Testing
     #expect(SessionSyntax.language(of: script, resultURL: nil).name == "Shell")
     let swift = try await SyntaxFixture.merge()
     #expect(SessionSyntax.language(of: swift, resultURL: nil).name == "Swift")
+    // A first line of two megabytes still names its interpreter at its start.
+    let long = try await SyntaxFixture.merge(
+      named: "run", firstLine: "#!/usr/bin/env python3 " + String(repeating: "x", count: 2_000_000))
+    #expect(SessionSyntax.language(of: long, resultURL: nil).name == "Python")
   }
 }
 

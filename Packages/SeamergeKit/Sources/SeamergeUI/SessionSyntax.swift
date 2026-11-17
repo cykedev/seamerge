@@ -212,10 +212,16 @@ final class SessionSyntax {
   /// comparison, of the newer file, and failing that by the first line of that file.
   static func language(of session: Session, resultURL: URL?) -> LanguageDescription {
     let file = session.file(for: .b) ?? session.file(for: .a)
-    let firstLine = file?.text.map { String($0.prefix { !$0.isNewline }) } ?? ""
+    // A file of a single line of megabytes would take long to read to its end.
+    let firstLine =
+      file?.text.map { String($0.prefix(firstLineLength).prefix { !$0.isNewline }) } ?? ""
     return LanguageDescription(
       fileName: path(of: session, resultURL: resultURL), firstLine: firstLine)
   }
+
+  /// How much of the first line of a file names its language: a `#!` line names its
+  /// interpreter within its first few hundred characters.
+  private static let firstLineLength = 1024
 
   /// The path of the file that names the language of `session`: the result, or for a comparison
   /// the newer file; its label if it has no path.
