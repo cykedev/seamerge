@@ -102,13 +102,49 @@ import Testing
       return offset..<offset + line.utf16.count
     }
     let search = SearchText(
-      texts: [text], sections: [SearchText.Section(pane: 0, lines: ranges, excluded: [])])
+      texts: [text as NSString],
+      sections: [SearchText.Section(pane: 0, lines: ranges, excluded: [])])
 
     #expect(search.string == text)
     for line in [0, 1, 4_242, 99_999] {
       let place = search.searchRange(ofPaneRange: ranges[line], inPane: 0)
       #expect(place.flatMap(search.paneRange(of:))?.range == ranges[line], "\(line)")
     }
+  }
+
+  /// The search text of the lines of one pane whose text is `text`, without previews unless
+  /// `excluded` names some.
+  private func searchText(
+    of text: String, lines: [Range<Int>], excluded: [Range<Int>] = []
+  ) -> SearchText {
+    SearchText(
+      texts: [text as NSString],
+      sections: [SearchText.Section(pane: 0, lines: lines, excluded: excluded)])
+  }
+
+  @Test func linesThatFollowEachOtherAreOnePieceThatEmptyLinesNeitherStartNorEnd() {
+    let lines = [0..<0, 1..<2, 3..<4, 5..<5, 6..<6, 7..<8, 9..<9]
+    let search = searchText(of: "\na\nb\n\n\nc\n", lines: lines)
+    #expect(search.pieces.map(\.paneRange) == [1..<8])
+    #expect(search.string == "a\nb\n\n\nc")
+    #expect(search.paneRange(of: 6..<7)?.range == 7..<8)
+  }
+
+  @Test func rowLeftOutOrPreviewEndsAPiece() {
+    // The second row, a filler row, is left out; the fourth has a preview at its start.
+    let search = searchText(
+      of: "ab\nfill\ncd\nef\ngh", lines: [0..<2, 8..<10, 11..<13, 14..<16],
+      excluded: [11..<12])
+    #expect(search.pieces.map(\.paneRange) == [0..<2, 8..<10, 12..<16])
+    #expect(search.string == "ab\ncd\nf\ngh")
+  }
+
+  @Test func matchOfSeveralLinesWithinOnePieceBelongsToNoPane() {
+    let search = searchText(of: "needle\nneedle", lines: [0..<6, 7..<13])
+    #expect(search.pieces.count == 1)
+    #expect(search.paneRange(of: 3..<10) == nil)
+    #expect(search.paneRange(of: 6..<6)?.range == 6..<6)
+    #expect(search.paneRange(of: 7..<13)?.range == 7..<13)
   }
 
   @Test func fillerRowsAndPreviewsAreNeverSearched() {
@@ -229,8 +265,9 @@ import Testing
     // A's lines take 0..<19, the base and the result 20..<26 and 27..<33, with a line feed
     // after each; the fourth row of A starts at 34.
     #expect(panes.search.firstSelectedRange == NSRange(location: 34, length: 0))
+    // A selection that reaches beyond the first two rows of A ends with them.
     panes.a.documentView.setSelectedRange(NSRange(location: 8, length: 30))
-    #expect(panes.search.firstSelectedRange == NSRange(location: 8, length: 4))
+    #expect(panes.search.firstSelectedRange == NSRange(location: 8, length: 11))
   }
 
   @Test func selectingAMatchOutsideAFindCommandLeavesTheFocusWhereTheUserPutIt() {
@@ -306,8 +343,8 @@ import Testing
     let panes = SearchPanes()
     defer { panes.window.close() }
     let visible = panes.search.visibleCharacterRanges.map(\.rangeValue)
-    // Every pane shows all of its text, which is all but the eight line feeds between pieces.
-    #expect(visible.map(\.length).reduce(0, +) == (panes.search.string as NSString).length - 8)
+    // Every pane shows all of its text, which is all but the six line feeds between pieces.
+    #expect(visible.map(\.length).reduce(0, +) == (panes.search.string as NSString).length - 6)
   }
 
   @Test func findCommandsOfAPaneAmongTheSectionsAreValidatedByTheSearch() {

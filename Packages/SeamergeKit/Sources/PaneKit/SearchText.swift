@@ -1,20 +1,23 @@
 import Foundation
 
-/// The text that a search over several panes goes through: the searchable pieces of their lines,
+/// The text that a search over several panes goes through: the searchable pieces of their text,
 /// one after the other in the order the owner of the panes gave, as one long string.
 ///
-/// Each piece is a line of a pane, or the piece of a line beside a preview. Filler rows, previews
-/// and empty lines have no piece. A line feed stands between every two pieces, of one pane or of
-/// two, so that no match reaches from one line into the next or from one pane into the next:
-/// neither a text that the user types into the search field nor a pattern such as any character
-/// matches it, and a word ends there as at the end of a line. A match that holds one all the
-/// same, for a search for a line break or for text of several lines, belongs to no pane.
+/// Each piece is a run of lines of a pane that follow each other in its text, with the line feeds
+/// between them, or the part of such a run beside a preview. Filler rows and previews have no
+/// piece, and empty lines start or end none. A line feed stands between every two pieces, of one
+/// pane or of two, so that the search text holds a line feed wherever a line ends: no match of a
+/// text without one reaches from one line into the next, from one section into the next or from
+/// one pane into the next, and a word ends there as at the end of a line. A match that holds a
+/// line feed all the same, for text of several lines, belongs to no pane.
 ///
-/// The text is a snapshot: a string of its own, put together from the panes' texts, which never
-/// changes and can be read from any thread.
+/// The text is a snapshot: a string of its own, copied from the panes' texts, which never changes
+/// and can be read from any thread. It keeps the characters in UTF-16, as the panes do, so that
+/// it takes a copy of their characters and nothing more to make, and the finder reads it without
+/// converting.
 struct SearchText: Sendable {
-  /// A searchable piece of a line: where it starts in the search text, which pane it belongs to,
-  /// and where it lies in that pane's text, all in UTF-16 code units.
+  /// A searchable piece of the text: where it starts in the search text, which pane it belongs
+  /// to, and where it lies in that pane's text, all in UTF-16 code units.
   struct Piece: Sendable, Equatable {
     var start: Int
     var pane: Int
@@ -58,38 +61,36 @@ struct SearchText: Sendable {
   /// Puts together the search text of `sections` of panes whose texts are `texts`.
   ///
   /// - Precondition: The lines and excluded ranges of each section lie within the text of its
-  ///   pane, and the lines are sorted and apart.
-  init(texts: [String], sections: [Section]) {
-    var pieces: [Piece] = []
-    var start = 0
-    func append(pane: Int, offset: Int, length: Int) {
-      if !pieces.isEmpty {
-        // The line feed before the piece.
-        start += 1
-      }
-      pieces.append(Piece(start: start, pane: pane, offset: offset, length: length))
-      start += length
-    }
+  ///   pane, the lines are sorted and apart, and each line that follows another right after its
+  ///   line feed starts one character after the end of that line.
+  init(texts: [NSString], sections: [Section]) {
+    var runs = Runs()
     for section in sections {
       var excluded = section.excluded[...]
       for line in section.lines {
-        var position = line.lowerBound
         // Ranges that end before the line cannot touch it or any line after it.
-        while let first = excluded.first, first.upperBound <= position {
+        while let first = excluded.first, first.upperBound <= line.lowerBound {
           excluded.removeFirst()
         }
+        var position = line.lowerBound
         for gap in excluded {
           guard gap.lowerBound < line.upperBound else { break }
           if position < gap.lowerBound {
-            append(pane: section.pane, offset: position, length: gap.lowerBound - position)
+            runs.add(
+              position..<gap.lowerBound, of: section.pane, startsLine: position == line.lowerBound,
+              endsLine: false)
           }
           position = max(position, gap.upperBound)
         }
-        if position < line.upperBound {
-          append(pane: section.pane, offset: position, length: line.upperBound - position)
+        if position < line.upperBound || position == line.lowerBound {
+          runs.add(
+            position..<line.upperBound, of: section.pane,
+            startsLine: position == line.lowerBound, endsLine: true)
         }
       }
     }
+    runs.end()
+    let pieces = runs.pieces
     var piecesByPane = Array(repeating: [Int](), count: texts.count)
     for (index, piece) in pieces.enumerated() {
       piecesByPane[piece.pane].append(index)
@@ -101,24 +102,82 @@ struct SearchText: Sendable {
     }) {
       piecesByPane[pane].sort { pieces[$0].offset < pieces[$1].offset }
     }
-    self.pieces = pieces
-    // The line feeds first, then the pieces between them.
-    var characters = [unichar](repeating: 0x0A, count: start)
+    let length = pieces.last?.range.upperBound ?? 0
+    // The line feeds between the pieces first, then the pieces between them.
+    var characters = [unichar](repeating: 0x0A, count: length)
     characters.withUnsafeMutableBufferPointer { buffer in
       // An empty text has no characters to copy.
       guard let base = buffer.baseAddress else { return }
-      let texts = texts.map { $0 as NSString }
       for piece in pieces {
         texts[piece.pane].getCharacters(base + piece.start, range: NSRange(piece.paneRange))
       }
     }
-    string = String(decoding: characters, as: UTF16.self)
+    self.pieces = pieces
     self.piecesByPane = piecesByPane
-    self.length = start
+    self.length = length
+    string = NSString(characters: characters, length: length) as String
+  }
+
+  /// Gathers the lines of the sections into pieces: lines of a pane that follow each other in
+  /// its text go into one piece, and empty lines start or end none.
+  private struct Runs {
+    /// A run of lines under way.
+    private struct Run {
+      /// The pane of the lines.
+      var pane: Int
+
+      /// The range of the run in the pane's text, from the start of its first line that is not
+      /// empty to the end of its last one.
+      var range: Range<Int>
+
+      /// The end of the last line the run reaches, which a line must follow right after its line
+      /// feed to join it; `nil` once a preview has cut the run short.
+      var reach: Int?
+    }
+
+    /// The pieces so far, in the order of the search text.
+    private(set) var pieces: [Piece] = []
+
+    /// The run under way, if any.
+    private var run: Run?
+
+    /// Adds `part` of a line of `pane`: the whole line or the part of it beside a preview.
+    mutating func add(_ part: Range<Int>, of pane: Int, startsLine: Bool, endsLine: Bool) {
+      let reach = endsLine ? part.upperBound : nil
+      guard var current = run, current.pane == pane, startsLine,
+        let end = current.reach, part.lowerBound == end + 1
+      else {
+        self.end()
+        run = Run(pane: pane, range: part, reach: reach)
+        return
+      }
+      if current.range.isEmpty {
+        // Empty lines before it start no piece.
+        current = Run(pane: pane, range: part, reach: reach)
+      } else {
+        // An empty line joins the run, but only a line after it that is not empty extends it.
+        if !part.isEmpty {
+          current.range = current.range.lowerBound..<part.upperBound
+        }
+        current.reach = reach
+      }
+      run = current
+    }
+
+    /// Ends the run under way, which becomes a piece unless it is empty.
+    mutating func end() {
+      defer { run = nil }
+      guard let run, !run.range.isEmpty else { return }
+      // A line feed stands before every piece but the first.
+      let start = pieces.last.map { $0.range.upperBound + 1 } ?? 0
+      pieces.append(
+        Piece(
+          start: start, pane: run.pane, offset: run.range.lowerBound, length: run.range.count))
+    }
   }
 
   /// The pane and the range in its text of `range` of the search text, or `nil` if the range
-  /// does not lie within one piece, as a range that holds a line feed between two pieces.
+  /// does not lie within one line of one piece, as a range that holds a line feed.
   ///
   /// An empty range at the end of a piece lies in that piece.
   func paneRange(of range: Range<Int>) -> (pane: Int, range: Range<Int>)? {
@@ -128,9 +187,9 @@ struct SearchText: Sendable {
       : pieces.partitioningIndex { $0.range.upperBound > range.lowerBound }
     guard index < pieces.count else { return nil }
     let piece = pieces[index]
-    guard piece.start <= range.lowerBound, range.upperBound <= piece.range.upperBound else {
-      return nil
-    }
+    guard piece.start <= range.lowerBound, range.upperBound <= piece.range.upperBound,
+      !holdsLineFeed(range)
+    else { return nil }
     let start = piece.offset + range.lowerBound - piece.start
     return (piece.pane, start..<start + range.count)
   }
@@ -192,5 +251,11 @@ struct SearchText: Sendable {
       first += 1
     }
     return ranges.sorted { $0.lowerBound < $1.lowerBound }
+  }
+
+  /// Whether `range` of the search text holds a line feed.
+  private func holdsLineFeed(_ range: Range<Int>) -> Bool {
+    (string as NSString).range(of: "\n", options: .literal, range: NSRange(range)).location
+      != NSNotFound
   }
 }

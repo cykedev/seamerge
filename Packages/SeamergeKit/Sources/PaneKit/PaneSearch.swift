@@ -271,13 +271,14 @@ public final class PaneSearch: NSObject {
 
   private func makeSearchText() -> SearchText {
     let sections = sectionsInScope
-    let texts = panes.map(\.textView.string)
+    // The texts as the panes hold them, without a copy: the search text copies what it needs.
+    let texts = panes.map { $0.textView.textStorage?.mutableString ?? NSMutableString() }
     let searched = sections.compactMap { section -> SearchText.Section? in
       guard let pane = panes.firstIndex(where: { $0 === section.pane }) else { return nil }
       let textView = section.pane.textView
       let grid = textView.grid
       let content = textView.content
-      let text = texts[pane] as NSString
+      let text = texts[pane]
       let rows =
         min(
           section.rows.lowerBound, grid.rowCount)..<min(
