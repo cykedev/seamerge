@@ -150,6 +150,11 @@ public final class SessionWindowController: NSWindowController {
   /// Whether the files are being compared anew.
   var isSwitchingComparison = false
 
+  /// The return to an earlier comparison that undo or redo brings back, while the window makes
+  /// it ready away from the main actor; until it shows, the window takes no edit and no
+  /// command.
+  var comparisonReturn: Task<Void, Never>?
+
   /// The filling of the panes once the comparison is ready, while the window waits for the
   /// comparison of its files.
   var comparisonFill: Task<Void, Never>?
@@ -454,6 +459,20 @@ public final class SessionWindowController: NSWindowController {
     }
   }
 
+  /// Whether Undo can act now on the step it would take back.
+  var allowsUndo: Bool {
+    allowsStep(
+      bringingBackAComparison:
+        sessionUndoManager.undoActionUserInfoValue(forKey: Self.bringsBackComparison) != nil)
+  }
+
+  /// Whether Redo can act now on the step it would carry out again.
+  var allowsRedo: Bool {
+    allowsStep(
+      bringingBackAComparison:
+        sessionUndoManager.redoActionUserInfoValue(forKey: Self.bringsBackComparison) != nil)
+  }
+
   /// Remembers which pane above the result has the focus, which gets it back when text mode
   /// ends.
   func windowDidChangeFirstResponder(_ window: NSWindow) {
@@ -545,6 +564,7 @@ extension SessionWindowController: NSWindowDelegate {
   /// to its file, and closing a comparison means it was seen, so that Git goes on to the next
   /// file.
   public func windowWillClose(_ notification: Notification) {
+    stopBringingBack()
     presentation.search.close()
     rememberPlace()
     fileWatchers = []
@@ -660,10 +680,12 @@ extension SessionWindowController: NSUserInterfaceValidations {
   }
 
   /// Whether `command` can have an effect now; while the window cannot show the lines of its
-  /// files, only skipping the remaining files, the commands of the list, and in a window of
-  /// several files the patch of all of them can.
+  /// files, or makes ready the comparison that undo or redo brings back, only skipping the
+  /// remaining files, the commands of the list, and in a window of several files the patch of
+  /// all of them can.
   func canPerform(_ command: SessionCommand) -> Bool {
-    if unavailable != nil || collectionPlaceholder != nil || waitsForComparison,
+    if unavailable != nil || collectionPlaceholder != nil || waitsForComparison
+      || comparisonReturn != nil,
       ![
         .skipRemainingFiles, .toggleFooter, .nextFile, .previousFile, .filterFiles,
         .toggleIdenticalFiles, .copyPatch, .exportPatch,

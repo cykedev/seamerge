@@ -1,4 +1,5 @@
 import AppKit
+import MergeModel
 import Testing
 
 @testable import SeamergeUI
@@ -28,6 +29,34 @@ import Testing
     #expect(Keys.of(.nextFile, in: .diff) == Keys(SessionCommand.rightArrow, [.option, .command]))
     #expect(
       Keys.of(.previousFile, in: .diff) == Keys(SessionCommand.leftArrow, [.option, .command]))
+  }
+
+  @Test func fileShownWhileUndoBringsBackAComparisonShowsUnderItsOwnName() async throws {
+    // A large first file, which takes a while to bring back, and a small second one, which
+    // shows sooner.
+    let folder = try SampleCollections.folder()
+    let lines = (0..<40_000).map { "line \($0)" }
+    let large = lines.joined(separator: "\n") + "\n"
+    let collection = FileCollection(files: [
+      try SampleCollections.file(
+        "large.txt", old: large, new: large.replacingOccurrences(of: "line 7", with: "line  7"),
+        number: 1, count: 2, in: folder),
+      try SampleCollections.file(
+        "small.txt", old: "a\n", new: "b\n", number: 2, count: 2, in: folder),
+    ])
+    let controller = try await Windows.controller(for: collection)
+    defer { controller.window?.close() }
+    await controller.switchComparison(to: ComparisonOptions(mode: .exact))
+    controller.sessionUndoManager.undo()
+    let returning = try #require(controller.comparisonReturn)
+
+    controller.showFile(at: 1)
+    await controller.fileLoad?.value
+    await returning.value
+    let file = collection.files[1]
+    #expect(controller.window?.title == file.path)
+    #expect(controller.presentation.changes.session.file(for: .b)?.label == file.new.label)
+    #expect(!controller.sessionUndoManager.canUndo && !controller.sessionUndoManager.canRedo)
   }
 
   @Test func windowOfOneSessionHasNoFilesToGoTo() async throws {

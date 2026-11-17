@@ -130,6 +130,7 @@ import Testing
     #expect(controller.comparisonOptions.mode == .ignoreAllWhitespace)
     try controller.checkResultIsShownAsModelled()
     undoManager.undo()
+    await controller.comparisonReturn?.value
     #expect(controller.comparisonOptions.mode == mode)
     undoManager.undo()
     #expect(try controller.segmentTexts[1] == "A1\n")

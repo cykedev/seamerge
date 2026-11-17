@@ -34,10 +34,12 @@ import Testing
     #expect(undoManager.undoMenuItemTitle == "Undo Change Comparison")
 
     undoManager.undo()
+    await controller.comparisonReturn?.value
     #expect(controller.comparisonOptions.mode == .windowDefault)
     #expect(controller.presentation.changes.blocks.count == blocksBefore)
     #expect(window.subtitle == subtitleBefore)
     undoManager.redo()
+    await controller.comparisonReturn?.value
     #expect(controller.comparisonOptions.mode == .exact)
   }
 

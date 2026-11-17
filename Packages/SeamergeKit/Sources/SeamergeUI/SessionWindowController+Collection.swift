@@ -319,6 +319,7 @@ extension SessionWindowController {
   /// Shows `loaded`, the comparison of `file`, in place of the file in view.
   private func show(_ loaded: LoadedFile, of file: CollectedFile) {
     guard collection != nil else { return }
+    stopBringingBack()
     var difftool = file.difftool
     difftool.filePosition = filePosition
     context = SessionContext(difftool: difftool, folders: collection?.namingFolders)

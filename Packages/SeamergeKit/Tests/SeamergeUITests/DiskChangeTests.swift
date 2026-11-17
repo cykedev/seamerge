@@ -83,6 +83,7 @@ struct DiskChangeTests {
     #expect(fixture.prompts.questions.isEmpty)
     fixture.controller.endEvent()
     fixture.undoManager.undo()
+    await fixture.controller.comparisonReturn?.value
     #expect(fixture.text(of: .a) == Self.a)
     #expect(fixture.conflictState == .chosen)
   }
@@ -218,9 +219,11 @@ struct DiskChangeTests {
     #expect(fixture.controller.window?.isDocumentEdited == false)
     fixture.controller.endEvent()
     fixture.undoManager.undo()
+    await fixture.controller.comparisonReturn?.value
     #expect(fixture.controller.presentation.result?.text == text)
     #expect(fixture.controller.window?.isDocumentEdited == true)
     fixture.undoManager.redo()
+    await fixture.controller.comparisonReturn?.value
     #expect(fixture.controller.window?.isDocumentEdited == false)
   }
 
@@ -252,11 +255,13 @@ struct DiskChangeTests {
     fixture.controller.endEvent()
 
     fixture.undoManager.undo()
+    await fixture.controller.comparisonReturn?.value
     await fixture.controller.reloadChangedFiles()
 
     #expect(fixture.text(of: .a) == Self.a)
     #expect(fixture.undoManager.canRedo)
     fixture.undoManager.redo()
+    await fixture.controller.comparisonReturn?.value
     #expect(fixture.text(of: .a) == changed)
   }
 
@@ -314,6 +319,7 @@ struct DiskChangeTests {
     #expect(fixture.conflictState == .open)
     controller.endEvent()
     fixture.undoManager.undo()
+    await fixture.controller.comparisonReturn?.value
     #expect(fixture.text(of: .a) == Self.a)
     #expect(controller.presentation.headers[.a]?.name == "a.txt")
   }

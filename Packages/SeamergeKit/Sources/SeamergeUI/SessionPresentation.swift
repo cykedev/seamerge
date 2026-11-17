@@ -142,6 +142,13 @@ final class SessionPresentation {
   /// moves with the text rather than by the user.
   var isCarryingOut = false
 
+  /// Whether the result can be edited, by typing or by replacing matches of the search; it
+  /// cannot while the window makes ready a comparison that undo or redo brings back, and the
+  /// result pane then reads as text that cannot be changed.
+  var acceptsEdits = true {
+    didSet { layout.resultPane?.editingDelegate = acceptsEdits ? self : nil }
+  }
+
   /// The edit of the result that the result pane has asked about and is about to report as
   /// carried out, with the plan that the document made for it.
   var pendingTyping: (plan: EditPlan, edits: [PaneEdit])?
