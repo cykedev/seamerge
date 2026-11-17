@@ -127,18 +127,47 @@ extension LargeFileRun {
     recorder.record("mode-switch-exact-longest-hold", held)
   }
 
+  /// Undoes the switch of the comparison mode, then redoes it, each until the window shows the
+  /// comparison it brings back and is laid out and drawn, with the longest hold of the main
+  /// actor meanwhile.
+  func measureUndoingTheSwitch() async {
+    let undoManager = controller.sessionUndoManager
+    for (metric, isUndo) in [("mode-switch-undo", true), ("mode-switch-redo", false)] {
+      let start = clock.now
+      let held = await longestHold {
+        if isUndo {
+          undoManager.undo()
+        } else {
+          undoManager.redo()
+        }
+        // Undo and redo set off the comparison they bring back; the window shows it once it is
+        // ready.
+        await controller.comparisonReturn?.value
+        contentView.layoutSubtreeIfNeeded()
+      }
+      recorder.record(metric, clock.now - start)
+      draw()
+      recorder.record("\(metric)-drawn", clock.now - start)
+      recorder.record("\(metric)-longest-hold", held)
+      pause()
+    }
+  }
+
   /// Searches all panes for a rare text, then for a common one, each until the first matches
   /// and until all of them, with the longest hold of the main actor meanwhile, and closes the
-  /// find bar.
+  /// find bar; the metrics begin with `label`.
   ///
   /// A search that does not find all its matches within `limit` ends the searching, since
   /// typing while the finder searches races with that search.
-  func measureSearching(limit: Duration = .seconds(120)) async throws {
+  func measureSearching(as label: String = "search", limit: Duration = .seconds(120))
+    async throws
+  {
     try await FindPasteboard.preserving {
       let driver = SearchDriver(controller)
       #expect(try driver.send(.find))
       let texts = largeCase.searchTexts
-      for (label, text) in [("rare", texts.rare), ("common", texts.common)] {
+      for (kind, text) in [("rare", texts.rare), ("common", texts.common)] {
+        let metric = "\(label)-\(kind)"
         let expected = matchCount(of: text)
         // An empty field drops the matches of the search before, so that the first matches
         // counted are those of this search.
@@ -155,18 +184,18 @@ extension LargeFileRun {
           try driver.type(text)
           found = await waitForMatches(of: driver, until: start + limit) { $0 > 0 }
           if found {
-            recorder.record("search-\(label)-first", clock.now - start)
+            recorder.record("\(metric)-first", clock.now - start)
           }
           found = await waitForMatches(of: driver, until: start + limit) { $0 >= expected }
         }
-        recorder.record(found ? "search-\(label)" : "search-\(label)-timeout", clock.now - start)
+        recorder.record(found ? metric : "\(metric)-timeout", clock.now - start)
         recorder.record(
-          "search-\(label)-matches", Double(driver.search.matches.count), unit: "matches")
-        recorder.record("search-\(label)-expected", Double(expected), unit: "matches")
-        recorder.record("search-\(label)-longest-hold", held)
+          "\(metric)-matches", Double(driver.search.matches.count), unit: "matches")
+        recorder.record("\(metric)-expected", Double(expected), unit: "matches")
+        recorder.record("\(metric)-longest-hold", held)
         guard found else { return }
       }
-      measure("search-hide", .once) { driver.search.perform(.hideFindInterface) }
+      measure("\(label)-hide", .once) { driver.search.perform(.hideFindInterface) }
     }
   }
 

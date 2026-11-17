@@ -3,8 +3,8 @@ import Testing
 
 /// Measures how a large comparison or merge behaves, phase by phase, until the window is laid
 /// out and drawn again: opening, coloring, scrolling, jumping, showing all lines, switching the
-/// arrangement and the comparison mode, searching, deciding and typing, and the memory after
-/// each phase.
+/// arrangement and the comparison mode, undoing and redoing that switch, searching, also right
+/// after the switch, deciding and typing, and the memory after each phase.
 ///
 /// The measurements run only on demand, never in the check of the repository: the environment
 /// variable `SEAMERGE_MEASURE_CASE` names the case of ``LargeFileCase``, and
@@ -59,6 +59,12 @@ struct LargeFileMeasurements {
     }
     await run.phase("arrangements") { run.measureArrangements() }
     await run.phase("mode-switch") { await run.measureSwitchingTheMode() }
+    // Searching right after the switch, while the window has just put in the new comparison.
+    try await run.phase("search-after-switch") {
+      try await run.measureSearching(as: "search-after-switch")
+    }
+    run.pause(.seconds(1))
+    await run.phase("mode-switch-undo") { await run.measureUndoingTheSwitch() }
     // The user reads the new comparison before searching it; a search right after the switch
     // measures a race of the finder with the new content instead.
     run.pause(.seconds(1))
