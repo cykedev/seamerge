@@ -59,12 +59,26 @@ enum Rendering {
   /// Draws the whole window, title bar included, into a bitmap at the backing scale.
   static func bitmap(of window: NSWindow) throws -> NSBitmapImageRep {
     let frameView = try #require(window.contentView?.superview)
+    useLegacyScrollers(in: frameView)
     frameView.layoutSubtreeIfNeeded()
     orderToolbarGlass(in: frameView)
     let bitmap = try #require(frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds))
     frameView.cacheDisplay(in: frameView.bounds, to: bitmap)
     try drawGlassContents(of: frameView, into: bitmap)
     return bitmap
+  }
+
+  /// Gives every scroll view of the window legacy scrollers, so that a picture shows the same
+  /// scrollers whenever it is drawn and whatever pointing devices the Mac has.
+  ///
+  /// The system gives scroll views the style of its own setting, which by default follows the
+  /// pointing devices. A process starts with overlay scrollers and learns the devices only once
+  /// its main run loop has turned, so the first picture of a test run would draw other
+  /// scrollers than the pictures after it on a Mac with a mouse.
+  private static func useLegacyScrollers(in frameView: NSView) {
+    for case let scrollView as NSScrollView in descendants(of: frameView) {
+      scrollView.scrollerStyle = .legacy
+    }
   }
 
   /// Puts the glass behind the items of the toolbar in order from left to right, so that the
