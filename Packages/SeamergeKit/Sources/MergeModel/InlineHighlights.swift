@@ -158,7 +158,11 @@ public struct InlineHighlights: Sendable, Hashable {
           let end = rowStart + offsets.offset(ofByte: upper, inLine: line)
           let composed = string.rangeOfComposedCharacterSequences(
             for: NSRange(location: start, length: end - start))
-          insert(composed.location..<(composed.location + composed.length), into: &ranges)
+          // The line feed before a row joins a combining mark at the start of the row into one
+          // character, which must not pull the highlight out of its row.
+          insert(
+            max(composed.location, rowStart)..<(composed.location + composed.length),
+            into: &ranges)
         }
         line += 1
       }
@@ -192,7 +196,9 @@ public struct InlineHighlights: Sendable, Hashable {
       + file.lineIndex.utf16Offset(ofByteOffset: offset - file.lineStarts[line], inLine: line)
     let string = displayText.string as NSString
     if position < string.length {
-      position = string.rangeOfComposedCharacterSequence(at: position).location
+      // As in `displayRanges`, a combining mark at the start of the row must not move the mark
+      // to the line feed before it.
+      position = max(rowStart, string.rangeOfComposedCharacterSequence(at: position).location)
     }
     return position..<position
   }

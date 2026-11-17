@@ -50,6 +50,17 @@ struct RemovalMarkTests {
     #expect(try session.removalMarks(of: .b, inFirst: .changed) == [4])
   }
 
+  @Test func removalBeforeACombiningMarkAtTheStartOfALineIsMarkedAtTheStartOfItsRow()
+    async throws
+  {
+    // In the text of all rows, the mark would join the line feed before it into one character.
+    let session = try await diff("same\nold \u{301}x = 1\n", "same\n\u{301}x = 1\n")
+    let text = try #require(session.rowLayout.displayText(for: .b))
+
+    #expect(
+      try session.removalMarks(of: .b, inFirst: .changed) == [text.utf16Range(ofRow: 1).lowerBound])
+  }
+
   @Test func whitespaceRemovedWithinALineIsMarkedUnlessAllWhitespaceIsIgnored() async throws {
     for mode in ComparisonMode.allCases {
       let session = try await diff("f(a, b) c\n", "f(a,b) d\n", mode: mode)

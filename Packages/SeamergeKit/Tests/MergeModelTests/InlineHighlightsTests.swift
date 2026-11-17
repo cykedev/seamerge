@@ -39,6 +39,17 @@ struct InlineHighlightsTests {
     #expect(ranges.first?.lowerBound == text.utf16Range(ofRow: 1).lowerBound + 8)
   }
 
+  @Test func highlightOfALineThatStartsWithACombiningMarkStaysOnItsRow() async throws {
+    // In the text of all rows, the mark would join the line feed before it into one character.
+    let session = try await diff("same\n\u{301}a x\n", "same\n\u{302}a x\n")
+    let block = try #require(session.blocks.first { $0.kind == .changed })
+    let ranges = try session.inlineHighlights(for: block).ranges(in: .a)
+    let text = try #require(session.rowLayout.displayText(for: .a))
+
+    #expect(
+      ranges == [text.utf16Range(ofRow: 1).lowerBound..<text.utf16Range(ofRow: 1).lowerBound + 2])
+  }
+
   @Test func highlightsLieOnTheExpectedCharactersOfAFileEndingInCR() async throws {
     let session = try await diff("eins\rzwei 😀 ü\rdrei\r", "eins\rzwei 🙃 ü\rdrei\r")
     let block = try #require(session.blocks.first { $0.kind == .changed })
