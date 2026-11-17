@@ -184,28 +184,41 @@ struct SearchDuringSwitchTests {
     }
   }
 
+  /// A comparison of the two files read from `folder`, whose newer file the test may change.
+  private static func diffOfFiles(in folder: URL) async throws -> (session: Session, new: URL) {
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    let old = folder.appending(path: "old.log")
+    let new = folder.appending(path: "new.log")
+    try Data(file(newer: false).utf8).write(to: old)
+    try Data(file(newer: true).utf8).write(to: new)
+    let session = try await Session.loadDiff(
+      old: SessionFile(url: old, label: "old.log"), new: SessionFile(url: new, label: "new.log"),
+      mode: .windowDefault)
+    return (session, new)
+  }
+
+  /// A folder of its own for the files of a test.
+  private static func newFolder() -> URL {
+    FileManager.default.temporaryDirectory.appending(
+      path: "SearchDuringSwitchTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+  }
+
+  /// The newer file with its first `lineCount` lines only.
+  private static func newerFile(prefix lineCount: Int) -> String {
+    file(newer: true).components(separatedBy: "\n").prefix(lineCount).joined(separator: "\n")
+      + "\n"
+  }
+
   @Test func fileChangedOnDiskReloadsWhileTheSearchRuns() async throws {
     try await FindPasteboard.preserving {
-      let folder = FileManager.default.temporaryDirectory.appending(
-        path: "SearchDuringSwitchTests-\(UUID().uuidString)", directoryHint: .isDirectory)
-      try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+      let folder = Self.newFolder()
       defer { #expect(throws: Never.self) { try FileManager.default.removeItem(at: folder) } }
-      let old = folder.appending(path: "old.log")
-      let new = folder.appending(path: "new.log")
-      try Data(Self.file(newer: false).utf8).write(to: old)
-      try Data(Self.file(newer: true).utf8).write(to: new)
-      let session = try await Session.loadDiff(
-        old: SessionFile(url: old, label: "old.log"), new: SessionFile(url: new, label: "new.log"),
-        mode: .windowDefault)
+      let (session, new) = try await Self.diffOfFiles(in: folder)
       let controller = try Windows.controller(for: session)
       defer { controller.window?.close() }
       let driver = try startSearch(in: controller)
       // Fewer lines, so that the search text gets shorter, then the lines again.
-      let texts = [
-        Self.file(newer: true).components(separatedBy: "\n").prefix(Self.lineCount / 2)
-          .joined(separator: "\n") + "\n",
-        Self.file(newer: true),
-      ]
+      let texts = [Self.newerFile(prefix: Self.lineCount / 2), Self.file(newer: true)]
       for (index, text) in texts.enumerated() {
         try Data(text.utf8).write(to: new)
         try driver.type(Self.common)
@@ -214,6 +227,64 @@ struct SearchDuringSwitchTests {
         await reloading.value
         #expect(controller.presentation.changes.session.file(for: .b)?.text == text)
         try await expectMatches(of: Self.rare(901 + index), with: driver)
+      }
+    }
+  }
+
+  /// The seed of the random sequence of searches, switches, undo and reloads, which every
+  /// failure names, so that the sequence can be repeated.
+  static let seed: UInt64 = 0x5EA2_C44D
+
+  /// A random line that holds a rare text in both files, as one search after another needs.
+  private static func randomUnchangedLine(using generator: inout SeededGenerator) -> Int {
+    let line = Int.random(in: 0..<lineCount / 2, using: &generator)
+    return line % 40 == 20 ? line + 1 : line
+  }
+
+  @Test func randomSearchesWhileTheWindowSwitchesUndoesAndReloadsEndWithTheirMatches()
+    async throws
+  {
+    try await FindPasteboard.preserving {
+      let folder = Self.newFolder()
+      defer { #expect(throws: Never.self) { try FileManager.default.removeItem(at: folder) } }
+      let (session, new) = try await Self.diffOfFiles(in: folder)
+      let controller = try Windows.controller(for: session)
+      defer { controller.window?.close() }
+      let undoManager = controller.sessionUndoManager
+      var generator = SeededGenerator(seed: Self.seed)
+      let modes: [ComparisonMode] = [.exact, .ignoreAllWhitespace, .ignoreWhitespaceAmount]
+      let driver = try startSearch(in: controller)
+      for step in 0..<24 {
+        let comment = Comment(rawValue: "seed \(Self.seed), step \(step)")
+        let typed = Self.rare(Self.randomUnchangedLine(using: &generator))
+        switch Int.random(in: 0..<4, using: &generator) {
+        case 0:
+          var options = controller.comparisonOptions
+          options.mode = modes.randomElement(using: &generator) ?? .exact
+          let switching = Task { [options] in await controller.switchComparison(to: options) }
+          try driver.type(typed)
+          await switching.value
+        case 1:
+          let lineCount = Bool.random(using: &generator) ? Self.lineCount : Self.lineCount * 3 / 4
+          try Data(Self.newerFile(prefix: lineCount).utf8).write(to: new)
+          let reloading = Task { await controller.reloadChangedFiles() }
+          try driver.type(typed)
+          await reloading.value
+        case 2 where controller.allowsUndo && (undoManager.canUndo || undoManager.canRedo):
+          if undoManager.canUndo && (Bool.random(using: &generator) || !undoManager.canRedo) {
+            undoManager.undo()
+          } else {
+            undoManager.redo()
+          }
+          try driver.type(typed)
+          await controller.comparisonReturn?.value
+        default:
+          try driver.type(Self.common)
+          try driver.type(typed)
+        }
+        #expect(!controller.isSwitchingComparison, comment)
+        try await expectMatches(
+          of: Self.rare(Self.randomUnchangedLine(using: &generator)), with: driver)
       }
     }
   }
