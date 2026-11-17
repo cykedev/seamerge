@@ -139,6 +139,34 @@ struct InlineHighlightsTests {
     #expect(try session.inlineHighlights(for: block).isEmpty)
   }
 
+  /// The most bytes that the text of a block may take in an input to be highlighted: 64 KiB.
+  private static let maximumBlockSize = 65_536
+
+  @Test func blockOfAtMost64KiBInEachInputIsHighlighted() async throws {
+    // Two lines that both change: 6 bytes, the filler and 2 more.
+    let filler = String(repeating: "x", count: Self.maximumBlockSize - 8)
+    let session = try await diff("let a\n\(filler)a\n", "let b\n\(filler)b\n")
+
+    #expect(try session.highlightedTexts(of: .b, inFirst: .changed).first == "b")
+  }
+
+  @Test func blockOfMoreThan64KiBInAnInputIsNotHighlighted() async throws {
+    let filler = String(repeating: "x", count: Self.maximumBlockSize - 7)
+    let session = try await diff("let a\n\(filler)a\n", "let b\n\(filler)b\n")
+    let block = try #require(session.blocks.first { $0.kind == .changed })
+
+    #expect(try session.inlineHighlights(for: block).isEmpty)
+  }
+
+  @Test func sideOfAtMost64KiBKeepsItsHighlightsWhenTheOtherSideIsLarger() async throws {
+    let filler = String(repeating: "x", count: Self.maximumBlockSize)
+    let session = try await merge(
+      base: "let size = 10\n", a: "let size = 12\n\(filler)\n", b: "let width = 10\n")
+
+    #expect(try session.highlightedTexts(of: .a, inFirst: .conflict).isEmpty)
+    #expect(try session.highlightedTexts(of: .b, inFirst: .conflict) == ["width"])
+  }
+
   @Test func insertedLinesAreNotHighlighted() async throws {
     let session = try await diff("a\n", "a\nb\n")
     let block = try #require(session.blocks.first { $0.kind == .changed })

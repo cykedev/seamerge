@@ -12,7 +12,9 @@ import Foundation
 /// made the same change has no highlights. Changes that the comparison mode ignores are not
 /// highlighted, nor are lines that ignore rules match entirely and runs of text that the rules
 /// match on both sides. When more than 60 % of the runs of a comparison changed, removed runs
-/// included, it highlights nothing, because the block as a whole is then the change.
+/// included, it highlights nothing, because the block as a whole is then the change; nor does a
+/// comparison in which the text of the block is larger than 64 KiB in one of the two inputs, such
+/// as thousands of lines replaced at once, whose comparison would hold up the window.
 ///
 /// A run that one side replaced is highlighted on both sides. A run that one side lacks is
 /// highlighted on the side that has it and marked by an empty range on the side that lacks it,
@@ -39,6 +41,10 @@ public struct InlineHighlights: Sendable, Hashable {
   /// The share of changed runs above which a comparison highlights nothing: three fifths.
   private static let maximumChangedShare = (numerator: 3, denominator: 5)
 
+  /// The most UTF-8 bytes that the text of a block may take in each of the two inputs of a
+  /// comparison for the comparison to highlight it.
+  private static let maximumBlockSize = 65_536
+
   /// Compares the texts of `block` in `session`: A with B if `comparingSides` or the session
   /// has no base, and each side with the base otherwise.
   init(block: Block, in session: Session, comparingSides: Bool = false) throws(MergeModelError) {
@@ -51,6 +57,9 @@ public struct InlineHighlights: Sendable, Hashable {
       else { continue }
       let firstBytes = firstFile.byteRange(ofLines: block.lines(in: comparison.first))
       let secondBytes = secondFile.byteRange(ofLines: block.lines(in: comparison.second))
+      guard
+        firstBytes.count <= Self.maximumBlockSize && secondBytes.count <= Self.maximumBlockSize
+      else { continue }
       let firstText = firstFile.utf8.subdata(in: firstBytes)
       let secondText = secondFile.utf8.subdata(in: secondBytes)
       let tokens = try EngineAdapter.compareTokens(firstText, secondText)
