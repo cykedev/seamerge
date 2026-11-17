@@ -65,12 +65,49 @@ import Testing
     letScrollingRest(textView)
     #expect(try isLaidOut(row: 500, of: textView))
 
-    #expect(textView.rowsToDiscard != nil)
+    #expect(!textView.rowsToDiscard.isEmpty)
     discardEverything(in: textView)
 
-    #expect(textView.rowsToDiscard == nil)
+    #expect(textView.rowsToDiscard.isEmpty)
     #expect(try !isLaidOut(row: 500, of: textView))
     #expect(try isLaidOut(row: 0, of: textView))
+  }
+
+  @Test func restingFarDownDiscardsTheLayoutFarAboveTheViewAndKeepsThePagesNearIt() throws {
+    let (pane, window, _) = EditingTests.editablePane(text: Self.text)
+    defer { window.close() }
+    let textView = pane.textView
+    let rowHeight = pane.theme.rowHeight
+    let page = Int((textView.visibleRect.height / rowHeight).rounded(.up))
+    scrollThrough(pane, in: window, backTo: CGPoint(x: 0, y: 400 * rowHeight))
+    letScrollingRest(textView)
+    #expect(try isLaidOut(row: 100, of: textView))
+
+    discardEverything(in: textView)
+
+    #expect(try !isLaidOut(row: 100, of: textView))
+    #expect(try !isLaidOut(row: 500, of: textView))
+    #expect(try isLaidOut(row: 400, of: textView))
+    #expect(try isLaidOut(row: 400 - (PaneTextView.pagesKept - 1) * page, of: textView))
+  }
+
+  @Test func scrollingBackToTheTopAfterDiscardingLaysOutOnlyTheRowsInViewAtTheirPlaces() throws {
+    let (pane, window, _) = EditingTests.editablePane(text: Self.text)
+    defer { window.close() }
+    let textView = pane.textView
+    let rowHeight = pane.theme.rowHeight
+    scrollThrough(pane, in: window, backTo: CGPoint(x: 0, y: 400 * rowHeight))
+    letScrollingRest(textView)
+    discardEverything(in: textView)
+
+    pane.scroll(to: .zero)
+    window.contentView?.layoutSubtreeIfNeeded()
+
+    let manager = try #require(textView.textLayoutManager)
+    let fragment = try #require(manager.textLayoutFragment(for: manager.documentRange.location))
+    #expect(fragment.state == .layoutAvailable)
+    #expect(fragment.layoutFragmentFrame.minY == 0)
+    #expect(try !isLaidOut(row: 250, of: textView))
   }
 
   /// Discarding makes the content storage make new elements for the paragraphs below the view.

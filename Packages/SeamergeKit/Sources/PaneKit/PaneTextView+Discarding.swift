@@ -12,19 +12,24 @@ extension PaneTextView {
   /// Posted to the text view itself when the run loop is idle, to discard the next rows.
   static let idleToDiscardNotification = Notification.Name("PaneTextViewIdleToDiscard")
 
+  /// The pages of rows above and below the visible text whose paragraph elements stay when the
+  /// pane discards the others.
+  static let pagesKept = 3
+
   /// Notes that the visible text moved, and discards, once scrolling has come to rest and the
-  /// run loop is idle, the paragraph elements that TextKit holds for the rows more than a page
-  /// below the visible text, a part at a time.
+  /// run loop is idle, the paragraph elements that TextKit holds for the rows more than
+  /// ``pagesKept`` pages above or below the visible text, a part at a time.
   ///
-  /// TextKit keeps an element for every paragraph it has laid out and moves each one that
-  /// follows an edit, so that after scrolling through a long text, every edit would take time in
-  /// proportion to the text below it. An edit in view moves only the elements down to a page
-  /// below it then. The elements above the visible text stay: TextKit finds the place of the
-  /// view from them.
+  /// TextKit keeps an element for every paragraph it has laid out, with the layout of its
+  /// lines, and moves each one that follows an edit. After scrolling through a long text, every
+  /// edit would take time in proportion to the text below it, and the layout of every line
+  /// shown would stay in memory: for lines thousands of characters long, hundreds of kilobytes
+  /// each. TextKit finds the place of the view without the elements above it, since the pane
+  /// lays out the first visible row before the rest (``layOutFirstVisibleRow()``).
   func visibleTextDidMove() {
     updateDrawnSpan()
-    if let lastShownRow {
-      farthestRowShown = max(min(farthestRowShown, grid.rowCount - 1), lastShownRow)
+    if let rows = rows(aroundViewByPages: 2) {
+      rowsNearView.insert(integersIn: rows)
     }
     waitForScrollingToRest()
   }
@@ -60,33 +65,19 @@ extension PaneTextView {
     scrollRestTimer = timer
   }
 
-  /// Plans to discard the rows from a page below the visible text to two pages beyond the
-  /// farthest row that has been in view, as TextKit lays out somewhat beyond the visible text.
+  /// Plans to discard the rows that TextKit may hold and that lie more than ``pagesKept`` pages
+  /// from the visible text.
   @objc func scrollingDidRest(_ timer: Timer) {
     scrollRestTimer = nil
     interaction?.scrollingDidRest()
-    guard let firstRow = firstRowBelowViewToDiscard else {
-      finishDiscarding()
-      return
-    }
-    let page = Int((visibleRect.height / theme.rowHeight).rounded(.up))
-    let farthest = min(farthestRowShown, grid.rowCount - 1)
-    let farthestLine = displayRows.lines(ofRows: farthest..<farthest + 1).lowerBound
-    let end =
-      displayRows.row(atDisplayRow: displayRows.clampedDisplayRow(atLine: farthestLine + 2 * page))
-      + 1
-    guard firstRow < end else {
-      finishDiscarding()
-      return
-    }
-    rowsToDiscard = firstRow..<end
+    rowsToDiscard = rowsNearView
     resumeDiscardingParagraphs()
   }
 
   /// Asks for the next pass of discarding, if there are rows left and scrolling is at rest, once
   /// the run loop is idle; the passes coalesce.
   func resumeDiscardingParagraphs() {
-    guard rowsToDiscard != nil, !isScrolling else { return }
+    guard !rowsToDiscard.isEmpty, !isScrolling else { return }
     isDiscardPassPending = true
     NotificationQueue.default.enqueue(
       Notification(name: Self.idleToDiscardNotification, object: self), postingStyle: .whenIdle,
@@ -110,51 +101,46 @@ extension PaneTextView {
   @discardableResult
   func discardNextParagraphs() -> Bool {
     guard !isScrolling else { return false }
-    // The rows in view and a page below keep their elements, wherever the view is now.
-    guard let scheduled = rowsToDiscard, let firstRow = firstRowBelowViewToDiscard else {
+    // The rows near the view keep their elements, wherever the view is now.
+    guard let kept = rows(aroundViewByPages: Self.pagesKept) else {
       finishDiscarding()
       return false
     }
-    let start = max(scheduled.lowerBound, firstRow)
-    let end = min(scheduled.upperBound, grid.rowCount)
-    guard start < end else {
+    rowsToDiscard.remove(integersIn: kept)
+    rowsToDiscard = rowsToDiscard.intersection(IndexSet(integersIn: 0..<grid.rowCount))
+    guard let next = rowsToDiscard.rangeView.first else {
       finishDiscarding()
       return false
     }
     guard !hasMarkedText() else { return false }
-    let part = start..<min(end, start + Self.rowsDiscardedAtOnce)
+    let part = next.lowerBound..<min(next.upperBound, next.lowerBound + Self.rowsDiscardedAtOnce)
     contentStorage.discardElements(in: grid.paragraphOffsets(ofRows: part))
-    if part.upperBound < end {
-      rowsToDiscard = part.upperBound..<end
-    } else {
+    rowsToDiscard.remove(integersIn: part)
+    if rowsToDiscard.isEmpty {
       finishDiscarding()
     }
     return true
   }
 
-  /// Ends discarding: TextKit holds no elements below the view beyond a page now, so the
-  /// farthest row shown is the last one in view.
+  /// Ends discarding: TextKit holds no elements beyond the rows near the view.
   private func finishDiscarding() {
-    rowsToDiscard = nil
-    farthestRowShown = lastShownRow ?? 0
+    rowsToDiscard = IndexSet()
+    rowsNearView = rows(aroundViewByPages: 2).map { IndexSet(integersIn: $0) } ?? IndexSet()
   }
 
-  /// The last row in view, or `nil` if the view has not been laid out in a window.
-  private var lastShownRow: Int? {
+  /// The rows in view and `pages` pages above and below, or `nil` if the view has not been laid
+  /// out in a window.
+  private func rows(aroundViewByPages pages: Int) -> Range<Int>? {
     let visible = visibleRect
-    guard window != nil, visible.height > 0 else { return nil }
-    let line = Int((visible.maxY / theme.rowHeight).rounded(.up))
-    return displayRows.row(atDisplayRow: displayRows.clampedDisplayRow(atLine: line))
+    guard window != nil, visible.height > 0, grid.rowCount > 0 else { return nil }
+    let margin = pages * Int((visible.height / theme.rowHeight).rounded(.up))
+    let first = row(atLine: Int((visible.minY / theme.rowHeight).rounded(.down)) - margin)
+    let last = row(atLine: Int((visible.maxY / theme.rowHeight).rounded(.up)) + margin)
+    return first..<last + 1
   }
 
-  /// The first row more than a page below the visible text, or `nil` if there is none or the
-  /// view has not been laid out in a window.
-  private var firstRowBelowViewToDiscard: Int? {
-    let visible = visibleRect
-    guard window != nil, visible.height > 0 else { return nil }
-    let page = Int((visible.height / theme.rowHeight).rounded(.up))
-    let line = Int((visible.maxY / theme.rowHeight).rounded(.up)) + page
-    return line < displayRows.lineCount
-      ? displayRows.row(atDisplayRow: displayRows.displayRow(atLine: line)) : nil
+  /// The row shown on screen line `line`, or on the first or last line if `line` lies beyond.
+  private func row(atLine line: Int) -> Int {
+    displayRows.row(atDisplayRow: displayRows.clampedDisplayRow(atLine: max(0, line)))
   }
 }

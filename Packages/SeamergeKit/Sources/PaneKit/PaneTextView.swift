@@ -31,13 +31,13 @@ final class PaneTextView: NSTextView {
   /// The content storage, which the text view holds only weakly.
   let contentStorage = PaneContentStorage()
 
-  /// The rows below the visible text whose paragraph elements are still to be discarded, once
-  /// scrolling is at rest and the run loop is idle.
-  var rowsToDiscard: Range<Int>?
+  /// The rows away from the visible text whose paragraph elements are still to be discarded,
+  /// once scrolling is at rest and the run loop is idle.
+  var rowsToDiscard = IndexSet()
 
-  /// The farthest row that has been in view since discarding last finished: TextKit holds no
-  /// elements far below it.
-  var farthestRowShown = 0
+  /// The rows that have been in view since discarding last finished, with two pages around
+  /// them, as TextKit lays out somewhat beyond the visible text: it holds no elements elsewhere.
+  var rowsNearView = IndexSet()
 
   /// Whether the user is scrolling by hand, with the scroller or a gesture.
   var isLiveScrolling = false
@@ -264,8 +264,8 @@ final class PaneTextView: NSTextView {
     } else {
       textStorage.setAttributedString(
         NSAttributedString(string: text, attributes: attributes))
-      rowsToDiscard = nil
-      farthestRowShown = 0
+      rowsToDiscard = IndexSet()
+      rowsNearView = IndexSet()
     }
   }
 
