@@ -27,7 +27,7 @@ This guide is for people who use Seamerge to compare files and to resolve Git me
 ![A merge in Seamerge](Images/merge-light.png)
 
 1. Start a merge that stops with conflicts, for example with `git merge`. Then run `git mergetool`. Seamerge opens the file.
-2. The window shows four panes: A, the base, B and the result. A is the incoming side, B your side, and the base is their common ancestor. Hide the base with **Hide Base** (`⌥⌘B`). The result is what Git saves.
+2. The window shows four panes: A, the base, B and the result. A is the incoming side, B your side, and the base is their common ancestor. Hide the base with **Hide Base** (`⌥⌘B`); A and B are then compared with each other directly, as in a merge without a base. The result is what Git saves.
 3. A block that is marked as a conflict has no obvious winner. Look at A and B, then take one side with the decision bar, or take both, or edit the result by hand.
 4. Continue with the next conflict. The toolbar counts the conflicts that are still open, and `⌥⌘↓` moves to the next one.
 5. Save with **Save and Close** (`⌘↩`). Git then continues with the next file.
