@@ -149,6 +149,35 @@ lint_format() {
   swift format lint --strict --parallel -- "${files[@]}"
 }
 
+# Starts a copy of the built app and passes if it still runs after a few
+# seconds, so that a crash at launch, such as a framework dyld refuses, fails
+# the check. The copy has a bundle identifier of its own and no services, so
+# that it touches neither the settings nor the Services menu of an installed
+# Seamerge, and it is unregistered and its settings removed afterwards.
+launch_app() {
+  local built=$1 identifier=app.eiden.seamerge.check copy pid alive=false
+  [ -d "$built" ] || { echo "no app at $built"; return 1; }
+  copy=$(mktemp -d "${TMPDIR:-/tmp}/seamerge-launch.XXXXXX")/Seamerge.app
+  ditto "$built" "$copy"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $identifier" \
+    -c "Delete :NSServices" "$copy/Contents/Info.plist" 2> /dev/null
+  codesign --force --deep --sign - --preserve-metadata=entitlements "$copy" || return 1
+  "$copy/Contents/MacOS/Seamerge" -SUEnableAutomaticChecks NO -SUHasLaunchedBefore YES &
+  pid=$!
+  sleep 3
+  if kill -0 "$pid" 2> /dev/null; then
+    alive=true
+    kill "$pid"
+    wait "$pid" 2> /dev/null
+  fi
+  /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister \
+    -u "$copy" 2> /dev/null
+  defaults delete "$identifier" 2> /dev/null
+  rm -f "$HOME/Library/Preferences/$identifier.plist"
+  rm -rf "$(dirname "$copy")"
+  $alive || { echo "Seamerge quit within 3 seconds of its launch"; return 1; }
+}
+
 run_step "format" lint_format
 
 for manifest in Packages/*/Package.swift; do
@@ -187,6 +216,7 @@ if [ -d App ]; then
     # Without -quiet, so that the log has the summary of Swift Testing to count the tests.
     run_step --tests "xcodebuild test" "${xcode[@]}" test
   fi
+  run_step "app launches" launch_app "$log_dir/xcode/Build/Products/Debug/Seamerge.app"
 fi
 
 if [ "$failed" -eq 0 ]; then
