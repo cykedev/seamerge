@@ -2,6 +2,22 @@
 
 All notable changes to Seamerge are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-11-17
+
+Users of 0.5.0 get this version through Seamerge ▸ Check for Updates… or the automatic check. This release gives Seamerge a welcome window.
+
+### Added
+
+- A welcome window replaces the window Compare Files. On the deep blue of the website it offers Compare Files…, Compare Folders… and Merge Files…, and takes two files or folders dropped on it; on the right it lists the recent comparisons by day, with their kind, folder and time.
+- File ▸ Merge Files… chooses three files to merge without Git.
+- Seamerge brings its own accent color, the blue of the website. macOS uses it while the accent color in System Settings is Multicolor.
+
+### Changed
+
+- Files are chosen in sheets: Compare Files has two fields, Left and Right; Merge Files has three, A, Base and B. Compare Files… (⌘O) shows the welcome window with its sheet from anywhere.
+- Two files dropped on the welcome window open at once, the older on the left, as the Finder service opens them.
+- Recent comparisons keep the time they were opened; the list shows all ten that are kept.
+
 ## [0.5.0] - 2026-11-17
 
 Users of 0.4.1 get this version through Seamerge ▸ Check for Updates… or the automatic check. This release is about speed: large files open, scroll, switch and search much faster.
