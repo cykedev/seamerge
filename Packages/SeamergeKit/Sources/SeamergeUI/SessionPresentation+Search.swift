@@ -59,28 +59,67 @@ extension SessionPresentation {
   /// by side on the rows of the grid in their bar, those of the result and of the single column
   /// each in its own.
   func showSearchMatches() {
-    var sourceRows = IndexSet()
+    var sourceRows: [IndexSet] = []
     var resultRows = IndexSet()
     var columnRows = IndexSet()
-    for match in search.matches {
-      let row = match.pane.row(containingOffset: match.range.lowerBound)
-      if match.pane === layout.resultPane {
-        resultRows.insert(row)
-      } else if match.pane === layout.columnPane {
-        columnRows.insert(row)
+    for pane in search.panesWithMatches {
+      let rows = search.matchRows(in: pane)
+      if pane === layout.resultPane {
+        resultRows = rows
+      } else if pane === layout.columnPane {
+        columnRows = rows
+      } else if alignsLines {
+        // The panes side by side stand on the grid.
+        sourceRows.append(rows)
       } else {
-        sourceRows.insert(gridRow(ofRow: row, in: match.pane))
+        var gridRows = IndexSet()
+        for row in rows {
+          gridRows.insert(gridRow(ofRow: row, in: pane))
+        }
+        sourceRows.append(gridRows)
       }
     }
-    sourcesOverviewBar.matchRows = sourceRows
+    sourcesOverviewBar.matchRows = Self.union(of: sourceRows)
     resultOverviewBar?.matchRows = resultRows
     columnOverviewBar?.matchRows = columnRows
   }
 
+  /// The union of `sets`, made by walking them side by side in order, so that each range goes
+  /// in at the end: the rows of panes side by side interleave, and putting the rows of one pane
+  /// into those of another moves all ranges after each one put in.
+  static func union(of sets: [IndexSet]) -> IndexSet {
+    var iterators = sets.map { $0.rangeView.makeIterator() }
+    var heads = iterators.indices.map { iterators[$0].next() }
+    var union = IndexSet()
+    var run: Range<Int>?
+    while true {
+      var next: (index: Int, range: Range<Int>)?
+      for (index, head) in heads.enumerated() {
+        guard let head else { continue }
+        if next.map({ head.lowerBound < $0.range.lowerBound }) ?? true {
+          next = (index, head)
+        }
+      }
+      guard let next else { break }
+      heads[next.index] = iterators[next.index].next()
+      if let last = run, next.range.lowerBound <= last.upperBound {
+        run = last.lowerBound..<max(last.upperBound, next.range.upperBound)
+      } else {
+        if let last = run {
+          union.insert(integersIn: last)
+        }
+        run = next.range
+      }
+    }
+    if let last = run {
+      union.insert(integersIn: last)
+    }
+    return union
+  }
+
   /// The changed block that the match of the search lies in, if any.
   func block(of match: PaneSearch.Match) -> Int? {
-    let row = match.pane.row(containingOffset: match.range.lowerBound)
-    return match.pane.content.blocks.firstIndex { $0.rows.contains(row) }
+    match.pane.content.blocks.firstIndex { $0.rows.contains(match.row) }
   }
 }
 
@@ -102,11 +141,9 @@ extension SessionPresentation: PaneSearchDelegate {
       let view = (responder as? NSText)?.delegate as? NSView ?? responder as? NSView,
       view.isDescendant(of: search.findBar)
     else { return }
-    var panes: [PaneView] = []
-    for match in search.matches where !panes.contains(where: { $0 === match.pane }) {
-      panes.append(match.pane)
-    }
-    announce(Self.matchesAnnouncement(matchCount: search.matches.count, paneCount: panes.count))
+    announce(
+      Self.matchesAnnouncement(
+        matchCount: search.matchCount, paneCount: search.panesWithMatches.count))
   }
 
   /// Tells the delegate, which keeps the steps of undo.

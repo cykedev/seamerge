@@ -381,6 +381,42 @@ struct SearchWindowTests {
     }
   }
 
+  @Test func matchesOfConnectedSidesStandOnTheRowsOfTheGridInTheOverviewBar() async throws {
+    try await FindPasteboard.preserving {
+      // Two lines more at the top of the newer file: the needle is row 3 of the older file and
+      // row 5 of the newer one, which is row 5 of the grid that the bar shows.
+      let controller = try Windows.controller(
+        for: try await SampleDiffs.diff(old: "a\nb\nc\nneedle\n", new: "x\ny\na\nb\nc\nneedle\n"))
+      let window = try #require(controller.window)
+      defer { window.close() }
+      controller.perform(.showConnectedSides)
+      #expect(!controller.presentation.alignsLines)
+      let driver = SearchDriver(controller)
+      #expect(try driver.send(.find))
+      try driver.type("needle")
+      await driver.waitForMatches(count: 2)
+
+      #expect(driver.search.matches.map(\.row).sorted() == [3, 5])
+      #expect(controller.presentation.sourcesOverviewBar.matchRows == IndexSet([5]))
+    }
+  }
+
+  @Test func rowsOfMatchesOfPanesSideBySideJoinAsTheirUnion() {
+    // The seed of the random rows, which a failure names.
+    let seed: UInt64 = 0x0B5E_4A44
+    var generator = SeededGenerator(seed: seed)
+    for _ in 0..<20 {
+      let sets = (0..<Int.random(in: 0...3, using: &generator)).map { _ in
+        IndexSet(
+          (0..<Int.random(in: 0..<200, using: &generator)).map { _ in
+            Int.random(in: 0..<300, using: &generator)
+          })
+      }
+      let expected = sets.reduce(IndexSet()) { $0.union($1) }
+      #expect(SessionPresentation.union(of: sets) == expected, "seed \(seed)")
+    }
+  }
+
   @Test func matchesStandAsStrokesInTheOverviewBarsWhileTheBarIsOpen() async throws {
     try await FindPasteboard.preserving {
       let controller = try Windows.controller(for: try await Self.needleMerge())

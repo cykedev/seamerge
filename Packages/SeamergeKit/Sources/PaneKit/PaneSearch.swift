@@ -41,6 +41,9 @@ public final class PaneSearch: NSObject {
 
     /// The range of the match in the text of the pane.
     public var range: Range<Int>
+
+    /// The row of the pane that the match starts in.
+    public var row: Int
   }
 
   /// The panes that the search goes through.
@@ -74,7 +77,31 @@ public final class PaneSearch: NSObject {
 
   /// The matches of the current search, in the order of the search, while the find bar shows
   /// them as the user types; empty while the find bar is closed.
-  public private(set) var matches: [Match] = []
+  ///
+  /// The search makes the list once it is asked for after the matches changed; ``matchCount``,
+  /// ``panesWithMatches`` and ``matchRows(in:)`` tell about them without it.
+  public var matches: [Match] {
+    if let listedMatches {
+      return listedMatches
+    }
+    let listed = found.places.map { Match(pane: panes[$0.pane], range: $0.range, row: $0.row) }
+    listedMatches = listed
+    return listed
+  }
+
+  /// The number of ``matches``.
+  public var matchCount: Int { found.places.count }
+
+  /// The panes that hold at least one of the ``matches``, in the order of the search.
+  public private(set) var panesWithMatches: [PaneView] = []
+
+  /// The rows of `pane` that the ``matches`` start in.
+  public func matchRows(in pane: PaneView) -> IndexSet {
+    guard let index = panes.firstIndex(where: { $0 === pane }),
+      found.rowsByPane.indices.contains(index)
+    else { return [] }
+    return found.rowsByPane[index]
+  }
 
   /// Whether the search as the user types found a match when it searched last, while the find
   /// bar is open.
@@ -125,8 +152,18 @@ public final class PaneSearch: NSObject {
   /// groups its edits and whether it replaces all matches.
   var replacement: (undoManager: UndoManager?, replacesAll: Bool)?
 
-  /// The panes that show matches now.
-  private var panesShowingMatches: [PaneView] = []
+  /// The matches of the current search, placed in the panes of the search.
+  private var found = FoundMatches.none
+
+  /// The list of the matches, once it was asked for after they changed.
+  private var listedMatches: [Match]?
+
+  /// The matches that the finder found, made ready for the panes away from the main actor,
+  /// while that is under way.
+  private(set) var matchesInPreparation: Task<Void, Never>?
+
+  /// Whether the finder found more matches while those under way were made ready.
+  private var hasMatchesWaiting = false
 
   /// Observes the matches that the finder finds as the user types.
   private var matchObservation: NSKeyValueObservation?
@@ -248,7 +285,7 @@ public final class PaneSearch: NSObject {
   func findBarDidClose() {
     hasFoundMatches = false
     matchesAreCurrent = false
-    showMatches([])
+    showMatches(.none)
     guard replacement == nil else { return }
     // The finder keeps the text it read until it hears of a change.
     finder.noteClientStringWillChange()
@@ -345,44 +382,74 @@ public final class PaneSearch: NSObject {
     isTextStale = true
     // The ranges of the matches refer to the text as it was.
     matchesAreCurrent = false
-    showMatches([])
+    showMatches(.none)
   }
 
   /// Marks the matches that the finder has found so far in their panes and tells the delegate.
+  ///
+  /// The finder hands over its matches bit by bit, each time all of them so far, which may be
+  /// hundreds of thousands. Where each lies in its pane is worked out away from the main actor,
+  /// one handover at a time: the matches under way show first, then all that the finder found
+  /// meanwhile.
   ///
   /// The finder drops its matches once the focus leaves the search field, as after Find Next or
   /// on the way to the field for replacing; they hold all the same until the text or the panes
   /// change, and stay while the bar is open.
   private func matchesDidChange() {
-    guard findBar.isFindBarVisible else { return showMatches([]) }
-    guard !finder.incrementalMatchRanges.isEmpty || findBar.holdsSearchFocus else { return }
-    let text = searchText()
-    let found = finder.incrementalMatchRanges.compactMap { value -> Match? in
-      guard let range = Range(value.rangeValue), let place = text.paneRange(of: range),
-        panes.indices.contains(place.pane)
-      else { return nil }
-      return Match(pane: panes[place.pane], range: place.range)
+    guard findBar.isFindBarVisible else { return showMatches(.none) }
+    guard matchesInPreparation == nil else {
+      hasMatchesWaiting = true
+      return
     }
-    hasFoundMatches = !found.isEmpty
-    matchesAreCurrent = true
-    showMatches(found)
+    let values = finder.incrementalMatchRanges
+    // Matches of a text that has changed since, which the finder found before it heard of the
+    // change, have no place in the text as it is now.
+    guard !values.isEmpty || findBar.holdsSearchFocus, !isTextStale else { return }
+    let text = searchText()
+    let grids = panes.map(\.textView.grid)
+    // Enumerating the array of the finder fetches its values many at a time.
+    var ranges: [Range<Int>] = []
+    ranges.reserveCapacity(values.count)
+    for case let value as NSValue in values as NSArray {
+      if let range = Range(value.rangeValue) {
+        ranges.append(range)
+      }
+    }
+    matchesInPreparation = Task {
+      let found = await FoundMatches.placing(ranges, in: text, grids: grids)
+      // Cancelled once the text or the panes changed.
+      guard !Task.isCancelled else { return }
+      matchesInPreparation = nil
+      let isWaiting = hasMatchesWaiting
+      hasMatchesWaiting = false
+      hasFoundMatches = !found.places.isEmpty
+      matchesAreCurrent = true
+      showMatches(found)
+      if isWaiting {
+        matchesDidChange()
+      }
+    }
   }
 
-  private func showMatches(_ found: [Match]) {
-    var shown: [PaneView] = []
-    for match in found where !shown.contains(where: { $0 === match.pane }) {
-      shown.append(match.pane)
+  private func showMatches(_ found: FoundMatches) {
+    if found.places.isEmpty {
+      matchesInPreparation?.cancel()
+      matchesInPreparation = nil
+      hasMatchesWaiting = false
     }
-    for pane in panesShowingMatches where !shown.contains(where: { $0 === pane }) {
+    let shown = found.rangesByPane.indices.filter { !found.rangesByPane[$0].isEmpty }.map {
+      panes[$0]
+    }
+    for pane in panesWithMatches where !shown.contains(where: { $0 === pane }) {
       pane.textView.searchMatches = []
     }
-    for pane in shown {
-      pane.textView.searchMatches =
-        found.filter { $0.pane === pane }.map(\.range).sorted { $0.lowerBound < $1.lowerBound }
+    for (index, ranges) in found.rangesByPane.enumerated() where !ranges.isEmpty {
+      panes[index].textView.searchMatches = ranges
     }
-    panesShowingMatches = shown
-    guard !(found.isEmpty && matches.isEmpty) else { return }
-    matches = found
+    panesWithMatches = shown
+    guard !(found.places.isEmpty && self.found.places.isEmpty) else { return }
+    self.found = found
+    listedMatches = nil
     delegate?.paneSearchDidChangeMatches(self)
   }
 }

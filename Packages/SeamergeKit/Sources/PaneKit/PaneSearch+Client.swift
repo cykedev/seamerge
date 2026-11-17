@@ -84,7 +84,10 @@ extension PaneSearch: @MainActor NSTextFinderClient {
     pane.textView.reveal(offset: place.range.lowerBound)
     pane.textView.setSelectedRange(NSRange(place.range))
     currentPane = pane
-    delegate?.paneSearch(self, didReveal: Match(pane: pane, range: place.range))
+    delegate?.paneSearch(
+      self,
+      didReveal: Match(
+        pane: pane, range: place.range, row: pane.row(containingOffset: place.range.lowerBound)))
   }
 
   /// The text view of the pane that shows the character at `index`, with the longest range of

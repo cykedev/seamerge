@@ -147,6 +147,23 @@ import Testing
     #expect(search.paneRange(of: 7..<13)?.range == 7..<13)
   }
 
+  @Test func matchesArePlacedInTheirPanesOnTheirRowsAndInTheOrderOfEachPane() async {
+    let panes = SearchPanes()
+    defer { panes.window.close() }
+    let ranges = panes.occurrences(of: "needle").compactMap { Range($0) }
+    // A range from the first row of A into the second belongs to no pane.
+    let found = await FoundMatches.placing(
+      ranges + [6..<19], in: panes.search.searchText(),
+      grids: panes.search.panes.map(\.textView.grid))
+    #expect(
+      found.places.map { "\($0.pane) \($0.range) \($0.row)" } == [
+        "0 6..<12 0", "0 13..<19 1", "1 0..<6 0", "2 0..<6 0", "0 21..<27 3", "1 21..<27 2",
+        "2 34..<40 3",
+      ])
+    #expect(
+      found.rangesByPane == [[6..<12, 13..<19, 21..<27], [0..<6, 21..<27], [0..<6, 34..<40]])
+  }
+
   @Test func fillerRowsAndPreviewsAreNeverSearched() {
     let panes = SearchPanes()
     defer { panes.window.close() }

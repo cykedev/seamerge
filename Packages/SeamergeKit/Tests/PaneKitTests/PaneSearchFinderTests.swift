@@ -27,6 +27,10 @@ struct PaneSearchFinderTests {
           "A 6..<12", "A 13..<19", "Base 0..<6", "Result 0..<6", "A 21..<27", "Base 21..<27",
           "Result 34..<40",
         ])
+      #expect(panes.search.matchCount == 7)
+      #expect(panes.search.panesWithMatches.map(panes.name(of:)) == ["A", "Base", "Result"])
+      #expect(panes.search.matchRows(in: panes.a) == IndexSet([0, 1, 3]))
+      #expect(panes.search.matchRows(in: panes.result) == IndexSet([0, 3]))
 
       // A click in A ends the search as the user types; Find Next goes on from the place of
       // the click, and takes the focus along to the pane of its match.
