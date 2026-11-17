@@ -60,9 +60,9 @@ Open conflicts show their preview of A and B until you decide. You cannot type i
 
 ## Comparing files
 
-Seamerge compares two files with `git difftool`, from Tower, or from the window **Compare Files** in the app.
+Seamerge compares two files with `git difftool`, from Tower, or from the welcome window in the app.
 
-- **Compare Files** lists the recent comparisons. You can also drop files on the Dock icon of Seamerge.
+- **File ▸ Compare Files…** (`⌘O`) shows the sheet Compare Files; see [The welcome window](#the-welcome-window).
 - **File ▸ Compare Folders…** compares two folders in one window; see [Comparing folders in the app](#comparing-folders-in-the-app).
 - Under **Compare** you choose how the files are compared:
   - **Exact** compares every byte.
@@ -72,6 +72,20 @@ Seamerge compares two files with `git difftool`, from Tower, or from the window 
 - **Swap Sides** exchanges the left and the right file.
 - **Next File** (`⌥⌘→`) and **Previous File** (`⌥⌘←`) move through the files of a collection.
 - **Show Sidebar** (`⌃⌘S`) shows or hides the list of files.
+
+### The welcome window
+
+The welcome window appears when Seamerge starts without a task, and when you click its Dock icon while no window is open.
+
+- **Compare Files…** (`⌘O`) shows a sheet with two fields, Left and Right, for two files or two folders.
+- **Compare Folders…** shows the same sheet and asks for the left folder first.
+- **Merge Files…** shows a sheet with three fields, A, Base and B.
+- Drop a file on a field, or click **Choose…** in it. **Swap Sides** exchanges the outer fields. **Compare** or **Merge** opens the files in the roles shown.
+- Two files or two folders dropped on the window open at once. Three files fill the sheet Merge Files. One file fills the left field of the sheet Compare Files.
+- The list shows the recent comparisons under **Today** and **Earlier**, each with its kind, its folder, and the time or the day. A double click or Return opens one. A comparison whose files are gone is left out.
+- The line at the bottom says whether Git uses Seamerge, with **Set Up Git Integration…** when it does not.
+
+If the files cannot be opened, the sheet says why and keeps them.
 
 ### Several files in one window
 
@@ -89,7 +103,7 @@ In Tower, turn on **Perform directory diff** to compare folders.
 
 ### Comparing folders in the app
 
-**File ▸ Compare Folders…** compares two folders in one window, without Git or Tower. Choose the two folders in **Compare Files**, or choose **Compare Folders…** in the File menu. The list shows the files that are new, deleted, modified, identical, or cannot be read. A file that cannot be read stays in the list with the reason. The progress of the comparison is shown above the filter. **View ▸ Show Identical Files** adds the identical files to the list. Links are not followed; their targets are compared as text.
+**File ▸ Compare Folders…** compares two folders in one window, without Git or Tower. Choose **Compare Folders…** in the welcome window or in the File menu, or drop two folders on the welcome window. The list shows the files that are new, deleted, modified, identical, or cannot be read. A file that cannot be read stays in the list with the reason. The progress of the comparison is shown above the filter. **View ▸ Show Identical Files** adds the identical files to the list. Links are not followed; their targets are compared as text.
 
 **Filter Files** (`⇧⌘F`) narrows the list. Type in the field at the foot of the sidebar, and the list keeps the files whose name or folder contains the text, ignoring case and accents. Escape clears the field. **Next File** and **Previous File** follow the filtered list.
 
@@ -194,17 +208,17 @@ Examples: `seamerge old.txt new.txt` compares two files; `seamerge <old folder> 
 
 Select files or folders in Finder and choose **Compare with Seamerge** from the Services menu:
 
-- One file opens in Compare Files, on the left.
+- One file opens in the sheet Compare Files, on the left.
 - Two files open at once in a comparison, with the older file on the left.
 - Two folders open in the folder comparison.
-- Three files fill the three fields of Compare Files.
-- Any other selection, such as four files or files mixed with folders, is not compared, and Compare Files says why.
+- Three files fill the sheet Merge Files.
+- Any other selection, such as four files or files mixed with folders, is not compared, and the sheet Compare Files says why.
 
 The service is available once Seamerge is in the Applications folder or in `~/Applications` and has been started; Seamerge registers it at each start. If **Compare with Seamerge** is missing from the menu, turn it on in **System Settings ▸ Keyboard ▸ Keyboard Shortcuts… ▸ Services ▸ Files and Folders**.
 
 ### Dock
 
-Files and folders dropped on the Seamerge icon in the Dock fill the fields of Compare Files. Nothing is compared until you choose the comparison. Seamerge accepts files and folders in the Dock but is never the default app for them.
+Files and folders dropped on the Seamerge icon in the Dock fill the sheet Compare Files, or Merge Files for three files. Nothing is compared until you choose the comparison. Seamerge accepts files and folders in the Dock but is never the default app for them.
 
 ## Settings
 

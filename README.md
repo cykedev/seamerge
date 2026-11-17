@@ -37,6 +37,12 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
     <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-folders-dark.png">
     <img src="Documentation/Images/screenshot-folders-light.png" alt="Two folders compared in one window: the sidebar lists the files that differ, says 7 of 12 files differ and has a field to filter by file name; the selected file is shown side by side with bands between the sides.">
   </picture>
+- **Welcome window.** Start a comparison, a comparison of folders or a merge, or open one of the recent comparisons again, grouped into today and earlier. Two files or folders dropped on the window open at once.
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-welcome-dark.png">
+    <img src="Documentation/Images/screenshot-welcome-light.png" alt="The welcome window: on the left the icon, name and version of Seamerge on deep blue, the buttons Compare Files, Compare Folders and Merge Files and a place to drop two files or folders; on the right the recent comparisons under Today and Earlier, each with its kind, folder and time.">
+  </picture>
 - **Moved blocks.** A block of lines that moved to another place gets an arrow at both ends that points to the other end; a click on the arrow, or Go ▸ Go to Other End of Move, jumps there.
 - **Updates.** Seamerge checks for new versions with your consent and installs one only when you choose to. See [Updates](#updates).
 - **Decisions per block.** The decision bar takes the text of A, the base, B, or both, or nothing, per block, with the mouse or single keys. A conflict stays open until you decide.
@@ -54,7 +60,7 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
 - **Ignore rules.** Settings ▸ Ignored Text holds rules for text that a comparison should leave out, such as timestamps, UUIDs and memory addresses, and your own patterns. Compare ▸ Use Ignore Rules applies them to a comparison.
 - **Export as patch.** File ▸ Export as Patch… and Edit ▸ Copy as Patch write the changes as a unified diff. `git apply` takes the patch; see the [user guide](Documentation/UserGuide.md#export-as-patch).
 - **Terminal command.** Seamerge ▸ Install Command Line Tool… installs `seamerge` in `/usr/local/bin`, so you can compare files and folders from Terminal.
-- **Finder and Dock.** Select two or three files, or two folders, in Finder and choose Compare with Seamerge from the Services menu. Drop folders on the Seamerge icon in the Dock to fill Compare Files.
+- **Finder and Dock.** Select two or three files, or two folders, in Finder and choose Compare with Seamerge from the Services menu. Drop files or folders on the Seamerge icon in the Dock to fill the sheet Compare Files or Merge Files.
 - **Encoding and line endings of the result.** Choose the encoding and the line endings the result is saved with.
 - **Settings.** Choose the font, size, line spacing and tab width of the code, and how each new window starts. See [Settings](#settings).
 - **Accessibility.** VoiceOver rotors for conflicts and changes, a window of all keyboard shortcuts, and support for Reduce Motion and Increase Contrast. See [Accessibility](#accessibility).
@@ -121,7 +127,7 @@ The `core.hooksPath` setting in the clone makes Git run the hooks in `Scripts/gi
 
 Seamerge does not change your Git configuration until you ask it to:
 
-1. Open Seamerge and choose **Seamerge ▸ Set Up Git Integration…**. The command is also in the window **Compare Files**, in the line that says whether Git opens Seamerge.
+1. Open Seamerge and choose **Seamerge ▸ Set Up Git Integration…**. The command is also in the welcome window, in the line that says whether Git opens Seamerge.
 2. Review the text on the sheet. It names the tool it replaces, if any.
 3. Click **Set Up**.
 
@@ -138,7 +144,7 @@ If Tower is installed, the sheet also has **Add Seamerge to Tower**. Tick it bef
 
 **Seamerge ▸ Install Command Line Tool…** puts a `seamerge` command into `/usr/local/bin`. The app asks for an administrator password before it changes that folder, and **Remove Command Line Tool…** takes the command out again. With the command, you can compare two files or two folders from Terminal, for example `seamerge old.txt new.txt`. The app also recognizes a command that Homebrew has linked there.
 
-In Finder, select files or folders and choose **Compare with Seamerge** from the Services menu. Two files open at once, with the older one on the left; two folders open in the folder comparison; three files fill Compare Files. Seamerge must be in the Applications folder, and it registers the service when it starts.
+In Finder, select files or folders and choose **Compare with Seamerge** from the Services menu. Two files open at once, with the older one on the left; two folders open in the folder comparison; three files fill the sheet Merge Files. Seamerge must be in the Applications folder, and it registers the service when it starts.
 
 ## Try it with the examples
 
@@ -197,7 +203,7 @@ Each window opens where the last window of its kind was closed, with the size it
     <img src="Documentation/Images/screenshot-shortcuts-light.png" width="560" alt="The Keyboard Shortcuts window of a merge, with the commands in two columns, grouped by menu.">
   </picture>
 - **Reduce Motion.** With Reduce Motion turned on in System Settings, a preview turns into text at once, without a transition.
-- **Contrast.** The colors of the text, the bands and the borders are checked against their backgrounds in light and dark mode, with and without Increase Contrast. The border of a file field in Compare Files that accepts a drop stays visible with any accent color.
+- **Contrast.** The colors of the text, the bands and the borders are checked against their backgrounds in light and dark mode, with and without Increase Contrast. The border of a file field that accepts a drop stays visible with any accent color, and the text on the blue of the welcome window keeps its contrast.
 
 ## Keyboard shortcuts
 

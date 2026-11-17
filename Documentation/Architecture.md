@@ -23,7 +23,7 @@ The packages require Swift tools 6.2 and macOS 27.0. Warnings are errors in ever
 | `SyntaxKit` | nothing | Language descriptions and lexers for syntax highlighting. |
 | `PaneKit` | nothing | The text panes, the row grid that aligns them, the connected layout (seams, bands and the common scroll track), the decision column and the overview bar. |
 | `SeamergeCLI` | `SessionIPC`, `GitSupport` | The logic of the `seamerge` command: arguments, file checks, starting the app, the exit code. |
-| `SeamergeUI` | `PaneKit`, `MergeModel`, `SyntaxKit`, `GitSupport` | The session window, its toolbar and menus, the settings (`UserSettings`), the keyboard shortcut window, the Compare Files window and the Git integration sheet. |
+| `SeamergeUI` | `PaneKit`, `MergeModel`, `SyntaxKit`, `GitSupport` | The session window, its toolbar and menus, the settings (`UserSettings`), the keyboard shortcut window, the welcome window with its sheets of files and the Git integration sheet. |
 
 The arrows point one way. The user interface knows the model, and the model knows the engine. Only `PaneKit` and `SeamergeUI` import AppKit. A module that is not in the table cannot be imported, which the compiler enforces.
 
@@ -32,8 +32,8 @@ The arrows point one way. The user interface knows the model, and the model know
 ## App
 
 - `App/Seamerge/main.swift` starts the app.
-- `AppDelegate` builds the main menu, creates the one `UserSettings` from the defaults, starts the session coordinator and shows the Compare Files window when the app has nothing else to do.
-- `SessionCoordinator` opens one window for each session and gives it the settings. Sessions come from the socket (`SessionServer`) or from the Compare Files window. Every session window has its own undo manager.
+- `AppDelegate` builds the main menu, creates the one `UserSettings` from the defaults, starts the session coordinator and shows the welcome window when the app has nothing else to do.
+- `SessionCoordinator` opens one window for each session and gives it the settings. Sessions come from the socket (`SessionServer`) or from the welcome window. Every session window has its own undo manager.
 - `App/SeamergeTool` is the `seamerge` executable. It calls `SeamergeCLI` and starts the app through `WorkspaceAppLauncher` when the app is not running.
 - `App/Shared/HelperLaunch.swift` holds the argument `--for-session` that the command passes when it starts the app, so that the app shows no window of its own at start.
 
@@ -201,10 +201,10 @@ Tower passes two folders to the launch script when its setting "Perform director
 `App/Config/Info.plist` declares the service **Compare with Seamerge** (`NSServices`, message `compareWithSeamerge`) for public data and folders, and a document type Folder with rank None, so Seamerge takes files and folders from the Dock without becoming their default app.
 
 - `App/Seamerge/AppDelegate+Service.swift` reads the file URLs from the pasteboard and brings the app to the front. `AppDelegate` is the `servicesProvider`.
-- `App/Seamerge/ServiceSelection.swift` sorts a selection into one entry, two files, two folders, three files or other. Two files open at once through `SessionCoordinator.open`, the older on the left; an error opens Compare Files with the reason beside the field. Other selections say so in Compare Files.
+- `App/Seamerge/ServiceSelection.swift` sorts a selection into one entry, two files, two folders, three files or other. Two files open at once through `SessionCoordinator.open`, the older on the left; an error opens the sheet of the files on the welcome window with the reason. Other selections say so in the sheet Compare Files.
 - `registerServiceIfInstalled()` calls `NSUpdateDynamicServices` only for an app in `/Applications` or `~/Applications`, at each start, so an update refreshes the entry.
-- At launch, Compare Files appears only if neither the service nor an open event arrived in time (`hasReceivedTask`) and no session window is open (`startWindowTask`).
-- Files and folders dropped on the Dock icon fill the outer fields of Compare Files and open nothing.
+- At launch, the welcome window appears only if neither the service nor an open event arrived in time (`hasReceivedTask`) and no session window is open (`startWindowTask`).
+- Files and folders dropped on the Dock icon fill the sheet Compare Files, or Merge Files for three files, and open nothing.
 
 ## Tests
 
