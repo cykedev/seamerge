@@ -167,6 +167,7 @@ extension PaneTextView: @MainActor NSTextStorageDelegate {
     range editedRange: NSRange, changeInLength delta: Int
   ) {
     guard editedMask.contains(.editedCharacters), !isShowingContent else { return }
+    shownText = nil
     let text = textStorage.string as NSString
     let edited = editedRange.location..<editedRange.location + editedRange.length
     // Announcements before the one that explains the change were not carried out.

@@ -109,6 +109,12 @@ final class PaneTextView: NSTextView {
   /// The version of the text, after whose changes fragments find their rows again.
   private let textVersion = TextVersion()
 
+  /// The text as the pane last put it into its text storage, until anything changes it there.
+  ///
+  /// Comparing a new text with it is quick where comparing with the string of the text storage
+  /// goes character by character: tens of milliseconds for a text of some megabytes.
+  var shownText: NSString?
+
   /// The part of the width of the view that its fragments draw, around the part in view.
   var drawnSpan: Range<CGFloat> = 0..<0
 
@@ -193,7 +199,7 @@ final class PaneTextView: NSTextView {
     prepared: PreparedPaneContent? = nil
   ) {
     let text = prepared?.storedText ?? content.text
-    let keepsText = (text as NSString).isEqual(to: string)
+    let keepsText = shownText?.isEqual(to: text) ?? (text as NSString).isEqual(to: string)
     // The rows of the same text are those the pane knows.
     let grid =
       if keepsText && theme.tabWidth == self.theme.tabWidth {
@@ -236,6 +242,7 @@ final class PaneTextView: NSTextView {
     guard let textStorage else { return }
     // Every paragraph is made anew, with the colors of the new content.
     rowsToRecolor = []
+    shownText = text as NSString
     isShowingContent = true
     defer { isShowingContent = false }
     if keepsText {

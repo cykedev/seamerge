@@ -121,6 +121,18 @@ import Testing
     #expect(textView.string == text as String)
   }
 
+  @Test func contentWithTheTextFromBeforeAnEditReplacesTheEditedText() {
+    let (pane, window, recorder) = Self.editablePane(text: Input.text)
+    defer { window.close() }
+    pane.documentView.setSelectedRange(NSRange(location: 5, length: 0))
+    pane.documentView.insertText("X", replacementRange: NSRange(location: NSNotFound, length: 0))
+    #expect(recorder.carriedOut.count == 1)
+
+    pane.content = Self.content(Input.text)
+
+    #expect(pane.documentView.string == Input.text)
+  }
+
   @Test func editThatTheDelegateRefusesLeavesTheTextAlone() {
     let (pane, window, recorder) = Self.editablePane(text: Input.text)
     defer { window.close() }
