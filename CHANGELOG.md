@@ -2,6 +2,13 @@
 
 All notable changes to Seamerge are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- A window of several files, a folder comparison and `git difftool --dir-diff` open at once. The chosen file is compared in the background; a large one shows "Comparing…" until its lines are ready, and switching to another file no longer waits for the one before.
+- Scrolling does less work: the text of a pane is no longer prepared for text checking it never uses, the decision bars keep their symbols, and the gutter sets its help tags only when they change.
+
 ## [0.6.0] - 2026-11-17
 
 Users of 0.5.0 get this version through Seamerge ▸ Check for Updates… or the automatic check. This release gives Seamerge a welcome window.
