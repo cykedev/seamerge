@@ -149,33 +149,56 @@ lint_format() {
   swift format lint --strict --parallel -- "${files[@]}"
 }
 
-# Starts a copy of the built app and passes if it still runs after a few
-# seconds, so that a crash at launch, such as a framework dyld refuses, fails
-# the check. The copy has a bundle identifier of its own and no services, so
-# that it touches neither the settings nor the Services menu of an installed
+# Starts a copy of the built app as a person does and passes if it still runs
+# after a few seconds and listens for the helper, so that a crash at launch,
+# such as a framework dyld refuses or a failure building the welcome window,
+# fails the check. The copy has a bundle identifier of its own and no services,
+# so that it touches neither the settings nor the Services menu of an installed
 # Seamerge, and it is unregistered and its settings removed afterwards.
+#
+# Nobody at the screen notices the copy: as an agent app it has no Dock icon,
+# and it is launched hidden and in the background, so it neither comes to the
+# front nor shows its window. It listens on a socket in its own folder, which
+# every run makes anew, so that it leaves the socket of a running Seamerge and
+# of another check alone; the path takes 93 of the 104 bytes a socket path may
+# have.
 launch_app() {
-  local built=$1 identifier=app.eiden.seamerge.check copy pid alive=false
+  local built=$1 identifier=app.eiden.seamerge.check folder copy pid
+  local launched=false alive=false listens=false
   [ -d "$built" ] || { echo "no app at $built"; return 1; }
-  copy=$(mktemp -d "${TMPDIR:-/tmp}/seamerge-launch.XXXXXX")/Seamerge.app
-  ditto "$built" "$copy"
-  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $identifier" \
-    -c "Delete :NSServices" "$copy/Contents/Info.plist" 2> /dev/null
-  codesign --force --deep --sign - --preserve-metadata=entitlements "$copy" || return 1
-  "$copy/Contents/MacOS/Seamerge" -SUEnableAutomaticChecks NO -SUHasLaunchedBefore YES &
-  pid=$!
-  sleep 3
-  if kill -0 "$pid" 2> /dev/null; then
-    alive=true
-    kill "$pid"
-    wait "$pid" 2> /dev/null
+  # The resolved path, as the process of the copy has it, finds the process.
+  folder=$(mktemp -d "${TMPDIR:-/tmp}/seamerge-launch.XXXXXX") || return 1
+  folder=$(realpath "$folder") || return 1
+  copy=$folder/Seamerge.app
+  if ditto "$built" "$copy" &&
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $identifier" \
+      -c "Delete :NSServices" -c "Add :LSUIElement bool true" "$copy/Contents/Info.plist" &&
+    codesign --force --deep --sign - --preserve-metadata=entitlements "$copy" &&
+    open -g -j -n "$copy" --args -SessionSocketDirectory "$folder" \
+      -SUEnableAutomaticChecks NO -SUHasLaunchedBefore YES; then
+    launched=true
+    sleep 3
+    pid=$(pgrep -f "^$copy/Contents/MacOS/Seamerge")
+    [ -n "$pid" ] && alive=true
+    [ -S "$folder/seamerge.sock" ] && listens=true
+    if $alive; then
+      kill "$pid"
+      for _ in {1..20}; do
+        kill -0 "$pid" 2> /dev/null || break
+        sleep 0.1
+      done
+    fi
+  else
+    echo "the copy of the app could not be prepared or launched"
   fi
   /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister \
     -u "$copy" 2> /dev/null
   defaults delete "$identifier" 2> /dev/null
   rm -f "$HOME/Library/Preferences/$identifier.plist"
-  rm -rf "$(dirname "$copy")"
+  rm -rf "$folder"
+  $launched || return 1
   $alive || { echo "Seamerge quit within 3 seconds of its launch"; return 1; }
+  $listens || { echo "Seamerge did not listen on a socket in $folder"; return 1; }
 }
 
 run_step "format" lint_format
