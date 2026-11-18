@@ -173,12 +173,23 @@ extension SessionWindowController {
   /// the rules of Settings changed meanwhile. The language of the code is recognized anew, since
   /// a file read again may start with another first line.
   ///
+  /// The comparison shown before keeps the texts of its panes, so that undo brings it back at
+  /// once; the one shown before that lets go of them, unless it is shown again, and undo lays
+  /// them out anew when it brings it back. Every switch would keep a copy of the files
+  /// otherwise, for as long as the window stays open.
+  ///
   /// - Precondition: `prepared` was made for the setup of the panes now.
   func show(_ prepared: PreparedSession, named name: String?) {
     let previous = shownComparison
     let session = prepared.changes.session
     typingRun = nil
     presentation.showComparedAnew(prepared)
+    if let older = comparisonShownBefore,
+      !older.rowLayout.sharesDisplayTexts(with: session.rowLayout)
+    {
+      older.rowLayout.letGoOfDisplayTexts()
+    }
+    comparisonShownBefore = previous.session
     presentation.show(
       Dictionary(
         uniqueKeysWithValues: session.roles.map { role in

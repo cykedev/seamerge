@@ -531,6 +531,7 @@ extension SessionWindowController {
     syntaxPath = SessionSyntax.path(of: session, resultURL: nil)
     presentation.colorSyntax(as: syntaxLanguage)
     sessionUndoManager.removeAllActions()
+    comparisonShownBefore = nil
     sessionDidChange()
     watchFiles()
     if placing {

@@ -160,6 +160,10 @@ public final class SessionWindowController: NSWindowController {
   /// command.
   var comparisonReturn: Task<Void, Never>?
 
+  /// The comparison the window showed before the one it shows now, which keeps the texts of its
+  /// panes so that undo brings it back at once; those before it let go of theirs.
+  var comparisonShownBefore: Session?
+
   /// The filling of the panes once the comparison is ready, while the window waits for the
   /// comparison of its files.
   var comparisonFill: Task<Void, Never>?

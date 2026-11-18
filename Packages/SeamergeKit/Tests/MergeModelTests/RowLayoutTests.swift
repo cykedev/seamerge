@@ -18,6 +18,18 @@ struct RowLayoutTests {
     #expect(kinds == [.unchanged, .changedInA, .changedInB, .changedInBoth, .conflict])
   }
 
+  @Test func layoutThatLetGoOfItsTextsLaysThemOutAlikeWhenAsked() async throws {
+    let session = try await merge(base: Self.base, a: Self.a, b: Self.b)
+    let layout = session.rowLayout
+    let texts = session.roles.map { layout.displayText(for: $0)?.string }
+
+    layout.letGoOfDisplayTexts()
+
+    #expect(session.roles.map { layout.displayText(for: $0)?.string } == texts)
+    #expect(session.roles.map { session.rowLayout.displayText(for: $0)?.string } == texts)
+    #expect(layout.displayText(for: .base)?.utf16Range(ofRow: 0) == 0..<6)
+  }
+
   @Test func rowsAndLinesMapToEachOtherInEveryKindOfBlock() async throws {
     let session = try await merge(base: Self.base, a: Self.a, b: Self.b)
 
