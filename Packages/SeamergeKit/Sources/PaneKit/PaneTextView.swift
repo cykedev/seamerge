@@ -148,6 +148,19 @@ final class PaneTextView: NSTextView {
     nil
   }
 
+  /// Lets go of the text and of its layout as the view goes.
+  ///
+  /// AppKit keeps the content storage and the layout manager of a text view on TextKit 2 alive
+  /// once the view is gone, not every time but most times (seen on macOS 27), and with them the
+  /// text and every fragment laid out: closing a window would keep the text of each of its panes
+  /// several times over. Without its layout manager and its characters, what stays is small.
+  isolated deinit {
+    for textLayoutManager in contentStorage.textLayoutManagers {
+      contentStorage.removeTextLayoutManager(textLayoutManager)
+    }
+    contentStorage.textStorage?.setAttributedString(NSAttributedString())
+  }
+
   /// Sets up the view as a pane; called once, before any content is shown.
   func configure(theme: Theme) {
     isEditable = false
