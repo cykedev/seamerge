@@ -6,6 +6,9 @@ import Testing
 
 /// A temporary folder for one test of the app: its socket, its user defaults and the files it
 /// merges.
+///
+/// From the first sandbox on, every window the process shows is transparent, so that the
+/// windows of the tests stay out of sight.
 @MainActor
 final class AppSandbox {
   let folder: URL
@@ -22,6 +25,7 @@ final class AppSandbox {
   private let servicesProvider = NSApplication.shared.servicesProvider
 
   init() throws {
+    TransparentWindows.turnOn()
     // Socket paths are limited to 103 bytes, so the folder name stays short.
     folder = FileManager.default.temporaryDirectory.appending(
       path: "SM-\(UUID().uuidString.prefix(8))", directoryHint: .isDirectory)
