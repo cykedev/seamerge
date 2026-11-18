@@ -458,13 +458,20 @@ public final class PaneView: NSView {
     let textBottom = convert(clipView.frame, from: scrollView).maxY
     gutterView.frame.size.height = textBottom
     decisionColumn?.frame.size.height = textBottom
-    // At least as high as the view, so that a click below the last line reaches the text and
-    // puts the insertion point at its end, as in any editor.
-    textView.setFrameSize(
-      CGSize(
-        width: visibleWidth + range,
-        height: max(textView.rowsHeight, clipView.bounds.height)))
+    textView.setFrameSize(CGSize(width: visibleWidth + range, height: textViewHeight))
     textDidScroll()
+  }
+
+  /// The height of the text view: that of its rows, and at least that of the view, so that a
+  /// click below the last line reaches the text and puts the insertion point at its end, as in
+  /// any editor.
+  private var textViewHeight: CGFloat {
+    max(textView.rowsHeight, clipView.bounds.height)
+  }
+
+  /// Gives the text view the height of its rows at once, ahead of the next layout of the pane.
+  func fitTextViewHeight() {
+    textView.setFrameSize(CGSize(width: textView.frame.width, height: textViewHeight))
   }
 
   /// Hands scrolling over the gutter and the overview bar to the text.
@@ -570,7 +577,7 @@ public final class PaneView: NSView {
   }
 
   /// Moves the gutter, the bars of collapsed runs and the overview bar along with the text.
-  private func textDidScroll() {
+  func textDidScroll() {
     let visible = clipView.bounds
     gutterView.scrollOffset = visible.minY
     placeRunBars()

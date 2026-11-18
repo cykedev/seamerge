@@ -14,15 +14,21 @@ extension PaneView {
       self.removeRunBars()
       self.textView.setCollapsedRuns(runs)
       self.showDisplayRows()
+      // The text lays itself out in the next layout, at the place the pane shows then: revealing
+      // a match or a block behind the run moves the pane on at once, and laying out the lines at
+      // the place it leaves, which may be very long, would be in vain. The place to keep needs
+      // only the new height.
       self.needsLayout = true
-      self.layoutSubtreeIfNeeded()
+      self.fitTextViewHeight()
       let y = CGFloat(self.displayRows.linePosition(ofRow: topRow)) * self.rowHeight
       // Where the runs above stay as they were, the text stays to the fraction of a point, so
       // that nothing in view moves, not even by rounding.
       let target = abs(y - visible.minY) < 0.01 ? visible.minY : y.rounded()
       self.scroll(
         to: CGPoint(x: visible.minX, y: min(max(target, 0), self.verticalScrollRange)))
-      self.placeRunBars()
+      // The bars, the gutter and the decision column follow the rows now, as the layout of the
+      // pane would have them.
+      self.textDidScroll()
     }
     if let scrollSync {
       scrollSync.withoutFollowing(change)

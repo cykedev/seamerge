@@ -245,6 +245,40 @@ import Testing
     }
   }
 
+  @Test func expandingARunLaysOutNoTextAtThePlaceThatARevealLeavesAtOnce() throws {
+    let pane = PaneView()
+    pane.content = CodeRows.content(count: 2_000)
+    pane.collapsedRuns = [CollapsedRun(rows: 10..<1_990)]
+    let window = Rendering.host(pane, size: CGSize(width: 600, height: 300))
+    defer { window.close() }
+    let textView = pane.documentView
+    try #require(Self.isLaidOut(row: 0, in: textView))
+
+    // As a find result behind the run does: expands it, then brings its row into view, before
+    // the view lays out again.
+    pane.collapsedRuns = []
+    #expect(textView.frame.height == CodeRows.textHeight(ofRows: 2_000, in: pane))
+    textView.scroll(CGPoint(x: 0, y: 1_500 * pane.theme.rowHeight))
+    pane.layoutSubtreeIfNeeded()
+
+    #expect(Self.isLaidOut(row: 1_500, in: textView))
+    #expect(!Self.isLaidOut(row: 0, in: textView))
+  }
+
+  /// Whether TextKit has laid out the paragraph of `row`, without laying it out.
+  private static func isLaidOut(row: Int, in textView: NSTextView) -> Bool {
+    guard let manager = textView.textLayoutManager,
+      let location = manager.location(
+        manager.documentRange.location, offsetBy: CodeRows.start(ofRow: row))
+    else { return false }
+    var isLaidOut = false
+    manager.enumerateTextLayoutFragments(from: location) { fragment in
+      isLaidOut = fragment.state == .layoutAvailable
+      return false
+    }
+    return isLaidOut
+  }
+
   /// Forty rows of code, with `runs`, in a pane `height` points high.
   private static func pane(runs: [CollapsedRun], height: CGFloat = 900) -> (PaneView, NSWindow) {
     let pane = PaneView()
