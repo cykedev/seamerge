@@ -573,6 +573,9 @@ extension SessionWindowController: NSWindowDelegate {
     stopBringingBack()
     fileLoad?.cancel()
     presentation.search.close()
+    // The steps of undo keep the comparisons they bring back. The find bar's field editor may
+    // keep the undo manager of the window once it has closed; without its steps, it is small.
+    sessionUndoManager.removeAllActions()
     rememberPlace()
     fileWatchers = []
     // A merge without a result yet, as while the window waits for it, was not saved.
