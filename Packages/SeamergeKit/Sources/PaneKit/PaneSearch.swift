@@ -390,7 +390,8 @@ public final class PaneSearch: NSObject {
   /// The finder hands over its matches bit by bit, each time all of them so far, which may be
   /// hundreds of thousands. Where each lies in its pane is worked out away from the main actor,
   /// one handover at a time: the matches under way show first, then all that the finder found
-  /// meanwhile.
+  /// meanwhile. The finder's array makes an object for each match as it is read, on the main
+  /// actor; it is read in parts, and the main actor is let go between them.
   ///
   /// The finder drops its matches once the focus leaves the search field, as after Find Next or
   /// on the way to the field for replacing; they hold all the same until the text or the panes
@@ -407,15 +408,10 @@ public final class PaneSearch: NSObject {
     guard !values.isEmpty || findBar.holdsSearchFocus, !isTextStale else { return }
     let text = searchText()
     let grids = panes.map(\.textView.grid)
-    // Enumerating the array of the finder fetches its values many at a time.
-    var ranges: [Range<Int>] = []
-    ranges.reserveCapacity(values.count)
-    for case let value as NSValue in values as NSArray {
-      if let range = Range(value.rangeValue) {
-        ranges.append(range)
-      }
-    }
     matchesInPreparation = Task {
+      let ranges = await Self.ranges(of: values as NSArray)
+      // Cancelled once the text or the panes changed.
+      guard !Task.isCancelled else { return }
       let found = await FoundMatches.placing(ranges, in: text, grids: grids)
       // Cancelled once the text or the panes changed.
       guard !Task.isCancelled else { return }
@@ -429,6 +425,35 @@ public final class PaneSearch: NSObject {
         matchesDidChange()
       }
     }
+  }
+
+  /// How many matches of the finder are read at a stretch on the main actor, about 20 ms.
+  static let matchesReadAtOnce = 200_000
+
+  /// The ranges of `values`, the matches of the finder, read on the main actor in parts of
+  /// ``matchesReadAtOnce``, letting it go between them; as far as read once the task is
+  /// cancelled.
+  ///
+  /// The array holds the finder's matches as they were when it handed them over; it does not
+  /// change as the finder goes on.
+  private static func ranges(of values: NSArray) async -> [Range<Int>] {
+    var ranges: [Range<Int>] = []
+    ranges.reserveCapacity(values.count)
+    var start = 0
+    while start < values.count, !Task.isCancelled {
+      if start > 0 {
+        await Task.yield()
+      }
+      let part = NSRange(location: start, length: min(matchesReadAtOnce, values.count - start))
+      // Enumerating a part of the array fetches its values many at a time.
+      for case let value as NSValue in values.subarray(with: part) as NSArray {
+        if let range = Range(value.rangeValue) {
+          ranges.append(range)
+        }
+      }
+      start = NSMaxRange(part)
+    }
+    return ranges
   }
 
   private func showMatches(_ found: FoundMatches) {
