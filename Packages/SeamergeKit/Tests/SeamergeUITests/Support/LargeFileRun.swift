@@ -206,6 +206,10 @@ final class LargeFileRun {
       let picture = try #require(
         contentView.bitmapImageRepForCachingDisplay(in: contentView.bounds))
       let waits = controller.waitsForComparison
+      // The app draws a new window in the pass of the run loop after the one that made it, so
+      // the main actor is let go here as there, and the making and the first picture are held
+      // apart.
+      await Task.yield()
       contentView.layoutSubtreeIfNeeded()
       contentView.cacheDisplay(in: contentView.bounds, to: picture)
       headers = clock.now - start
