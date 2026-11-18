@@ -2,8 +2,9 @@
 #
 # Measures scrolling on the screen: builds a copy of the app with a bundle
 # identifier of its own, compares two files or merges three in it from the
-# window Compare Files, plays flicks of a trackpad with momentum over the window while
-# Instruments records hitches, and prints how many frames came late. With
+# sheet Compare Files or Merge Files, plays flicks of a trackpad with momentum
+# over the window while Instruments records hitches, and prints how many frames
+# came late. With
 # --counter, a library loaded into the copy counts the frames of the window
 # instead, through the display link of its content view, without Instruments.
 # The copy never takes the place of the installed app: its identifier starts
@@ -248,11 +249,12 @@ esac
 defaults write "$bundle_id" ConnectsChanges -bool "$connects"
 defaults write "$bundle_id" ShowsSingleColumn -bool "$single"
 defaults write "$bundle_id" HidesBase -bool "$hides_base"
-# The driver finds the window and the button by their English titles.
+# The driver finds the sheet and the button by their English titles.
 defaults write "$bundle_id" AppleLanguages -array en
 
-# Drives the copy as the user does: presses Compare in the window Compare
-# Files through the accessibility of the copy, and plays flicks as a trackpad
+# Drives the copy as the user does: presses Compare or Merge in the sheet that
+# the files fill on the welcome window, through the accessibility of the copy,
+# and plays flicks as a trackpad
 # sends them, over the larger pane of the comparison: the fingers move for a
 # quarter of a second, then the content glides on with momentum for a second
 # and a half, at 120 events a second, down and up again. The events go where
@@ -307,10 +309,13 @@ func button(titled title: String, in element: AXUIElement) -> AXUIElement? {
   return children(of: element).lazy.compactMap { button(titled: title, in: $0) }.first
 }
 
+// The windows that are not the comparison: the welcome window and its sheets.
+let setupWindows = ["Welcome", "Compare Files", "Merge Files"]
+
 func pressCompare(in pid: pid_t) {
   let app = AXUIElementCreateApplication(pid)
   guard let compare = button(titled: "Compare", in: app) ?? button(titled: "Merge", in: app) else {
-    fail("the window Compare Files of \(pid) has no button Compare or Merge")
+    fail("the sheet of \(pid) has no button Compare or Merge")
   }
   guard AXUIElementPerformAction(compare, kAXPressAction as CFString) == .success else {
     fail("Compare could not be pressed")
@@ -334,7 +339,7 @@ func post(_ delta: Double, phase: Int64, momentum: Int64, at point: CGPoint) {
 }
 
 func flick(_ count: Int, in pid: pid_t) {
-  guard let window = windows(of: pid).filter({ $0.name != "Compare Files" })
+  guard let window = windows(of: pid).filter({ !setupWindows.contains($0.name) })
     .max(by: { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height })
   else { fail("no comparison of \(pid) on the screen") }
   let point = CGPoint(x: window.frame.minX + window.frame.width * 0.75, y: window.frame.midY)
@@ -376,7 +381,7 @@ func place(in pid: pid_t, fast: Bool) {
   for window in value as? [AXUIElement] ?? [] {
     var title: CFTypeRef?
     AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &title)
-    guard title as? String != "Compare Files" else { continue }
+    guard !setupWindows.contains(title as? String ?? "") else { continue }
     let visible = screen.visibleFrame
     var origin = CGPoint(x: visible.minX + 20, y: primary.frame.height - visible.maxY + 20)
     guard let position = AXValueCreate(.cgPoint, &origin),
@@ -400,16 +405,16 @@ swiftc -O -o "$work/driver" "$work/Driver.swift" > "$work/driver-build.log" 2>&1
   exit 1
 }
 
-# Waits up to 30 seconds until the copy shows a window named $1, or one not
-# named so with --other.
+# Waits up to 30 seconds until the copy shows a window whose title matches the
+# extended regular expression $1, or one that does not with --other.
 wait_for_window() {
   local other=false
   [ "$1" = --other ] && other=true && shift
   for _ in $(seq 1 30); do
     if $other; then
-      "$work/driver" windows "$pid" | grep -qvx "$1" && return 0
+      "$work/driver" windows "$pid" | grep -Eqvx "$1" && return 0
     else
-      "$work/driver" windows "$pid" | grep -qx "$1" && return 0
+      "$work/driver" windows "$pid" | grep -Eqx "$1" && return 0
     fi
     sleep 1
   done
@@ -494,9 +499,15 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 [ -n "$pid" ] || { echo "the copy did not start" >&2; exit 1; }
-wait_for_window "Compare Files" || { echo "the copy shows no window Compare Files" >&2; exit 1; }
-"$work/driver" compare "$pid" || exit 1
-wait_for_window --other "Compare Files" || { echo "the comparison did not open" >&2; exit 1; }
+# The sheet is no window of its own on the screen, so press its default button
+# as soon as the accessibility of the copy shows it.
+pressed=false
+for _ in $(seq 1 30); do
+  "$work/driver" compare "$pid" 2> /dev/null && pressed=true && break
+  sleep 1
+done
+$pressed || { echo "the copy shows no sheet of files" >&2; exit 1; }
+wait_for_window --other "Welcome|Compare Files|Merge Files" || { echo "the comparison did not open" >&2; exit 1; }
 sleep 1
 "$work/driver" place "$pid" "$screen" || exit 1
 
