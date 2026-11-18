@@ -314,6 +314,25 @@ import Testing
       #expect(!identifiers.map(\.rawValue).contains("options"))
     }
   }
+
+  @Test func languageButtonHasRoomForTheLongestNameMeasuringOnlyTheWidest() async throws {
+    let footer = SessionFooterView(toggles: FooterToggle.allCases)
+    let button = footer.syntaxChoiceButton
+    let cell = try #require(button.cell as? NSPopUpButtonCell)
+    let titleItem = try #require(cell.menuItem)
+    let titles = SyntaxChoice.groups.joined().map {
+      $0.languageTitle(of: $0.language(detected: .plainText))
+    }
+    // Every name, as the button measured them before it measured only the widest.
+    let widest = titles.map { title in
+      titleItem.title = title
+      return cell.cellSize.width.rounded(.up)
+    }.max()
+    titleItem.title = ""
+    #expect(footer.syntaxButtonWidth == widest)
+    let measured = SessionFooterView.widestTitles(of: titles, in: button.font)
+    #expect(!measured.isEmpty && measured.count < 4, "measured: \(measured)")
+  }
 }
 
 extension ComparisonMode {

@@ -60,7 +60,7 @@ final class SessionFooterView: NSView {
 
   /// The width of the pop-up button of the language: room for the longest name of a language,
   /// so that its width does not change with the language.
-  private var syntaxButtonWidth: CGFloat = 0
+  private(set) var syntaxButtonWidth: CGFloat = 0
 
   /// The item whose title the pop-up button of the language shows: the language in effect, also
   /// while Automatic is chosen, whose own title is longer.
@@ -123,11 +123,26 @@ final class SessionFooterView: NSView {
     }
     cell.usesItemFromMenu = false
     cell.menuItem = syntaxTitleItem
-    for choice in SyntaxChoice.groups.joined() {
-      syntaxTitleItem.title = choice.languageTitle(of: choice.language(detected: .plainText))
+    let titles = SyntaxChoice.groups.joined().map {
+      $0.languageTitle(of: $0.language(detected: .plainText))
+    }
+    for title in Self.widestTitles(of: titles, in: syntaxButton.font) {
+      syntaxTitleItem.title = title
       syntaxButtonWidth = max(syntaxButtonWidth, cell.cellSize.width.rounded(.up))
     }
     syntaxTitleItem.title = ""
+  }
+
+  /// The titles of `titles` that come within a point of the widest in `font`.
+  ///
+  /// A pop-up button grows with the width of its title. It takes a moment to tell its size for
+  /// one title, the text alone hardly any, so the button measures only the titles that may be
+  /// the widest.
+  static func widestTitles(of titles: [String], in font: NSFont?) -> [String] {
+    let attributes: [NSAttributedString.Key: Any] = font.map { [.font: $0] } ?? [:]
+    let widths = titles.map { NSAttributedString(string: $0, attributes: attributes).size().width }
+    guard let widest = widths.max() else { return [] }
+    return zip(titles, widths).filter { $0.1 >= widest - 1 }.map(\.0)
   }
 
   /// Footers are never archived.
