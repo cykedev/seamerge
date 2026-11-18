@@ -18,6 +18,7 @@ final class CompareFilesFixture {
     displayOptions: DisplayOptions = DisplayOptions()
   ) {
     WindowAnimations.turnOff()
+    TransparentWindows.turnOn()
     window = CompareFilesWindow()
     var announce: (String) -> Void = { _ in }
     controller = CompareFilesWindowController(
@@ -70,6 +71,7 @@ final class WelcomeFixture {
     integrationStore: (any IntegrationStore)? = nil
   ) throws {
     WindowAnimations.turnOff()
+    TransparentWindows.turnOn()
     defaults = try #require(UserDefaults(suiteName: suiteName))
     recentComparisons = RecentComparisons(defaults: defaults)
     window = WelcomeWindow()

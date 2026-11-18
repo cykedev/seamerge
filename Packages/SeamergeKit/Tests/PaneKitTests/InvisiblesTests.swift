@@ -31,6 +31,7 @@ import Testing
   @Test func switchingInvisiblesHasEveryFragmentInViewDrawnAgain() throws {
     let pane = PaneView(theme: theme)
     pane.content = PaneContent(text: "a b\nc d\ne f", lineNumbers: [0, 1, 2])
+    TransparentWindows.turnOn()
     let window = Rendering.host(
       pane, size: CGSize(width: 300, height: 100), appearance: appearance, isKey: true)
     defer { window.close() }

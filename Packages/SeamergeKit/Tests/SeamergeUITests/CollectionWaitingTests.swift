@@ -29,6 +29,7 @@ import Testing
       return await comparison.value
     }
     WindowAnimations.turnOff()
+    TransparentWindows.turnOn()
     let controller = SessionWindowController(
       session: opening.session, context: opening.context, undoManager: UndoManager(),
       displayOptions: DisplayOptions(reducesMotion: true), pasteboard: .withUniqueName(),

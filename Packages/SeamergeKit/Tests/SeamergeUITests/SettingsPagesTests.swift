@@ -27,6 +27,7 @@ struct SettingsPagesTests {
   @Test func windowSetsOutForTheSizeOfEachPageAndKeepsItsTopEdge() throws {
     // The animations of windows that the tests turn off are those that show and close them.
     WindowAnimations.turnOff()
+    TransparentWindows.turnOn()
     let controller = SettingsWindowController(
       settings: .private(), updates: nil, displayOptions: DisplayOptions(reducesMotion: false))
     let window = try #require(controller.window)
@@ -54,6 +55,7 @@ struct SettingsPagesTests {
 
   @Test func windowGoesOverToTheSizeOfEachPageWithoutPassingIt() async throws {
     WindowAnimations.turnOff()
+    TransparentWindows.turnOn()
     let controller = SettingsWindowController(
       settings: .private(), updates: nil, displayOptions: DisplayOptions(reducesMotion: false))
     let window = try #require(controller.window)

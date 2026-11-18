@@ -39,10 +39,7 @@ struct SheetKeyTests {
   private func answer<Answer: Sendable>(
     pressing key: Key, to ask: @escaping @MainActor (SessionSheets, NSWindow) async -> Answer
   ) async throws -> Answer {
-    let window = NSWindow(
-      contentRect: CGRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.titled],
-      backing: .buffered, defer: false)
-    window.isReleasedWhenClosed = false
+    let window = Self.window()
     defer { window.close() }
     let answer = Task { await ask(SessionSheets(), window) }
     var turns = 0
@@ -75,14 +72,21 @@ struct SheetKeyTests {
     return await answer.value
   }
 
-  /// The texts that the sheet `ask` puts up shows, after which Escape closes it.
-  private func texts<Answer: Sendable>(
-    of ask: @escaping @MainActor (SessionSheets, NSWindow) async -> Answer
-  ) async throws -> [String] {
+  /// A window for a sheet to hang on, which turns transparent with its sheet once it shows.
+  private static func window() -> NSWindow {
+    TransparentWindows.turnOn()
     let window = NSWindow(
       contentRect: CGRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.titled],
       backing: .buffered, defer: false)
     window.isReleasedWhenClosed = false
+    return window
+  }
+
+  /// The texts that the sheet `ask` puts up shows, after which Escape closes it.
+  private func texts<Answer: Sendable>(
+    of ask: @escaping @MainActor (SessionSheets, NSWindow) async -> Answer
+  ) async throws -> [String] {
+    let window = Self.window()
     defer { window.close() }
     let answer = Task { await ask(SessionSheets(), window) }
     var turns = 0

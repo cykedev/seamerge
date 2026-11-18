@@ -23,6 +23,7 @@ enum Windows {
     pendingComparison: PendingComparison? = nil
   ) throws -> SessionWindowController {
     WindowAnimations.turnOff()
+    TransparentWindows.turnOn()
     let controller = SessionWindowController(
       session: session, context: context, undoManager: undoManager, displayOptions: options,
       pasteboard: .withUniqueName(), workspace: workspace, prompts: prompts, doneStyle: .standard,
@@ -313,6 +314,7 @@ extension Windows {
     prompts: PromptRecorder = PromptRecorder(), fillsFirstFile: Bool = true
   ) async throws -> SessionWindowController {
     WindowAnimations.turnOff()
+    TransparentWindows.turnOn()
     let opening = try await SessionWindowController.opening(collection, settings: settings)
     let controller = SessionWindowController(
       session: opening.session, context: opening.context, undoManager: UndoManager(),

@@ -146,6 +146,7 @@ import Testing
     let window = ScaledSessionWindow()
     window.scale = setup.scale
     WindowAnimations.turnOff()
+    TransparentWindows.turnOn()
     let controller = SessionWindowController(
       session: try await SampleMerges.example(), context: SessionContext(),
       undoManager: UndoManager(), displayOptions: DisplayOptions(reducesMotion: true),
