@@ -259,19 +259,32 @@ final class LargeFileRun {
     var spent = Duration.zero
     var count = 0
     while repetitions.continues(after: count, spent: spent) {
-      prepare()
-      contentView.layoutSubtreeIfNeeded()
-      let laidOut = clock.measure {
-        action()
+      let (laidOut, drawn) = asOneEvent {
+        prepare()
         contentView.layoutSubtreeIfNeeded()
+        let laidOut = clock.measure {
+          action()
+          contentView.layoutSubtreeIfNeeded()
+        }
+        return (laidOut, clock.measure { draw() })
       }
-      let drawn = clock.measure { draw() }
       let name = repetitions.name(of: metric, sample: count)
       recorder.record(name, laidOut)
       recorder.record("\(name)-drawn", laidOut + drawn)
       spent += laidOut + drawn
       count += 1
     }
+  }
+
+  /// Carries out `body` as the run loop handles an event: what it leaves to the autorelease
+  /// pool is released afterwards.
+  ///
+  /// The measurement runs in one long task on the main actor, whose pool would otherwise keep
+  /// everything that every step left to it, such as the views and fragments of text replaced
+  /// or scrolled out of view, until the end; the memory would grow with each step as it never
+  /// does in the app.
+  func asOneEvent<Result>(_ body: () throws -> Result) rethrows -> Result {
+    try autoreleasepool(invoking: body)
   }
 
   /// Draws the whole window into a bitmap, as the screen would show it.
@@ -292,13 +305,18 @@ final class LargeFileRun {
     for _ in 0..<count {
       y = min(y + step(clip.bounds.height), max(0, textView.frame.height - clip.bounds.height))
       let target = y
-      let laidOut = clock.measure {
-        clip.scroll(to: NSPoint(x: 0, y: target))
-        scrollView.reflectScrolledClipView(clip)
-        contentView.layoutSubtreeIfNeeded()
+      let (laidOut, windowDrawn, paneDrawn) = asOneEvent {
+        let laidOut = clock.measure {
+          clip.scroll(to: NSPoint(x: 0, y: target))
+          scrollView.reflectScrolledClipView(clip)
+          contentView.layoutSubtreeIfNeeded()
+        }
+        let windowDrawn = clock.measure { draw() }
+        return (
+          laidOut, windowDrawn,
+          clock.measure { pane.cacheDisplay(in: pane.bounds, to: panePicture) }
+        )
       }
-      let windowDrawn = clock.measure { draw() }
-      let paneDrawn = clock.measure { pane.cacheDisplay(in: pane.bounds, to: panePicture) }
       recorder.record("scroll-\(label)-layout", laidOut)
       recorder.record("scroll-\(label)-panedraw", paneDrawn)
       recorder.record("scroll-\(label)-step", laidOut + paneDrawn)
