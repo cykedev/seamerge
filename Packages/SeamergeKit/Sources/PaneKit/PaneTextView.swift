@@ -628,7 +628,11 @@ final class PaneTextView: NSTextView {
       self, name: NSWindow.didBecomeKeyNotification, object: nil)
     NotificationCenter.default.removeObserver(
       self, name: NSWindow.didResignKeyNotification, object: nil)
-    guard let window else { return }
+    guard let window else {
+      pauseDiscarding()
+      return
+    }
+    resumeDiscarding()
     for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification] {
       NotificationCenter.default.addObserver(
         self, selector: #selector(windowKeyStateDidChange(_:)), name: name, object: window)

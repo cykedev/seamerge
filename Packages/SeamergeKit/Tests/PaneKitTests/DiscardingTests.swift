@@ -228,6 +228,38 @@ import Testing
     #expect(!colored.isEmpty)
   }
 
+  /// Leaving the window stops the waits that keep the text view; back in a window, it waits for
+  /// scrolling to rest anew.
+  ///
+  /// The timer that waits for scrolling to rest and the notification queued for the idle run
+  /// loop each keep the text view. Back in a window, it discards what it left planned or not.
+  @Test func leavingTheWindowStopsWaitingAndComingBackWaitsAnew() throws {
+    let (pane, window, _) = EditingTests.editablePane(text: Self.text)
+    defer { window.close() }
+    let textView = pane.textView
+    scrollThrough(pane, in: window, backTo: .zero)
+    #expect(textView.scrollRestTimer != nil)
+
+    // Away while it waits for scrolling to rest.
+    window.contentView = nil
+    #expect(textView.scrollRestTimer == nil)
+    #expect(!textView.isScrolling)
+    window.contentView = pane
+    #expect(textView.scrollRestTimer != nil)
+
+    // Away while a pass waits for the idle run loop.
+    letScrollingRest(textView)
+    #expect(textView.isDiscardPassPending)
+    window.contentView = nil
+    #expect(!textView.isDiscardPassPending)
+    window.contentView = pane
+    #expect(textView.scrollRestTimer != nil)
+
+    letScrollingRest(textView)
+    discardEverything(in: textView)
+    #expect(try !isLaidOut(row: 500, of: textView))
+  }
+
   @Test func discardingWaitsWhileTheInputMethodMarksText() throws {
     let (pane, window, recorder) = EditingTests.editablePane(text: Self.text)
     defer { window.close() }

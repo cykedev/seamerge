@@ -122,6 +122,31 @@ extension PaneTextView {
     return true
   }
 
+  /// Stops waiting for scrolling to rest and for the run loop to be idle, as the view leaves its
+  /// window.
+  ///
+  /// The timer and the queued notification would keep the view, and with it its text and every
+  /// fragment laid out, until they fire. The rows near the view stay for when it comes back into
+  /// a window (``resumeDiscarding()``).
+  func pauseDiscarding() {
+    scrollRestTimer?.invalidate()
+    scrollRestTimer = nil
+    isLiveScrolling = false
+    guard isDiscardPassPending else { return }
+    NotificationQueue.default.dequeueNotifications(
+      matching: Notification(name: Self.idleToDiscardNotification, object: self),
+      coalesceMask: Int(NotificationQueue.NotificationCoalescing([.onName, .onSender]).rawValue))
+    isDiscardPassPending = false
+  }
+
+  /// Waits for scrolling to rest anew as the view comes back into a window, if TextKit may hold
+  /// elements away from the view, so that the passes of discarding plan them once the view is
+  /// laid out in its window.
+  func resumeDiscarding() {
+    guard !rowsNearView.isEmpty || !rowsToDiscard.isEmpty else { return }
+    waitForScrollingToRest()
+  }
+
   /// Ends discarding: TextKit holds no elements beyond the rows near the view.
   private func finishDiscarding() {
     rowsToDiscard = IndexSet()

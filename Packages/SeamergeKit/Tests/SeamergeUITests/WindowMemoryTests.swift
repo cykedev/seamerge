@@ -69,9 +69,7 @@ import Testing
         "Sources/Order.swift", old: SampleCollections.orderOld, new: SampleCollections.orderNew,
         number: 2, count: 2, in: folder),
     ]
-    try await expectEveryRoundGivesBackItsMemory(
-      fileSize: texts.a.utf8.count, knownIssue: Self.textViewsOfSeveralFiles
-    ) {
+    try await expectEveryRoundGivesBackItsMemory(fileSize: texts.a.utf8.count) {
       let controller = try await Windows.controller(for: FileCollection(files: files))
       try await use(controller, searchingFor: largeCase.searchTexts.common)
       controller.showFile(at: 1)
@@ -91,9 +89,7 @@ import Testing
     try folders.write("Same.swift", left: SampleFolders.order, right: SampleFolders.order)
     let pair = folders.pair
     let linkFolder = folders.folder.appending(path: "links")
-    try await expectEveryRoundGivesBackItsMemory(
-      fileSize: texts.a.utf8.count, knownIssue: Self.textViewsOfSeveralFiles
-    ) {
+    try await expectEveryRoundGivesBackItsMemory(fileSize: texts.a.utf8.count) {
       let collection = FileCollection(
         comparer: FolderComparer(folders: pair, linkFolder: linkFolder))
       collection.startComparing()
@@ -107,14 +103,6 @@ import Testing
       return try close(controller)
     }
   }
-
-  /// Why a window of several files may fail.
-  ///
-  /// After a switch of the comparison, a search and scrolling, its two text views stay in the
-  /// test process, and with them some memory each round. Who keeps them is open; without one of
-  /// the three, they go.
-  private static let textViewsOfSeveralFiles: Comment =
-    "The text views of a window of several files stay after switching, searching and scrolling"
 
   // MARK: - Rounds
 
@@ -142,9 +130,9 @@ import Testing
 
   /// Carries out `round`, which opens a window, uses it and closes it, six times, each time
   /// expecting the window gone afterwards, and each of the last four to leave less than three
-  /// times `fileSize` bytes more in use; with `knownIssue`, a failure is known and named so.
+  /// times `fileSize` bytes more in use.
   private func expectEveryRoundGivesBackItsMemory(
-    fileSize: Int, knownIssue: Comment? = nil, _ round: () async throws -> Parts
+    fileSize: Int, _ round: () async throws -> Parts
   ) async throws {
     try await FindPasteboard.preserving {
       var inUse: [Int] = []
@@ -152,28 +140,14 @@ import Testing
         let parts = try await round()
         await settle(until: parts)
         inUse.append(Self.bytesInUse())
-        let check = {
-          #expect(parts.remaining.isEmpty, "Round \(index + 1) left \(parts.remaining)")
-        }
-        if let knownIssue {
-          withKnownIssue(knownIssue, isIntermittent: true, check)
-        } else {
-          check()
-        }
+        #expect(parts.remaining.isEmpty, "Round \(index + 1) left \(parts.remaining)")
       }
       let growth = inUse[5] - inUse[1]
       let rounds = inUse.map { String(format: "%.1f", Double($0) / 1_048_576) }
-      let check = {
-        #expect(
-          growth < 4 * 3 * fileSize,
-          "\(growth) bytes more in use after four rounds with files of \(fileSize) bytes: \(rounds)"
-        )
-      }
-      if let knownIssue {
-        withKnownIssue(knownIssue, isIntermittent: true, check)
-      } else {
-        check()
-      }
+      #expect(
+        growth < 4 * 3 * fileSize,
+        "\(growth) bytes more in use after four rounds with files of \(fileSize) bytes: \(rounds)"
+      )
     }
   }
 
