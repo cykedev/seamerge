@@ -14,6 +14,23 @@ struct EncodingDetectionTests {
     #expect(text.utf8 == bytes)
   }
 
+  /// The bytes of a file in UTF-8 without a byte order mark are its UTF-8 already: the decoded
+  /// text keeps the bytes read from the file rather than a copy, so that a file mapped into
+  /// memory stays mapped.
+  @Test func utf8ReadFromAFileKeepsTheBytesReadAsItsUTF8() throws {
+    let url = FileManager.default.temporaryDirectory.appending(
+      path: "DecodedText-\(UUID().uuidString).txt")
+    try Data(String(repeating: "Grüße, 東京 😀\n", count: 10_000).utf8).write(to: url)
+    defer { try? FileManager.default.removeItem(at: url) }
+    let bytes = try Data(contentsOf: url, options: .mappedIfSafe)
+
+    let text = try #require(try LoadedFile(bytes: bytes).decodedText)
+
+    let kept = text.utf8.withUnsafeBytes { $0.baseAddress }
+    #expect(kept != nil)
+    #expect(kept == bytes.withUnsafeBytes { $0.baseAddress })
+  }
+
   @Test(arguments: TextEncoding.unicodeEncodings)
   func byteOrderMarkDecidesTheEncodingAndIsDropped(encoding: TextEncoding) throws {
     let bytes = try fileBytes("Grüße, 東京 😀\r\n", in: encoding, byteOrderMark: true)

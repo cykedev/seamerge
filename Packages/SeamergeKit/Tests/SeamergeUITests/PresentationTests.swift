@@ -115,6 +115,22 @@ import Testing
     #expect(!result.text.contains("\r"))
   }
 
+  @Test func linesOfAFileEndAsTheFileEndsThem() {
+    let mixed = SourceFile(bytes: Data("one\r\ntwö\nthree\r\nlast".utf8), label: "mixed")
+    #expect(
+      PaneContent.lineEndings(of: mixed, lineCount: 4) == [
+        .carriageReturnLineFeed, .lineFeed, .carriageReturnLineFeed, .none,
+      ])
+    let classic = SourceFile(bytes: Data("one\rtwo\r".utf8), label: "classic")
+    #expect(
+      PaneContent.lineEndings(of: classic, lineCount: 2) == [.carriageReturn, .carriageReturn])
+    #expect(
+      PaneContent.lineEndings(of: classic, lineCount: 3)
+        == Array(repeating: .carriageReturn, count: 3))
+    let empty = SourceFile(bytes: Data(), label: "empty")
+    #expect(PaneContent.lineEndings(of: empty, lineCount: 0) == [])
+  }
+
   @Test func resultRowsBreakWhereTheTextSystemBreaksLines() {
     let rows = ResultPaneContent.rows(of: "one\r\ntwo\rthree\nfour\u{2028}five")
     #expect(rows.text == "one\ntwo\nthree\nfour\nfive")

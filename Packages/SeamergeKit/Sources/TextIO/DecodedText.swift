@@ -30,7 +30,11 @@ public struct DecodedText: Sendable {
     let hasByteOrderMark = !byteOrderMark.isEmpty && bytes.starts(with: byteOrderMark)
     let content = hasByteOrderMark ? bytes.dropFirst(byteOrderMark.count) : bytes
     guard let text = Transcoder.decode(content, from: encoding) else { return nil }
-    let utf8 = encoding == .utf8 ? Data(content) : Data(text.utf8)
+    // Bytes in UTF-8 without a byte order mark are the UTF-8 of the text already. Kept as they
+    // are rather than copied, which `Data(content)` does for bytes read from a file, a file that
+    // was mapped into memory stays mapped.
+    let utf8 =
+      encoding == .utf8 ? (hasByteOrderMark ? Data(content) : bytes) : Data(text.utf8)
     let lineEndings = utf8.withUnsafeBytes { LineEndingCounts(utf8: $0) }
 
     self.encoding = encoding

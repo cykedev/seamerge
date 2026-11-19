@@ -153,19 +153,22 @@ extension PaneContent {
   /// end in CR. Where the file splits into another number of lines, as a comparison mode that
   /// also ends lines at a lone CR does, each line counts as ending like most lines of the file.
   static func lineEndings(of file: SourceFile, lineCount: Int) -> [LineEnding] {
-    let text = Array(file.text?.utf16 ?? "".utf16)
+    // Line endings are ASCII, so the UTF-8 of the text finds them without a copy of it.
+    let text = file.text?.utf8 ?? "".utf8
     let separator = file.lineEndings == .cr ? Self.carriageReturn : Self.lineFeed
     var endings: [LineEnding] = []
     endings.reserveCapacity(lineCount)
-    for (index, unit) in text.enumerated() where unit == separator {
+    var previous: UInt8?
+    for unit in text {
+      defer { previous = unit }
+      guard unit == separator else { continue }
       if separator == Self.carriageReturn {
         endings.append(.carriageReturn)
       } else {
-        let afterReturn = index > 0 && text[index - 1] == Self.carriageReturn
-        endings.append(afterReturn ? .carriageReturnLineFeed : .lineFeed)
+        endings.append(previous == Self.carriageReturn ? .carriageReturnLineFeed : .lineFeed)
       }
     }
-    if text.last != separator && !text.isEmpty {
+    if previous != separator && previous != nil {
       endings.append(.none)
     }
     guard endings.count == lineCount else {
@@ -180,6 +183,6 @@ extension PaneContent {
     return endings
   }
 
-  private static let lineFeed = UInt16(UInt8(ascii: "\n"))
-  private static let carriageReturn = UInt16(UInt8(ascii: "\r"))
+  private static let lineFeed = UInt8(ascii: "\n")
+  private static let carriageReturn = UInt8(ascii: "\r")
 }

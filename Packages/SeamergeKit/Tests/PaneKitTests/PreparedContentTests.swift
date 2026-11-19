@@ -32,6 +32,23 @@ import Testing
     #expect(prepared.collapsedRuns == given.collapsedRuns)
   }
 
+  /// A text that starts with a byte order mark keeps it as a character, which Foundation
+  /// would drop on the way from UTF-8; the pane holds the same characters as the text either
+  /// way, so that its rows and every range in them are where they are.
+  @Test(arguments: ["\u{FEFF}first\nsecond\n", "first\u{FEFF}\nsecond\n"])
+  func preparedContentKeepsAByteOrderMarkInItsText(text: String) {
+    let given = PaneView()
+    given.setContent(content(text), collapsedRuns: [])
+    let prepared = PaneView()
+    prepared.setContent(
+      PreparedPaneContent(preparing: content(text), tabWidth: prepared.theme.tabWidth),
+      collapsedRuns: [])
+
+    #expect(prepared.textView.string.utf16.count == text.utf16.count)
+    #expect(prepared.textView.string == given.textView.string)
+    #expect(prepared.textView.grid.textLength == text.utf16.count)
+  }
+
   @Test func contentPreparedForAnotherTabWidthFindsItsRowsAnew() {
     let pane = PaneView()
     let tabWidth = pane.theme.tabWidth
