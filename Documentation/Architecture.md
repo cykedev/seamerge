@@ -10,24 +10,27 @@ The repository has two Swift packages.
 - `Packages/SeamergeKit` holds the Swift modules of the app and of the `seamerge` command. Its module graph is declared as a table in `Packages/SeamergeKit/Package.swift`. Every module has a test target next to it.
 - `App/` holds the Xcode project and the app-level code: the app (`App/Seamerge`), the `seamerge` command-line executable (`App/SeamergeTool`), code both share (`App/Shared`), the build settings (`App/Config`) and the app tests (`App/SeamergeTests`).
 
-The packages require Swift tools 6.2 and macOS 27.0. Warnings are errors in every target except the vendored Perforce code.
+The packages require Swift tools 6.2 and macOS 27.0. Warnings are errors in every target except the vendored Perforce code. Both packages turn on `InternalImportsByDefault` and `MemberImportVisibility`: an import is internal unless a public or package interface needs the module, which the file marks with `public import` or `package import`, and a file imports every module whose members it uses.
 
 ## Modules
 
 | Module | Depends on | Responsibility |
 |---|---|---|
-| `TextIO` | nothing | Reading and writing text files with their encoding and line endings. |
-| `MergeModel` | `MergeEngine`, `TextIO` | The model of a session, its blocks, the lines that moved, the ignore rules, the single-column layout, the result document and its editing rules. |
+| `TextBasics` | nothing | The vocabulary of text that the other modules share: line endings (`LineEnding`, `LineEndingCounts`, `LineEndingStyle`), the table of where lines start (`LineStarts`) and the binary searches `partitioningIndex(where:)` and `lastIndex(holding:)`. |
+| `TextIO` | `TextBasics` | Reading and writing text files with their encoding and line endings. |
+| `MergeModel` | `MergeEngine`, `TextBasics`, `TextIO` | The model of a session, its blocks, the lines that moved, the ignore rules, the single-column layout, the result document and its editing rules. |
 | `GitSupport` | nothing | Running `git`, reading the context of a merge or comparison, and writing the Git and Tower configuration. |
 | `SessionIPC` | nothing | The socket between the command and the app: requests, events, the client and the server. |
 | `SyntaxKit` | nothing | Language descriptions and lexers for syntax highlighting. |
-| `PaneKit` | nothing | The text panes, the row grid that aligns them, the connected layout (seams, bands and the common scroll track), the decision column and the overview bar. |
+| `PaneKit` | `TextBasics` | The text panes, the row grid that aligns them, the connected layout (seams, bands and the common scroll track), the decision column and the overview bar. |
 | `SeamergeCLI` | `SessionIPC`, `GitSupport` | The logic of the `seamerge` command: arguments, file checks, starting the app, the exit code. |
-| `SeamergeUI` | `PaneKit`, `MergeModel`, `SyntaxKit`, `GitSupport` | The session window, its toolbar and menus, the settings (`UserSettings`), the keyboard shortcut window, the welcome window with its sheets of files and the Git integration sheet. |
+| `SeamergeUI` | `PaneKit`, `MergeModel`, `SyntaxKit`, `GitSupport`, `TextBasics` | The session window, its toolbar and menus, the settings (`UserSettings`), the keyboard shortcut window, the welcome window with its sheets of files and the Git integration sheet. |
 
 The arrows point one way. The user interface knows the model, and the model knows the engine. Only `PaneKit` and `SeamergeUI` import AppKit. A module that is not in the table cannot be imported, which the compiler enforces.
 
 `PaneKit` does not depend on `MergeModel`. The panes show rows and text; the window decides what they show.
+
+The package exports `SeamergeUI`, `MergeModel`, `SeamergeCLI`, `SessionIPC` and `GitSupport` as libraries, the modules that the app and the command link. `PaneKit`, `SyntaxKit` and `TextIO` are used only within the package, so their declarations are `package` rather than `public`. `TextBasics` makes public only the three line ending types, which appear in the interface of `MergeModel` and `SeamergeUI`; apart from the cases of `LineEnding` and `LineEndingStyle`, their members and the rest of the module are `package`.
 
 ## App
 
@@ -208,6 +211,6 @@ Tower passes two folders to the launch script when its setting "Perform director
 
 ## Tests
 
-- Each module has a test target next to its sources.
+- Each module has a test target next to its sources, which may also import the modules its module depends on.
 - `App/SeamergeTests` tests the app. `SystemIntegrationStore` takes the bundle, the home folder and the environment as parameters, so the tests run in a sandbox folder and do not touch the real configuration. `App/SeamergeTests/Support/AppSandbox.swift` sets that up.
 - `Scripts/check.sh` runs the format check, the build and the tests of every package and of the app. It is the only check of the repository.
