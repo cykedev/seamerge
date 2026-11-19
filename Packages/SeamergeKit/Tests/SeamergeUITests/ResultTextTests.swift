@@ -72,7 +72,7 @@ struct ResultTextTests {
     let rows = ResultPaneContent.rows(of: "a😀\nb\r\nc")
 
     #expect(rows.text == "a😀\nb\nc")
-    #expect(rows.starts == [0, 4, 6, 8])
+    #expect(rows.starts == LineStarts([0, 4, 6, 8]))
     #expect(rows.lineEndings == [.lf, .crlf, nil])
     #expect(rows.row(ofPaneOffset: 5) == 1)
     // The file's text: "a😀\n" takes 0..<4, "b\r\n" 4..<7.

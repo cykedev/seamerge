@@ -2,6 +2,7 @@ import Foundation
 import MergeModel
 import PaneKit
 import SyntaxKit
+import TextBasics
 
 /// The tokens of the files of a window, lexed by the syntax of their language: each input once,
 /// in the background, so that the window shows its lines before they have colors, and the result
@@ -158,19 +159,19 @@ final class SessionSyntax {
   /// The stretch reaches from the first row an edit touched to the last, so that edits apart
   /// from each other, as of a command, take the rows between them along.
   static func rowChange(
-    of edits: [PaneEdit], from starts: [Int]
-  ) -> (oldRows: Range<Int>, newRowCount: Int, starts: [Int])? {
+    of edits: [PaneEdit], from starts: LineStarts
+  ) -> (oldRows: Range<Int>, newRowCount: Int, starts: LineStarts)? {
     var starts = starts
     var stretch: (start: Int, oldEnd: Int, newEnd: Int)?
     for edit in edits {
-      guard let last = starts.last, edit.range.upperBound < last else { return nil }
-      let first = row(containing: edit.range.lowerBound, in: starts)
-      let end = row(containing: edit.range.upperBound, in: starts) + 1
+      guard edit.range.upperBound < starts[starts.lineCount] else { return nil }
+      let first = starts.line(containing: edit.range.lowerBound)
+      let end = starts.line(containing: edit.range.upperBound) + 1
       let breaks = edit.text.utf16.enumerated().filter { $0.element == Self.lineFeed }
       let delta = edit.text.utf16.count - edit.range.count
-      starts =
-        Array(starts[...first]) + breaks.map { edit.range.lowerBound + $0.offset + 1 }
-        + starts[(end)...].map { $0 + delta }
+      starts.replaceLines(
+        first..<end, withLinesStartingAt: breaks.map { edit.range.lowerBound + $0.offset + 1 },
+        movingLaterLinesBy: delta)
       let newEnd = first + breaks.count + 1
       guard let previous = stretch else {
         stretch = (first, end, newEnd)
@@ -185,18 +186,6 @@ final class SessionSyntax {
     }
     guard let stretch else { return nil }
     return (stretch.start..<stretch.oldEnd, stretch.newEnd - stretch.start, starts)
-  }
-
-  /// The row whose text, its line feed included, holds `offset`, given where each row starts and,
-  /// last, the length of the text plus one.
-  private static func row(containing offset: Int, in starts: [Int]) -> Int {
-    var low = 0
-    var high = starts.count - 1
-    while high - low > 1 {
-      let middle = (low + high) / 2
-      if starts[middle] <= offset { low = middle } else { high = middle }
-    }
-    return low
   }
 
   private static let lineFeed = UInt16(UInt8(ascii: "\n"))

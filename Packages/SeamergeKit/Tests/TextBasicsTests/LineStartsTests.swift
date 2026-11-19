@@ -39,6 +39,22 @@ struct LineStartsTests {
     #expect(starts.line(containing: 0) == 0)
   }
 
+  @Test func replacingLinesInsertsTheirNewStartsAndMovesTheLinesAfterThem() {
+    var starts = LineStarts([0, 4, 8, 12, 15])
+
+    starts.replaceLines(1..<3, withLinesStartingAt: [6, 7, 9], movingLaterLinesBy: 2)
+
+    #expect(starts == LineStarts([0, 4, 6, 7, 9, 14, 17]))
+  }
+
+  @Test func replacingTheLastLineMovesTheEndOfTheText() {
+    var starts = LineStarts([0, 4, 8])
+
+    starts.replaceLines(1..<2, withLinesStartingAt: [], movingLaterLinesBy: -3)
+
+    #expect(starts == LineStarts([0, 4, 5]))
+  }
+
   @Test func lineContainingAgreesWithALinearSearchForEverySmallTable() {
     for table in Self.nonDecreasingTables(maximumCount: 5, maximumOffset: 4) {
       let starts = LineStarts(table)

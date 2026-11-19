@@ -116,7 +116,7 @@ struct ResultPaneContent {
       let end = start + document.previewLineCount(of: role, in: block)
       // At the end of the text, the last line of the preview has no line feed in the rows, and
       // a preview of one empty line there has no text at all.
-      let length = rows.starts[rows.starts.count - 1] - 1
+      let length = rows.starts[rows.starts.lineCount] - 1
       let upper = min(rows.starts[end], length)
       let range = min(max(rows.starts[start], lower), upper)..<upper
       lower = upper
@@ -189,7 +189,7 @@ struct ResultPaneContent {
 
     /// The UTF-16 offset in ``text`` where each row starts, followed by the length of the text
     /// plus one, as if the last row ended with a line feed too.
-    let starts: [Int]
+    let starts: LineStarts
 
     /// How the line of each row ended in the result.
     let lineEndings: [LineEnding?]
@@ -209,29 +209,16 @@ struct ResultPaneContent {
 
     /// The row in which `offset` of ``text`` lies; the end of the text lies in the last row.
     func row(ofPaneOffset offset: Int) -> Int {
-      var low = 0
-      var high = starts.count - 1
-      // The last start that is at or before the offset.
-      while high - low > 1 {
-        let middle = (low + high) / 2
-        if starts[middle] <= offset { low = middle } else { high = middle }
-      }
-      return low
+      starts.line(containing: offset)
     }
 
     /// The row whose line, its break included, holds offset `offset` of the result text, or the
     /// number of rows for an offset after the last line break that ends the text.
     private func row(containing offset: Int) -> Int {
-      var low = 0
-      var high = breakOffsets.count
-      while low < high {
-        let middle = (low + high) / 2
-        if breakOffsets[middle] < offset { low = middle + 1 } else { high = middle }
-      }
-      return low
+      breakOffsets.partitioningIndex { $0 >= offset }
     }
 
-    init(text: String, starts: [Int], lineEndings: [LineEnding?], breakOffsets: [Int]) {
+    init(text: String, starts: LineStarts, lineEndings: [LineEnding?], breakOffsets: [Int]) {
       self.text = text
       self.starts = starts
       self.lineEndings = lineEndings
@@ -306,7 +293,8 @@ struct ResultPaneContent {
       paneText = String(ResultText.visibleForm(of: text).utf8.dropLast(endsWithBreak ? 1 : 0)) ?? ""
     }
     return Rows(
-      text: paneText, starts: starts, lineEndings: lineEndings, breakOffsets: breakOffsets)
+      text: paneText, starts: LineStarts(starts), lineEndings: lineEndings,
+      breakOffsets: breakOffsets)
   }
 
 }

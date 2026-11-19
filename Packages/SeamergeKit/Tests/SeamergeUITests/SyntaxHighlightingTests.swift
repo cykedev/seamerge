@@ -3,6 +3,7 @@ import MergeModel
 import PaneKit
 import SyntaxKit
 import Testing
+import TextBasics
 
 @testable import SeamergeUI
 
@@ -88,7 +89,7 @@ import Testing
       let after = ResultPaneContent.rows(of: text + "\n").starts
       #expect(change.starts == after, "seed \(seed), round \(round)")
       #expect(
-        before.count - 1 - change.oldRows.count + change.newRowCount == after.count - 1,
+        before.lineCount - change.oldRows.count + change.newRowCount == after.lineCount,
         "seed \(seed), round \(round)")
     }
   }

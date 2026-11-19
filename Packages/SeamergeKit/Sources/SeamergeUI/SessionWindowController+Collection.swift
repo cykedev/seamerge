@@ -1,6 +1,7 @@
 import AppKit
 import GitSupport
 import MergeModel
+import TextBasics
 
 /// The place in a file that a window that compares several files keeps while it shows another.
 struct FilePlace: Equatable {

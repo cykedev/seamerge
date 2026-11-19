@@ -1,5 +1,6 @@
 import MergeModel
 import PaneKit
+import TextBasics
 
 /// The text of a merge result in the two forms it takes: as the file has it, with its own line
 /// breaks, and as the result pane shows it, with a line feed for every line break and without the

@@ -3,7 +3,7 @@
 /// The table holds the offset where each line starts, followed by the offset where the last line
 /// ends, so that line *n* reaches from the start of line *n* to the start of line *n* + 1.
 package struct LineStarts: Sendable, Hashable {
-  @usableFromInline let offsets: [Int]
+  @usableFromInline var offsets: [Int]
 
   /// Creates the table from the start of each line, followed by the end of the last line.
   ///
@@ -36,5 +36,23 @@ package struct LineStarts: Sendable, Hashable {
   @inlinable
   package func line(containing offset: Int) -> Int {
     (0..<lineCount).lastIndex(holding: { offsets[$0] <= offset })
+  }
+
+  /// Replaces `lines` by lines that start where the first of them does and at `starts`, and
+  /// moves the lines after them, and the end of the text, by `distance`.
+  ///
+  /// The table follows an edit this way that rewrote `lines` into `starts.count + 1` lines and
+  /// changed the length of the text by `distance`.
+  ///
+  /// - Precondition: `lines` is not empty and lies within `0..<lineCount`.
+  package mutating func replaceLines(
+    _ lines: Range<Int>, withLinesStartingAt starts: [Int], movingLaterLinesBy distance: Int
+  ) {
+    precondition(
+      !lines.isEmpty && lines.upperBound <= lineCount, "Lines \(lines) are out of range")
+    offsets.replaceSubrange(lines.lowerBound + 1..<lines.upperBound, with: starts)
+    for index in lines.lowerBound + 1 + starts.count..<offsets.count {
+      offsets[index] += distance
+    }
   }
 }

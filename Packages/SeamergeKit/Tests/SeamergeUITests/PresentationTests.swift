@@ -139,7 +139,7 @@ import TextBasics
       rows.lineEndings == [
         .crlf, .cr, .lf, .lf, nil,
       ])
-    #expect(rows.starts == [0, 4, 8, 14, 19, 24])
+    #expect(rows.starts == LineStarts([0, 4, 8, 14, 19, 24]))
     #expect(rows.rows(ofUTF16: 0..<5) == 0..<1)
     #expect(rows.rows(ofUTF16: 5..<10) == 1..<3)
     #expect(rows.rows(ofUTF16: 10..<10) == 2..<2)

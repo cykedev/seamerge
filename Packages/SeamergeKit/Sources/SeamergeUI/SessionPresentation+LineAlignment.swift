@@ -230,13 +230,7 @@ extension SessionPresentation {
 
   /// The row of `text` that the UTF-16 `offset` lies in; the end of the text lies in the last.
   private func row(containingOffset offset: Int, in text: DisplayText) -> Int {
-    var low = 0
-    var high = text.rowCount
-    while high - low > 1 {
-      let middle = (low + high) / 2
-      if text.utf16Range(ofRow: middle).lowerBound <= offset { low = middle } else { high = middle }
-    }
-    return low
+    (0..<text.rowCount).lastIndex(holding: { text.utf16Range(ofRow: $0).lowerBound <= offset })
   }
 }
 
