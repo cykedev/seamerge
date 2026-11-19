@@ -8,10 +8,18 @@ import Testing
 /// temporary folder, as Git hands them over.
 @MainActor
 enum SampleCollections {
+  /// The temporary folder that holds the folders of this test process; it is removed as the
+  /// process exits, since the tests hand the folders on and none of them owns one.
+  nonisolated private static let root: URL = {
+    let root = FileManager.default.temporaryDirectory.appending(
+      path: "SeamergeCollections-\(UUID().uuidString)", directoryHint: .isDirectory)
+    atexit { try? FileManager.default.removeItem(at: SampleCollections.root) }
+    return root
+  }()
+
   /// A new, empty temporary folder.
   static func folder() throws -> URL {
-    let folder = FileManager.default.temporaryDirectory.appending(
-      path: "SeamergeCollections-\(UUID().uuidString)", directoryHint: .isDirectory)
+    let folder = root.appending(path: UUID().uuidString, directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     return folder
   }
