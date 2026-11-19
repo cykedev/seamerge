@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 
 /// The text a pane shows: the lines of one input laid out on the row grid, the lines of its file
 /// alone, or the lines of both files of a comparison in a single column.
@@ -15,7 +16,7 @@ public struct DisplayText: Sendable {
 
   /// The UTF-16 offset where each row starts, followed by the length of ``string`` plus one, as
   /// if the last row ended with a separator too.
-  private let rowStarts: [Int]
+  private let rowStarts: LineStarts
 
   /// Lays out the lines of `file` on the rows of `blocks`.
   init(file: ComparedFile, role: Role, blocks: [Block]) {
@@ -63,11 +64,11 @@ public struct DisplayText: Sendable {
     }
     rowStarts.append(utf16Offset)
     string = String(decoding: bytes, as: UTF8.self)
-    self.rowStarts = rowStarts
+    self.rowStarts = LineStarts(rowStarts)
   }
 
   /// The number of rows.
-  public var rowCount: Int { rowStarts.count - 1 }
+  public var rowCount: Int { rowStarts.lineCount }
 
   /// The UTF-16 range of a row in ``string``, without the separator that follows it.
   ///
@@ -85,13 +86,7 @@ public struct DisplayText: Sendable {
     precondition(
       rowCount > 0 && (0..<rowStarts[rowCount]).contains(offset), "Offset \(offset) is out of range"
     )
-    var low = 0
-    var high = rowCount
-    while high - low > 1 {
-      let middle = (low + high) / 2
-      if rowStarts[middle] <= offset { low = middle } else { high = middle }
-    }
-    return low
+    return rowStarts.line(containing: offset)
   }
 
   /// Appends UTF-8 bytes and replaces each character that ends a line in a text view with a

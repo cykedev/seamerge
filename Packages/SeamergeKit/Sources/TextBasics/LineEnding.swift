@@ -67,6 +67,14 @@ public enum LineEndingStyle: Sendable, Hashable {
     }
   }
 
+  /// The only line ending of a uniform text, or `nil` for a mixed one.
+  package var uniformLineEnding: LineEnding? {
+    if case .uniform(let lineEnding) = self { lineEnding } else { nil }
+  }
+
+  /// Whether the text mixes line endings.
+  package var isMixed: Bool { uniformLineEnding == nil }
+
   /// The line ending a text in this style is written with by default: its only one, or the most
   /// frequent one of a mixed text.
   package var predominantLineEnding: LineEnding {

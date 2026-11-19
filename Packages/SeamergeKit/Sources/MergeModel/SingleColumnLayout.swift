@@ -1,3 +1,5 @@
+import TextBasics
+
 /// The rows of a comparison laid out in a single column: the lines that both files share once,
 /// and in each changed block the lines of one file above those of the other.
 ///
@@ -156,7 +158,7 @@ public struct SingleColumnLayout: Sendable {
   /// - Precondition: `row` lies within `0..<rowCount`.
   public func place(atRow row: Int) -> Place {
     precondition((0..<rowCount).contains(row), "Row \(row) is out of range")
-    let block = blocks[lastIndex(in: blocks.indices) { blockRowStarts[$0] <= row }]
+    let block = blocks[blocks.indices.lastIndex(holding: { blockRowStarts[$0] <= row })]
     let offset = row - blockRowStarts[block.id]
     let shared = Self.sharedRowCount(of: block)
     let firstLines = block.lines(in: firstSide)
@@ -185,7 +187,7 @@ public struct SingleColumnLayout: Sendable {
     precondition((0..<(lineCounts[role] ?? 0)).contains(line), "Line \(line) is out of range")
     // Blocks without lines in this input start where the next block does, so the last block
     // starting at or before the line is the one that contains it.
-    let index = lastIndex(in: blocks.indices) { blocks[$0].lines(in: role).lowerBound <= line }
+    let index = blocks.indices.lastIndex(holding: { blocks[$0].lines(in: role).lowerBound <= line })
     let block = blocks[index]
     let offset = line - block.lines(in: role).lowerBound
     let shared = Self.sharedRowCount(of: block)
@@ -201,18 +203,6 @@ public struct SingleColumnLayout: Sendable {
     let block = place(atRow: row).block
     precondition(block.kind == .unchanged, "Row \(row) belongs to a changed block")
     return rowLayout.rows(of: block).lowerBound + row - blockRowStarts[block.id]
-  }
-
-  /// The last index in `indices` for which `isAtOrBefore` holds, given that it holds for the
-  /// first index and, once it fails, for no later one.
-  private func lastIndex(in indices: Range<Int>, where isAtOrBefore: (Int) -> Bool) -> Int {
-    var low = indices.lowerBound
-    var high = indices.upperBound
-    while high - low > 1 {
-      let middle = (low + high) / 2
-      if isAtOrBefore(middle) { low = middle } else { high = middle }
-    }
-    return low
   }
 }
 

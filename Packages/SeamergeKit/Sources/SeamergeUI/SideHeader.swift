@@ -1,6 +1,7 @@
 import Foundation
 import GitSupport
 import MergeModel
+import TextBasics
 
 /// What the header above the pane of an input says: the letter of the side, its real name, its
 /// role in the Git operation, and the details its popover shows.
@@ -24,7 +25,7 @@ struct SideHeader: Equatable {
     var location: String
 
     /// How the lines of the file end, if the file has line breaks.
-    var lineEndings: LineEndings?
+    var lineEndingStyle: LineEndingStyle?
 
     /// The encoding the file was read in, if it is text.
     var encoding: FileEncoding?
@@ -54,7 +55,7 @@ struct SideHeader: Equatable {
   let rolePlacement: RolePlacement
 
   /// How the lines of the file end, shown only where they differ from the other sides.
-  let differingLineEndings: LineEndings?
+  let differingLineEndingStyle: LineEndingStyle?
 
   /// The encoding of the file, shown only where it differs from the other sides.
   let differingEncoding: FileEncoding?
@@ -94,13 +95,13 @@ struct SideHeader: Equatable {
       case .merge, nil: .afterName
       case .rebase, .cherryPick, .revert, .stash: .beforeName
       }
-    differingLineEndings = session.lineEndingsDiffer ? file.lineEndings : nil
+    differingLineEndingStyle = session.lineEndingsDiffer ? file.lineEndingStyle : nil
     let encodings = Set(session.roles.compactMap { session.file(for: $0)?.encoding })
     differingEncoding = encodings.count > 1 ? file.encoding : nil
     details = Details(
       commit: side?.commit,
       location: file.url.map { $0.path(percentEncoded: false) } ?? file.label,
-      lineEndings: file.lineEndings, encoding: file.encoding)
+      lineEndingStyle: file.lineEndingStyle, encoding: file.encoding)
   }
 
   /// The name of the side as a whole, for VoiceOver and the help tag: letter, role and name in

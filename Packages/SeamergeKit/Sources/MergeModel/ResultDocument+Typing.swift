@@ -1,3 +1,5 @@
+import TextBasics
+
 extension ResultDocument {
   /// The plan for an edit of the result text, attributed to the segments it touches.
   ///
@@ -108,13 +110,7 @@ extension ResultDocument {
   ///
   /// - Precondition: There is at least one segment, and `offset` is not negative.
   private func lastSegment(startingAtOrBefore offset: Int, starts: [Int]) -> Int {
-    var low = 0
-    var high = segments.count
-    while high - low > 1 {
-      let middle = (low + high) / 2
-      if starts[middle] <= offset { low = middle } else { high = middle }
-    }
-    return low
+    segments.indices.lastIndex(holding: { starts[$0] <= offset })
   }
 
   /// A typing plan that carries out `replacements` and changes the length of segments by

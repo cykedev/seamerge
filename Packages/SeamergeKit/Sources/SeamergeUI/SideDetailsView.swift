@@ -41,14 +41,14 @@ struct SideDetailsView: View {
             Text("Encoding", bundle: .module, comment: "Details of a side: UTF-8 and the like."),
             value: encoding.name)
         }
-        if let lineEndings = header.details.lineEndings {
+        if let lineEndingStyle = header.details.lineEndingStyle {
           row(
             Text(
               "Line Endings", bundle: .module,
               comment:
                 "Line endings: the label in the details of a side, LF, CRLF or CR, and the submenu of the File menu that chooses those of the result."
             ),
-            value: lineEndings.name)
+            value: lineEndingStyle.name)
         }
       }
     }

@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 
 extension UnifiedDiff {
   /// A side of a file whose lines a diff shows: its bytes and the encoding it was read in, or
@@ -23,8 +24,8 @@ extension UnifiedDiff {
 
     private let old: TextFile
     private let new: TextFile
-    private let oldLineStarts: [Int]
-    private let newLineStarts: [Int]
+    private let oldLineStarts: LineStarts
+    private let newLineStarts: LineStarts
     private let changes: [Block]
 
     /// Compares the bytes of `old` and `new` byte for byte.
@@ -88,13 +89,13 @@ extension UnifiedDiff {
         oldLine..<hunk.old.upperBound, of: old, starts: oldLineStarts, as: " ", to: &output)
     }
 
-    private var oldLineCount: Int { oldLineStarts.count - 1 }
-    private var newLineCount: Int { newLineStarts.count - 1 }
+    private var oldLineCount: Int { oldLineStarts.lineCount }
+    private var newLineCount: Int { newLineStarts.lineCount }
 
     /// Writes `lines` of `file`, each after `sign`; a last line without a line break is followed
     /// by one and by the line that says so.
     private func writeLines<Output: UnifiedDiffOutput>(
-      _ lines: Range<Int>, of file: TextFile, starts: [Int], as sign: Character,
+      _ lines: Range<Int>, of file: TextFile, starts: LineStarts, as sign: Character,
       to output: inout Output
     ) {
       for line in lines {

@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 import TextIO
 
 /// A file as a comparison with ignore rules sees it: without the text that the rules match,
@@ -44,7 +45,7 @@ struct IgnoreMask: Sendable {
     var masked: [UInt8] = []
     masked.reserveCapacity(text.utf8.count)
     var maskedStarts = [0]
-    maskedStarts.reserveCapacity(text.lineStarts.count)
+    maskedStarts.reserveCapacity(text.lineCount + 1)
     var kept: [Range<Int>] = []
     kept.reserveCapacity(joined.count)
     var entireLines = IndexSet()
@@ -78,7 +79,7 @@ struct IgnoreMask: Sendable {
     }
     self.text = text
     self.lineIndex = lineIndex
-    self.masked = LineText(utf8: Data(masked), lineStarts: maskedStarts)
+    self.masked = LineText(utf8: Data(masked), lineStarts: LineStarts(maskedStarts))
     matches = RuleMatches(ranges: kept, entireLines: entireLines)
   }
 

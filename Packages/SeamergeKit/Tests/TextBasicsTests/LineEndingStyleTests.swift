@@ -13,6 +13,13 @@ struct LineEndingStyleTests {
     #expect(LineEndingStyle(counts)?.predominantLineEnding == .crlf)
   }
 
+  @Test func onlyAUniformStyleHasAUniformLineEnding() {
+    #expect(LineEndingStyle.uniform(.crlf).uniformLineEnding == .crlf)
+    #expect(!LineEndingStyle.uniform(.crlf).isMixed)
+    #expect(LineEndingStyle.mixed(LineEndingCounts(lf: 1, cr: 1)).uniformLineEnding == nil)
+    #expect(LineEndingStyle.mixed(LineEndingCounts(lf: 1, cr: 1)).isMixed)
+  }
+
   @Test func countsWithoutLineEndingsHaveNoStyle() {
     #expect(LineEndingStyle(LineEndingCounts()) == nil)
   }

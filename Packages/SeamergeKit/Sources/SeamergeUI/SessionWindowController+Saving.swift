@@ -274,7 +274,7 @@ extension SessionWindowController {
     header.format = saving.format
     header.path = saving.url.map(ResultHeader.path(of:))
     header.bWithMixedLineEndings =
-      presentation.changes.session.file(for: .b)?.lineEndings == .mixed
+      presentation.changes.session.file(for: .b)?.lineEndingStyle?.isMixed == true
       ? presentation.headers[.b]?.distinctName : nil
     layout.show(header)
   }

@@ -156,7 +156,7 @@ extension PaneContent {
   static func lineEndings(of file: SourceFile, lineCount: Int) -> [LineEnding?] {
     // Line endings are ASCII, so the UTF-8 of the text finds them without a copy of it.
     let text = file.text?.utf8 ?? "".utf8
-    let separator = file.lineEndings == .cr ? Self.carriageReturn : Self.lineFeed
+    let separator = file.lineEndingStyle == .uniform(.cr) ? Self.carriageReturn : Self.lineFeed
     var endings: [LineEnding?] = []
     endings.reserveCapacity(lineCount)
     var previous: UInt8?
@@ -173,12 +173,7 @@ extension PaneContent {
       endings.append(nil)
     }
     guard endings.count == lineCount else {
-      let usual: LineEnding =
-        switch file.lineEndings {
-        case .crlf: .crlf
-        case .cr: .cr
-        case .lf, .mixed, nil: .lf
-        }
+      let usual = file.lineEndingStyle?.uniformLineEnding ?? .lf
       return Array(repeating: usual, count: lineCount)
     }
     return endings

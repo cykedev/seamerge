@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 
 /// The text of a file that the ignore rules of a comparison match.
 struct RuleMatches: Sendable {
@@ -17,15 +18,10 @@ struct RuleMatches: Sendable {
 
   /// The matched ranges that overlap `bytes`, in text order.
   func ranges(overlapping bytes: Range<Int>) -> ArraySlice<Range<Int>> {
-    var low = 0
-    var high = ranges.count
-    while low < high {
-      let middle = (low + high) / 2
-      if ranges[middle].upperBound <= bytes.lowerBound { low = middle + 1 } else { high = middle }
-    }
-    var end = low
+    let start = ranges.partitioningIndex { $0.upperBound > bytes.lowerBound }
+    var end = start
     while end < ranges.count, ranges[end].lowerBound < bytes.upperBound { end += 1 }
-    return ranges[low..<end]
+    return ranges[start..<end]
   }
 
   /// Whether the rules match all of `bytes`, which is not empty.

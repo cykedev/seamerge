@@ -1,4 +1,5 @@
 import Synchronization
+import TextBasics
 
 /// The row grid that aligns the blocks of a session across the panes.
 ///
@@ -107,7 +108,7 @@ public struct RowLayout: Sendable {
   /// - Precondition: `row` lies within `0..<rowCount`.
   public func block(atRow row: Int) -> Block {
     precondition((0..<rowCount).contains(row), "Row \(row) is out of range")
-    return blocks[lastIndex(in: blocks.indices) { blockRowStarts[$0] <= row }]
+    return blocks[blocks.indices.lastIndex(holding: { blockRowStarts[$0] <= row })]
   }
 
   /// The line of the input of `role` that a row shows, or `nil` for a filler row.
@@ -127,20 +128,8 @@ public struct RowLayout: Sendable {
     precondition((0..<lineCount(in: role)).contains(line), "Line \(line) is out of range")
     // Blocks without lines in this input start where the next block does, so the last block
     // starting at or before the line is the one that contains it.
-    let index = lastIndex(in: blocks.indices) { blocks[$0].lines(in: role).lowerBound <= line }
+    let index = blocks.indices.lastIndex(holding: { blocks[$0].lines(in: role).lowerBound <= line })
     return blockRowStarts[index] + line - blocks[index].lines(in: role).lowerBound
-  }
-
-  /// The last index in `indices` for which `isAtOrBefore` holds, given that it holds for the
-  /// first index and, once it fails, for no later one.
-  private func lastIndex(in indices: Range<Int>, where isAtOrBefore: (Int) -> Bool) -> Int {
-    var low = indices.lowerBound
-    var high = indices.upperBound
-    while high - low > 1 {
-      let middle = (low + high) / 2
-      if isAtOrBefore(middle) { low = middle } else { high = middle }
-    }
-    return low
   }
 }
 

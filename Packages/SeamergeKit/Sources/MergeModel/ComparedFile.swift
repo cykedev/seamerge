@@ -31,12 +31,12 @@ struct ComparedFile: Sendable {
   /// - Precondition: `lineStarts` meets the preconditions of `LineIndex`, which the engine's
   ///   split of valid UTF-8 always does: it splits only after CR or LF, and neither byte occurs
   ///   within a multi-byte scalar.
-  init(file: SourceFile, text: Data, lineStarts: [Int]) {
+  init(file: SourceFile, text: Data, lineStarts: LineStarts) {
     self.file = file
     self.text = LineText(utf8: text, lineStarts: lineStarts)
     compared = self.text
     ruleMatches = .none
-    lineIndex = LineIndex(utf8: text, byteLineStarts: LineStarts(lineStarts))
+    lineIndex = LineIndex(utf8: text, byteLineStarts: lineStarts)
   }
 
   /// The file `file` as the engine compared it, masked by `mask`.
@@ -52,10 +52,10 @@ struct ComparedFile: Sendable {
   var utf8: Data { text.utf8 }
 
   /// The byte offset where each line starts, followed by the byte count.
-  var lineStarts: [Int] { text.lineStarts }
+  var lineStarts: LineStarts { text.lineStarts }
 
   /// The number of lines.
-  var lineCount: Int { lineStarts.count - 1 }
+  var lineCount: Int { lineStarts.lineCount }
 
   /// The bytes of `lines`, including the line ending of the last one.
   func byteRange(ofLines lines: Range<Int>) -> Range<Int> {
@@ -90,13 +90,7 @@ struct ComparedFile: Sendable {
   /// - Precondition: `offset` lies within `0..<utf8.count`.
   func line(containingByte offset: Int) -> Int {
     precondition((0..<utf8.count).contains(offset), "Byte \(offset) is outside the text")
-    var low = 0
-    var high = lineCount
-    while high - low > 1 {
-      let middle = (low + high) / 2
-      if lineStarts[middle] <= offset { low = middle } else { high = middle }
-    }
-    return low
+    return lineStarts.line(containing: offset)
   }
 
   /// Whether a line starts at byte `offset`, counting the end of the text as the start of the

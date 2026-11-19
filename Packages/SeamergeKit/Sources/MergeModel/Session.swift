@@ -240,7 +240,8 @@ public struct Session: Sendable {
   /// another file with mixed line endings. The comparison may treat the line endings as equal,
   /// so the header shows the difference instead.
   public var lineEndingsDiffer: Bool {
-    Set(files.values.compactMap(\.file.lineEndings)).count > 1
+    // Mixed files count as one kind, whatever their mix.
+    Set(files.values.compactMap { $0.file.lineEndingStyle.map(\.uniformLineEnding) }).count > 1
   }
 
   /// The text of each file as the comparison sees it.

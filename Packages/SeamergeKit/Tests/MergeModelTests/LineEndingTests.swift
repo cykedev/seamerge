@@ -43,13 +43,13 @@ struct LineEndingTests {
     let session = try await diff("one\rtwo\r", "one\ntwo\n")
 
     #expect(session.file(for: .a)?.text == "one\rtwo\r")
-    #expect(session.file(for: .a)?.lineEndings == .cr)
+    #expect(session.file(for: .a)?.lineEndingStyle == .uniform(.cr))
   }
 
   @Test func loneCarriageReturnInAFileWithOtherLineEndingsStaysVisible() async throws {
     let session = try await diff("x\r\ny\rz\r\n", "x\r\nyz\r\n")
 
-    #expect(session.file(for: .a)?.lineEndings == .mixed)
+    #expect(session.file(for: .a)?.lineEndingStyle?.isMixed == true)
     #expect(try session.rowTexts(of: .a) == ["x", "y\u{240D}z"])
   }
 

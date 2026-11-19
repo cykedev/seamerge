@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 
 /// A UTF-8 text and the byte offsets where its lines start.
 struct LineText: Sendable {
@@ -6,10 +7,10 @@ struct LineText: Sendable {
   let utf8: Data
 
   /// The byte offset where each line starts, followed by the byte count.
-  let lineStarts: [Int]
+  let lineStarts: LineStarts
 
   /// A text split at `lineStarts`.
-  init(utf8: Data, lineStarts: [Int]) {
+  init(utf8: Data, lineStarts: LineStarts) {
     self.utf8 = utf8
     self.lineStarts = lineStarts
   }
@@ -33,11 +34,11 @@ struct LineText: Sendable {
       }
     }
     if !utf8.isEmpty { lineStarts.append(utf8.count) }
-    self.init(utf8: utf8, lineStarts: lineStarts)
+    self.init(utf8: utf8, lineStarts: LineStarts(lineStarts))
   }
 
   /// The number of lines.
-  var lineCount: Int { lineStarts.count - 1 }
+  var lineCount: Int { lineStarts.lineCount }
 
   /// The bytes of `lines`, including the line ending of the last one.
   func byteRange(ofLines lines: Range<Int>) -> Range<Int> {

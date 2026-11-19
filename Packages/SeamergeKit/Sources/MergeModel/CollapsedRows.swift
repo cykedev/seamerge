@@ -1,3 +1,5 @@
+import TextBasics
+
 /// The runs of rows of the grid that the panes collapse: long runs of unchanged rows, the same in
 /// every pane.
 ///
@@ -228,12 +230,7 @@ public struct CollapsedRows: Sendable {
   private static func lastIndex(
     in indices: Range<Int>, where isAtOrBefore: (Int) -> Bool
   ) -> Int? {
-    var low = indices.lowerBound
-    var high = indices.upperBound
-    while low < high {
-      let middle = (low + high) / 2
-      if isAtOrBefore(middle) { low = middle + 1 } else { high = middle }
-    }
-    return low > indices.lowerBound ? low - 1 : nil
+    let end = indices.partitioningIndex { !isAtOrBefore($0) }
+    return end > indices.lowerBound ? end - 1 : nil
   }
 }

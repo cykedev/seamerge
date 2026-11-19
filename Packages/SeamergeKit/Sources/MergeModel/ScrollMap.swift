@@ -1,3 +1,5 @@
+import TextBasics
+
 /// The correspondence between positions in two ways of counting the text of a session, block by
 /// block: rows of the grid and lines of the result, or the lines of two inputs.
 ///
@@ -78,14 +80,9 @@ public struct ScrollMap: Sendable {
     guard position < Double(source[blockCount]) else {
       return Double(target[blockCount]) + position - Double(source[blockCount])
     }
-    var low = 0
-    var high = blockCount
-    while high - low > 1 {
-      let middle = (low + high) / 2
-      if Double(source[middle]) <= position { low = middle } else { high = middle }
-    }
-    let fraction = (position - Double(source[low])) / Double(source[low + 1] - source[low])
-    return Double(target[low]) + fraction * Double(target[low + 1] - target[low])
+    let block = (0..<blockCount).lastIndex(holding: { Double(source[$0]) <= position })
+    let fraction = (position - Double(source[block])) / Double(source[block + 1] - source[block])
+    return Double(target[block]) + fraction * Double(target[block + 1] - target[block])
   }
 
   private static let lineFeed = UInt16(UInt8(ascii: "\n"))

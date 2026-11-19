@@ -1,5 +1,6 @@
 import Foundation
 import MergeEngine
+import TextBasics
 
 /// The bridge to the diff and merge engine, and the only place that knows its types.
 ///
@@ -14,7 +15,7 @@ enum EngineAdapter {
     /// The byte offset where each line of an input starts, followed by its byte count.
     ///
     /// Inputs that take no part, such as the base of a comparison of two files, are missing.
-    var lineStarts: [Role: [Int]]
+    var lineStarts: [Role: LineStarts]
   }
 
   /// The runs of tokens in which two texts differ.
@@ -135,8 +136,8 @@ enum EngineAdapter {
   ///
   /// The buffer does not publish its offsets, but the empty range before each line starts at
   /// them.
-  private static func lineStarts(of buffer: LineBuffer) -> [Int] {
-    (0...buffer.lineCount).map { buffer.byteRange(lines: $0..<$0).lowerBound }
+  private static func lineStarts(of buffer: LineBuffer) -> LineStarts {
+    LineStarts((0...buffer.lineCount).map { buffer.byteRange(lines: $0..<$0).lowerBound })
   }
 }
 

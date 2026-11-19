@@ -18,16 +18,11 @@ struct RuleMatcher: Sendable {
   /// The UTF-16 code units of ``text``.
   private let utf16: [UInt16]
 
-  /// The UTF-16 offset where each line starts.
-  private let utf16LineStarts: [Int]
-
   /// Prepares the matching of `text`, which is valid UTF-8.
   init(text: LineText) {
-    let lineIndex = LineIndex(utf8: text.utf8, byteLineStarts: LineStarts(text.lineStarts))
     self.text = text
-    self.lineIndex = lineIndex
+    lineIndex = LineIndex(utf8: text.utf8, byteLineStarts: text.lineStarts)
     utf16 = Array(String(decoding: text.utf8, as: UTF8.self).utf16)
-    utf16LineStarts = (0..<text.lineCount).map { lineIndex.utf16Range(ofLine: $0).lowerBound }
   }
 
   /// The non-empty matches of `expression` in the contents of the lines, as byte ranges in
@@ -112,22 +107,12 @@ struct RuleMatcher: Sendable {
         return
       }
       guard let range = match?.range else { return }
-      let first = line(containingUTF16Offset: range.location)
-      let last = line(containingUTF16Offset: max(range.location, range.location + range.length - 1))
+      let first = lineIndex.line(containingUTF16Offset: range.location)
+      let last = lineIndex.line(
+        containingUTF16Offset: max(range.location, range.location + range.length - 1))
       lines.insert(integersIn: first...last)
     }
     return isTooSlow ? nil : lines
-  }
-
-  /// The line that holds the UTF-16 offset `offset`, or the last line for the end of the text.
-  private func line(containingUTF16Offset offset: Int) -> Int {
-    var low = 0
-    var high = utf16LineStarts.count
-    while high - low > 1 {
-      let middle = (low + high) / 2
-      if utf16LineStarts[middle] <= offset { low = middle } else { high = middle }
-    }
-    return low
   }
 }
 

@@ -1,6 +1,7 @@
 import MergeModel
 import PaneKit
 import SwiftUI
+import TextBasics
 
 /// The header above the pane of an input: the badge of the side, its real name and role, and a
 /// quiet button for its details.
@@ -53,8 +54,8 @@ struct SideNamesView: View {
         .font(.subheadline)
         .foregroundStyle(.secondary)
     }
-    if let lineEndings = header.differingLineEndings {
-      Text(lineEndings.name)
+    if let lineEndingStyle = header.differingLineEndingStyle {
+      Text(lineEndingStyle.name)
         .font(.subheadline)
         .foregroundStyle(.secondary)
         .help(
@@ -115,14 +116,23 @@ struct SideBadge: View {
   }
 }
 
-extension LineEndings {
-  /// The short name of the line endings, as editors show it.
+extension LineEnding {
+  /// The short name of the line ending, as editors show it.
   var name: String {
     switch self {
     case .lf: String(localized: "LF", bundle: .module, comment: "Line endings: line feed.")
     case .crlf:
       String(localized: "CRLF", bundle: .module, comment: "Line endings: CR LF.")
     case .cr: String(localized: "CR", bundle: .module, comment: "Line endings: carriage return.")
+    }
+  }
+}
+
+extension LineEndingStyle {
+  /// The short name of the line endings, as editors show it.
+  var name: String {
+    switch self {
+    case .uniform(let lineEnding): lineEnding.name
     case .mixed:
       String(localized: "Mixed", bundle: .module, comment: "Line endings: more than one kind.")
     }

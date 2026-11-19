@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 import TextIO
 
 /// A file that a session compares: its name, its bytes and its text.
@@ -72,14 +73,12 @@ public struct SourceFile: Sendable {
   /// no line break.
   ///
   /// A tie goes to LF, then to CRLF, before CR.
-  public var predominantLineEnding: ResultFormat.LineEnding? {
-    decodedText?.lineEndingStyle.map { ResultFormat.LineEnding($0.predominantLineEnding) }
+  public var predominantLineEnding: LineEnding? {
+    lineEndingStyle?.predominantLineEnding
   }
 
   /// How the lines of the text end, or `nil` if the file is binary or has no line break.
-  public var lineEndings: LineEndings? {
-    decodedText?.lineEndingStyle.map(LineEndings.init)
-  }
+  public var lineEndingStyle: LineEndingStyle? { decodedText?.lineEndingStyle }
 
   /// The UTF-8 text as a comparison in `mode` sees it, or `nil` if the file is binary.
   ///

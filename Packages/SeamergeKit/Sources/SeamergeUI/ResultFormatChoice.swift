@@ -1,5 +1,6 @@
 import AppKit
 import MergeModel
+import TextBasics
 
 /// A choice of how the result of a merge is written: its encoding or its line endings.
 ///
@@ -11,7 +12,7 @@ public enum ResultFormatChoice: Hashable, Sendable {
   case encoding(FileEncoding)
 
   /// Ends every line of the result this way.
-  case lineEnding(ResultFormat.LineEnding)
+  case lineEnding(LineEnding)
 
   /// The choices of the encoding, in the order of their menu.
   public static let encodings: [ResultFormatChoice] = [
@@ -20,16 +21,13 @@ public enum ResultFormatChoice: Hashable, Sendable {
   ].map(ResultFormatChoice.encoding)
 
   /// The choices of the line endings, in the order of their menu.
-  public static let lineEndings = ResultFormat.LineEnding.allCases.map(
-    ResultFormatChoice.lineEnding)
+  public static let lineEndings = LineEnding.allCases.map(ResultFormatChoice.lineEnding)
 
   /// The name of the choice in a menu.
   public var title: String {
     switch self {
     case .encoding(let encoding): encoding.name
-    case .lineEnding(.lf): LineEndings.lf.name
-    case .lineEnding(.crlf): LineEndings.crlf.name
-    case .lineEnding(.cr): LineEndings.cr.name
+    case .lineEnding(let lineEnding): lineEnding.name
     }
   }
 

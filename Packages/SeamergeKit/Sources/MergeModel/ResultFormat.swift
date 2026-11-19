@@ -5,37 +5,6 @@ import TextIO
 /// How the result of a merge is written: its encoding, whether it starts with a byte order mark,
 /// and the one line ending every line break becomes.
 public struct ResultFormat: Sendable, Hashable {
-  /// A line ending the result can be written with.
-  public enum LineEnding: Sendable, Hashable, CaseIterable {
-    /// A line feed, as on macOS and Linux.
-    case lf
-
-    /// A carriage return followed by a line feed, as on Windows.
-    case crlf
-
-    /// A carriage return alone, as on classic Mac OS.
-    case cr
-
-    /// The line ending as TextIO describes it.
-    init(_ lineEnding: TextBasics.LineEnding) {
-      self =
-        switch lineEnding {
-        case .lf: .lf
-        case .crlf: .crlf
-        case .cr: .cr
-        }
-    }
-
-    /// The line ending as TextIO describes it.
-    var textLineEnding: TextBasics.LineEnding {
-      switch self {
-      case .lf: .lf
-      case .crlf: .crlf
-      case .cr: .cr
-      }
-    }
-  }
-
   /// The encoding the result is written in.
   public private(set) var encoding: FileEncoding
 
@@ -121,6 +90,6 @@ public struct ResultFormat: Sendable, Hashable {
   private var writer: TextWriter {
     TextWriter(
       encoding: encoding.textEncoding, writesByteOrderMark: writesByteOrderMark,
-      lineEnding: lineEnding.textLineEnding)
+      lineEnding: lineEnding)
   }
 }
