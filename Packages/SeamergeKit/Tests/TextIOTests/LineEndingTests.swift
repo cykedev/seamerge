@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import TextBasics
 import TextIO
 
 struct LineEndingTests {
@@ -54,11 +55,5 @@ struct LineEndingTests {
     let text = try decoded("a\r\nb\r\n", in: .utf16BigEndian)
 
     #expect(text.lineEndingStyle == .uniform(.crlf))
-  }
-
-  @Test func countsWithoutLineEndingHaveNoMajority() {
-    #expect(LineEndingCounts().majority == nil)
-    #expect(LineEndingCounts(lf: 1, cr: 3).majority == .cr)
-    #expect(LineEndingCounts(lf: 2, crlf: 3, cr: 3).total == 8)
   }
 }

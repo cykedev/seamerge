@@ -1,4 +1,4 @@
-import TextIO
+import TextBasics
 
 /// How the lines of a file end.
 public enum LineEndings: Sendable, Hashable {

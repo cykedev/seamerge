@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import TextBasics
 import TextIO
 
 struct TextWriterTests {

@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 import TextIO
 
 /// How the result of a merge is written: its encoding, whether it starts with a byte order mark,
@@ -16,7 +17,7 @@ public struct ResultFormat: Sendable, Hashable {
     case cr
 
     /// The line ending as TextIO describes it.
-    init(_ lineEnding: TextIO.LineEnding) {
+    init(_ lineEnding: TextBasics.LineEnding) {
       self =
         switch lineEnding {
         case .lf: .lf
@@ -26,7 +27,7 @@ public struct ResultFormat: Sendable, Hashable {
     }
 
     /// The line ending as TextIO describes it.
-    var textLineEnding: TextIO.LineEnding {
+    var textLineEnding: TextBasics.LineEnding {
       switch self {
       case .lf: .lf
       case .crlf: .crlf

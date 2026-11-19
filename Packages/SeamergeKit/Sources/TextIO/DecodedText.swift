@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 
 /// The text of a file, decoded, together with what is needed to write it back in the same form.
 public struct DecodedText: Sendable {

@@ -11,8 +11,11 @@ let swiftSettings: [SwiftSetting] = [.treatAllWarnings(as: .error)]
 /// knows the model, the model never knows the user interface.
 let modules: [(name: String, dependencies: [Target.Dependency])] = [
   ("TextBasics", []),
-  ("TextIO", []),
-  ("MergeModel", [.product(name: "MergeEngine", package: "MergeEngine"), "TextIO"]),
+  ("TextIO", ["TextBasics"]),
+  (
+    "MergeModel",
+    [.product(name: "MergeEngine", package: "MergeEngine"), "TextBasics", "TextIO"]
+  ),
   ("GitSupport", []),
   ("SessionIPC", []),
   ("SeamergeCLI", ["SessionIPC", "GitSupport"]),
@@ -43,9 +46,10 @@ let package = Package(
         dependencies: module.dependencies,
         swiftSettings: swiftSettings
       ),
+      // A test may use what its module uses, such as the types of the module's interface.
       .testTarget(
         name: "\(module.name)Tests",
-        dependencies: [.target(name: module.name)],
+        dependencies: [.target(name: module.name)] + module.dependencies,
         swiftSettings: swiftSettings
       ),
     ]

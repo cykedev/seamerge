@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 import TextIO
 
 /// A file of a session split into lines as the comparison split it.
@@ -35,7 +36,7 @@ struct ComparedFile: Sendable {
     self.text = LineText(utf8: text, lineStarts: lineStarts)
     compared = self.text
     ruleMatches = .none
-    lineIndex = LineIndex(utf8: text, byteLineStarts: lineStarts)
+    lineIndex = LineIndex(utf8: text, byteLineStarts: LineStarts(lineStarts))
   }
 
   /// The file `file` as the engine compared it, masked by `mask`.

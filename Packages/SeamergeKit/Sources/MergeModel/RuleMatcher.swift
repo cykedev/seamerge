@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 import TextIO
 
 /// Matches the patterns of ignore rules against the lines of a text, each line on its own.
@@ -22,7 +23,7 @@ struct RuleMatcher: Sendable {
 
   /// Prepares the matching of `text`, which is valid UTF-8.
   init(text: LineText) {
-    let lineIndex = LineIndex(utf8: text.utf8, byteLineStarts: text.lineStarts)
+    let lineIndex = LineIndex(utf8: text.utf8, byteLineStarts: LineStarts(text.lineStarts))
     self.text = text
     self.lineIndex = lineIndex
     utf16 = Array(String(decoding: text.utf8, as: UTF8.self).utf16)

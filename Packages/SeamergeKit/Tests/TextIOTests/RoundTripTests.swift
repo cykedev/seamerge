@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import TextBasics
 import TextIO
 
 /// Loading a file and writing its text back unchanged reproduces the file byte for byte.

@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 
 /// Converts between the byte positions of UTF-8 text and the UTF-16 positions that `NSString`
 /// and TextKit use.
@@ -7,8 +8,8 @@ import Foundation
 /// UTF-16; positions within a line are converted by scanning that line only.
 public struct LineIndex: Sendable {
   private let utf8: Data
-  private let byteLineStarts: [Int]
-  private let utf16LineStarts: [Int]
+  private let byteLineStarts: LineStarts
+  private let utf16LineStarts: LineStarts
 
   /// Creates the index of UTF-8 text split into lines.
   ///
@@ -18,14 +19,18 @@ public struct LineIndex: Sendable {
   ///     offset is at the start of a Unicode scalar and none is smaller than the one before.
   /// - Precondition: `byteLineStarts` starts with 0, ends with `utf8.count`, does not decrease,
   ///   and no offset falls inside a multi-byte scalar.
-  public init(utf8: Data, byteLineStarts: [Int]) {
-    precondition(byteLineStarts.first == 0, "Line starts must begin at offset 0")
-    precondition(byteLineStarts.last == utf8.count, "Line starts must end with the byte count")
+  package init(utf8: Data, byteLineStarts: LineStarts) {
+    precondition(byteLineStarts[0] == 0, "Line starts must begin at offset 0")
+    precondition(
+      byteLineStarts[byteLineStarts.lineCount] == utf8.count,
+      "Line starts must end with the byte count")
     var utf16LineStarts = [0]
-    utf16LineStarts.reserveCapacity(byteLineStarts.count)
+    utf16LineStarts.reserveCapacity(byteLineStarts.lineCount + 1)
     utf8.withUnsafeBytes { bytes in
       var utf16Offset = 0
-      for (start, end) in zip(byteLineStarts, byteLineStarts.dropFirst()) {
+      for line in 0..<byteLineStarts.lineCount {
+        let start = byteLineStarts[line]
+        let end = byteLineStarts[line + 1]
         precondition(start <= end, "Line starts must not decrease")
         precondition(
           end == bytes.count || !UTF8.isContinuation(bytes[end]),
@@ -38,18 +43,24 @@ public struct LineIndex: Sendable {
     }
     self.utf8 = utf8
     self.byteLineStarts = byteLineStarts
-    self.utf16LineStarts = utf16LineStarts
+    self.utf16LineStarts = LineStarts(utf16LineStarts)
   }
 
   /// The number of lines.
-  public var lineCount: Int { byteLineStarts.count - 1 }
+  public var lineCount: Int { byteLineStarts.lineCount }
 
   /// The UTF-16 range of a line in the whole text, including its line ending.
   ///
   /// - Precondition: `line` lies within `0..<lineCount`.
   public func utf16Range(ofLine line: Int) -> Range<Int> {
     precondition((0..<lineCount).contains(line), "Line \(line) is out of range")
-    return utf16LineStarts[line]..<utf16LineStarts[line + 1]
+    return utf16LineStarts.range(ofLine: line)
+  }
+
+  /// The line that holds the UTF-16 offset `offset`; the end of the text belongs to the last
+  /// line.
+  package func line(containingUTF16Offset offset: Int) -> Int {
+    utf16LineStarts.line(containing: offset)
   }
 
   /// The UTF-16 offset from the start of a line that corresponds to a byte offset from the start
@@ -100,7 +111,7 @@ public struct LineIndex: Sendable {
 
   private func byteRange(ofLine line: Int) -> Range<Int> {
     precondition((0..<lineCount).contains(line), "Line \(line) is out of range")
-    return byteLineStarts[line]..<byteLineStarts[line + 1]
+    return byteLineStarts.range(ofLine: line)
   }
 
   /// The number of UTF-16 code units of the scalar that a byte begins, or 0 for a byte that

@@ -1,15 +1,16 @@
 import Foundation
 import Testing
+import TextBasics
 import TextIO
 
 struct LineIndexTests {
   /// The byte offsets where the lines of `text` start, split after each line feed, followed by
   /// the byte count.
-  private func byteLineStarts(of text: String) -> [Int] {
+  private func byteLineStarts(of text: String) -> LineStarts {
     let breaks = text.utf8.indices.filter { text.utf8[$0] == 0x0A }
       .map { text.utf8.distance(from: text.utf8.startIndex, to: $0) + 1 }
     let starts = [0] + breaks
-    return starts.last == text.utf8.count ? starts : starts + [text.utf8.count]
+    return LineStarts(starts.last == text.utf8.count ? starts : starts + [text.utf8.count])
   }
 
   private func index(of text: String) -> LineIndex {
@@ -54,8 +55,16 @@ struct LineIndexTests {
     }
   }
 
+  @Test func utf16OffsetLiesInTheLineThatHoldsItAndTheEndInTheLast() {
+    let index = index(of: "ä😀\nb\n")
+
+    #expect((0..<4).map { index.line(containingUTF16Offset: $0) } == [0, 0, 0, 0])
+    #expect(index.line(containingUTF16Offset: 4) == 1)
+    #expect(index.line(containingUTF16Offset: 6) == 1)
+  }
+
   @Test func emptyTextHasNoLines() {
-    let index = LineIndex(utf8: Data(), byteLineStarts: [0])
+    let index = LineIndex(utf8: Data(), byteLineStarts: LineStarts([0]))
 
     #expect(index.lineCount == 0)
   }
@@ -64,7 +73,7 @@ struct LineIndexTests {
     let whole = Data("--äb\nc".utf8)
     let slice = whole.dropFirst(2)
 
-    let index = LineIndex(utf8: slice, byteLineStarts: [0, 4, 5])
+    let index = LineIndex(utf8: slice, byteLineStarts: LineStarts([0, 4, 5]))
 
     #expect(index.utf16Range(ofLine: 0) == 0..<3)
     #expect(index.utf16Offset(ofByteOffset: 2, inLine: 0) == 1)
