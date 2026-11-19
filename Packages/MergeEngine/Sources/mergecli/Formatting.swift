@@ -43,7 +43,7 @@ func escaped(_ bytes: Data) -> String {
 
 /// A span as 1-based line numbers, or the position after which it lies if it
 /// is empty.
-func lineNumbers(_ span: Span) -> String {
+func lineNumbers(_ span: LineSpan) -> String {
   switch span.lines.count {
   case 0: "after \(span.lines.lowerBound)"
   case 1: "\(span.lines.lowerBound + 1)"
@@ -52,7 +52,7 @@ func lineNumbers(_ span: Span) -> String {
 }
 
 /// The lines of `span`, each prefixed with `prefix`.
-func listing(_ span: Span, in buffer: LineBuffer, prefix: String) -> [String] {
+func listing(_ span: LineSpan, in buffer: LineBuffer, prefix: String) -> [String] {
   span.lines.flatMap { index in
     let line = displayed(buffer.line(index))
     return line.hasLineEnding

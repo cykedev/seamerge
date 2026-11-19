@@ -39,8 +39,8 @@ for block in diff.blocks where block.kind == .changed {
 ```
 
 The blocks cover both inputs in order and alternate between `.equal` and
-`.changed`. Each block has a `Span` per side, with the line indices and the byte
-range of the lines.
+`.changed`. Each block has a `LineSpan` per side, with the line indices and the
+byte range of the lines.
 
 `Whitespace` selects how lines are compared:
 

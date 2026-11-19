@@ -57,7 +57,7 @@ private func normalized(_ line: Data, _ mode: Whitespace) -> [UInt8] {
 
 /// Whether two spans hold the same lines under `mode`.
 func spansEqual(
-  _ spanX: Span, in x: LineBuffer, _ spanY: Span, in y: LineBuffer, under mode: Whitespace
+  _ spanX: LineSpan, in x: LineBuffer, _ spanY: LineSpan, in y: LineBuffer, under mode: Whitespace
 ) -> Bool {
   spanX.lines.count == spanY.lines.count
     && zip(spanX.lines, spanY.lines).allSatisfy { lineX, lineY in

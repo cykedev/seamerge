@@ -43,7 +43,7 @@ public struct LineBuffer: Sendable, Hashable {
 }
 
 /// A range of one input of a diff or merge, in lines and in bytes.
-public struct Span: Sendable, Hashable {
+public struct LineSpan: Sendable, Hashable {
   /// The lines, as zero-based indices.
   public let lines: Range<Int>
 

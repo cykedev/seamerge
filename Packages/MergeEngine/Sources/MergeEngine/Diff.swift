@@ -25,10 +25,10 @@ public struct Diff: Sendable {
     public let kind: BlockKind
 
     /// The run in A; empty for an insertion.
-    public let a: Span
+    public let a: LineSpan
 
     /// The run in B; empty for a deletion.
-    public let b: Span
+    public let b: LineSpan
 
     /// Whether the block adds lines that are only in B.
     public var isInsertion: Bool { kind == .changed && a.isEmpty }
@@ -56,8 +56,8 @@ public struct Diff: Sendable {
     self.blocks = comparison.blocks.map { block in
       Block(
         kind: block.isEqual ? .equal : .changed,
-        a: Span(lines: block.a, in: bufferA),
-        b: Span(lines: block.b, in: bufferB))
+        a: LineSpan(lines: block.a, in: bufferA),
+        b: LineSpan(lines: block.b, in: bufferB))
     }
   }
 

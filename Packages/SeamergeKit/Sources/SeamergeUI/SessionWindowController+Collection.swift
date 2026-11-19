@@ -21,14 +21,14 @@ struct FilePlace: Equatable {
 
 /// A file of a collection as the window read it: its comparison, or the empty one of a file it
 /// cannot compare, with the reason.
-struct LoadedFile {
+struct CollectedComparison {
   var session: Session
   var unavailable: UnavailableComparison?
 }
 
 /// The comparison of the first file of a collection, which a window that opens without its lines
 /// waits for; `nil` if the file cannot even be shown as a file that cannot be compared.
-typealias PendingFile = Task<LoadedFile?, Never>
+typealias PendingFile = Task<CollectedComparison?, Never>
 
 /// What a window of a collection opens with: the files it names in its headers, without their
 /// lines, and the comparison of its first file, while it runs.
@@ -45,7 +45,7 @@ struct CollectionOpening {
 
 /// A file of a collection ready to show: as the window read it, and what its panes show.
 private struct ReadyFile {
-  var loaded: LoadedFile
+  var collected: CollectedComparison
   var prepared: PreparedSession
 }
 
@@ -227,17 +227,18 @@ extension SessionWindowController {
   ) -> Task<ReadyFile?, Never> {
     let generation = diskGeneration
     return Task { [weak self] in
-      let loaded: LoadedFile?
+      let collected: CollectedComparison?
       if let comparison {
-        loaded = await comparison.value
-        if let loaded, let self, !hasFinished {
-          keep(loaded, of: file, readIn: generation)
+        collected = await comparison.value
+        if let collected, let self, !hasFinished {
+          keep(collected, of: file, readIn: generation)
         }
       } else {
-        loaded = await self?.loaded(file)
+        collected = await self?.collectedComparison(of: file)
       }
-      guard let self, let loaded, !Task.isCancelled, !hasFinished else { return nil }
-      return ReadyFile(loaded: loaded, prepared: await presentation.prepareLoaded(loaded.session))
+      guard let self, let collected, !Task.isCancelled, !hasFinished else { return nil }
+      return ReadyFile(
+        collected: collected, prepared: await presentation.prepareLoaded(collected.session))
     }
   }
 
@@ -272,7 +273,8 @@ extension SessionWindowController {
     var outcome = outcome
     if let made = outcome, made.prepared.setup != presentation.setup {
       outcome = ReadyFile(
-        loaded: made.loaded, prepared: await presentation.prepareLoaded(made.loaded.session))
+        collected: made.collected,
+        prepared: await presentation.prepareLoaded(made.collected.session))
     }
     guard !ready.isCancelled, shownFile == file, !hasFinished else { return }
     show(outcome, of: file)
@@ -287,7 +289,9 @@ extension SessionWindowController {
     else { return false }
     let prepared = await presentation.prepareLoaded(empty)
     guard !Task.isCancelled, shownFile == file, !hasFinished else { return false }
-    show(LoadedFile(session: empty, unavailable: nil), prepared: prepared, of: file, placing: false)
+    show(
+      CollectedComparison(session: empty, unavailable: nil), prepared: prepared, of: file,
+      placing: false)
     return true
   }
 
@@ -315,7 +319,7 @@ extension SessionWindowController {
     if waited {
       fadeInTheLines()
     }
-    show(ready.loaded, prepared: ready.prepared, of: file)
+    show(ready.collected, prepared: ready.prepared, of: file)
     guard waited else { return }
     lookAtFilesAgainIfAsked()
     followIgnoreRules()
@@ -337,7 +341,7 @@ extension SessionWindowController {
       if let comparison {
         load(collection.files[index], comparing: comparison)
       } else {
-        loadedFiles[collection.files[index]] = LoadedFile(
+        collectedComparisons[collection.files[index]] = CollectedComparison(
           session: presentation.changes.session, unavailable: unavailable)
       }
     } else {
@@ -362,7 +366,7 @@ extension SessionWindowController {
       if !collection.isReceiving {
         // Files changed on disk; those read ahead may be out of date even where their entry in
         // the list reads the same. The window watches the file in view itself.
-        loadedFiles = loadedFiles.filter { $0.key == shownFile }
+        collectedComparisons = collectedComparisons.filter { $0.key == shownFile }
         diskGeneration += 1
       }
       followShownFile()
@@ -503,18 +507,19 @@ extension SessionWindowController {
     return FileListViewController.differingText(differing, of: collection.files.count)
   }
 
-  /// Shows `loaded`, the comparison of `file` whose panes show `prepared`, in place of the file
+  /// Shows `collected`, the comparison of `file` whose panes show `prepared`, in place of the file
   /// in view; with `placing`, where the window left the file, or at its first change.
   private func show(
-    _ loaded: LoadedFile, prepared: PreparedSession, of file: CollectedFile, placing: Bool = true
+    _ collected: CollectedComparison, prepared: PreparedSession, of file: CollectedFile,
+    placing: Bool = true
   ) {
     guard collection != nil else { return }
     stopBringingBack()
     var difftool = file.difftool
     difftool.filePosition = filePosition
     context = SessionContext(difftool: difftool, folders: collection?.namingFolders)
-    let session = loaded.session
-    unavailable = loaded.unavailable
+    let session = collected.session
+    unavailable = collected.unavailable
     collectionPlaceholder = nil
     if let unavailable {
       layout.showInPlaceOfTheLines(
@@ -578,30 +583,30 @@ extension SessionWindowController {
   /// The comparison of `file` in the comparison mode and with the ignore rules of the window,
   /// from those read already or read now; `nil` if it cannot even be shown as a file that cannot
   /// be compared.
-  private func loaded(_ file: CollectedFile) async -> LoadedFile? {
+  private func collectedComparison(of file: CollectedFile) async -> CollectedComparison? {
     let mode = comparisonOptions.mode
     let rules = requestedIgnoreRules
-    if let loaded = loadedFiles[file], loaded.session.options.mode == mode,
-      loaded.unavailable != nil || Self.haveTheSameEffect(loaded.session.ignoreRules, rules)
+    if let collected = collectedComparisons[file], collected.session.options.mode == mode,
+      collected.unavailable != nil || Self.haveTheSameEffect(collected.session.ignoreRules, rules)
     {
-      return loaded
+      return collected
     }
     let generation = diskGeneration
     do {
-      let loaded = try await Self.load(file, mode: mode, ignoring: rules)
-      keep(loaded, of: file, readIn: generation)
-      return loaded
+      let collected = try await Self.load(file, mode: mode, ignoring: rules)
+      keep(collected, of: file, readIn: generation)
+      return collected
     } catch {
       Self.logger.error("Cannot show \(file.path, privacy: .public): \(error, privacy: .public)")
       return nil
     }
   }
 
-  /// Keeps `loaded`, the comparison of `file` read since the change on disk of `generation`,
+  /// Keeps `collected`, the comparison of `file` read since the change on disk of `generation`,
   /// unless the files changed on disk again meanwhile.
-  func keep(_ loaded: LoadedFile, of file: CollectedFile, readIn generation: Int) {
+  func keep(_ collected: CollectedComparison, of file: CollectedFile, readIn generation: Int) {
     guard generation == diskGeneration else { return }
-    loadedFiles[file] = loaded
+    collectedComparisons[file] = collected
   }
 
   /// Reads the file after `file` in the list ahead, and forgets the files that are not beside
@@ -611,9 +616,9 @@ extension SessionWindowController {
     let next = neighborIndex(forward: true)
     let neighbors = [neighborIndex(forward: false), fileIndex, next].compactMap(\.self)
     let kept = Set(neighbors.map { collection.files[$0] })
-    loadedFiles = loadedFiles.filter { kept.contains($0.key) }
+    collectedComparisons = collectedComparisons.filter { kept.contains($0.key) }
     if let next {
-      _ = await loaded(collection.files[next])
+      _ = await collectedComparison(of: collection.files[next])
     }
   }
 
@@ -625,15 +630,16 @@ extension SessionWindowController {
   ///   made.
   static func load(
     _ file: CollectedFile, mode: ComparisonMode, ignoring rules: [IgnoreRule]
-  ) async throws(SessionLoadingError) -> LoadedFile {
+  ) async throws(SessionLoadingError) -> CollectedComparison {
     do {
-      return LoadedFile(
+      return CollectedComparison(
         session: try await Session.loadDiff(
           old: file.old, new: file.new, mode: mode, ignoring: rules),
         unavailable: nil)
     } catch {
       let unavailable = UnavailableComparison(old: file.old, new: file.new, reason: error)
-      return LoadedFile(session: try await unavailable.emptySession(), unavailable: unavailable)
+      return CollectedComparison(
+        session: try await unavailable.emptySession(), unavailable: unavailable)
     }
   }
 

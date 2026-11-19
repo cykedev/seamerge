@@ -116,7 +116,7 @@ import Testing
     await load.value
 
     #expect(controller.presentation.changes.blocks.isEmpty)
-    #expect(controller.loadedFiles.isEmpty)
+    #expect(controller.collectedComparisons.isEmpty)
     for pane in Windows.panes(of: controller) {
       #expect(pane.documentView.string.isEmpty)
     }

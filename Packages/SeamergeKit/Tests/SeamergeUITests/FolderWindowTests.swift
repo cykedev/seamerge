@@ -198,7 +198,7 @@ import Testing
     await controller.fileLoad?.value
     let next = try #require(controller.neighborIndex(forward: true))
     let path = collection.files[next].path
-    #expect(controller.loadedFiles.keys.contains(collection.files[next]), "Read ahead")
+    #expect(controller.collectedComparisons.keys.contains(collection.files[next]), "Read ahead")
 
     try folders.write("{\n  \"retries\": 7\n}\n", to: folders.right.appending(path: path))
     collection.take(.replaced(Self.files(of: comparer)))
@@ -219,16 +219,16 @@ import Testing
     let controller = try await Windows.controller(for: collection)
     let next = try #require(controller.neighborIndex(forward: true))
     let file = collection.files[next]
-    let loaded = try await SessionWindowController.load(
+    let collected = try await SessionWindowController.load(
       file, mode: .windowDefault, ignoring: [])
     let generation = controller.diskGeneration
 
     collection.take(.replaced(collection.files))
-    controller.keep(loaded, of: file, readIn: generation)
+    controller.keep(collected, of: file, readIn: generation)
 
-    #expect(controller.loadedFiles[file] == nil)
-    controller.keep(loaded, of: file, readIn: controller.diskGeneration)
-    #expect(controller.loadedFiles[file] != nil)
+    #expect(controller.collectedComparisons[file] == nil)
+    controller.keep(collected, of: file, readIn: controller.diskGeneration)
+    #expect(controller.collectedComparisons[file] != nil)
   }
 
   @Test func fileInViewThatCannotBeReadAnyMoreSaysWhy() async throws {

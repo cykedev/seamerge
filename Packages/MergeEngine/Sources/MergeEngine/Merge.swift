@@ -48,13 +48,13 @@ public struct Merge: Sendable {
 
     /// The run in the base; empty where A, B or both inserted lines, and
     /// always empty with ``MergeStrategy/twoWay``.
-    public let base: Span
+    public let base: LineSpan
 
     /// The run in A.
-    public let a: Span
+    public let a: LineSpan
 
     /// The run in B.
-    public let b: Span
+    public let b: LineSpan
 
     /// The source used when no resolution is given, or `nil` for a conflict.
     ///
@@ -165,9 +165,9 @@ public struct Merge: Sendable {
       blocks.append(
         Block(
           kind: try BlockKind(block.kind),
-          base: Span(lines: Int(block.base_start)..<Int(block.base_end), in: bufferBase),
-          a: Span(lines: Int(block.a_start)..<Int(block.a_end), in: bufferA),
-          b: Span(lines: Int(block.b_start)..<Int(block.b_end), in: bufferB)))
+          base: LineSpan(lines: Int(block.base_start)..<Int(block.base_end), in: bufferBase),
+          a: LineSpan(lines: Int(block.a_start)..<Int(block.a_end), in: bufferA),
+          b: LineSpan(lines: Int(block.b_start)..<Int(block.b_end), in: bufferB)))
     }
 
     self.base = bufferBase

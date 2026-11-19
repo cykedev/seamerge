@@ -135,7 +135,7 @@ public final class SessionWindowController: NSWindowController {
   /// The files of the collection that the window has read: the one it shows and those beside it.
   ///
   /// A file whose sides or change differ since is another file, which is read anew.
-  var loadedFiles: [CollectedFile: LoadedFile] = [:]
+  var collectedComparisons: [CollectedFile: CollectedComparison] = [:]
 
   /// How often the files of the folders changed on disk since the window opened; a reading that
   /// started before the last change is out of date when it ends.
