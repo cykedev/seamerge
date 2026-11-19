@@ -1,172 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@ is a link to %@. Seamerge doesn’t replace it." : {
-      "comment" : "Install the seamerge Command: a link of someone else is where the link goes.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is a link to %2$@. Seamerge doesn’t replace it."
-          }
-        }
-      }
-    },
-    "%@ to %@" : {
-      "comment" : "VoiceOver: the header of a single column that shows both files, such as A, old.swift to B, new.swift.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ to %2$@"
-          }
-        }
-      }
-    },
-    "%@ ·" : {
-      "comment" : "Welcome window: the kind of a recent comparison before its folder, such as Merge ·."
-    },
-    "Adds a link at %@ so that you can compare files in Terminal, for example seamerge old.txt new.txt. macOS asks for an administrator’s name and password." : {
-      "comment" : "Install the seamerge Command: what installing does; the path of the link."
-    },
-    "Aligned Lines" : {
-      "comment" : "View menu, toolbar and Settings: matching lines of the files side by side."
-    },
-    "Another file is at %@. Seamerge doesn’t replace it." : {
-      "comment" : "Install the seamerge Command: a file of someone else is where the link goes."
-    },
-    "Another file is in the way." : {
-      "comment" : "Install the seamerge Command: a file appeared where the link goes."
-    },
-    "Arrangement" : {
-      "comment" : "Toolbar item: the choice of how the lines of the files are laid out."
-    },
-    "Change Files" : {
-      "comment" : "The title of the sheet that chooses other files for a session window."
-    },
-    "Choose Compare Files… or drop two files on this window." : {
-      "comment" : "Welcome window: the next step below No Recent Comparisons."
-    },
-    "Command" : {
-      "comment" : "VoiceOver: the command to type in Install the seamerge Command."
-    },
-    "Compare Folders…" : {
-      "comment" : "Welcome window: the button that chooses two folders to compare."
-    },
-    "Comparisons of two files only; merges show the files side by side." : {
-      "comment" : "Settings: which new windows start with a single column."
-    },
-    "Connected Sides" : {
-      "comment" : "View menu, toolbar and Settings: the files side by side with bands between changes."
-    },
-    "Copy the command to paste it into Terminal" : {
-      "comment" : "Tooltip of the button Copy in Install the seamerge Command."
-    },
-    "Drop to Compare" : {
-      "comment" : "Welcome window: the place to drop files while a drop would compare them."
-    },
-    "Drop to Merge" : {
-      "comment" : "Welcome window: the place to drop files while a drop would merge them."
-    },
-    "Drop two files or folders" : {
-      "comment" : "Welcome window: the place that invites files dropped on the window."
-    },
-    "Each window starts like this. The switches in a window’s toolbar and footer change only that window." : {
-      "comment" : "Settings: note below the group of how a new window starts."
-    },
-    "Earlier" : {
-      "comment" : "Welcome window: the heading of the comparisons opened before today."
-    },
-    "Folder Comparison" : {
-      "comment" : "Welcome window: the kind of a recent comparison of two folders."
-    },
-    "Homebrew installed the seamerge command." : {
-      "comment" : "Install the seamerge Command: Homebrew made the link."
-    },
-    "If Terminal doesn’t find seamerge, add %@ to the PATH of your shell." : {
-      "comment" : "Install the seamerge Command: below the commands; the folder of the link."
-    },
-    "Install" : {
-      "comment" : "Install the seamerge Command: the button that makes the link."
-    },
-    "Install the seamerge Command" : {
-      "comment" : "Install the seamerge Command: the title of the offer."
-    },
-    "macOS didn’t allow the change." : {
-      "comment" : "Install the seamerge Command: the dialog for the password was cancelled."
-    },
-    "Merge Files" : {
-      "comment" : "The title of the sheet that puts three files together to merge."
-    },
-    "No Recent Comparisons" : {
-      "comment" : "Welcome window: the list of recent comparisons while it is empty."
-    },
-    "OK" : {
-      "comment" : "Install the seamerge Command: the button that closes the sheet."
-    },
-    "Recent Comparisons" : {
-      "comment" : "VoiceOver: the list of the comparisons opened last in the welcome window."
-    },
-    "Seamerge wants to install the seamerge command in %@." : {
-      "comment" : "The dialog of macOS that asks for an administrator's password; a folder."
-    },
-    "Seamerge wants to remove the seamerge command from %@." : {
-      "comment" : "The dialog of macOS that asks for an administrator's password; a folder."
-    },
-    "Seamerge wants to update the seamerge command in %@." : {
-      "comment" : "The dialog of macOS that asks for an administrator's password; a folder."
-    },
-    "Show Command" : {
-      "comment" : "Install the seamerge Command: the triangle that shows the command to type."
-    },
-    "Show removed lines above added lines in one column" : {
-      "comment" : "Help tag of Single Column in the View menu and the toolbar."
-    },
-    "Side by Side" : {
-      "comment" : "Settings: how a new window lays out the files side by side."
-    },
-    "Single Column" : {
-      "comment" : "View menu, toolbar and Settings: both files of a comparison in one column."
-    },
-    "Synchronize scrolling (a single column scrolls alone)" : {
-      "comment" : "Help tag of the footer toggle of synchronized scrolling in a single column."
-    },
-    "The link couldn’t be changed." : {
-      "comment" : "Install the seamerge Command: changing the link failed for another reason."
-    },
-    "The seamerge Command Is Installed" : {
-      "comment" : "Install the seamerge Command: the title once the command is installed."
-    },
-    "The seamerge command is installed." : {
-      "comment" : "VoiceOver: the link of the command was made or updated."
-    },
-    "The seamerge command is removed." : {
-      "comment" : "VoiceOver: the link of the command was removed."
-    },
-    "The seamerge command points to a copy of Seamerge that has moved. Updating points it to this copy. macOS asks for an administrator’s name and password." : {
-      "comment" : "Install the seamerge Command: the link names another copy of the app."
-    },
-    "Today" : {
-      "comment" : "Welcome window: the heading of the comparisons opened today."
-    },
-    "Update" : {
-      "comment" : "Install the seamerge Command: the button that points the link to this copy."
-    },
-    "Update the seamerge Command" : {
-      "comment" : "Install the seamerge Command: the title when the link names a moved copy."
-    },
-    "Version %@" : {
-      "comment" : "Welcome window: the version of the app below its name, such as Version 0.6.0."
-    },
-    "Waiting for macOS" : {
-      "comment" : "VoiceOver: the change waits for the dialog of macOS that asks for a password."
-    },
-    "Welcome" : {
-      "comment" : "The title of the window that starts a comparison or a merge and lists the recent ones; shown in the Window menu, not in the title bar."
-    },
-    "You can compare files in Terminal, for example seamerge old.txt new.txt. Removing deletes the link at %@. macOS asks for an administrator’s name and password." : {
-      "comment" : "Install the seamerge Command: what removing does; the path of the link."
-    },
     "“%@” can’t be saved in %@." : {
       "comment" : "Sheet: the result holds characters the encoding lacks, such as in ISO 8859-1.",
       "localizations" : {
@@ -189,6 +23,9 @@
     },
     "“%@” was changed by another app." : {
       "comment" : "Sheet: another app changed the file the result is saved to."
+    },
+    "%@ ·" : {
+      "comment" : "Welcome window: the kind of a recent comparison before its folder, such as Merge ·."
     },
     "%@ · %@" : {
       "comment" : "The name of a commit followed by its branch, such as 1a2b3c4 Fix typo · main."
@@ -234,8 +71,22 @@
         }
       }
     },
+    "%@ copy" : {
+      "comment" : "Settings: the name of a copy of an ignore rule, such as Timestamps copy."
+    },
     "%@ for merge and %@ for diff" : {
       "comment" : "Set Up Git Integration: two replaced tools, such as Kaleidoscope for merge…"
+    },
+    "%@ is a link to %@. Seamerge doesn’t replace it." : {
+      "comment" : "Install the seamerge Command: a link of someone else is where the link goes.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is a link to %2$@. Seamerge doesn’t replace it."
+          }
+        }
+      }
     },
     "%@ mixes line endings. The result is written with %@ throughout." : {
       "comment" : "Notice below the result header: B ends its lines in more than one way, such as main mixes line endings. The result is written with LF throughout.",
@@ -262,6 +113,17 @@
     },
     "%@ The file is unchanged, and the window keeps your work." : {
       "comment" : "Sheet after saving failed: the reason, then what still holds."
+    },
+    "%@ to %@" : {
+      "comment" : "VoiceOver: the header of a single column that shows both files, such as A, old.swift to B, new.swift.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ to %2$@"
+          }
+        }
+      }
     },
     "%@, %@" : {
       "comment" : "VoiceOver, Keyboard Shortcuts: a command and its shortcut or single keys.\nVoiceOver: a pane, such as A, feature/login."
@@ -513,9 +375,6 @@
     "✓ Git uses Seamerge for merge." : {
       "comment" : "Compare Files: the line about Git when it uses the app for merges only."
     },
-    "%@ copy" : {
-      "comment" : "Settings: the name of a copy of an ignore rule, such as Timestamps copy."
-    },
     "A" : {
       "comment" : "The badge of the incoming side."
     },
@@ -537,11 +396,17 @@
     "Add to Tower" : {
       "comment" : "Set Up Git Integration: the button that adds the app to Tower's tools."
     },
+    "Adds a link at %@ so that you can compare files in Terminal, for example seamerge old.txt new.txt. macOS asks for an administrator’s name and password." : {
+      "comment" : "Install the seamerge Command: what installing does; the path of the link."
+    },
     "Adds Seamerge to the list of tools in Tower’s settings and creates a script for it. The other tools stay." : {
       "comment" : "Set Up Git Integration: what adding to Tower adds when it lists other tools."
     },
     "After Use A, Use B and the like on an open conflict." : {
       "comment" : "Settings: when the window goes on to the next conflict."
+    },
+    "Aligned Lines" : {
+      "comment" : "View menu, toolbar and Settings: matching lines of the files side by side."
     },
     "All %lld files received" : {
       "comment" : "VoiceOver: every file of a run has come, such as All 40 files received."
@@ -554,6 +419,15 @@
     },
     "Also Use %@" : {
       "comment" : "Context menu of a changed block of a side: add its lines after those taken."
+    },
+    "Another file is at %@. Seamerge doesn’t replace it." : {
+      "comment" : "Install the seamerge Command: a file of someone else is where the link goes."
+    },
+    "Another file is in the way." : {
+      "comment" : "Install the seamerge Command: a file appeared where the link goes."
+    },
+    "Arrangement" : {
+      "comment" : "Toolbar item: the choice of how the lines of the files are laid out."
     },
     "Author" : {
       "comment" : "Details of a side: the author of the commit."
@@ -588,6 +462,9 @@
     "Change Encoding" : {
       "comment" : "Undo menu: the encoding of the result was changed."
     },
+    "Change Files" : {
+      "comment" : "The title of the sheet that chooses other files for a session window."
+    },
     "Change Files…" : {
       "comment" : "File menu: choose other files for the roles of the window."
     },
@@ -600,11 +477,11 @@
     "Change Rule" : {
       "comment" : "Undo menu: an ignore rule was renamed, got another pattern, or was switched."
     },
-    "Changes" : {
-      "comment" : "Toolbar items: the current change and the buttons that go through the changes."
-    },
     "changes" : {
       "comment" : "The name suggested for the patch of the files of a run of Git, before .patch."
+    },
+    "Changes" : {
+      "comment" : "Toolbar items: the current change and the buttons that go through the changes."
     },
     "Changing the files discards %lld decisions." : {
       "comment" : "Sheet before showing other files in a window, such as discards 3 decisions.",
@@ -649,6 +526,9 @@
     },
     "Choose another folder, then export again." : {
       "comment" : "Sheet after exporting a patch failed: what to do next."
+    },
+    "Choose Compare Files… or drop two files on this window." : {
+      "comment" : "Welcome window: the next step below No Recent Comparisons."
     },
     "Choose how lines are compared" : {
       "comment" : "Help tag of the choice of the comparison mode in the toolbar and the footer."
@@ -724,6 +604,9 @@
         }
       }
     },
+    "Command" : {
+      "comment" : "VoiceOver: the command to type in Install the seamerge Command."
+    },
     "Commands" : {
       "comment" : "VoiceOver: the commands of the setup in Set Up Git Integration."
     },
@@ -741,6 +624,9 @@
     },
     "Compare Files" : {
       "comment" : "The title of the sheet that puts two files or folders together to compare."
+    },
+    "Compare Folders…" : {
+      "comment" : "Welcome window: the button that chooses two folders to compare."
     },
     "Compare the folder %@ with %@" : {
       "comment" : "VoiceOver: a recent comparison of two folders, with their names."
@@ -760,6 +646,9 @@
     "Comparison" : {
       "comment" : "Keyboard Shortcuts: the shortcuts of a comparison of two files.\nThe choice of the comparison mode: a toolbar item and the pop-up button of the footer.\nWelcome window: the kind of a recent comparison of two files."
     },
+    "Comparisons of two files only; merges show the files side by side." : {
+      "comment" : "Settings: which new windows start with a single column."
+    },
     "Conflict %lld of %lld, open" : {
       "comment" : "VoiceOver: an item of the rotor of conflicts that awaits a decision."
     },
@@ -768,6 +657,9 @@
     },
     "Conflicts" : {
       "comment" : "Toolbar items: the count of the open conflicts and the buttons that go through them."
+    },
+    "Connected Sides" : {
+      "comment" : "View menu, toolbar and Settings: the files side by side with bands between changes."
     },
     "Copied the patch" : {
       "comment" : "VoiceOver after copying the patch of a comparison of two files."
@@ -796,7 +688,7 @@
       }
     },
     "Copy" : {
-      "comment" : "Context menu: copy the selected text, or the block if nothing is selected.\nSet Up Git Integration: the button that copies the commands."
+      "comment" : "Context menu: copy the selected text, or the block if nothing is selected.\nInstall the seamerge Command: the button that copies the command.\nSet Up Git Integration: the button that copies the commands."
     },
     "Copy as Patch" : {
       "comment" : "Edit menu command: copy the changes as a unified diff."
@@ -806,6 +698,9 @@
     },
     "Copy Path" : {
       "comment" : "Context menu of a header."
+    },
+    "Copy the command to paste it into Terminal" : {
+      "comment" : "Tooltip of the button Copy in Install the seamerge Command."
     },
     "Copy the commands to paste them into Terminal" : {
       "comment" : "Tooltip of the button Copy in Set Up Git Integration."
@@ -873,11 +768,20 @@
     "Drop a File or Folder" : {
       "comment" : "Compare Files: an empty field that takes a file or a folder."
     },
+    "Drop to Compare" : {
+      "comment" : "Welcome window: the place to drop files while a drop would compare them."
+    },
+    "Drop to Merge" : {
+      "comment" : "Welcome window: the place to drop files while a drop would merge them."
+    },
     "Drop to Swap" : {
       "comment" : "Compare Files: below two fields while one is dragged onto the other."
     },
     "Drop to Use as %@" : {
       "comment" : "Compare Files: below a field that a drop would fill, such as Drop to Use as A."
+    },
+    "Drop two files or folders" : {
+      "comment" : "Welcome window: the place that invites files dropped on the window."
     },
     "Duplicate" : {
       "comment" : "Settings: button and context menu item that copy an ignore rule."
@@ -887,6 +791,12 @@
     },
     "Duplicate this rule to change it" : {
       "comment" : "Help tag of the name and pattern of an ignore rule that comes with the app."
+    },
+    "Each window starts like this. The switches in a window’s toolbar and footer change only that window." : {
+      "comment" : "Settings: note below the group of how a new window starts."
+    },
+    "Earlier" : {
+      "comment" : "Welcome window: the heading of the comparisons opened before today."
     },
     "Earlier Version" : {
       "comment" : "Role: the file before the change, shown when both sides have the same name."
@@ -950,6 +860,9 @@
     },
     "First Change" : {
       "comment" : "Go menu command."
+    },
+    "Folder Comparison" : {
+      "comment" : "Welcome window: the kind of a recent comparison of two folders."
     },
     "Font" : {
       "comment" : "Settings: the font of the code."
@@ -1088,8 +1001,14 @@
     "Highlight Syntax" : {
       "comment" : "View menu command."
     },
+    "Homebrew installed the seamerge command." : {
+      "comment" : "Install the seamerge Command: Homebrew made the link."
+    },
     "Identical" : {
       "comment" : "A file in the sidebar whose two sides hold the same bytes."
+    },
+    "If Terminal doesn’t find seamerge, add %@ to the PATH of your shell." : {
+      "comment" : "Install the seamerge Command: below the commands; the folder of the link."
     },
     "If you don’t save, your decisions are lost and Git keeps the file unresolved." : {
       "comment" : "Sheet before closing a merge that Git waits for: what follows."
@@ -1118,6 +1037,12 @@
     "incoming" : {
       "comment" : "Role: the branch being merged in."
     },
+    "Install" : {
+      "comment" : "Install the seamerge Command: the button that makes the link."
+    },
+    "Install the seamerge Command" : {
+      "comment" : "Install the seamerge Command: the title of the offer."
+    },
     "Invisibles" : {
       "comment" : "VoiceOver: the footer toggle that shows spaces, tabs and line endings."
     },
@@ -1142,11 +1067,11 @@
     "Later Version" : {
       "comment" : "Role: the file after the change, shown when both sides have the same name."
     },
-    "Leave out the text that the rules in Settings match" : {
-      "comment" : "Help tag of Compare > Use Ignore Rules."
-    },
     "Leave “%@” unresolved?" : {
       "comment" : "Sheet before leaving a merge unresolved that has decisions."
+    },
+    "Leave out the text that the rules in Settings match" : {
+      "comment" : "Help tag of Compare > Use Ignore Rules."
     },
     "Leave Unresolved" : {
       "comment" : "File menu: close a merge without saving it and report it as not done."
@@ -1187,6 +1112,9 @@
     "Mac Roman" : {
       "comment" : "Encoding."
     },
+    "macOS didn’t allow the change." : {
+      "comment" : "Install the seamerge Command: the dialog for the password was cancelled."
+    },
     "Make a copy of the selected rule that you can change" : {
       "comment" : "Help tag of Duplicate below the ignore rules."
     },
@@ -1201,6 +1129,9 @@
     },
     "Merge %@ and %@ with the base %@" : {
       "comment" : "VoiceOver: a recent merge, with the names of A, B and the base."
+    },
+    "Merge Files" : {
+      "comment" : "The title of the sheet that puts three files together to merge."
     },
     "Merges always compare all text." : {
       "comment" : "Help tag of Compare > Use Ignore Rules in a merge, where it is unavailable."
@@ -1262,11 +1193,17 @@
     "No matches" : {
       "comment" : "VoiceOver: the search found nothing in the panes."
     },
+    "No Recent Comparisons" : {
+      "comment" : "Welcome window: the list of recent comparisons while it is empty."
+    },
     "Nothing taken" : {
       "comment" : "VoiceOver: a part of the result that takes no lines."
     },
     "Off" : {
       "comment" : "VoiceOver: a footer toggle that is off."
+    },
+    "OK" : {
+      "comment" : "Install the seamerge Command: the button that closes the sheet."
     },
     "On" : {
       "comment" : "VoiceOver: a footer toggle that is on."
@@ -1328,6 +1265,9 @@
     "Receiving Files…" : {
       "comment" : "Sidebar: files still come and it is not known how many."
     },
+    "Recent Comparisons" : {
+      "comment" : "VoiceOver: the list of the comparisons opened last in the welcome window."
+    },
     "Records every byte, whatever the comparison mode" : {
       "comment" : "Help tag of Copy as Patch and Export as Patch."
     },
@@ -1338,7 +1278,7 @@
       "comment" : "Files that changed on disk: the button of a sheet that offers to show them as they are now, and the step of the Undo menu that did."
     },
     "Remove" : {
-      "comment" : "Set Up Git Integration: the button that takes the setup back."
+      "comment" : "Install the seamerge Command: the button that deletes the link.\nSet Up Git Integration: the button that takes the setup back."
     },
     "Remove File" : {
       "comment" : "Compare Files: the button that empties a field."
@@ -1466,11 +1406,11 @@
     "Seamerge at %@" : {
       "comment" : "Set Up Git Integration: another copy of the app, such as Seamerge at /Volumes/A.app."
     },
-    "Seamerge can’t merge the contents of this file. Use one side as a whole, or leave it unresolved." : {
-      "comment" : "Merge of a file that is not text: what can be done."
-    },
     "Seamerge can’t merge “%@”" : {
       "comment" : "Merge window: the files cannot be merged, such as “Settings.swift”."
+    },
+    "Seamerge can’t merge the contents of this file. Use one side as a whole, or leave it unresolved." : {
+      "comment" : "Merge of a file that is not text: what can be done."
     },
     "Seamerge can’t read “%@”." : {
       "comment" : "Alert: a file of a merge or comparison cannot be read."
@@ -1486,6 +1426,15 @@
     },
     "Seamerge couldn’t compare the files." : {
       "comment" : "Alert: the comparison of the files of a session failed."
+    },
+    "Seamerge wants to install the seamerge command in %@." : {
+      "comment" : "The dialog of macOS that asks for an administrator's password; a folder."
+    },
+    "Seamerge wants to remove the seamerge command from %@." : {
+      "comment" : "The dialog of macOS that asks for an administrator's password; a folder."
+    },
+    "Seamerge wants to update the seamerge command in %@." : {
+      "comment" : "The dialog of macOS that asks for an administrator's password; a folder."
     },
     "Seamerge works with text. Use the app that made the file instead." : {
       "comment" : "Alert: what to do with a binary file."
@@ -1507,6 +1456,9 @@
     },
     "Show Base" : {
       "comment" : "View menu command, and the setting of whether a new merge shows the base."
+    },
+    "Show Command" : {
+      "comment" : "Install the seamerge Command: the triangle that shows the command to type."
     },
     "Show Commands" : {
       "comment" : "Set Up Git Integration: the triangle that shows the commands of the setup."
@@ -1538,6 +1490,9 @@
     "Show or hide the base (restore the layout first)" : {
       "comment" : "Help tag of the footer toggle of the base while the result fills the window."
     },
+    "Show removed lines above added lines in one column" : {
+      "comment" : "Help tag of Single Column in the View menu and the toolbar."
+    },
     "Show spaces, tabs and line endings" : {
       "comment" : "Help tag of the footer toggle of invisibles while they are hidden."
     },
@@ -1555,6 +1510,12 @@
     },
     "Show where this side comes from" : {
       "comment" : "Help tag of ⓘ."
+    },
+    "Side by Side" : {
+      "comment" : "Settings: how a new window lays out the files side by side."
+    },
+    "Single Column" : {
+      "comment" : "View menu, toolbar and Settings: both files of a comparison in one column."
     },
     "Single keys work wherever you are not typing in the result." : {
       "comment" : "Keyboard Shortcuts: when the keys without Command work in a merge."
@@ -1594,6 +1555,9 @@
     },
     "Synchronize Scrolling" : {
       "comment" : "View menu command."
+    },
+    "Synchronize scrolling (a single column scrolls alone)" : {
+      "comment" : "Help tag of the footer toggle of synchronized scrolling in a single column."
     },
     "Synchronize scrolling (no lines to scroll)" : {
       "comment" : "Help tag of the footer toggle of synchronized scrolling in a window without lines."
@@ -1651,6 +1615,9 @@
     "The folders have the same files." : {
       "comment" : "Window of two folders: no file differs."
     },
+    "The link couldn’t be changed." : {
+      "comment" : "Install the seamerge Command: changing the link failed for another reason."
+    },
     "The pattern also matches empty text, so the rule ignores nothing." : {
       "comment" : "Settings: why an ignore rule takes no effect: its pattern matches empty text."
     },
@@ -1659,6 +1626,18 @@
     },
     "The pattern takes too long to match, so the rule ignores nothing." : {
       "comment" : "Settings: why an ignore rule takes no effect: matching it takes too long."
+    },
+    "The seamerge Command Is Installed" : {
+      "comment" : "Install the seamerge Command: the title once the command is installed."
+    },
+    "The seamerge command is installed." : {
+      "comment" : "VoiceOver: the link of the command was made or updated."
+    },
+    "The seamerge command is removed." : {
+      "comment" : "VoiceOver: the link of the command was removed."
+    },
+    "The seamerge command points to a copy of Seamerge that has moved. Updating points it to this copy. macOS asks for an administrator’s name and password." : {
+      "comment" : "Install the seamerge Command: the link names another copy of the app."
     },
     "The switch discards %lld decisions." : {
       "comment" : "Sheet before switching the comparison, such as The switch discards 3 decisions.",
@@ -1715,6 +1694,9 @@
     "Timestamps" : {
       "comment" : "Settings: an ignore rule that comes with the app, for dates and times of day."
     },
+    "Today" : {
+      "comment" : "Welcome window: the heading of the comparisons opened today."
+    },
     "Toggle A" : {
       "comment" : "Undo menu: A was switched on or off for a block."
     },
@@ -1753,6 +1735,12 @@
     },
     "Typing" : {
       "comment" : "Undo menu: text typed in the result."
+    },
+    "Update" : {
+      "comment" : "Install the seamerge Command: the button that points the link to this copy."
+    },
+    "Update the seamerge Command" : {
+      "comment" : "Install the seamerge Command: the title when the link names a moved copy."
     },
     "Updates" : {
       "comment" : "Settings: heading of the group of updates."
@@ -1808,8 +1796,17 @@
     "UUIDs" : {
       "comment" : "Settings: an ignore rule that comes with the app, for UUIDs."
     },
+    "Version %@" : {
+      "comment" : "Welcome window: the version of the app below its name, such as Version 0.6.0."
+    },
     "View" : {
       "comment" : "Menu bar."
+    },
+    "Waiting for macOS" : {
+      "comment" : "VoiceOver: the change waits for the dialog of macOS that asks for a password."
+    },
+    "Welcome" : {
+      "comment" : "The title of the window that starts a comparison or a merge and lists the recent ones; shown in the Window menu, not in the title bar."
     },
     "Whitespace changes ignored" : {
       "comment" : "Subtitle: the comparison ignores how much whitespace there is."
@@ -1831,6 +1828,9 @@
     },
     "Wrap long lines at the width of the panes" : {
       "comment" : "Help tag of the footer toggle of line wrapping while lines run on."
+    },
+    "You can compare files in Terminal, for example seamerge old.txt new.txt. Removing deletes the link at %@. macOS asks for an administrator’s name and password." : {
+      "comment" : "Install the seamerge Command: what removing does; the path of the link."
     },
     "You don’t have permission to read it." : {
       "comment" : "Why a file or folder of a comparison of folders cannot be read."

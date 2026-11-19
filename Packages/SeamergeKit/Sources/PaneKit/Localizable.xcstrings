@@ -1,28 +1,28 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "%@ and %@": {
-      "comment": "VoiceOver: the inputs that share a toggle, such as Base and B."
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ and %@" : {
+      "comment" : "VoiceOver: the inputs that share a toggle, such as Base and B."
     },
-    "%@, removes these lines": {
-      "comment": "VoiceOver: a toggle that follows the inputs named in removing the lines, such as A."
+    "%@, removes these lines" : {
+      "comment" : "VoiceOver: a toggle that follows the inputs named in removing the lines, such as A."
     },
-    "%lld Unchanged Lines": {
-      "comment": "The bar that stands for unchanged lines that are hidden.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Unchanged Line"
+    "%lld Unchanged Lines" : {
+      "comment" : "The bar that stands for unchanged lines that are hidden.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Unchanged Line"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Unchanged Lines"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Unchanged Lines"
                 }
               }
             }
@@ -30,22 +30,22 @@
         }
       }
     },
-    "%lld unchanged lines in %@, collapsed": {
-      "comment": "VoiceOver: the bar that stands for unchanged lines that are hidden in a pane, such as Base.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld unchanged line in %@, collapsed"
+    "%lld unchanged lines in %@, collapsed" : {
+      "comment" : "VoiceOver: the bar that stands for unchanged lines that are hidden in a pane, such as Base.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld unchanged line in %@, collapsed"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld unchanged lines in %@, collapsed"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld unchanged lines in %@, collapsed"
                 }
               }
             }
@@ -53,22 +53,22 @@
         }
       }
     },
-    "%lld unchanged lines, collapsed": {
-      "comment": "VoiceOver: the bar that stands for unchanged lines that are hidden.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld unchanged line, collapsed"
+    "%lld unchanged lines, collapsed" : {
+      "comment" : "VoiceOver: the bar that stands for unchanged lines that are hidden.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld unchanged line, collapsed"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld unchanged lines, collapsed"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld unchanged lines, collapsed"
                 }
               }
             }
@@ -76,52 +76,52 @@
         }
       }
     },
-    "A": {
-      "comment": "The name of the incoming side on a toggle."
+    "A" : {
+      "comment" : "The name of the incoming side on a toggle."
     },
-    "Added": {
-      "comment": "VoiceOver: the side added lines."
+    "Added" : {
+      "comment" : "VoiceOver: the side added lines."
     },
-    "After line %lld": {
-      "comment": "VoiceOver: where a mark beside a filler row is."
+    "After line %lld" : {
+      "comment" : "VoiceOver: where a mark beside a filler row is."
     },
-    "Appears only on this side": {
-      "comment": "Help tag of the + in the gutter."
+    "Appears only on this side" : {
+      "comment" : "Help tag of the + in the gutter."
     },
-    "B": {
-      "comment": "The name of the own side on a toggle."
+    "B" : {
+      "comment" : "The name of the own side on a toggle."
     },
-    "Base": {
-      "comment": "The name of the common ancestor on a toggle."
+    "Base" : {
+      "comment" : "The name of the common ancestor on a toggle."
     },
-    "Before the first line": {
-      "comment": "VoiceOver: where a mark beside filler rows at the start is."
+    "Before the first line" : {
+      "comment" : "VoiceOver: where a mark beside filler rows at the start is."
     },
-    "Change markers": {
-      "comment": "VoiceOver: the gutter of a pane."
+    "Change markers" : {
+      "comment" : "VoiceOver: the gutter of a pane."
     },
-    "Changed": {
-      "comment": "VoiceOver: the side changed lines."
+    "Changed" : {
+      "comment" : "VoiceOver: the side changed lines."
     },
-    "Chosen: %@": {
-      "comment": "VoiceOver: a block whose sources the user chose, in order, such as B, A."
+    "Chosen: %@" : {
+      "comment" : "VoiceOver: a block whose sources the user chose, in order, such as B, A."
     },
-    "Collapse %lld Unchanged Lines": {
-      "comment": "VoiceOver: the sign beside an expanded run of unchanged lines that hides them.",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Collapse %lld Unchanged Line"
+    "Collapse %lld Unchanged Lines" : {
+      "comment" : "VoiceOver: the sign beside an expanded run of unchanged lines that hides them.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Collapse %lld Unchanged Line"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Collapse %lld Unchanged Lines"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Collapse %lld Unchanged Lines"
                 }
               }
             }
@@ -129,99 +129,99 @@
         }
       }
     },
-    "Collapses these unchanged lines again": {
-      "comment": "Help tag of the sign beside an expanded run of unchanged lines."
+    "Collapses these unchanged lines again" : {
+      "comment" : "Help tag of the sign beside an expanded run of unchanged lines."
     },
-    "Decisions": {
-      "comment": "VoiceOver: the column beside the result that shows how each block was decided."
+    "Decisions" : {
+      "comment" : "VoiceOver: the column beside the result that shows how each block was decided."
     },
-    "Differed on both sides; the result takes what you chose": {
-      "comment": "Help tag of the sign of a resolved conflict."
+    "Differed on both sides; the result takes what you chose" : {
+      "comment" : "Help tag of the sign of a resolved conflict."
     },
-    "Differs on both sides; choose what the result takes": {
-      "comment": "Help tag of the sign of an open conflict."
+    "Differs on both sides; choose what the result takes" : {
+      "comment" : "Help tag of the sign of an open conflict."
     },
-    "Differs on this side": {
-      "comment": "Help tag of the ~ in the gutter."
+    "Differs on this side" : {
+      "comment" : "Help tag of the ~ in the gutter."
     },
-    "Differs only in whitespace or line endings, which this comparison ignores": {
-      "comment": "Help tag of the ring in the gutter."
+    "Differs only in whitespace or line endings, which this comparison ignores" : {
+      "comment" : "Help tag of the ring in the gutter."
     },
-    "Edited by hand": {
-      "comment": "VoiceOver: a block whose text the user typed or changed."
+    "Edited by hand" : {
+      "comment" : "VoiceOver: a block whose text the user typed or changed."
     },
-    "Goes to the other end of the move": {
-      "comment": "VoiceOver: the help of the arrow of a move, which jumps to where the lines are."
+    "Goes to the other end of the move" : {
+      "comment" : "VoiceOver: the help of the arrow of a move, which jumps to where the lines are."
     },
-    "Holds lines that you typed or changed": {
-      "comment": "Help tag of a block whose text the user typed or changed."
+    "Holds lines that you typed or changed" : {
+      "comment" : "Help tag of a block whose text the user typed or changed."
     },
-    "Ignored difference": {
-      "comment": "VoiceOver: a line that differs only in what the comparison ignores."
+    "Ignored difference" : {
+      "comment" : "VoiceOver: a line that differs only in what the comparison ignores."
     },
-    "Lacks lines here that the other side has": {
-      "comment": "Help tag of the − in the gutter."
+    "Lacks lines here that the other side has" : {
+      "comment" : "Help tag of the − in the gutter."
     },
-    "Line %lld": {
-      "comment": "VoiceOver: where a mark is."
+    "Line %lld" : {
+      "comment" : "VoiceOver: where a mark is."
     },
-    "Line %lld on the left, line %lld on the right": {
-      "comment": "VoiceOver: where a row of a single column is that both files share."
+    "Line %lld on the left, line %lld on the right" : {
+      "comment" : "VoiceOver: where a row of a single column is that both files share."
     },
-    "Moved here from line %lld": {
-      "comment": "Help tag and VoiceOver: the arrow where lines arrived; the line they came from."
+    "Moved here from line %lld" : {
+      "comment" : "Help tag and VoiceOver: the arrow where lines arrived; the line they came from."
     },
-    "Moved to line %lld": {
-      "comment": "Help tag and VoiceOver: the arrow where lines left; the line where they are now."
+    "Moved to line %lld" : {
+      "comment" : "Help tag and VoiceOver: the arrow where lines left; the line where they are now."
     },
-    "Nothing taken": {
-      "comment": "VoiceOver: a block that takes no lines from any input."
+    "Nothing taken" : {
+      "comment" : "VoiceOver: a block that takes no lines from any input."
     },
-    "Open conflict": {
-      "comment": "VoiceOver: a conflict that still needs a decision."
+    "Open conflict" : {
+      "comment" : "VoiceOver: a conflict that still needs a decision."
     },
-    "Overview": {
-      "comment": "VoiceOver: the scroll bar that marks where the text changes."
+    "Overview" : {
+      "comment" : "VoiceOver: the scroll bar that marks where the text changes."
     },
-    "Removed": {
-      "comment": "VoiceOver: the side removed lines."
+    "Removed" : {
+      "comment" : "VoiceOver: the side removed lines."
     },
-    "Removed text": {
-      "comment": "VoiceOver: the mark where a side removed text within a line."
+    "Removed text" : {
+      "comment" : "VoiceOver: the mark where a side removed text within a line."
     },
-    "Replace": {
-      "comment": "The name of the step of undo that replaced a match of the search, as in Undo Replace."
+    "Replace" : {
+      "comment" : "The name of the step of undo that replaced a match of the search, as in Undo Replace."
     },
-    "Replace All": {
-      "comment": "The name of the step of undo that replaced every match of the search, as in Undo Replace All."
+    "Replace All" : {
+      "comment" : "The name of the step of undo that replaced every match of the search, as in Undo Replace All."
     },
-    "Reset Block": {
-      "comment": "VoiceOver: the arrow that resets a block to how it was loaded."
+    "Reset Block" : {
+      "comment" : "VoiceOver: the arrow that resets a block to how it was loaded."
     },
-    "Resolved conflict": {
-      "comment": "VoiceOver: a conflict that has been decided."
+    "Resolved conflict" : {
+      "comment" : "VoiceOver: a conflict that has been decided."
     },
-    "Return the block to how it was after loading": {
-      "comment": "Help tag of the arrow that resets a block."
+    "Return the block to how it was after loading" : {
+      "comment" : "Help tag of the arrow that resets a block."
     },
-    "Shows the hidden lines.": {
-      "comment": "VoiceOver: what pressing the bar of hidden lines does."
+    "Shows the hidden lines." : {
+      "comment" : "VoiceOver: what pressing the bar of hidden lines does."
     },
-    "Taken automatically: %@": {
-      "comment": "VoiceOver: a block whose sources the merge took, such as A."
+    "Taken automatically: %@" : {
+      "comment" : "VoiceOver: a block whose sources the merge took, such as A."
     },
-    "Takes no lines, as you chose": {
-      "comment": "Help tag of a block that takes no lines from any input."
+    "Takes no lines, as you chose" : {
+      "comment" : "Help tag of a block that takes no lines from any input."
     },
-    "Takes the lines of %@, as the merge decided": {
-      "comment": "Help tag of a block whose sources the merge took, such as A and B."
+    "Takes the lines of %@, as the merge decided" : {
+      "comment" : "Help tag of a block whose sources the merge took, such as A and B."
     },
-    "Takes the lines of %@, in the order you chose": {
-      "comment": "Help tag of a block whose sources the user chose, such as B and A."
+    "Takes the lines of %@, in the order you chose" : {
+      "comment" : "Help tag of a block whose sources the user chose, such as B and A."
     },
-    "Unchanged": {
-      "comment": "VoiceOver: a row of a single column that shows a line both files share."
+    "Unchanged" : {
+      "comment" : "VoiceOver: a row of a single column that shows a line both files share."
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

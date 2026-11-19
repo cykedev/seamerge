@@ -1,156 +1,156 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "About Seamerge": {
-      "comment": "App menu."
+  "sourceLanguage" : "en",
+  "strings" : {
+    "“%@” isn’t a folder of yours alone. Remove it, then open Seamerge again. Comparing files still works." : {
+      "comment" : "Alert at launch: the folder of the socket belongs to someone else; what to do."
     },
-    "Another copy of Seamerge is already running.": {
-      "comment": "Alert at launch: a second copy of the app cannot take merges from the command line."
+    "About Seamerge" : {
+      "comment" : "App menu."
     },
-    "Bring All to Front": {
-      "comment": "Window menu."
+    "Another copy of Seamerge is already running." : {
+      "comment" : "Alert at launch: a second copy of the app cannot take merges from the command line."
     },
-    "Check for Updates…": {
-      "comment": "App menu: look for a new version of the app."
+    "Bring All to Front" : {
+      "comment" : "Window menu."
     },
-    "Clear Menu": {
-      "comment": "File > Open Recent: forget the recent comparisons."
+    "Check for Updates…" : {
+      "comment" : "App menu: look for a new version of the app."
     },
-    "Close": {
-      "comment": "File menu."
+    "Clear Menu" : {
+      "comment" : "File > Open Recent: forget the recent comparisons."
     },
-    "Compare": {
-      "comment": "Menu bar: the comparison modes."
+    "Close" : {
+      "comment" : "File menu."
     },
-    "Compare Files…": {
-      "comment": "File menu: show the welcome window with the sheet Compare Files."
+    "Compare" : {
+      "comment" : "Menu bar: the comparison modes."
     },
-    "Compare Folders…": {
-      "comment": "File menu: show the welcome window with the sheet Compare Files to choose two folders."
+    "Compare Files…" : {
+      "comment" : "File menu: show the welcome window with the sheet Compare Files."
     },
-    "Comparing files still works. Quit Seamerge and open it again to merge from the command line.": {
-      "comment": "Alert at launch: what to do when the app cannot listen for the command line."
+    "Compare Folders…" : {
+      "comment" : "File menu: show the welcome window with the sheet Compare Files to choose two folders."
     },
-    "Copy": {
-      "comment": "Edit menu."
+    "Comparing files still works. Quit Seamerge and open it again to merge from the command line." : {
+      "comment" : "Alert at launch: what to do when the app cannot listen for the command line."
     },
-    "Customize Toolbar…": {
-      "comment": "View menu."
+    "Copy" : {
+      "comment" : "Edit menu."
     },
-    "Cut": {
-      "comment": "Edit menu."
+    "Customize Toolbar…" : {
+      "comment" : "View menu."
     },
-    "Edit": {
-      "comment": "Menu bar."
+    "Cut" : {
+      "comment" : "Edit menu."
     },
-    "Enter Full Screen": {
-      "comment": "View menu."
+    "Edit" : {
+      "comment" : "Menu bar."
     },
-    "File": {
-      "comment": "Menu bar."
+    "Enter Full Screen" : {
+      "comment" : "View menu."
     },
-    "Find": {
-      "comment": "Edit menu: the submenu of finding."
+    "File" : {
+      "comment" : "Menu bar."
     },
-    "Folders": {
-      "comment": "VoiceOver: the symbol of a recent comparison of two folders."
+    "Find" : {
+      "comment" : "Edit menu: the submenu of finding."
     },
-    "Go": {
-      "comment": "Menu bar."
+    "Folders" : {
+      "comment" : "VoiceOver: the symbol of a recent comparison of two folders."
     },
-    "Help": {
-      "comment": "Menu bar."
+    "Go" : {
+      "comment" : "Menu bar."
     },
-    "Hide Others": {
-      "comment": "App menu."
+    "Help" : {
+      "comment" : "Menu bar."
     },
-    "Hide Seamerge": {
-      "comment": "App menu."
+    "Hide Others" : {
+      "comment" : "App menu."
     },
-    "Install Command Line Tool…": {
-      "comment": "App menu: put the seamerge command into Terminal's PATH."
+    "Hide Seamerge" : {
+      "comment" : "App menu."
     },
-    "Jump to Selection": {
-      "comment": "Edit > Find."
+    "Install Command Line Tool…" : {
+      "comment" : "App menu: put the seamerge command into Terminal's PATH."
     },
-    "Keyboard Shortcuts": {
-      "comment": "Help menu: the sheet of all shortcuts."
+    "Jump to Selection" : {
+      "comment" : "Edit > Find."
     },
-    "Merge": {
-      "comment": "Menu bar: the decisions of a merge."
+    "Keyboard Shortcuts" : {
+      "comment" : "Help menu: the sheet of all shortcuts."
     },
-    "Merge Files…": {
-      "comment": "File menu: show the welcome window with the sheet Merge Files."
+    "Merge" : {
+      "comment" : "Menu bar: the decisions of a merge."
     },
-    "Merges from the command line open in the other copy. Quit it, then open this one again.": {
-      "comment": "Alert at launch: what to do when another copy runs."
+    "Merge Files…" : {
+      "comment" : "File menu: show the welcome window with the sheet Merge Files."
     },
-    "Minimize": {
-      "comment": "Window menu."
+    "Merges from the command line open in the other copy. Quit it, then open this one again." : {
+      "comment" : "Alert at launch: what to do when another copy runs."
     },
-    "Open Recent": {
-      "comment": "File menu."
+    "Minimize" : {
+      "comment" : "Window menu."
     },
-    "Paste": {
-      "comment": "Edit menu."
+    "Open Recent" : {
+      "comment" : "File menu."
     },
-    "Quit Seamerge": {
-      "comment": "App menu."
+    "Paste" : {
+      "comment" : "Edit menu."
     },
-    "Redo": {
-      "comment": "Edit menu."
+    "Quit Seamerge" : {
+      "comment" : "App menu."
     },
-    "Remove Command Line Tool…": {
-      "comment": "App menu: take the seamerge command out of Terminal's PATH."
+    "Redo" : {
+      "comment" : "Edit menu."
     },
-    "Seamerge": {
-      "comment": "Menu bar: the app menu."
+    "Remove Command Line Tool…" : {
+      "comment" : "App menu: take the seamerge command out of Terminal's PATH."
     },
-    "Seamerge Help": {
-      "comment": "Help menu."
+    "Seamerge" : {
+      "comment" : "Menu bar: the app menu."
     },
-    "Seamerge can’t take merges from the command line.": {
-      "comment": "Alert at launch: the app cannot listen for the command-line helper."
+    "Seamerge can’t take merges from the command line." : {
+      "comment" : "Alert at launch: the app cannot listen for the command-line helper."
     },
-    "Select All": {
-      "comment": "Edit menu."
+    "Seamerge Help" : {
+      "comment" : "Help menu."
     },
-    "Services": {
-      "comment": "App menu."
+    "Select All" : {
+      "comment" : "Edit menu."
     },
-    "Set Up Git Integration…": {
-      "comment": "App menu: make Git use Seamerge."
+    "Services" : {
+      "comment" : "App menu."
     },
-    "Settings…": {
-      "comment": "App menu."
+    "Set Up Git Integration…" : {
+      "comment" : "App menu: make Git use Seamerge."
     },
-    "Show All": {
-      "comment": "App menu."
+    "Settings…" : {
+      "comment" : "App menu."
     },
-    "Show Sidebar": {
-      "comment": "View menu: show the list of the files of a window."
+    "Show All" : {
+      "comment" : "App menu."
     },
-    "Show Toolbar": {
-      "comment": "View menu."
+    "Show Sidebar" : {
+      "comment" : "View menu: show the list of the files of a window."
     },
-    "The path of its connection to the command line is longer than macOS allows. Comparing files still works. This is a bug in Seamerge; please report it.": {
-      "comment": "Alert at launch: the path of the socket is too long; what still works."
+    "Show Toolbar" : {
+      "comment" : "View menu."
     },
-    "Undo": {
-      "comment": "Edit menu."
+    "The path of its connection to the command line is longer than macOS allows. Comparing files still works. This is a bug in Seamerge; please report it." : {
+      "comment" : "Alert at launch: the path of the socket is too long; what still works."
     },
-    "View": {
-      "comment": "Menu bar."
+    "Undo" : {
+      "comment" : "Edit menu."
     },
-    "Window": {
-      "comment": "Menu bar."
+    "View" : {
+      "comment" : "Menu bar."
     },
-    "Zoom": {
-      "comment": "Window menu."
+    "Window" : {
+      "comment" : "Menu bar."
     },
-    "“%@” isn’t a folder of yours alone. Remove it, then open Seamerge again. Comparing files still works.": {
-      "comment": "Alert at launch: the folder of the socket belongs to someone else; what to do."
+    "Zoom" : {
+      "comment" : "Window menu."
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }
