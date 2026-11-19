@@ -7,7 +7,7 @@ import AppKit
 /// carry it out: usually the edit itself, sometimes edits around a preview, none to refuse it.
 /// The pane carries out exactly what the delegate answers and then tells it what it replaced.
 @MainActor
-public protocol PaneEditingDelegate: AnyObject {
+package protocol PaneEditingDelegate: AnyObject {
   /// The edits that carry out `edit`, which the user is about to make in `pane`, in order; each
   /// range refers to the text as the edits before it left it.
   ///

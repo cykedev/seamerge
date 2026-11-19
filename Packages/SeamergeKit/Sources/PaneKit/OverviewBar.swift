@@ -2,7 +2,7 @@ import AppKit
 
 /// Receives the clicks on the marks of an overview bar.
 @MainActor
-public protocol OverviewBarDelegate: AnyObject {
+package protocol OverviewBarDelegate: AnyObject {
   /// Tells the delegate that the mark of `block` was clicked, or pressed with VoiceOver.
   func overviewBar(_ overviewBar: OverviewBar, didSelectBlock block: Int)
 }
@@ -19,14 +19,14 @@ public protocol OverviewBarDelegate: AnyObject {
 /// Install the bar on a pane with `PaneView.overviewBar`; the pane places it, tells it its rows
 /// and scrolls when it acts. Marks name rows of the grid; the bar draws them where the pane shows
 /// them, with its collapsed runs.
-public final class OverviewBar: NSScroller {
+package final class OverviewBar: NSScroller {
   /// The colors of the marks and areas.
-  public var theme = Theme() {
+  package var theme = Theme() {
     didSet { invalidateLayout() }
   }
 
   /// The marks, in row order.
-  public var marks: [OverviewMark] = [] {
+  package var marks: [OverviewMark] = [] {
     didSet { invalidateLayout() }
   }
 
@@ -35,7 +35,7 @@ public final class OverviewBar: NSScroller {
   ///
   /// Like marks, the rows name rows of the grid; a row behind a collapsed run is marked on its
   /// bar.
-  public var matchRows = IndexSet() {
+  package var matchRows = IndexSet() {
     didSet { invalidateLayout() }
   }
 
@@ -44,12 +44,12 @@ public final class OverviewBar: NSScroller {
   ///
   /// Where several marks name the block, as the parts of a block in a single column do, the
   /// triangle points at the middle of all of them.
-  public var currentBlock: Int? {
+  package var currentBlock: Int? {
     didSet { needsDisplay = true }
   }
 
   /// Receives clicks on the marks.
-  public weak var delegate: (any OverviewBarDelegate)?
+  package weak var delegate: (any OverviewBarDelegate)?
 
   /// Whether the bar is moving its knob to a mark that VoiceOver pressed, so that its action asks
   /// to scroll there whatever part of the bar the mouse hit last.
@@ -91,17 +91,17 @@ public final class OverviewBar: NSScroller {
   }
 
   /// Creates an overview bar without marks.
-  public init() {
+  package init() {
     super.init(frame: CGRect(x: 0, y: 0, width: Theme.overviewBarWidth, height: 100))
     setAccessibilityLabel(String(localized: "Overview", bundle: .module))
   }
 
   /// Overview bars are never archived.
-  public required init?(coder: NSCoder) {
+  package required init?(coder: NSCoder) {
     nil
   }
 
-  public override class func scrollerWidth(
+  package override class func scrollerWidth(
     for controlSize: NSControl.ControlSize, scrollerStyle: NSScroller.Style
   ) -> CGFloat {
     Theme.overviewBarWidth
@@ -109,22 +109,22 @@ public final class OverviewBar: NSScroller {
 
   /// The bar always takes its room beside the text; overlay scrollers would hide it while the
   /// text rests.
-  public override var scrollerStyle: NSScroller.Style {
+  package override var scrollerStyle: NSScroller.Style {
     get { .legacy }
     set { super.scrollerStyle = .legacy }
   }
 
-  public override var isOpaque: Bool { true }
+  package override var isOpaque: Bool { true }
 
   // The frame of the visible part is drawn with the bar, which the scroller would not draw
   // again when only its knob moves: the stripe of the frame is drawn again where it was and
   // where it is now, and nothing else.
-  public override var doubleValue: Double {
+  package override var doubleValue: Double {
     willSet { invalidateVisibleRegion() }
     didSet { invalidateVisibleRegion() }
   }
 
-  public override var knobProportion: CGFloat {
+  package override var knobProportion: CGFloat {
     willSet { invalidateVisibleRegion() }
     didSet { invalidateVisibleRegion() }
   }
@@ -140,7 +140,7 @@ public final class OverviewBar: NSScroller {
         height: knob.height + 2 * margin))
   }
 
-  public override func setFrameSize(_ newSize: NSSize) {
+  package override func setFrameSize(_ newSize: NSSize) {
     let changed = newSize != frame.size
     super.setFrameSize(newSize)
     if changed {
@@ -148,7 +148,7 @@ public final class OverviewBar: NSScroller {
     }
   }
 
-  public override func draw(_ dirtyRect: NSRect) {
+  package override func draw(_ dirtyRect: NSRect) {
     Theme.backgroundColor.setFill()
     dirtyRect.fill()
     theme.overviewBackgroundTone.setFill()
@@ -170,7 +170,7 @@ public final class OverviewBar: NSScroller {
 
   /// Scrolls the way the user set clicks in scroll bars to work, and reports the block of a
   /// mark when a click on it jumps there.
-  public override func mouseDown(with event: NSEvent) {
+  package override func mouseDown(with event: NSEvent) {
     let point = convert(event.locationInWindow, from: nil)
     let knob = rect(for: .knob)
     let block = point.y < knob.minY || point.y > knob.maxY ? layout.block(at: point.y) : nil
@@ -184,7 +184,7 @@ public final class OverviewBar: NSScroller {
     }
   }
 
-  public override func updateTrackingAreas() {
+  package override func updateTrackingAreas() {
     super.updateTrackingAreas()
     guard pointerArea == nil else { return }
     let area = NSTrackingArea(
@@ -215,15 +215,15 @@ public final class OverviewBar: NSScroller {
     return window.mouseLocationOutsideOfEventStream
   }
 
-  public override func mouseEntered(with event: NSEvent) {
+  package override func mouseEntered(with event: NSEvent) {
     isPointerInside = true
   }
 
-  public override func mouseExited(with event: NSEvent) {
+  package override func mouseExited(with event: NSEvent) {
     isPointerInside = false
   }
 
-  public override func accessibilityChildren() -> [Any]? {
+  package override func accessibilityChildren() -> [Any]? {
     markElements
   }
 

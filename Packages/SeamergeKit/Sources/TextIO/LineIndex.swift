@@ -6,7 +6,7 @@ import TextBasics
 ///
 /// The index is built once per text in a single pass. It records where each line starts in
 /// UTF-16; positions within a line are converted by scanning that line only.
-public struct LineIndex: Sendable {
+package struct LineIndex: Sendable {
   private let utf8: Data
   private let byteLineStarts: LineStarts
   private let utf16LineStarts: LineStarts
@@ -47,12 +47,12 @@ public struct LineIndex: Sendable {
   }
 
   /// The number of lines.
-  public var lineCount: Int { byteLineStarts.lineCount }
+  package var lineCount: Int { byteLineStarts.lineCount }
 
   /// The UTF-16 range of a line in the whole text, including its line ending.
   ///
   /// - Precondition: `line` lies within `0..<lineCount`.
-  public func utf16Range(ofLine line: Int) -> Range<Int> {
+  package func utf16Range(ofLine line: Int) -> Range<Int> {
     precondition((0..<lineCount).contains(line), "Line \(line) is out of range")
     return utf16LineStarts.range(ofLine: line)
   }
@@ -68,7 +68,7 @@ public struct LineIndex: Sendable {
   ///
   /// - Precondition: `line` lies within `0..<lineCount`, and `byteOffset` lies within the line or
   ///   at its end and at the start of a Unicode scalar.
-  public func utf16Offset(ofByteOffset byteOffset: Int, inLine line: Int) -> Int {
+  package func utf16Offset(ofByteOffset byteOffset: Int, inLine line: Int) -> Int {
     let lineBytes = byteRange(ofLine: line)
     precondition(
       (0...lineBytes.count).contains(byteOffset), "Byte offset \(byteOffset) is outside the line")
@@ -90,7 +90,7 @@ public struct LineIndex: Sendable {
   ///
   /// - Precondition: `line` lies within `0..<lineCount`, and `utf16Offset` lies within the line
   ///   or at its end and not between the two halves of a surrogate pair.
-  public func byteOffset(ofUTF16Offset utf16Offset: Int, inLine line: Int) -> Int {
+  package func byteOffset(ofUTF16Offset utf16Offset: Int, inLine line: Int) -> Int {
     let lineBytes = byteRange(ofLine: line)
     precondition(
       (0...utf16Range(ofLine: line).count).contains(utf16Offset),

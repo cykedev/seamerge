@@ -9,9 +9,9 @@ import AppKit
 ///
 /// The pane moves its text only when the user scrolls, when it is told to reveal a block, and
 /// when the selection or a find result has to come into view; nothing else shifts what it shows.
-public final class PaneView: NSView {
+package final class PaneView: NSView {
   /// The fonts, metrics and colors of the pane.
-  public var theme: Theme {
+  package var theme: Theme {
     didSet { show(content, collapsedRuns: collapsedRuns) }
   }
 
@@ -34,7 +34,7 @@ public final class PaneView: NSView {
   /// its rows; to show it with runs, use ``setContent(_:collapsedRuns:)``.
   ///
   /// - Precondition: The content has one line number and one line ending per row.
-  public var content: PaneContent {
+  package var content: PaneContent {
     get { textView.content }
     set { setContent(newValue, collapsedRuns: []) }
   }
@@ -45,7 +45,7 @@ public final class PaneView: NSView {
   ///
   /// - Precondition: The content has one line number and one line ending per row, and the runs
   ///   are sorted, do not overlap and lie within its rows.
-  public func setContent(_ content: PaneContent, collapsedRuns: [CollapsedRun]) {
+  package func setContent(_ content: PaneContent, collapsedRuns: [CollapsedRun]) {
     show(content, collapsedRuns: collapsedRuns)
   }
 
@@ -53,7 +53,7 @@ public final class PaneView: NSView {
   /// ``setContent(_:collapsedRuns:)`` shows content.
   ///
   /// - Precondition: As for ``setContent(_:collapsedRuns:)``.
-  public func setContent(_ prepared: PreparedPaneContent, collapsedRuns: [CollapsedRun]) {
+  package func setContent(_ prepared: PreparedPaneContent, collapsedRuns: [CollapsedRun]) {
     show(prepared.content, collapsedRuns: collapsedRuns, prepared: prepared)
   }
 
@@ -67,7 +67,7 @@ public final class PaneView: NSView {
   /// - Precondition: The blocks are sorted, do not overlap and lie within the rows; the previews
   ///   are sorted, do not overlap and lie within the text; the rows of the tints lie within the
   ///   rows.
-  public func setBlocks(
+  package func setBlocks(
     _ blocks: [PaneBlock], previews: [PanePreview], rowTints: [Int: BlockStyle]
   ) {
     textView.setBlocks(blocks, previews: previews, rowTints: rowTints)
@@ -85,7 +85,7 @@ public final class PaneView: NSView {
   /// when the user asks to expand a run; the pane leaves it collapsed until it is told otherwise.
   ///
   /// - Precondition: The runs are sorted, do not overlap and lie within the rows of the content.
-  public var collapsedRuns: [CollapsedRun] {
+  package var collapsedRuns: [CollapsedRun] {
     get { displayRows.runs }
     set { collapse(newValue) }
   }
@@ -97,7 +97,7 @@ public final class PaneView: NSView {
   ///
   /// - Precondition: The runs are sorted, do not overlap, lie within the rows of the content and
   ///   outside its collapsed runs.
-  public var expandedRuns: [CollapsedRun] {
+  package var expandedRuns: [CollapsedRun] {
     get { gutterView.expandedRuns }
     set { gutterView.expandedRuns = newValue }
   }
@@ -105,7 +105,7 @@ public final class PaneView: NSView {
   /// The index of the current block in the content's blocks, or `nil` if there is none.
   ///
   /// The rows of the current block are tinted more strongly and its line-number cells filled.
-  public var currentBlock: Int? {
+  package var currentBlock: Int? {
     get { textView.currentBlock }
     set {
       textView.setCurrentBlock(newValue)
@@ -116,7 +116,7 @@ public final class PaneView: NSView {
   }
 
   /// Supplies the changed runs within the lines of the blocks; the pane does not retain it.
-  public var highlightProvider: (any PaneHighlightProvider)? {
+  package var highlightProvider: (any PaneHighlightProvider)? {
     get { textView.highlightProvider }
     set { textView.highlightProvider = newValue }
   }
@@ -125,7 +125,7 @@ public final class PaneView: NSView {
   ///
   /// The pane does not retain it. Without one, the code keeps the color of text; setting a
   /// provider colors every row anew.
-  public var syntaxProvider: (any PaneSyntaxProvider)? {
+  package var syntaxProvider: (any PaneSyntaxProvider)? {
     get { textView.syntaxProvider }
     set { textView.syntaxProvider = newValue }
   }
@@ -133,13 +133,13 @@ public final class PaneView: NSView {
   /// Colors the code of `rows` anew, after the syntax provider changed the tokens of their lines.
   ///
   /// - Parameter rows: Rows of the content; those beyond its rows are left out.
-  public func syntaxDidChange(inRows rows: Range<Int>) {
+  package func syntaxDidChange(inRows rows: Range<Int>) {
     textView.syntaxDidChange(inRows: rows)
   }
 
   /// Whether the keyboard focus lies in the pane: in its text, or beside it, such as in the
   /// decision column of the result or on the bar of a collapsed run.
-  public var holdsFocus: Bool {
+  package var holdsFocus: Bool {
     (window?.firstResponder as? NSView)?.isDescendant(of: self) == true
   }
 
@@ -147,14 +147,14 @@ public final class PaneView: NSView {
   private(set) var contentGeneration = 0
 
   /// Learns about clicks and supplies the context menu; the pane does not retain it.
-  public weak var delegate: (any PaneViewDelegate)?
+  package weak var delegate: (any PaneViewDelegate)?
 
   /// Decides every edit of the text; the pane does not retain it.
   ///
   /// With a delegate, the user can edit the text, and every edit passes through the delegate
   /// before it changes the text; without one, the text is read-only. The text view keeps no undo
   /// of its own: undo belongs to the delegate, which knows what an edit means.
-  public weak var editingDelegate: (any PaneEditingDelegate)? {
+  package weak var editingDelegate: (any PaneEditingDelegate)? {
     didSet { textView.isEditable = editingDelegate != nil }
   }
 
@@ -167,14 +167,14 @@ public final class PaneView: NSView {
   ///
   /// - Precondition: Each range lies within the text as the edits before it left it.
   @discardableResult
-  public func carryOut(_ edits: [PaneEdit]) -> [String] {
+  package func carryOut(_ edits: [PaneEdit]) -> [String] {
     textView.carryOut(edits)
   }
 
   /// Whether spaces, tabs and line endings show as quiet symbols.
   ///
   /// The symbols are drawn only: they are neither copied nor read by VoiceOver.
-  public var showsInvisibles: Bool {
+  package var showsInvisibles: Bool {
     get { textView.showsInvisibles }
     set { textView.showsInvisibles = newValue }
   }
@@ -184,7 +184,7 @@ public final class PaneView: NSView {
   /// A row that wraps takes as many screen lines as it needs, the lines after its first
   /// indented and without a line number. The panes that a ``RowAlignment`` lines up with this
   /// one show the row as high, with a quiet fill below a version that needs fewer lines.
-  public var wrapsLines = false {
+  package var wrapsLines = false {
     didSet {
       guard wrapsLines != oldValue else { return }
       updateLineWrapping()
@@ -200,7 +200,7 @@ public final class PaneView: NSView {
   ///
   /// The bar sits beside the scroll view rather than in it, so that the scroll view shows its
   /// horizontal scroller in the style that the user chose, as in every other pane.
-  public var overviewBar: OverviewBar? {
+  package var overviewBar: OverviewBar? {
     didSet {
       guard overviewBar !== oldValue else { return }
       oldValue?.removeFromSuperview()
@@ -216,7 +216,7 @@ public final class PaneView: NSView {
 
   /// The grid that the overview bar measures in, for a pane whose rows are not those of the
   /// grid; `nil` while the bar measures the pane's own rows.
-  public var overviewGrid: OverviewGrid? {
+  package var overviewGrid: OverviewGrid? {
     didSet {
       showDisplayRows()
       textDidScroll()
@@ -228,7 +228,7 @@ public final class PaneView: NSView {
   ///
   /// The pane places the column and keeps it in step with its rows, its scroll position and its
   /// current block.
-  public var decisionColumn: DecisionColumnView? {
+  package var decisionColumn: DecisionColumnView? {
     didSet {
       guard decisionColumn !== oldValue else { return }
       oldValue?.removeFromSuperview()
@@ -242,13 +242,13 @@ public final class PaneView: NSView {
   }
 
   /// The view that shows the text, for selection and the focus.
-  public var documentView: NSTextView { textView }
+  package var documentView: NSTextView { textView }
 
   /// The row that the UTF-16 `offset` of the text lies in.
   ///
   /// The end of the text lies in the last row. The answer takes as long whichever row it is, so
   /// that it may be asked at every keystroke.
-  public func row(containingOffset offset: Int) -> Int {
+  package func row(containingOffset offset: Int) -> Int {
     textView.grid.row(containingOffset: offset)
   }
 
@@ -257,7 +257,7 @@ public final class PaneView: NSView {
   /// text.
   ///
   /// - Precondition: The rows lie within the rows of the content.
-  public func textRange(ofRows rows: Range<Int>) -> NSRange {
+  package func textRange(ofRows rows: Range<Int>) -> NSRange {
     let grid = textView.grid
     precondition(rows.upperBound <= grid.rowCount, "Rows reach beyond the \(grid.rowCount) rows")
     guard rows.lowerBound < grid.rowCount else {
@@ -274,7 +274,7 @@ public final class PaneView: NSView {
 
   /// The narrowest the pane gets: room for the gutter, a short line of code and the overview
   /// bar, so that its neighbors and the dividers between them stay usable.
-  public var minimumWidth: CGFloat {
+  package var minimumWidth: CGFloat {
     let text = CGFloat(Theme.minimumTextColumns) * theme.characterWidth + 2 * Theme.textInset
     let bar = overviewBar == nil ? 0 : Theme.overviewBarWidth
     let column = decisionColumn?.width ?? 0
@@ -284,7 +284,7 @@ public final class PaneView: NSView {
 
   /// Scrolls the pane, and the panes coupled with it, so that the first change of `block` comes
   /// into view with some text before it, unless it is in view already.
-  public func reveal(block: Int) {
+  package func reveal(block: Int) {
     guard content.blocks.indices.contains(block) else { return }
     textView.reveal(offset: textView.firstChangeOffset(ofBlock: block))
   }
@@ -292,7 +292,7 @@ public final class PaneView: NSView {
   /// The row and block at `point`, in the pane's coordinates.
   ///
   /// On the bar of a collapsed run, the row is the first one that the run hides.
-  public func hit(at point: CGPoint) -> PaneHit {
+  package func hit(at point: CGPoint) -> PaneHit {
     let y = point.y + clipView.bounds.minY
     let line = Int((y / theme.rowHeight).rounded(.down))
     return hit(atRow: displayRows.row(atDisplayRow: displayRows.clampedDisplayRow(atLine: line)))
@@ -302,7 +302,7 @@ public final class PaneView: NSView {
   /// bottom of their last; for an empty range, the boundary that it lies on.
   ///
   /// Rows behind the bar of a collapsed run take the place of the bar.
-  public func verticalSpan(ofRows rows: Range<Int>) -> Range<CGFloat> {
+  package func verticalSpan(ofRows rows: Range<Int>) -> Range<CGFloat> {
     let lines = displayRows.lines(ofRows: rows)
     return CGFloat(lines.lowerBound) * rowHeight..<CGFloat(lines.upperBound) * rowHeight
   }
@@ -380,7 +380,7 @@ public final class PaneView: NSView {
   private let scrollView = PaneScrollView()
 
   /// Creates an empty pane.
-  public init(theme: Theme = Theme()) {
+  package init(theme: Theme = Theme()) {
     self.theme = theme
     super.init(frame: .zero)
     textView.configure(theme: theme)
@@ -415,7 +415,7 @@ public final class PaneView: NSView {
   }
 
   /// Panes are never archived.
-  public required init?(coder: NSCoder) {
+  package required init?(coder: NSCoder) {
     nil
   }
 
@@ -423,9 +423,9 @@ public final class PaneView: NSView {
     scrollSync?.remove(self)
   }
 
-  public override var isFlipped: Bool { true }
+  package override var isFlipped: Bool { true }
 
-  public override func layout() {
+  package override func layout() {
     super.layout()
     let gutterWidth = gutterView.fittingWidth
     let barWidth = overviewBar == nil ? 0 : Theme.overviewBarWidth
@@ -475,7 +475,7 @@ public final class PaneView: NSView {
   }
 
   /// Hands scrolling over the gutter and the overview bar to the text.
-  public override func scrollWheel(with event: NSEvent) {
+  package override func scrollWheel(with event: NSEvent) {
     scrollView.scrollWheel(with: event)
   }
 
@@ -529,7 +529,7 @@ public final class PaneView: NSView {
     return displayRows.row(atDisplayRow: displayRows.clampedDisplayRow(atLine: line))
   }
 
-  public override func viewDidEndLiveResize() {
+  package override func viewDidEndLiveResize() {
     super.viewDidEndLiveResize()
     updateLineWrapping()
     needsLayout = true

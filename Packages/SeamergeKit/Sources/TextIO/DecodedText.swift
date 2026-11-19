@@ -2,27 +2,27 @@ import Foundation
 import TextBasics
 
 /// The text of a file, decoded, together with what is needed to write it back in the same form.
-public struct DecodedText: Sendable {
+package struct DecodedText: Sendable {
   /// The encoding the file is in.
-  public let encoding: TextEncoding
+  package let encoding: TextEncoding
 
   /// Whether the file starts with the byte order mark of ``encoding``.
-  public let hasByteOrderMark: Bool
+  package let hasByteOrderMark: Bool
 
   /// The text as UTF-8, without a byte order mark and with line endings as they are in the file.
-  public let utf8: Data
+  package let utf8: Data
 
   /// The text, with line endings as they are in the file.
-  public let text: String
+  package let text: String
 
   /// The line endings of the text, or `nil` if it has no line break.
-  public let lineEndingStyle: LineEndingStyle?
+  package let lineEndingStyle: LineEndingStyle?
 
   /// Whether the text has characters after its last line break, so that its last line has no
   /// line ending.
   ///
   /// An empty text lacks nothing and is `false`.
-  public let isMissingFinalLineBreak: Bool
+  package let isMissingFinalLineBreak: Bool
 
   /// Decodes `bytes` in `encoding` and drops the encoding's byte order mark if they start with
   /// it, or returns `nil` if the bytes are not valid in `encoding`.

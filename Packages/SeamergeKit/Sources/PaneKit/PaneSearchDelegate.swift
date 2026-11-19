@@ -1,7 +1,7 @@
 /// Learns which match a search over several panes shows, when its matches change, and when it
 /// replaces text.
 @MainActor
-public protocol PaneSearchDelegate: AnyObject {
+package protocol PaneSearchDelegate: AnyObject {
   /// Tells the delegate that `search` brought `match` into view in its pane, after Find Next,
   /// Find Previous or a search as the user types: the moment to make the block of the match the
   /// current one.

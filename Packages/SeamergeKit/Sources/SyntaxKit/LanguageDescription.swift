@@ -3,7 +3,7 @@
 ///
 /// A description is a value. Its syntax is a table for one of three lexer families, so that
 /// adding a language means adding a table, not code.
-public struct LanguageDescription: Sendable, Hashable {
+package struct LanguageDescription: Sendable, Hashable {
   /// The syntax of a language, as a table for the lexer of its family.
   enum Syntax: Sendable, Hashable {
     /// A programming language such as Swift, Python or SQL, and style sheets.
@@ -20,7 +20,7 @@ public struct LanguageDescription: Sendable, Hashable {
   }
 
   /// The name of the language, such as “Swift” or “C++”.
-  public let name: String
+  package let name: String
 
   /// The file name extensions, in lowercase and without the dot.
   let fileExtensions: [String]
@@ -48,6 +48,6 @@ public struct LanguageDescription: Sendable, Hashable {
   }
 
   /// Text without syntax, for files of an unknown language; lexing it yields no tokens.
-  public static let plainText = LanguageDescription(
+  package static let plainText = LanguageDescription(
     name: "Plain Text", fileExtensions: ["txt"], syntax: .plainText)
 }

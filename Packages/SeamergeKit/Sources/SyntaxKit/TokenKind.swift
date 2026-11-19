@@ -2,7 +2,7 @@
 ///
 /// Syntax coloring is deliberately restrained: only these four kinds get a color of their own,
 /// everything else keeps the color of plain text.
-public enum TokenKind: Sendable, Hashable {
+package enum TokenKind: Sendable, Hashable {
   /// A line or block comment, including its delimiters.
   case comment
 

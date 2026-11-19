@@ -4,36 +4,36 @@ import AppKit
 ///
 /// Every color adapts to the appearance it is drawn in: light, dark, and both with increased
 /// contrast. Neutral colors are the dynamic system colors; only the role colors have fixed values.
-public struct Theme {
+package struct Theme {
   /// The font of the code, a font of fixed width.
-  public var font: NSFont
+  package var font: NSFont
 
   /// The height of a row as a multiple of the font size.
-  public var lineHeightMultiple: CGFloat
+  package var lineHeightMultiple: CGFloat
 
   /// The width of a tab, in characters.
-  public var tabWidth: Int
+  package var tabWidth: Int
 
   /// Whether the colors take their values for increased contrast.
   ///
   /// Set it from the system setting, `NSWorkspace.accessibilityDisplayShouldIncreaseContrast`.
   /// The colors also take those values in an appearance that has increased contrast.
-  public var increasesContrast: Bool
+  package var increasesContrast: Bool
 
   /// Whether marks that differ in color differ in shape as well.
   ///
   /// Set it from the system setting,
   /// `NSWorkspace.accessibilityDisplayShouldDifferentiateWithoutColor`. Open conflicts in the
   /// overview bar then get a notch at their leading edge.
-  public var differentiatesWithoutColor: Bool
+  package var differentiatesWithoutColor: Bool
 
   /// Whether a preview turns into text at once rather than in a cross-fade.
   ///
   /// Set it from the system setting, `NSWorkspace.accessibilityDisplayShouldReduceMotion`.
-  public var reducesMotion: Bool
+  package var reducesMotion: Bool
 
   /// Creates a theme.
-  public init(
+  package init(
     font: NSFont = .monospacedSystemFont(ofSize: 13, weight: .regular),
     lineHeightMultiple: CGFloat = 1.5,
     tabWidth: Int = 4,
@@ -50,20 +50,20 @@ public struct Theme {
   }
 
   /// The height of every row, in points: the font size times the multiple, rounded up.
-  public var rowHeight: CGFloat {
+  package var rowHeight: CGFloat {
     (font.pointSize * lineHeightMultiple).rounded(.up)
   }
 
   /// The font of the line numbers: two points smaller than the code, but never below the
   /// smallest size of the interface, with digits of equal width.
-  public var lineNumberFont: NSFont {
+  package var lineNumberFont: NSFont {
     .monospacedDigitSystemFont(
       ofSize: max(font.pointSize - 2, Self.smallestFontSize), weight: .regular)
   }
 
   /// The font of the line numbers on the cells of the current block while the pane has no focus,
   /// where the cell has the color of its side: as large as the other numbers, semibold.
-  public var currentLineNumberFont: NSFont {
+  package var currentLineNumberFont: NSFont {
     .monospacedDigitSystemFont(ofSize: lineNumberFont.pointSize, weight: .semibold)
   }
 
@@ -154,11 +154,11 @@ public struct Theme {
   /// Where the reading line lies, as a fraction of the visible height from the top: the line
   /// that panes coupled by blocks align, and where a place that the pane scrolls to comes to
   /// rest.
-  public static let readingLine: CGFloat = 0.25
+  package static let readingLine: CGFloat = 0.25
 
   /// The width of the seam between two panes that connect their changes with bands: room for a
   /// band to turn, and a target for dragging the divider below it.
-  public static let seamWidth: CGFloat = 28
+  package static let seamWidth: CGFloat = 28
 
   /// The width of the outline of a match of the search in the text.
   static let searchMatchOutlineWidth: CGFloat = 1.5

@@ -7,12 +7,12 @@ import AppKit
 /// Put the view at the bottom of the window, below the panes, and lay it out at its intrinsic
 /// height, which changes when the bar opens, closes or changes its height; the view has the
 /// layout of its superview done again then.
-public final class PaneFindBar: NSView, @MainActor NSTextFinderBarContainer {
+package final class PaneFindBar: NSView, @MainActor NSTextFinderBarContainer {
   /// The search whose find bar the view shows.
   weak var search: PaneSearch?
 
   /// The find bar, which the finder of the search makes and assigns.
-  public var findBarView: NSView? {
+  package var findBarView: NSView? {
     didSet {
       guard findBarView !== oldValue else { return }
       oldValue?.removeFromSuperview()
@@ -27,7 +27,7 @@ public final class PaneFindBar: NSView, @MainActor NSTextFinderBarContainer {
   ///
   /// Closing the bar while it holds the focus hands the focus to the pane that the search
   /// started from.
-  public var isFindBarVisible = false {
+  package var isFindBarVisible = false {
     didSet {
       guard isFindBarVisible != oldValue else { return }
       let hadFocus = !isFindBarVisible && holdsFocus
@@ -45,30 +45,30 @@ public final class PaneFindBar: NSView, @MainActor NSTextFinderBarContainer {
 
   /// Tells the view that the find bar changed its height, as it does when the user shows or
   /// hides the field for replacing.
-  public func findBarViewDidChangeHeight() {
+  package func findBarViewDidChangeHeight() {
     barDidChangeHeight()
     search?.findBarDidChangeHeight()
   }
 
   /// No content to dim: the tints of the panes carry meaning.
-  public func contentView() -> NSView? {
+  package func contentView() -> NSView? {
     nil
   }
 
-  public override var isFlipped: Bool { true }
+  package override var isFlipped: Bool { true }
 
   /// The height of the find bar while it shows, and no height otherwise.
-  public override var intrinsicContentSize: NSSize {
+  package override var intrinsicContentSize: NSSize {
     NSSize(width: NSView.noIntrinsicMetric, height: barHeight)
   }
 
   /// The height that the view takes now: the height of the find bar while it shows, else 0.
-  public var barHeight: CGFloat {
+  package var barHeight: CGFloat {
     guard isFindBarVisible, let findBarView else { return 0 }
     return findBarView.frame.height
   }
 
-  public override func layout() {
+  package override func layout() {
     super.layout()
     guard let findBarView else { return }
     findBarView.frame = CGRect(x: 0, y: 0, width: bounds.width, height: findBarView.frame.height)

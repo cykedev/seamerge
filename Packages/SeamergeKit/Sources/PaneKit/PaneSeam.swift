@@ -15,21 +15,21 @@ import TextBasics
 /// them and where they are scrolled to; it lays out no text. It takes no clicks, so that the
 /// divider below it stays draggable, and VoiceOver passes it by: the bands repeat what the place,
 /// the tints and the marks of the panes say.
-public final class PaneSeam: NSView {
+package final class PaneSeam: NSView {
   /// The pane to the left of the seam.
-  public private(set) weak var leftPane: PaneView?
+  package private(set) weak var leftPane: PaneView?
 
   /// The pane to the right of the seam.
-  public private(set) weak var rightPane: PaneView?
+  package private(set) weak var rightPane: PaneView?
 
   /// The fonts, metrics and colors of the panes.
-  public var theme = Theme() {
+  package var theme = Theme() {
     didSet { needsDisplay = true }
   }
 
   /// The blocks in which the panes on either side do not differ, which get no band, as where
   /// only the other side of a merge changed; none at first.
-  public var blocksWithoutBand = IndexSet() {
+  package var blocksWithoutBand = IndexSet() {
     didSet {
       if blocksWithoutBand != oldValue {
         needsDisplay = true
@@ -39,7 +39,7 @@ public final class PaneSeam: NSView {
 
   /// Creates the seam between `leftPane` and `rightPane`, which tell it when what they show
   /// changes, in place of any seam they had on that side.
-  public init(between leftPane: PaneView, and rightPane: PaneView) {
+  package init(between leftPane: PaneView, and rightPane: PaneView) {
     self.leftPane = leftPane
     self.rightPane = rightPane
     super.init(frame: .zero)
@@ -50,7 +50,7 @@ public final class PaneSeam: NSView {
   }
 
   /// Seams are never archived.
-  public required init?(coder: NSCoder) {
+  package required init?(coder: NSCoder) {
     nil
   }
 
@@ -59,7 +59,7 @@ public final class PaneSeam: NSView {
   }
 
   /// A seam taken out of its view stops hearing from its panes; put back, it hears again.
-  public override func viewDidMoveToSuperview() {
+  package override func viewDidMoveToSuperview() {
     super.viewDidMoveToSuperview()
     if superview == nil {
       detach()
@@ -84,24 +84,24 @@ public final class PaneSeam: NSView {
     }
   }
 
-  public override var isFlipped: Bool { true }
+  package override var isFlipped: Bool { true }
 
-  public override var isOpaque: Bool { true }
+  package override var isOpaque: Bool { true }
 
   /// Clicks and drags pass through to the divider below.
-  public override func hitTest(_ point: NSPoint) -> NSView? {
+  package override func hitTest(_ point: NSPoint) -> NSView? {
     nil
   }
 
-  public override func isAccessibilityElement() -> Bool {
+  package override func isAccessibilityElement() -> Bool {
     false
   }
 
-  public override func accessibilityChildren() -> [Any]? {
+  package override func accessibilityChildren() -> [Any]? {
     []
   }
 
-  public override func draw(_ dirtyRect: NSRect) {
+  package override func draw(_ dirtyRect: NSRect) {
     let dirtyRect = dirtyRect.intersection(bounds)
     guard let context = NSGraphicsContext.current?.cgContext, !dirtyRect.isEmpty else { return }
     Theme.backgroundColor.setFill()

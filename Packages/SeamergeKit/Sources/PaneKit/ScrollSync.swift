@@ -14,11 +14,11 @@ import AppKit
 /// Sideways, all panes share one position, also while they bounce at an edge, and one scroll
 /// range: that of the pane that needs the widest, so that the text of every pane reaches as far.
 @MainActor
-public final class ScrollSync {
+package final class ScrollSync {
   /// Whether the panes follow each other; while off, each pane scrolls on its own.
   ///
   /// Turned on again, the panes follow the pane that scrolled last.
-  public var isEnabled = true {
+  package var isEnabled = true {
     didSet {
       if isEnabled && !oldValue, let lastLeader {
         follow(lastLeader)
@@ -48,7 +48,7 @@ public final class ScrollSync {
   private var trackPlaces: [ObjectIdentifier: CGFloat] = [:]
 
   /// Creates a coupling without panes.
-  public init() {}
+  package init() {}
 
   isolated deinit {
     for pane in panes.compactMap(\.pane) {
@@ -59,7 +59,7 @@ public final class ScrollSync {
   /// Couples `pane` to the panes that are already coupled.
   ///
   /// - Precondition: `pane` belongs to no coupling.
-  public func add(_ pane: PaneView) {
+  package func add(_ pane: PaneView) {
     precondition(pane.scrollSync == nil, "A pane belongs to one scroll coupling at most")
     panes.removeAll { $0.pane == nil }
     panes.append(WeakPane(pane: pane))
@@ -71,7 +71,7 @@ public final class ScrollSync {
   }
 
   /// Releases `pane`, which then scrolls on its own, and forgets its mappings.
-  public func remove(_ pane: PaneView) {
+  package func remove(_ pane: PaneView) {
     guard pane.scrollSync === self else { return }
     stopObserving(pane)
     panes.removeAll { $0.pane == nil || $0.pane === pane }
@@ -91,7 +91,7 @@ public final class ScrollSync {
   /// on the same grid.
   ///
   /// - Precondition: `first` and `second` are different panes.
-  public func setRowMapping(
+  package func setRowMapping(
     between first: PaneView, and second: PaneView,
     forward: @escaping @MainActor (Double) -> Double,
     backward: @escaping @MainActor (Double) -> Double
@@ -104,7 +104,7 @@ public final class ScrollSync {
 
   /// Ends the mappings between `first` and `second` in both directions, after which they take
   /// each other's origin, as panes on the same grid do.
-  public func removeRowMapping(between first: PaneView, and second: PaneView) {
+  package func removeRowMapping(between first: PaneView, and second: PaneView) {
     let (firstID, secondID) = (ObjectIdentifier(first), ObjectIdentifier(second))
     mappings[Pair(leader: firstID, follower: secondID)] = nil
     mappings[Pair(leader: secondID, follower: firstID)] = nil
@@ -122,7 +122,7 @@ public final class ScrollSync {
   /// track where it stands there.
   ///
   /// - Precondition: The panes belong to this coupling and show the same changed blocks.
-  public func setTrack(for panes: [PaneView]) {
+  package func setTrack(for panes: [PaneView]) {
     trackPanes = panes.map { WeakPane(pane: $0) }
     measuredTrack = nil
     trackPosition = nil
@@ -132,7 +132,7 @@ public final class ScrollSync {
   /// Moves the other panes to where `pane` stands, as if it had scrolled there: after the panes
   /// changed how they show their rows, so that they stand together again before the user
   /// scrolls; nothing happens while the panes do not follow each other.
-  public func align(to pane: PaneView) {
+  package func align(to pane: PaneView) {
     guard isEnabled, pane.scrollSync === self else { return }
     lastLeader = pane
     follow(pane)
@@ -148,7 +148,7 @@ public final class ScrollSync {
   /// Runs `body`, in which panes move without the others following, as a pane does to keep its
   /// rows in place when its collapsed runs change, or as panes do while they get new content one
   /// after the other.
-  public func withoutFollowing(_ body: () -> Void) {
+  package func withoutFollowing(_ body: () -> Void) {
     let wasSynchronizing = isSynchronizing
     isSynchronizing = true
     defer { isSynchronizing = wasSynchronizing }

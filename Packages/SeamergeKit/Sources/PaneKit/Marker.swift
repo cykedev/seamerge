@@ -1,5 +1,5 @@
 /// The mark in the gutter at the first row of a block that tells how a side changed it.
-public enum Marker: Sendable, Hashable {
+package enum Marker: Sendable, Hashable {
   /// The side added lines; shown as `+`.
   case added
   /// The side changed lines; shown as `~`.
@@ -9,7 +9,7 @@ public enum Marker: Sendable, Hashable {
 }
 
 /// The mark `!` in the gutter at the first row of a conflict.
-public enum ConflictMarker: Sendable, Hashable, CaseIterable {
+package enum ConflictMarker: Sendable, Hashable, CaseIterable {
   /// The conflict still needs a decision; drawn in the conflict color.
   case open
   /// The conflict has been decided; drawn in the secondary label color.

@@ -5,7 +5,7 @@
 /// the changed runs of a block and within previews in their own colors: the change takes
 /// precedence over the syntax.
 @MainActor
-public protocol PaneSyntaxProvider: AnyObject {
+package protocol PaneSyntaxProvider: AnyObject {
   /// The tokens of `line`, the line number that the pane's content gives its rows, in order and
   /// without overlap, in UTF-16 offsets from the start of the line.
   ///

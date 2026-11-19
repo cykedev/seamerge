@@ -3,7 +3,7 @@ import AppKit
 /// Learns where the user clicks in a pane, supplies its context menu and expands its collapsed
 /// runs.
 @MainActor
-public protocol PaneViewDelegate: AnyObject {
+package protocol PaneViewDelegate: AnyObject {
   /// Tells the delegate that the user clicked `hit` in the text or the gutter of `pane`, after
   /// the pane has handled the click; or that the user pressed the arrow of a move in the gutter,
   /// with a click or with VoiceOver, which ``PaneHit/isOnMoveArrow`` tells.

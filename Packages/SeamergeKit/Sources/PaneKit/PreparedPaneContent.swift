@@ -5,9 +5,9 @@ import Foundation
 ///
 /// Showing prepared content leaves the main actor only putting it in place, which for a text of
 /// several megabytes is a matter of a millisecond rather than of tens of them.
-public struct PreparedPaneContent: Sendable {
+package struct PreparedPaneContent: Sendable {
   /// What the pane shows.
-  public let content: PaneContent
+  package let content: PaneContent
 
   /// The rows of the text with tabs of `tabWidth` columns.
   let grid: RowGrid
@@ -20,7 +20,7 @@ public struct PreparedPaneContent: Sendable {
 
   /// Prepares `content` for a pane whose tabs are `tabWidth` columns wide; best done away from
   /// the main actor, since it takes time in proportion to the text.
-  public init(preparing content: PaneContent, tabWidth: Int) {
+  package init(preparing content: PaneContent, tabWidth: Int) {
     self.content = content
     self.tabWidth = tabWidth
     storedText = Self.storedText(of: content.text)

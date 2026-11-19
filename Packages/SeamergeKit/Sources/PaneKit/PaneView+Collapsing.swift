@@ -46,7 +46,7 @@ extension PaneView {
   ///
   /// - Returns: Whether the bar took the focus.
   @discardableResult
-  public func focusBar(of run: CollapsedRun) -> Bool {
+  package func focusBar(of run: CollapsedRun) -> Bool {
     guard let index = displayRows.runs.firstIndex(of: run) else { return false }
     layoutSubtreeIfNeeded()
     placeRunBars()

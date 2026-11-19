@@ -6,16 +6,16 @@ import AppKit
 /// Panes on different grids, such as the result of a merge and its sources, line up only by
 /// scrolling (see ``ScrollSync``), and each wraps on its own.
 @MainActor
-public final class RowAlignment {
+package final class RowAlignment {
   private var panes: [WeakPane] = []
 
   /// Creates an alignment without panes.
-  public init() {}
+  package init() {}
 
   /// Lines up the rows of `pane` with those of the panes already added.
   ///
   /// - Precondition: `pane` belongs to no alignment.
-  public func add(_ pane: PaneView) {
+  package func add(_ pane: PaneView) {
     precondition(pane.rowAlignment == nil, "A pane lines up its rows in one alignment at most")
     panes.removeAll { $0.pane == nil }
     panes.append(WeakPane(pane: pane))
@@ -24,7 +24,7 @@ public final class RowAlignment {
   }
 
   /// Releases `pane`, whose rows then take the lines of its own text alone.
-  public func remove(_ pane: PaneView) {
+  package func remove(_ pane: PaneView) {
     guard pane.rowAlignment === self else { return }
     panes.removeAll { $0.pane == nil || $0.pane === pane }
     pane.rowAlignment = nil

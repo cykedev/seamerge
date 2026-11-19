@@ -4,7 +4,7 @@
 /// read the lines they need and keep only tokens and the state at the end of each line. After
 /// a change, lexing goes on past the changed lines only until a line ends in the same state as
 /// before, so typing usually costs one line.
-public struct LexedText: Sendable {
+package struct LexedText: Sendable {
   private let lexer: Lexer
   private var lines: [LexedLine]
 
@@ -14,7 +14,7 @@ public struct LexedText: Sendable {
   ///   - language: The language of the text; `LanguageDescription.plainText` yields no
   ///     tokens.
   ///   - lines: The lines of the text. A line may end in its line break.
-  public init<Lines: Sequence>(language: LanguageDescription, lines: Lines)
+  package init<Lines: Sequence>(language: LanguageDescription, lines: Lines)
   where Lines.Element: StringProtocol {
     lexer = Lexer(language: language)
     var lexedLines: [LexedLine] = []
@@ -29,13 +29,13 @@ public struct LexedText: Sendable {
   }
 
   /// The number of lines.
-  public var lineCount: Int { lines.count }
+  package var lineCount: Int { lines.count }
 
   /// The tokens of a line, in order and without overlap, in UTF-16 offsets from the start of
   /// the line.
   ///
   /// - Precondition: `line` lies within `0..<lineCount`.
-  public func tokens(inLine line: Int) -> [SyntaxToken] {
+  package func tokens(inLine line: Int) -> [SyntaxToken] {
     precondition(lines.indices.contains(line), "Line \(line) is out of range")
     return lines[line].tokens
   }
@@ -51,7 +51,7 @@ public struct LexedText: Sendable {
   ///   of the other lines are unchanged.
   /// - Precondition: `range` lies within `0...lineCount`.
   @discardableResult
-  public mutating func replaceLines<Line: StringProtocol>(
+  package mutating func replaceLines<Line: StringProtocol>(
     in range: Range<Int>, withLineCount lineCount: Int, text: (Int) -> Line
   ) -> Range<Int> {
     precondition(

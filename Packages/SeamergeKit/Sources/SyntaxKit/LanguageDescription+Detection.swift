@@ -1,6 +1,6 @@
 extension LanguageDescription {
   /// Every language SyntaxKit describes, apart from plain text.
-  public static let all: [LanguageDescription] = [
+  package static let all: [LanguageDescription] = [
     .swift, .objectiveC, .c, .cPlusPlus, .java, .kotlin, .cSharp, .javaScript, .typeScript,
     .python, .ruby, .go, .rust, .php, .shell, .sql, .html, .xml, .css, .scss, .json, .yaml,
     .toml, .markdown,
@@ -17,7 +17,7 @@ extension LanguageDescription {
   ///   - fileName: The name of the file, with or without its folder.
   ///   - firstLine: The first line of the file, or the empty string if it is not known.
   /// - Returns: The language, or `plainText` if neither name nor first line is recognized.
-  public init(fileName: String, firstLine: String = "") {
+  package init(fileName: String, firstLine: String = "") {
     self = Self.language(fileName: fileName, firstLine: firstLine) ?? .plainText
   }
 

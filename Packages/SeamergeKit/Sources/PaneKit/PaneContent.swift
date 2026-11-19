@@ -5,59 +5,59 @@ import TextBasics
 ///
 /// Row *r* is paragraph *r* of the text, so panes with the same number of rows have the same
 /// height and their rows line up.
-public struct PaneContent: Sendable {
+package struct PaneContent: Sendable {
   /// The text of the rows, separated by line feeds.
-  public var text: String
+  package var text: String
 
   /// The zero-based number of the line that each row shows, or -1 for a filler row.
   ///
   /// In a pane with ``sideLineNumbers``, the numbers count the rows of the pane itself, from 0,
   /// and the gutter shows the numbers of both sides instead.
-  public var lineNumbers: [Int32]
+  package var lineNumbers: [Int32]
 
   /// The line numbers of both files of a comparison, for a pane that shows them in one column,
   /// which the gutter shows in two columns; `nil` for a pane of one file.
   ///
   /// An edit of the text drops them, as it cannot tell which file the rewritten rows belong to;
   /// the gutter then numbers the rows of the pane until the owner gives the exact content.
-  public private(set) var sideLineNumbers: SideLineNumbers?
+  package private(set) var sideLineNumbers: SideLineNumbers?
 
   /// The blocks, in row order and without overlap.
   ///
   /// Rows outside every block are unchanged.
-  public var blocks: [PaneBlock]
+  package var blocks: [PaneBlock]
 
   /// The rows whose line differs from the line it is compared with, although the comparison
   /// counts both as equal.
-  public var ignoredDifferenceRows: IndexSet
+  package var ignoredDifferenceRows: IndexSet
 
   /// The places within the rows of ``ignoredDifferenceRows`` where they differ, as UTF-16
   /// ranges of the text, sorted and apart; empty unless the places are to be shown.
-  public var ignoredDifferencePlaces: [Range<Int>]
+  package var ignoredDifferencePlaces: [Range<Int>]
 
   /// How the line of each row ends in the file, shown among the invisible characters; `nil` for
   /// the last line of a file without a final line break and for a filler row.
   ///
   /// The text of a pane separates its rows with line feeds whatever the file uses, so the pane
   /// learns the real ending of each line from here.
-  public var lineEndings: [LineEnding?]
+  package var lineEndings: [LineEnding?]
 
   /// The rows tinted otherwise than their block, or tinted outside every block, by row: lines
   /// typed by hand, and the lines of a block that takes the texts of several sources, each in
   /// the tint of its own source.
-  public var rowTints: [Int: BlockStyle]
+  package var rowTints: [Int: BlockStyle]
 
   /// The parts of the text that show a preview of what a conflict offers rather than text of the
   /// file, in order and without overlap.
   ///
   /// A preview is drawn quieter than text and cannot be entered: the insertion point skips it,
   /// and copying leaves it out. Its rows are tinted in the color of its side.
-  public var previews: [PanePreview]
+  package var previews: [PanePreview]
 
   /// Whether a block without rows shows as a hairline across the pane, with its marks in the
   /// gutter, on the boundary where its lines are missing: on a pane that connects its changes to
   /// those of its neighbors rather than filling rows to line up with them.
-  public var marksBlocksWithoutRows: Bool
+  package var marksBlocksWithoutRows: Bool
 
   /// Creates the content of a pane.
   ///
@@ -68,7 +68,7 @@ public struct PaneContent: Sendable {
   ///   blocks are sorted, do not overlap and lie within the rows; the previews are sorted, do not
   ///   overlap and lie within the text; the rows of the tints lie within the rows;
   ///   `sideLineNumbers` has as many rows as `lineNumbers`.
-  public init(
+  package init(
     text: String, lineNumbers: [Int32], sideLineNumbers: SideLineNumbers? = nil,
     blocks: [PaneBlock] = [], ignoredDifferenceRows: IndexSet = [],
     ignoredDifferencePlaces: [Range<Int>] = [], lineEndings: [LineEnding?]? = nil,
@@ -95,7 +95,7 @@ public struct PaneContent: Sendable {
   }
 
   /// A pane without text.
-  public static let empty = PaneContent(text: "", lineNumbers: [-1])
+  package static let empty = PaneContent(text: "", lineNumbers: [-1])
 
   /// The index of the block that `row` belongs to, or `nil` if the row is unchanged.
   func blockIndex(atRow row: Int) -> Int? {
@@ -194,17 +194,17 @@ extension PaneContent {
 }
 
 /// A part of a pane's text that shows a preview of the lines one side offers for a conflict.
-public struct PanePreview: Sendable, Hashable {
+package struct PanePreview: Sendable, Hashable {
   /// The text of the preview, in UTF-16 code units, the line ending of its last line included.
-  public var range: Range<Int>
+  package var range: Range<Int>
 
   /// The side whose lines the preview shows, which tints its rows.
-  public var role: ColorRole
+  package var role: ColorRole
 
   /// Creates a preview of the text in `range`, showing the lines of `role`.
   ///
   /// - Precondition: `range` is not empty.
-  public init(range: Range<Int>, role: ColorRole) {
+  package init(range: Range<Int>, role: ColorRole) {
     precondition(!range.isEmpty, "A preview shows at least one character")
     self.range = range
     self.role = role
@@ -234,22 +234,22 @@ public struct PanePreview: Sendable, Hashable {
 }
 
 /// A run of rows that changed on at least one side, as one pane shows it.
-public struct PaneBlock: Sendable, Hashable {
+package struct PaneBlock: Sendable, Hashable {
   /// The rows of the block on the grid.
-  public var rows: Range<Int>
+  package var rows: Range<Int>
 
   /// How the rows are tinted.
-  public var style: BlockStyle
+  package var style: BlockStyle
 
   /// How this pane's side changed the block, or `nil` if it did not.
-  public var marker: Marker?
+  package var marker: Marker?
 
   /// The mark of a conflict, shown on the base pane, or on B while the base is hidden.
-  public var conflict: ConflictMarker?
+  package var conflict: ConflictMarker?
 
   /// The arrow to the other end, if the block is an end of a move; it takes the place of
   /// ``marker``, which still says how the side changed the block.
-  public var move: MoveMark?
+  package var move: MoveMark?
 
   /// The rows of the second file below those of the first, in a pane that shows both files of
   /// a comparison in one column, with a tint and a mark of their own; `nil` where the block has
@@ -257,12 +257,12 @@ public struct PaneBlock: Sendable, Hashable {
   ///
   /// ``style`` and ``marker`` then belong to the rows above the part. A hairline divides the two
   /// parts as it divides two blocks that touch.
-  public var lowerPart: PaneBlockPart?
+  package var lowerPart: PaneBlockPart?
 
   /// Creates a block.
   ///
   /// - Precondition: `lowerPart` starts below the first row of the block and within it.
-  public init(
+  package init(
     rows: Range<Int>, style: BlockStyle, marker: Marker? = nil, conflict: ConflictMarker? = nil,
     move: MoveMark? = nil, lowerPart: PaneBlockPart? = nil
   ) {
@@ -299,18 +299,18 @@ public struct PaneBlock: Sendable, Hashable {
 
 /// The lower part of a block in a pane that shows both files of a comparison in one column: the
 /// rows of the second file, from a row of the block to its end.
-public struct PaneBlockPart: Sendable, Hashable {
+package struct PaneBlockPart: Sendable, Hashable {
   /// The first row of the part, which runs to the end of its block.
-  public var firstRow: Int
+  package var firstRow: Int
 
   /// How the rows of the part are tinted.
-  public var style: BlockStyle
+  package var style: BlockStyle
 
   /// How the second file changed the block, shown at the first row of the part, or `nil`.
-  public var marker: Marker?
+  package var marker: Marker?
 
   /// Creates the part of a block from `firstRow` to the end of the block.
-  public init(firstRow: Int, style: BlockStyle, marker: Marker? = nil) {
+  package init(firstRow: Int, style: BlockStyle, marker: Marker? = nil) {
     self.firstRow = firstRow
     self.style = style
     self.marker = marker

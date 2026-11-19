@@ -4,17 +4,17 @@
 /// A row that both files share has both numbers, a removed line only the left one, an added line
 /// only the right one. The gutter shows them in two columns, each as wide as the largest number
 /// of either file needs.
-public struct SideLineNumbers: Sendable, Hashable {
+package struct SideLineNumbers: Sendable, Hashable {
   /// The zero-based number of the line of the left file that each row shows, or -1.
-  public let left: [Int32]
+  package let left: [Int32]
 
   /// The zero-based number of the line of the right file that each row shows, or -1.
-  public let right: [Int32]
+  package let right: [Int32]
 
   /// Creates the line numbers of both files.
   ///
   /// - Precondition: Both have one entry per row, and each row shows a line of at least one file.
-  public init(left: [Int32], right: [Int32]) {
+  package init(left: [Int32], right: [Int32]) {
     precondition(left.count == right.count, "Line numbers of both sides for different rows")
     precondition(
       zip(left, right).allSatisfy { $0 >= 0 || $1 >= 0 }, "A row shows a line of neither side")

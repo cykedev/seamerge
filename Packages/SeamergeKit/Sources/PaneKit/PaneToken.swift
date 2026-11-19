@@ -1,7 +1,7 @@
 /// A stretch of a line that the pane colors by what it is in the code.
-public struct PaneToken: Sendable, Hashable {
+package struct PaneToken: Sendable, Hashable {
   /// What a stretch of code is, which decides its color.
-  public enum Kind: Sendable, Hashable, CaseIterable {
+  package enum Kind: Sendable, Hashable, CaseIterable {
     /// A reserved word of the language, or a directive.
     case keyword
 
@@ -16,13 +16,13 @@ public struct PaneToken: Sendable, Hashable {
   }
 
   /// The stretch in UTF-16 code units, counted from the start of the line.
-  public var range: Range<Int>
+  package var range: Range<Int>
 
   /// What the stretch is.
-  public var kind: Kind
+  package var kind: Kind
 
   /// Creates a token of `kind` over `range` of its line.
-  public init(range: Range<Int>, kind: Kind) {
+  package init(range: Range<Int>, kind: Kind) {
     self.range = range
     self.kind = kind
   }

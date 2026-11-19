@@ -1,9 +1,9 @@
 import Foundation
 
 /// A file as read from disk: its bytes and, unless it is binary, its decoded text.
-public struct LoadedFile: Sendable {
+package struct LoadedFile: Sendable {
   /// What a file holds.
-  public enum Content: Sendable {
+  package enum Content: Sendable {
     /// Text in a recognized encoding.
     case text(DecodedText)
 
@@ -12,13 +12,13 @@ public struct LoadedFile: Sendable {
   }
 
   /// The bytes of the file, exactly as they are on disk.
-  public let bytes: Data
+  package let bytes: Data
 
   /// The decoded text, or the verdict that the file is binary.
-  public let content: Content
+  package let content: Content
 
   /// Whether the file is binary and has no text.
-  public var isBinary: Bool {
+  package var isBinary: Bool {
     if case .binary = content { true } else { false }
   }
 
@@ -32,7 +32,7 @@ public struct LoadedFile: Sendable {
   ///   - encoding: The encoding to read the file in, or `nil` to recognize it.
   /// - Throws: ``TextIOError/invalidBytes(_:)`` if the file is not valid in `encoding`, or the
   ///   error of the file system if the file cannot be read.
-  public init(contentsOf url: URL, encoding: TextEncoding? = nil) throws {
+  package init(contentsOf url: URL, encoding: TextEncoding? = nil) throws {
     try self.init(bytes: Data(contentsOf: url, options: .mappedIfSafe), encoding: encoding)
   }
 
@@ -52,7 +52,7 @@ public struct LoadedFile: Sendable {
   ///   - bytes: The content of a file.
   ///   - encoding: The encoding to decode the bytes in, or `nil` to recognize it.
   /// - Throws: ``TextIOError/invalidBytes(_:)`` if the bytes are not valid in `encoding`.
-  public init(bytes: Data, encoding: TextEncoding? = nil) throws(TextIOError) {
+  package init(bytes: Data, encoding: TextEncoding? = nil) throws(TextIOError) {
     self.bytes = bytes
     if let encoding {
       guard let text = DecodedText(bytes: bytes, encoding: encoding) else {

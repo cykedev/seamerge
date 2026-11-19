@@ -5,7 +5,7 @@ extension PaneView {
   /// after them with an ellipsis.
   ///
   /// The text of the pane keeps the whole line: copying, saving and editing see all of it.
-  public nonisolated static let maximumShownLineLength = 20_000
+  package nonisolated static let maximumShownLineLength = 20_000
 }
 
 /// How a pane shows a line too long to show whole: cut after

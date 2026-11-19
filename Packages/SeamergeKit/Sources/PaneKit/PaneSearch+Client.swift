@@ -7,14 +7,14 @@ import AppKit
 /// into a pane and a range of its text.
 extension PaneSearch: @MainActor NSTextFinderClient {
   /// Matches can be selected in the panes.
-  public var isSelectable: Bool { true }
+  package var isSelectable: Bool { true }
 
   /// One selection in one pane: the finder cannot select matches in several panes at once.
-  public var allowsMultipleSelection: Bool { false }
+  package var allowsMultipleSelection: Bool { false }
 
   /// Whether text can be replaced: in the pane that the search is limited to, or in the
   /// replaceable pane, which the field for replacing limits the search to as it comes.
-  public var isEditable: Bool {
+  package var isEditable: Bool {
     editablePane != nil || replaceablePane?.editingDelegate != nil
   }
 
@@ -26,14 +26,14 @@ extension PaneSearch: @MainActor NSTextFinderClient {
   /// without one reaches from one line, section or pane into the next. The finder asks on the
   /// main thread before it searches, which is when the search takes the text anew after a
   /// change; from any other thread, it gets the copy taken last.
-  public nonisolated var string: String {
+  package nonisolated var string: String {
     guard Thread.isMainThread else { return snapshot.withLock(\.string) }
     return MainActor.assumeIsolated { searchText().string }
   }
 
   /// The selection of the pane that Find Next starts from, in the search text: within the piece
   /// of its line, or empty at the next piece if it starts where the search does not go.
-  public var firstSelectedRange: NSRange {
+  package var firstSelectedRange: NSRange {
     let text = searchText()
     guard let pane = selectionPane, let index = panes.firstIndex(where: { $0 === pane }),
       let selection = Range(pane.textView.selectedRange()),
@@ -51,7 +51,7 @@ extension PaneSearch: @MainActor NSTextFinderClient {
   ///
   /// A match that reaches from one line into the next, as for a search for a line break, is no
   /// match in a pane: the selection goes to its end, where Find Next goes on.
-  public var selectedRanges: [NSValue] {
+  package var selectedRanges: [NSValue] {
     get { [NSValue(range: firstSelectedRange)] }
     set {
       guard let first = newValue.first.flatMap({ Range($0.rangeValue) }) else { return }
@@ -76,7 +76,7 @@ extension PaneSearch: @MainActor NSTextFinderClient {
   /// The finder calls this for the current match, after Find Next, Find Previous or a search as
   /// the user types. Besides the outline that every match has and the find indicator, which
   /// fades, the selection marks the current match for as long as it stays there.
-  public func scrollRangeToVisible(_ range: NSRange) {
+  package func scrollRangeToVisible(_ range: NSRange) {
     guard let searched = Range(range), let place = searchText().paneRange(of: searched) else {
       return
     }
@@ -92,7 +92,7 @@ extension PaneSearch: @MainActor NSTextFinderClient {
 
   /// The text view of the pane that shows the character at `index`, with the longest range of
   /// the search text around it that the pane shows.
-  public func contentView(
+  package func contentView(
     at index: Int, effectiveCharacterRange outRange: NSRangePointer
   ) -> NSView {
     guard let stretch = searchText().paneStretch(containing: index) else {
@@ -105,7 +105,7 @@ extension PaneSearch: @MainActor NSTextFinderClient {
 
   /// The rectangles of `range` of the search text in the text view of its pane, where the
   /// finder shows its indicator.
-  public func rects(forCharacterRange range: NSRange) -> [NSValue]? {
+  package func rects(forCharacterRange range: NSRange) -> [NSValue]? {
     guard let searched = Range(range), let place = searchText().paneRange(of: searched) else {
       return nil
     }
@@ -113,7 +113,7 @@ extension PaneSearch: @MainActor NSTextFinderClient {
   }
 
   /// The parts of the search text that the panes show now.
-  public var visibleCharacterRanges: [NSValue] {
+  package var visibleCharacterRanges: [NSValue] {
     let text = searchText()
     return panes.indices.flatMap { index in
       text.searchRanges(within: panes[index].textView.visibleTextRange, ofPane: index)
@@ -123,7 +123,7 @@ extension PaneSearch: @MainActor NSTextFinderClient {
   }
 
   /// Draws the characters of `range` of the search text as the find indicator shows them.
-  public func drawCharacters(in range: NSRange, forContentView view: NSView) {
+  package func drawCharacters(in range: NSRange, forContentView view: NSView) {
     guard let searched = Range(range), let place = searchText().paneRange(of: searched),
       panes[place.pane].textView === view
     else { return }
@@ -135,7 +135,7 @@ extension PaneSearch: @MainActor NSTextFinderClient {
   ///
   /// A match that reaches from one line into the next belongs to no pane and stays as it is;
   /// the others are replaced.
-  public func shouldReplaceCharacters(inRanges ranges: [NSValue], with strings: [String]) -> Bool {
+  package func shouldReplaceCharacters(inRanges ranges: [NSValue], with strings: [String]) -> Bool {
     guard let pane = editablePane else { return false }
     let text = searchText()
     let paneIndex = panes.firstIndex { $0 === pane }
@@ -157,7 +157,7 @@ extension PaneSearch: @MainActor NSTextFinderClient {
   ///
   /// The finder replaces from the last match to the first, so the ranges refer to the text that
   /// the replacement began in, which the search keeps until the replacement is over.
-  public func replaceCharacters(in range: NSRange, with string: String) {
+  package func replaceCharacters(in range: NSRange, with string: String) {
     guard let pane = editablePane, let searched = Range(range),
       let place = searchText().paneRange(of: searched), panes[place.pane] === pane
     else { return }
@@ -165,7 +165,7 @@ extension PaneSearch: @MainActor NSTextFinderClient {
   }
 
   /// Ends the replacement: its edits become one step of undo, named after it.
-  public func didReplaceCharacters() {
+  package func didReplaceCharacters() {
     guard let (undoManager, replacesAll) = replacement else { return }
     replacement = nil
     // Replace All leaves no match of the search; the finder searches again only as the search
@@ -182,7 +182,7 @@ extension PaneSearch: @MainActor NSTextFinderClient {
 
   /// The name of the step of undo that replacing makes: Replace All for all matches, also if
   /// there is only one, else Replace.
-  public static func undoActionName(replacingAll replacesAll: Bool) -> String {
+  package static func undoActionName(replacingAll replacesAll: Bool) -> String {
     replacesAll
       ? String(localized: "Replace All", bundle: .module)
       : String(localized: "Replace", bundle: .module)

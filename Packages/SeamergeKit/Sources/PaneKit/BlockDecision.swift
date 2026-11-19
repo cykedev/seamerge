@@ -1,8 +1,8 @@
 /// What the decision column shows for one block of the result: its bar of toggles, which also
 /// shows its state, and beside it the arrow that resets it.
-public struct BlockDecision: Sendable, Hashable {
+package struct BlockDecision: Sendable, Hashable {
   /// How the block came by its text, which its toggles show.
-  public enum State: Sendable, Hashable {
+  package enum State: Sendable, Hashable {
     /// The block has the text it was loaded with; the toggles that are on show tinted.
     case unchanged
     /// The merge took the sources given; their toggles show tinted.
@@ -17,19 +17,19 @@ public struct BlockDecision: Sendable, Hashable {
   }
 
   /// How the block came by its text.
-  public var state: State
+  package var state: State
 
   /// The toggles of the block, one to three, in the order they stand.
-  public var toggles: [DecisionToggle]
+  package var toggles: [DecisionToggle]
 
   /// Whether the block differs from how it was loaded, so that an arrow beside its toggles
   /// offers to reset it.
-  public var canReset: Bool
+  package var canReset: Bool
 
   /// Creates what the column shows for a block.
   ///
   /// - Precondition: There are one to three toggles.
-  public init(state: State, toggles: [DecisionToggle], canReset: Bool = false) {
+  package init(state: State, toggles: [DecisionToggle], canReset: Bool = false) {
     precondition((1...3).contains(toggles.count), "A block has one to three toggles")
     self.state = state
     self.toggles = toggles
@@ -39,7 +39,7 @@ public struct BlockDecision: Sendable, Hashable {
 
 extension BlockDecision.State {
   /// What VoiceOver says for the state of a block, or `nil` for an unchanged block.
-  @MainActor public var spokenName: String? {
+  @MainActor package var spokenName: String? {
     func names(_ roles: [ColorRole]) -> String {
       roles.map(DecisionToggleButton.name(of:)).joined(separator: ", ")
     }
@@ -100,27 +100,27 @@ extension BlockDecision.State {
 }
 
 /// A switch that adds the text of one or more inputs to a block of the result, or takes it out.
-public struct DecisionToggle: Sendable, Hashable {
+package struct DecisionToggle: Sendable, Hashable {
   /// The inputs that share the toggle because they have the same text in the block, in the order
   /// base, A, B; each shows in a segment of its own, and the segments switch together.
-  public var roles: [ColorRole]
+  package var roles: [ColorRole]
 
   /// Whether the toggle is switched on.
-  public var isOn: Bool
+  package var isOn: Bool
 
   /// Whether switching the toggle on follows its inputs in removing the block's lines; its
   /// segments show a trash can in place of their letters.
-  public var isDeletion: Bool
+  package var isDeletion: Bool
 
   /// What switching the toggle does, in a whole sentence with the real names, such as "Take the
   /// version of feature/login."; shown as its help tag and read by VoiceOver.
-  public var help: String
+  package var help: String
 
   /// Creates a toggle.
   ///
   /// - Precondition: `roles` names at least one of A, base and B, and not the conflict; a toggle
   ///   that follows a deletion does not include the base, whose lines a deletion removes.
-  public init(roles: [ColorRole], isOn: Bool, isDeletion: Bool = false, help: String) {
+  package init(roles: [ColorRole], isOn: Bool, isDeletion: Bool = false, help: String) {
     precondition(
       !roles.isEmpty && !roles.contains(.conflict), "A toggle stands for one or more inputs")
     precondition(!(isDeletion && roles.contains(.base)), "The base never follows a deletion")

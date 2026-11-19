@@ -2,7 +2,7 @@
 ///
 /// The style says what the rows are, not which color they get; the theme picks the color, so
 /// that every pane tints the same kind of row the same way.
-public enum BlockStyle: Sendable, Hashable {
+package enum BlockStyle: Sendable, Hashable {
   /// Rows that no side changed, and rows of the side that kept the text that the other side
   /// changed. They stay on the text background.
   case unchanged

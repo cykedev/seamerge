@@ -1,7 +1,7 @@
 import Foundation
 
 /// A text encoding that files are read in and written in.
-public enum TextEncoding: Sendable, Hashable, CaseIterable {
+package enum TextEncoding: Sendable, Hashable, CaseIterable {
   /// UTF-8.
   case utf8
 
@@ -30,7 +30,7 @@ public enum TextEncoding: Sendable, Hashable, CaseIterable {
   /// Whether a file in this encoding can start with a byte order mark.
   ///
   /// Only the Unicode encodings have one.
-  public var supportsByteOrderMark: Bool { byteOrderMark != nil }
+  package var supportsByteOrderMark: Bool { byteOrderMark != nil }
 
   /// The bytes of the byte order mark, or `nil` for an encoding without one.
   var byteOrderMark: [UInt8]? {

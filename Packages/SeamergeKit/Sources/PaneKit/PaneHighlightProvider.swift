@@ -4,7 +4,7 @@
 /// A pane asks only for the blocks it is about to draw, and asks for each block once until its
 /// content or its provider changes.
 @MainActor
-public protocol PaneHighlightProvider: AnyObject {
+package protocol PaneHighlightProvider: AnyObject {
   /// The changed runs of the block at `block` in the pane's blocks, as UTF-16 offsets into the
   /// pane's text, sorted and without overlap.
   ///

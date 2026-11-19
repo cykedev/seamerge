@@ -15,9 +15,9 @@ import AppKit
 /// Install the column on a pane with ``PaneView/decisionColumn``; the pane places it beside its
 /// text and keeps it in step with its rows and its scroll position. Its width follows from the
 /// slots, so that it never changes.
-public final class DecisionColumnView: NSView {
+package final class DecisionColumnView: NSView {
   /// The colors and fonts of the column.
-  public var theme = Theme() {
+  package var theme = Theme() {
     didSet {
       for row in rowsByBlock.values {
         row.theme = theme
@@ -33,7 +33,7 @@ public final class DecisionColumnView: NSView {
   /// What the column shows for each block, by the index of the block in the pane's content.
   ///
   /// A block without an entry has no row.
-  public var decisions: [Int: BlockDecision] = [:] {
+  package var decisions: [Int: BlockDecision] = [:] {
     didSet {
       // Decisions that come from anything but the press of the pinned row, such as typing or a
       // command of the keyboard or the menu, end its hold.
@@ -47,10 +47,10 @@ public final class DecisionColumnView: NSView {
   /// Whether the toggles and the reset arrows take the keyboard focus, so that Tab reaches them,
   /// the side arrow keys move between them and Space presses them, as Keyboard Navigation in the
   /// settings of the system asks.
-  public var navigatesWithKeyboard = false
+  package var navigatesWithKeyboard = false
 
   /// Learns what the user presses; the column does not retain it.
-  public weak var delegate: (any DecisionColumnDelegate)?
+  package weak var delegate: (any DecisionColumnDelegate)?
 
   /// The pane that the column stands in.
   weak var host: (any DecisionColumnHost)?
@@ -76,17 +76,17 @@ public final class DecisionColumnView: NSView {
   private var isPressing = false
 
   /// Creates an empty column.
-  public init() {
+  package init() {
     super.init(frame: .zero)
     clipsToBounds = true
   }
 
   /// Decision columns are never archived.
-  public required init?(coder: NSCoder) {
+  package required init?(coder: NSCoder) {
     nil
   }
 
-  public override var isFlipped: Bool { true }
+  package override var isFlipped: Bool { true }
 
   /// Where the parts of its rows stand, for the rows of the text of the theme.
   var layout: DecisionColumnLayout {
@@ -227,7 +227,7 @@ public final class DecisionColumnView: NSView {
   }
 
   /// Ends the hold of the pinned row once the pointer leaves it.
-  public override func mouseExited(with event: NSEvent) {
+  package override func mouseExited(with event: NSEvent) {
     guard pinnedRow != nil else { return }
     releasePinnedRow()
     update()
@@ -236,7 +236,7 @@ public final class DecisionColumnView: NSView {
   /// Gives the keyboard focus to the first toggle of `block`, under Keyboard Navigation.
   ///
   /// - Returns: Whether a toggle took the focus; not if the block shows no row.
-  public func focusToggles(ofBlock block: Int) -> Bool {
+  package func focusToggles(ofBlock block: Int) -> Bool {
     guard navigatesWithKeyboard, let window,
       let control = rowsByBlock[block]?.controls.first(where: \.acceptsFirstResponder)
     else { return false }
@@ -250,27 +250,27 @@ public final class DecisionColumnView: NSView {
 
   /// The column takes the focus of a result in block mode, after a click beside its text, so
   /// that single keys decide blocks rather than type; Tab passes it by for its controls.
-  public override var acceptsFirstResponder: Bool { true }
+  package override var acceptsFirstResponder: Bool { true }
 
-  public override var canBecomeKeyView: Bool { false }
+  package override var canBecomeKeyView: Bool { false }
 
-  public override func becomeFirstResponder() -> Bool {
+  package override func becomeFirstResponder() -> Bool {
     defer { host?.focusDidChange() }
     return super.becomeFirstResponder()
   }
 
-  public override func resignFirstResponder() -> Bool {
+  package override func resignFirstResponder() -> Bool {
     defer { host?.focusDidChange() }
     return super.resignFirstResponder()
   }
 
   /// Scrolls the text for the page keys while the column has the focus; other keys that reach
   /// the column do nothing, as in block mode.
-  public override func keyDown(with event: NSEvent) {
+  package override func keyDown(with event: NSEvent) {
     interpretKeyEvents([event])
   }
 
-  public override func doCommand(by selector: Selector) {
+  package override func doCommand(by selector: Selector) {
     if Self.scrollingCommands.contains(selector) {
       host?.scrollText(selector)
     }
@@ -283,14 +283,14 @@ public final class DecisionColumnView: NSView {
     #selector(NSResponder.scrollToEndOfDocument(_:)),
   ]
 
-  public override func draw(_ dirtyRect: NSRect) {
+  package override func draw(_ dirtyRect: NSRect) {
     Theme.backgroundColor.setFill()
     dirtyRect.fill()
   }
 
   /// Gives the pane the focus and tells the delegate which block the click is beside; a click on
   /// a control reaches the control instead.
-  public override func mouseDown(with event: NSEvent) {
+  package override func mouseDown(with event: NSEvent) {
     focusPane()
     guard let block = block(atY: convert(event.locationInWindow, from: nil).y) else { return }
     delegate?.decisionColumn(self, didClickBlock: block)
@@ -298,7 +298,7 @@ public final class DecisionColumnView: NSView {
 
   /// The control under `point`: where the rows of blocks on lines one after the other reach into
   /// each other, the row whose middle lies nearest to the point.
-  public override func hitTest(_ point: NSPoint) -> NSView? {
+  package override func hitTest(_ point: NSPoint) -> NSView? {
     let local = convert(point, from: superview)
     guard !isHidden, bounds.contains(local) else { return nil }
     let nearest = rows.filter { $0.frame.contains(local) }
@@ -307,26 +307,26 @@ public final class DecisionColumnView: NSView {
   }
 
   /// Passes scrolling on to the pane, which scrolls its text.
-  public override func scrollWheel(with event: NSEvent) {
+  package override func scrollWheel(with event: NSEvent) {
     nextResponder?.scrollWheel(with: event)
   }
 
-  public override func isAccessibilityElement() -> Bool {
+  package override func isAccessibilityElement() -> Bool {
     true
   }
 
-  public override func accessibilityRole() -> NSAccessibility.Role? {
+  package override func accessibilityRole() -> NSAccessibility.Role? {
     .group
   }
 
-  public override func accessibilityLabel() -> String? {
+  package override func accessibilityLabel() -> String? {
     String(
       localized: "Decisions", bundle: .module,
       comment: "VoiceOver: the column beside the result that shows how each block was decided.")
   }
 
   /// The rows of the blocks in view, from top to bottom.
-  public override func accessibilityChildren() -> [Any]? {
+  package override func accessibilityChildren() -> [Any]? {
     rows.filter { bounds.intersects($0.frame) }
   }
 }

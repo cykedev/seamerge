@@ -2,23 +2,23 @@ import AppKit
 
 extension Theme {
   /// The color behind the text and the gutter.
-  public static var backgroundColor: NSColor { .textBackgroundColor }
+  package static var backgroundColor: NSColor { .textBackgroundColor }
 
   /// The color of the code.
-  public static var textColor: NSColor { .textColor }
+  package static var textColor: NSColor { .textColor }
 
   /// The color of the line numbers and marks on the gutter cells of the current block, as text
   /// on a selection of content.
-  public static func currentCellContentColor(isEmphasized: Bool) -> NSColor {
+  package static func currentCellContentColor(isEmphasized: Bool) -> NSColor {
     isEmphasized ? .alternateSelectedControlTextColor : .labelColor
   }
 
   /// The color of marks that say something without a role: the ring of an ignored difference
   /// and the mark of a resolved conflict.
-  public static var secondaryMarkColor: NSColor { .secondaryLabelColor }
+  package static var secondaryMarkColor: NSColor { .secondaryLabelColor }
 
   /// The color of the line numbers: quieter than the code, yet as legible as any text.
-  public var lineNumberColor: NSColor {
+  package var lineNumberColor: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.lineNumberOpacity[appearance])
@@ -27,7 +27,7 @@ extension Theme {
 
   /// The color of the preview of a conflict in the result: quieter than real text, yet legible
   /// on every row tint of A and B.
-  public var previewTextColor: NSColor {
+  package var previewTextColor: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.previewTextOpacity[appearance])
@@ -37,7 +37,7 @@ extension Theme {
   /// The color of code of `kind`: violet for keywords, rust for strings and numbers, both apart
   /// from the four role colors, and a quiet gray for comments; each legible as text on every
   /// row tint.
-  public func syntaxColor(for kind: PaneToken.Kind) -> NSColor {
+  package func syntaxColor(for kind: PaneToken.Kind) -> NSColor {
     color { appearance, nsAppearance in
       switch kind {
       case .keyword: NSColor(rgb: Palette.keyword[appearance])
@@ -51,7 +51,7 @@ extension Theme {
 
   /// The color of the invisible characters: quiet beside the code, yet legible on every tint and
   /// within a selection.
-  public var invisibleCharacterColor: NSColor {
+  package var invisibleCharacterColor: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.invisibleCharacterOpacity[appearance])
@@ -60,7 +60,7 @@ extension Theme {
 
   /// The fill behind the places where a line differs in a way that the comparison ignores, such
   /// as other whitespace: a pale gray, like the hollow ring of such a line in the gutter.
-  public var ignoredDifferenceFill: NSColor {
+  package var ignoredDifferenceFill: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.ignoredDifferenceOpacity[appearance])
@@ -69,7 +69,7 @@ extension Theme {
 
   /// The color of the spaces and tabs in a place of an ignored difference, which say what differs
   /// there.
-  public var ignoredDifferenceSymbolColor: NSColor {
+  package var ignoredDifferenceSymbolColor: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.ignoredDifferenceSymbolOpacity[appearance])
@@ -78,7 +78,7 @@ extension Theme {
 
   /// The color of the mark of a match of the search in the text: the label color, so that the
   /// shape of the mark, not a color of its own, tells it from the tints and the selection.
-  public var searchMatchColor: NSColor {
+  package var searchMatchColor: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.searchMatchOpacity[appearance])
@@ -87,7 +87,7 @@ extension Theme {
 
   /// The color of the stroke of a match in the overview bar: the label color, above the marks
   /// of the blocks.
-  public var overviewMatchColor: NSColor {
+  package var overviewMatchColor: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.overviewMatchOpacity[appearance])
@@ -95,7 +95,7 @@ extension Theme {
   }
 
   /// The tone behind the marks of the overview bar, drawn over the text background.
-  public var overviewBackgroundTone: NSColor {
+  package var overviewBackgroundTone: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.overviewBackgroundOpacity[appearance])
@@ -103,7 +103,7 @@ extension Theme {
   }
 
   /// The quiet tone of the bar of a collapsed run, drawn over the text background.
-  public var collapsedRunFill: NSColor {
+  package var collapsedRunFill: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.collapsedRunOpacity[appearance])
@@ -111,7 +111,7 @@ extension Theme {
   }
 
   /// The tone of the bar of a collapsed run while it is pressed, drawn over the text background.
-  public var pressedCollapsedRunFill: NSColor {
+  package var pressedCollapsedRunFill: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.pressedCollapsedRunOpacity[appearance])
@@ -120,7 +120,7 @@ extension Theme {
 
   /// The color of the ellipsis and the label on the bar of a collapsed run: secondary beside the
   /// code, yet as legible as any text, also within a selection.
-  public var collapsedRunTextColor: NSColor {
+  package var collapsedRunTextColor: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.collapsedRunTextOpacity[appearance])
@@ -129,7 +129,7 @@ extension Theme {
 
   /// The fill of the frame of the overview bar that shows the visible part of the text, stronger
   /// while it is `emphasized` under the pointer or dragged.
-  public func visibleRegionFill(emphasized: Bool) -> NSColor {
+  package func visibleRegionFill(emphasized: Bool) -> NSColor {
     let values =
       emphasized ? Palette.emphasizedVisibleRegionOpacity : Palette.visibleRegionOpacity
     return color { appearance, nsAppearance in
@@ -139,7 +139,7 @@ extension Theme {
 
   /// The outline of the frame of the overview bar that shows the visible part of the text,
   /// stronger while it is `emphasized` under the pointer or dragged.
-  public func visibleRegionOutline(emphasized: Bool) -> NSColor {
+  package func visibleRegionOutline(emphasized: Bool) -> NSColor {
     let values =
       emphasized
       ? Palette.emphasizedVisibleRegionOutlineOpacity : Palette.visibleRegionOutlineOpacity
@@ -152,7 +152,7 @@ extension Theme {
   /// whose text the rows hold, a neutral tone for text typed by hand, each toned down toward the
   /// tint of the rows; only an open conflict keeps the full symbol value, so that it alone
   /// stands out in the bar.
-  public func overviewMarkColor(for style: BlockStyle) -> NSColor {
+  package func overviewMarkColor(for style: BlockStyle) -> NSColor {
     let full = fullOverviewMarkColor(for: style)
     guard style != .tinted(.conflict) else { return full }
     return color { appearance, nsAppearance in
@@ -177,7 +177,7 @@ extension Theme {
 
   /// The color of the outline of the bar of toggles, as strong as the edges of the blocks
   /// beside it.
-  public var toggleOutlineColor: NSColor {
+  package var toggleOutlineColor: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.toggleOutlineOpacity[appearance])
@@ -186,7 +186,7 @@ extension Theme {
 
   /// The color of the hairlines between the segments of the bar of toggles, a step quieter
   /// than its outline.
-  public var toggleSeparatorColor: NSColor {
+  package var toggleSeparatorColor: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.toggleSeparatorOpacity[appearance])
@@ -195,7 +195,7 @@ extension Theme {
 
   /// The color of the sign of a toggle that is off: secondary, so that a column of many blocks
   /// stays quiet and the inputs that are taken stand out, yet legible as a sign.
-  public var offToggleLabelColor: NSColor {
+  package var offToggleLabelColor: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.offToggleLabelOpacity[appearance])
@@ -204,7 +204,7 @@ extension Theme {
 
   /// The fill of a chosen segment of `role` in the bar of toggles and of the badge of the side:
   /// the symbol value of its side, for the base a clear yellow (``Palette/chosenBaseFill``).
-  public func chosenFill(for role: ColorRole) -> NSColor {
+  package func chosenFill(for role: ColorRole) -> NSColor {
     guard role == .base else { return symbolColor(for: role) }
     let values = Palette.chosenBaseFill
     return color { appearance, _ in NSColor(rgb: values[appearance]) }
@@ -212,13 +212,13 @@ extension Theme {
 
   /// The color of the sign on a chosen segment or a badge of `role`: the color of the label on
   /// a fill, and black on the yellow of the base, which carries only a dark sign.
-  public func chosenSignColor(for role: ColorRole) -> NSColor {
+  package func chosenSignColor(for role: ColorRole) -> NSColor {
     role == .base ? .black : filledLabelColor
   }
 
   /// The color of the sign on a chosen toggle: white in light appearances, black in
   /// dark ones, where the fills are light.
-  public var filledLabelColor: NSColor {
+  package var filledLabelColor: NSColor {
     color { appearance, _ in
       switch appearance {
       case .light, .lightHighContrast: .white
@@ -228,7 +228,7 @@ extension Theme {
   }
 
   /// The quiet fill behind a toggle or the reset arrow while it is pressed.
-  public var pressedDecisionControlFill: NSColor {
+  package var pressedDecisionControlFill: NSColor {
     color { appearance, nsAppearance in
       NSColor.labelColor.resolved(in: nsAppearance)
         .withAlphaComponent(Palette.pressedCollapsedRunOpacity[appearance])
@@ -236,14 +236,14 @@ extension Theme {
   }
 
   /// The symbol value of `role`: the color of its markers, badges and toggles.
-  public func symbolColor(for role: ColorRole) -> NSColor {
+  package func symbolColor(for role: ColorRole) -> NSColor {
     let values = Palette.symbol(of: role)
     return color { appearance, _ in NSColor(rgb: values[appearance]) }
   }
 
   /// The color of the change marker and of the marks of removed text in a block of `style`: the
   /// color of the side that made the change.
-  public func markerColor(for style: BlockStyle) -> NSColor {
+  package func markerColor(for style: BlockStyle) -> NSColor {
     if case .tinted(let role) = style {
       return symbolColor(for: role)
     }
@@ -251,7 +251,7 @@ extension Theme {
   }
 
   /// The color of the mark of a conflict.
-  public func color(for conflict: ConflictMarker) -> NSColor {
+  package func color(for conflict: ConflictMarker) -> NSColor {
     switch conflict {
     case .open: symbolColor(for: .conflict)
     case .resolved: Self.secondaryMarkColor
@@ -262,7 +262,7 @@ extension Theme {
   /// as a focused selection of content, while the pane has the focus in the key window; without
   /// focus a clearly stronger step of the color of the rows' side (``Palette/currentCell(of:)``),
   /// or a neutral tone where the rows have no side.
-  public func currentCellFill(for style: BlockStyle, isEmphasized: Bool) -> NSColor {
+  package func currentCellFill(for style: BlockStyle, isEmphasized: Bool) -> NSColor {
     guard !isEmphasized else { return .selectedContentBackgroundColor }
     let tint = tint(for: style) ?? .quiet
     return color { appearance, nsAppearance in tint.cellColor(appearance, nsAppearance) }
@@ -273,7 +273,7 @@ extension Theme {
   /// Filler rows are tinted at half the strength of their block, and the rows of the current
   /// block more strongly, so that it stands out on every pane; where the block leaves a pane
   /// untinted, its rows get a quiet neutral tone while it is current.
-  public func rowFill(for style: BlockStyle, isFiller: Bool, isCurrent: Bool) -> NSColor? {
+  package func rowFill(for style: BlockStyle, isFiller: Bool, isCurrent: Bool) -> NSColor? {
     guard let tint = tint(for: style) ?? (isCurrent ? .quiet : nil) else { return nil }
     let factor = Self.rowFactor(isFiller: isFiller, isCurrent: isCurrent)
     return color { appearance, nsAppearance in
@@ -292,7 +292,7 @@ extension Theme {
   /// tint, which stands out from the rows on both sides as a sign does.
   ///
   /// - Parameter isOnlyBoundary: Whether nothing but the hairline separates the two blocks.
-  public func edgeColor(
+  package func edgeColor(
     between upper: BlockStyle?, and lower: BlockStyle?, isOnlyBoundary: Bool
   ) -> NSColor? {
     let tints = [upper, lower].compactMap { $0.flatMap(tint(for:)) }
@@ -318,7 +318,7 @@ extension Theme {
   ///
   /// Together with the row fill of a line, current or not, the run reaches the run opacity of
   /// the palette, so that text on it stays legible in the current block too.
-  public func runFill(for style: BlockStyle, isCurrent: Bool) -> NSColor? {
+  package func runFill(for style: BlockStyle, isCurrent: Bool) -> NSColor? {
     guard let tint = tint(for: style), tint.highlightsRuns else { return nil }
     let factor = Self.rowFactor(isFiller: false, isCurrent: isCurrent)
     return color { appearance, nsAppearance in
@@ -330,7 +330,7 @@ extension Theme {
 
   /// The fill of the selection, translucent so that the tint of a row stays visible below it:
   /// in the accent color while the pane has focus in the key window, quieter otherwise.
-  public func selectionFill(isEmphasized: Bool) -> NSColor {
+  package func selectionFill(isEmphasized: Bool) -> NSColor {
     color { appearance, nsAppearance in
       (isEmphasized
         ? NSColor.selectedTextBackgroundColor

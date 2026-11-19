@@ -3,23 +3,23 @@ import TextBasics
 import os
 
 /// Writes text to a file with one encoding and one line ending.
-public struct TextWriter: Sendable {
+package struct TextWriter: Sendable {
   private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "TextIO")
 
   /// The encoding the file is written in.
-  public let encoding: TextEncoding
+  package let encoding: TextEncoding
 
   /// Whether the file starts with the byte order mark of ``encoding``.
-  public let writesByteOrderMark: Bool
+  package let writesByteOrderMark: Bool
 
   /// The line ending every line break is written as.
-  public let lineEnding: LineEnding
+  package let lineEnding: LineEnding
 
   /// Creates a writer for the given form of a file.
   ///
   /// - Precondition: `writesByteOrderMark` is only `true` for an encoding that
   ///   ``TextEncoding/supportsByteOrderMark``.
-  public init(encoding: TextEncoding, writesByteOrderMark: Bool, lineEnding: LineEnding) {
+  package init(encoding: TextEncoding, writesByteOrderMark: Bool, lineEnding: LineEnding) {
     precondition(
       !writesByteOrderMark || encoding.supportsByteOrderMark,
       "\(encoding) has no byte order mark")
@@ -35,7 +35,7 @@ public struct TextWriter: Sendable {
   ///
   /// - Throws: ``TextIOError/unrepresentableText(_:)`` if ``encoding`` cannot represent every
   ///   character of `text`.
-  public func encode(_ text: String) throws(TextIOError) -> Data {
+  package func encode(_ text: String) throws(TextIOError) -> Data {
     guard let encoded = Transcoder.encode(utf8: unifyingLineEndings(of: text), to: encoding) else {
       throw .unrepresentableText(encoding)
     }
@@ -52,7 +52,7 @@ public struct TextWriter: Sendable {
   ///
   /// - Throws: ``TextIOError/unrepresentableText(_:)`` before anything is written, or the error of
   ///   the file system if the file cannot be written.
-  public func write(_ text: String, to url: URL) throws {
+  package func write(_ text: String, to url: URL) throws {
     try write(encode(text), to: url)
   }
 
@@ -62,7 +62,7 @@ public struct TextWriter: Sendable {
   /// text; a symbolic link is followed.
   ///
   /// - Throws: The error of the file system if the file cannot be written.
-  public func write(_ bytes: Data, to url: URL) throws {
+  package func write(_ bytes: Data, to url: URL) throws {
     let destination = url.resolvingSymlinksInPath()
     let fileManager = FileManager.default
     guard fileManager.fileExists(atPath: destination.path(percentEncoded: false)) else {

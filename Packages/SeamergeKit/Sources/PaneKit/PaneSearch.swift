@@ -18,36 +18,36 @@ import Synchronization
 /// it searches as the user types, on a thread of its own, from a copy that the search takes after
 /// each change.
 @MainActor
-public final class PaneSearch: NSObject {
+package final class PaneSearch: NSObject {
   /// Some rows of a pane that the search goes through.
-  public struct Section {
+  package struct Section {
     /// The pane.
-    public var pane: PaneView
+    package var pane: PaneView
 
     /// The rows of the pane, on its grid.
-    public var rows: Range<Int>
+    package var rows: Range<Int>
 
     /// Creates a section of `rows` of `pane`.
-    public init(pane: PaneView, rows: Range<Int>) {
+    package init(pane: PaneView, rows: Range<Int>) {
       self.pane = pane
       self.rows = rows
     }
   }
 
   /// A match of the search: a range of a pane's text, in UTF-16 code units.
-  public struct Match {
+  package struct Match {
     /// The pane whose text holds the match.
-    public var pane: PaneView
+    package var pane: PaneView
 
     /// The range of the match in the text of the pane.
-    public var range: Range<Int>
+    package var range: Range<Int>
 
     /// The row of the pane that the match starts in.
-    public var row: Int
+    package var row: Int
   }
 
   /// The panes that the search goes through.
-  public enum Scope {
+  package enum Scope {
     /// All the panes of the sections; nothing can be replaced.
     case allPanes
 
@@ -56,22 +56,22 @@ public final class PaneSearch: NSObject {
   }
 
   /// The view that shows the find bar, which the owner puts at the bottom of the window.
-  public let findBar = PaneFindBar()
+  package let findBar = PaneFindBar()
 
   /// Learns which match the search shows and when the matches change; the search does not retain
   /// it.
-  public weak var delegate: (any PaneSearchDelegate)?
+  package weak var delegate: (any PaneSearchDelegate)?
 
   /// The rows that the search goes through, in the order that Find Next follows.
   ///
   /// Set the sections anew whenever the rows of a pane change their meaning, after an edit that
   /// adds or removes rows among them. Rows beyond the end of a pane are left out.
-  public var sections: [Section] = [] {
+  package var sections: [Section] = [] {
     didSet { panesDidChange() }
   }
 
   /// The panes that the search goes through: all panes of the sections, or one of them alone.
-  public var scope = Scope.allPanes {
+  package var scope = Scope.allPanes {
     didSet { panesDidChange() }
   }
 
@@ -80,7 +80,7 @@ public final class PaneSearch: NSObject {
   ///
   /// The search makes the list once it is asked for after the matches changed; ``matchCount``,
   /// ``panesWithMatches`` and ``matchRows(in:)`` tell about them without it.
-  public var matches: [Match] {
+  package var matches: [Match] {
     if let listedMatches {
       return listedMatches
     }
@@ -90,13 +90,13 @@ public final class PaneSearch: NSObject {
   }
 
   /// The number of ``matches``.
-  public var matchCount: Int { found.places.count }
+  package var matchCount: Int { found.places.count }
 
   /// The panes that hold at least one of the ``matches``, in the order of the search.
-  public private(set) var panesWithMatches: [PaneView] = []
+  package private(set) var panesWithMatches: [PaneView] = []
 
   /// The rows of `pane` that the ``matches`` start in.
-  public func matchRows(in pane: PaneView) -> IndexSet {
+  package func matchRows(in pane: PaneView) -> IndexSet {
     guard let index = panes.firstIndex(where: { $0 === pane }),
       found.rowsByPane.indices.contains(index)
     else { return [] }
@@ -108,22 +108,22 @@ public final class PaneSearch: NSObject {
   ///
   /// The matches go once the text changes, as after a replacement, and the finder does not
   /// search again until the search text changes; this still tells that the text was found.
-  public internal(set) var hasFoundMatches = false
+  package internal(set) var hasFoundMatches = false
 
   /// Whether ``matches`` are what the finder found in the text as it is now: false once the text
   /// or the panes changed since it searched, and its matches are gone, until it searches again.
-  public private(set) var matchesAreCurrent = false
+  package private(set) var matchesAreCurrent = false
 
   /// Whether the find bar shows the field for replacing, as the owner opened it or as the user
   /// switched it on or off in the bar.
-  public private(set) var showsReplaceField = false
+  package private(set) var showsReplaceField = false
 
   /// The pane that text can be replaced in, if any and if it can be edited.
   ///
   /// The find bar offers its field for replacing while the pane is set; as the field comes, the
   /// search is limited to the pane, and as it goes, the search goes through all panes again,
   /// whether the owner or the user in the bar switched it.
-  public var replaceablePane: PaneView?
+  package var replaceablePane: PaneView?
 
   /// The finder that runs the find bar; internal for the tests, which take its find indicator
   /// away.
@@ -173,7 +173,7 @@ public final class PaneSearch: NSObject {
   private var observedPanes: [PaneView] = []
 
   /// Creates a search without sections, with its find bar closed.
-  public override init() {
+  package override init() {
     super.init()
     finder.client = self
     finder.findBarContainer = findBar
@@ -198,7 +198,7 @@ public final class PaneSearch: NSObject {
   ///
   /// The find indicator updates after a delay, as the panes change their size, and holds the
   /// finder without retaining it; it must not find the finder gone.
-  public func close() {
+  package func close() {
     finder.cancelFindIndicator()
     finder.client = nil
     finder.findBarContainer = nil
@@ -206,13 +206,13 @@ public final class PaneSearch: NSObject {
 
   /// Carries out the find command of `sender`, a menu item or control whose tag is an
   /// `NSTextFinder.Action`, as the responder to `performTextFinderAction(_:)` does.
-  public func performTextFinderAction(_ sender: Any?) {
+  package func performTextFinderAction(_ sender: Any?) {
     guard let action = Self.action(of: sender) else { return }
     perform(action)
   }
 
   /// Carries out `action` of the finder.
-  public func perform(_ action: NSTextFinder.Action) {
+  package func perform(_ action: NSTextFinder.Action) {
     // The finder shows its bar in a scroll view of its own accord, but only hands it to any
     // other container, which is to show it; it hides it again itself. The bar shows before the
     // finder acts, so that its search field can take the focus.
@@ -226,13 +226,13 @@ public final class PaneSearch: NSObject {
 
   /// Whether the find command of `item`, whose tag is an `NSTextFinder.Action`, can be carried
   /// out now.
-  public func validate(_ item: any NSValidatedUserInterfaceItem) -> Bool {
+  package func validate(_ item: any NSValidatedUserInterfaceItem) -> Bool {
     guard let action = NSTextFinder.Action(rawValue: item.tag) else { return false }
     return validate(action)
   }
 
   /// Whether `action` of the finder can be carried out now.
-  public func validate(_ action: NSTextFinder.Action) -> Bool {
+  package func validate(_ action: NSTextFinder.Action) -> Bool {
     finder.validateAction(action)
   }
 

@@ -2,7 +2,7 @@ import AppKit
 
 /// Learns what the user does in the decision column of a pane.
 @MainActor
-public protocol DecisionColumnDelegate: AnyObject {
+package protocol DecisionColumnDelegate: AnyObject {
   /// Tells the delegate that the user switched toggle `toggle` of `block`, with a click, the
   /// keyboard or VoiceOver.
   ///
