@@ -1,19 +1,24 @@
 #!/bin/bash
 #
 # Measures scrolling on the screen: builds a copy of the app with a bundle
-# identifier of its own, compares two files or merges three in it from the
-# sheet Compare Files or Merge Files, plays flicks of a trackpad with momentum
-# over the window while Instruments records hitches, and prints how many frames
-# came late. With
-# --counter, a library loaded into the copy counts the frames of the window
-# instead, through the display link of its content view, without Instruments.
-# The copy never takes the place of the installed app: its identifier starts
-# with app.eiden.seamerge. and is none of a part of the app, it has no
-# services, does not look for updates, shows its English text, and it, its
-# settings, its saved state and the build are removed from Launch Services
-# and from disk afterwards. The library loads only into this copy, which is
-# signed ad hoc without the hardened runtime; the app as shipped runs with the
-# hardened runtime, which ignores DYLD_INSERT_LIBRARIES.
+# identifier of its own, compares two files or merges three in it, and a
+# library loaded into the copy opens them, shows the window on a screen
+# without activating the copy, and plays flicks of a trackpad with momentum
+# over it through events it posts to the copy itself, while it counts the
+# frames of the window through the display link of its content view. The
+# script prints how many frames came late between the first event of the
+# flicks and the end of the glide that AppKit adds after the last one. With
+# --instruments, Instruments records the hitches instead of the library
+# counting frames. Should the copy come to the front, the library ends it and
+# the measurement fails.
+#
+# The window stands above other windows at the top left of the chosen screen
+# for the time of the flicks, about two seconds a flick, lets the pointer
+# through to the windows below and never takes the key focus: the person at
+# the screen can go on working, and no event reaches another window. With
+# --transparent, nobody sees it either; whether its frames are then those of
+# a window that can be seen is to be compared once. The copy is described in
+# Scripts/Support/test-copy.sh.
 #
 # Usage: Scripts/measure-scrolling.sh [options] (<case> | <file> [<base>] <file>)
 #
@@ -21,24 +26,25 @@
 #   --hides-base        Hide the base pane of a merge.
 #   --screen <s>        The screen the window goes to: slow (default), the one
 #                       with the lowest frame rate, or fast, with the highest.
+#   --transparent       Show the window fully transparent.
 #   --flicks <n>        Flicks down and up again (default 6).
 #   --bundle-id <id>    The bundle identifier of the copy, app.eiden.seamerge.
 #                       and more (default app.eiden.seamerge.measure).
 #   --revision <rev>    Build a commit instead of the working tree.
-#   --counter           Count frames in the copy instead of recording hitches
-#                       with Instruments.
-#   --sample <file>     With --counter, also sample the copy into <file> while
+#   --counter           Count frames in the copy (the default).
+#   --instruments       Record hitches with Instruments instead of counting
+#                       frames in the copy.
+#   --sample <file>     When counting, also sample the copy into <file> while
 #                       it scrolls, which costs frames of its own.
 #   --keep              Keep the trace, the files and the logs; the copy and
 #                       the build go, since Launch Services would register
 #                       them again.
 #
 # A case is one of Scripts/measure-large-files.sh; its files are written
-# first, with the base of a merge. The screen must be unlocked, the process
-# that runs the script needs the permission to control the computer, which
-# clicking Compare or Merge and posting the scroll events take, and
+# first, with the base of a merge. The screen must be unlocked, and
 # Instruments records hitches only while the developer mode of the system is
-# on (DevToolsSecurity).
+# on (DevToolsSecurity). Neither way needs the permission to control the
+# computer or to record the screen.
 #
 # Exits with 0 when the frames were measured, with 1 otherwise, and with 2 for
 # wrong arguments.
@@ -46,7 +52,7 @@
 set -u
 
 usage() {
-  sed -n '/^# Usage:/,/^# on (DevToolsSecurity)/p' "$0" | sed 's/^# \{0,1\}//' >&2
+  sed -n '/^# Usage:/,/^# computer or to record the screen/p' "$0" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -54,11 +60,12 @@ arrangement=aligned
 flicks=6
 bundle_id=app.eiden.seamerge.measure
 revision=""
-counter=false
+counter=true
 sample_file=""
 keep=false
 hides_base=false
 screen=slow
+transparent=false
 inputs=()
 while [ $# -gt 0 ]; do
   case $1 in
@@ -67,10 +74,12 @@ while [ $# -gt 0 ]; do
     --bundle-id) [ $# -ge 2 ] || usage; bundle_id=$2; shift 2 ;;
     --revision) [ $# -ge 2 ] || usage; revision=$2; shift 2 ;;
     --counter) counter=true; shift ;;
+    --instruments) counter=false; shift ;;
     --sample) [ $# -ge 2 ] || usage; sample_file=$2; shift 2 ;;
     --keep) keep=true; shift ;;
     --hides-base) hides_base=true; shift ;;
     --screen) [ $# -ge 2 ] || usage; screen=$2; shift 2 ;;
+    --transparent) transparent=true; shift ;;
     -*) usage ;;
     *) inputs+=("$1"); shift ;;
   esac
@@ -81,37 +90,8 @@ case ${#inputs[@]} in 1 | 2 | 3) ;; *) usage ;; esac
 case $screen in slow | fast) ;; *) usage ;; esac
 [ -z "$sample_file" ] || $counter || usage
 root=$(cd "$(dirname "$0")/.." && pwd)
-
-# Succeeds if $1 can name the copy: app.eiden.seamerge. and more, in any case,
-# but no identifier of a part of the app, whose settings and registrations
-# belong to the user.
-is_identifier_of_a_copy() {
-  local identifier part
-  identifier=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
-  case $identifier in
-    app.eiden.seamerge..* | app.eiden.seamerge.*[!a-z0-9.-]* | app.eiden.seamerge.*..* | app.eiden.seamerge.*.) return 1 ;;
-    app.eiden.seamerge.?*) ;;
-    *) return 1 ;;
-  esac
-  for part in app.eiden.seamerge $(sed -n 's/.*PRODUCT_BUNDLE_IDENTIFIER = \([^;]*\);.*/\1/p' \
-    "$root/App/Seamerge.xcodeproj/project.pbxproj" | tr '[:upper:]' '[:lower:]'); do
-    [ "$identifier" = "$part" ] && return 1
-  done
-  return 0
-}
-if ! is_identifier_of_a_copy "$bundle_id"; then
-  echo "the copy needs an identifier of its own under app.eiden.seamerge.: $bundle_id" >&2
-  exit 2
-fi
-start=$(date +%s)
-lsregister=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
-
-progress() {
-  local now elapsed
-  now=$(date +%s)
-  elapsed=$((now - start))
-  printf '%s +%d:%02d %s\n' "$(date +%H:%M:%S)" $((elapsed / 60)) $((elapsed % 60)) "$*" >&2
-}
+# shellcheck source=Support/test-copy.sh
+. "$root/Scripts/Support/test-copy.sh"
 
 if ioreg -n Root -d1 -a | grep -q CGSSessionScreenIsLocked; then
   echo "the screen is locked: scrolling cannot be measured" >&2
@@ -119,397 +99,49 @@ if ioreg -n Root -d1 -a | grep -q CGSSessionScreenIsLocked; then
 fi
 
 if ! $counter && ! DevToolsSecurity -status 2>&1 | grep -q enabled; then
-  echo "the developer mode is off: Instruments cannot record hitches; try --counter" >&2
+  echo "the developer mode is off: Instruments cannot record hitches; count frames instead" >&2
   exit 1
 fi
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/seamerge-scrolling.XXXXXX") || exit 1
-# The path as the processes of the copy show it, without links.
-work=$(cd "$work" && pwd -P) || exit 1
-copy=$work/Seamerge.app
-built=$work/build/Build/Products/Release/Seamerge.app
-pid=""
+copy_set_up scrolling
 recorder=""
-# Stops Instruments and quits the copy, removes it from Launch Services, its
-# settings and what macOS keeps under its identifier, and the folder unless it
-# is to be kept.
+ktrace=""
+sampler=""
+# Stops the sampler and Instruments and removes the recording Instruments
+# keeps in the temporary folder, then quits and removes the copy.
 clean_up() {
-  # The driver first, so that no scroll event reaches another window.
-  pkill -f "^$work/driver " 2> /dev/null
+  [ -z "$sampler" ] || kill "$sampler" 2> /dev/null
   if [ -n "$recorder" ]; then
     kill -INT "$recorder" 2> /dev/null
     sleep 2
     kill -KILL "$recorder" 2> /dev/null
+    wait "$recorder" 2> /dev/null
   fi
-  if [ -n "$pid" ]; then
-    kill "$pid" 2> /dev/null
-    # Its settings go only once it no longer writes them.
-    for _ in $(seq 1 50); do
-      kill -0 "$pid" 2> /dev/null || break
-      sleep 0.1
-    done
-  else
-    pkill -f "^$copy/Contents/MacOS/" 2> /dev/null
-  fi
-  # Xcode registers what it builds, under the identifier of the app.
-  for app in "$copy" "$built" "$built/Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app"; do
-    [ -d "$app" ] && "$lsregister" -u "$app" 2> /dev/null
-  done
-  defaults delete "$bundle_id" > /dev/null 2>&1
-  # What defaults leaves of the domain is an empty file.
-  rm -f "$HOME/Library/Preferences/$bundle_id.plist"
-  rm -rf "$HOME/Library/Saved Application State/$bundle_id.savedState" \
-    "$HOME/Library/Caches/$bundle_id" "$HOME/Library/HTTPStorages/$bundle_id" \
-    "$HOME/Library/HTTPStorages/$bundle_id.binarycookies"
-  rm -f "$HOME/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.ApplicationRecentDocuments/$(printf '%s' "$bundle_id" | tr '[:upper:]' '[:lower:]')".sfl*
-  # A copy or build left on disk would be registered again by whatever looks at it next.
-  rm -rf "$copy" "$work/build"
-  if $keep; then
-    progress "kept $work"
-  else
-    rm -rf "$work"
-  fi
+  [ -z "$ktrace" ] || rm -rf "$ktrace"
+  copy_clean_up
 }
 trap clean_up EXIT
 trap 'exit 1' INT TERM HUP
 
-clone=$work/clone
-progress "cloning ${revision:-the working tree}"
-if [ -n "$revision" ]; then
-  mkdir -p "$clone"
-  git -C "$root" archive "$revision" | tar -x -C "$clone" || exit 1
-else
-  git clone --quiet "$root" "$clone" || exit 1
-  while IFS= read -r -d '' file; do
-    if [ -e "$root/$file" ]; then
-      mkdir -p "$clone/$(dirname "$file")"
-      cp -p "$root/$file" "$clone/$file"
-    else
-      rm -f "$clone/$file"
-    fi
-  done < <(git -C "$root" ls-files -z --modified --others --exclude-standard)
-fi
-
-if [ ${#inputs[@]} -eq 1 ]; then
-  suite=Packages/SeamergeKit/Tests/SeamergeUITests
-  mkdir -p "$clone/$suite/Support"
-  cp -p "$root/$suite/LargeFileMeasurements.swift" "$clone/$suite/"
-  cp -p "$root/$suite"/Support/LargeFile*.swift "$clone/$suite/Support/"
-  progress "writing the files of ${inputs[0]}"
-  mkdir -p "$work/files"
-  if ! SEAMERGE_MEASURE_CASE=${inputs[0]} SEAMERGE_MEASURE_FILES=$work/files \
-    swift test --package-path "$clone/Packages/SeamergeKit" \
-    --filter LargeFileMeasurements > "$work/files.log" 2>&1; then
-    echo "the files of ${inputs[0]} could not be written (log: $work/files.log)" >&2
-    keep=true
-    exit 1
-  fi
-  # A comparison has old and new, a merge theirs, base and ours, in the order of the fields.
-  files=()
-  for name in old new theirs base ours; do
-    for file in "$work/files/$name".*; do
-      [ -e "$file" ] && files+=("$file")
-    done
-  done
-else
-  files=("${inputs[@]}")
-fi
+copy_clone "$revision" || exit 1
+copy_files "${inputs[@]}" || exit 1
 case ${#files[@]} in
   2 | 3) ;;
   *) echo "a measurement on the screen compares two files or merges three" >&2; exit 1 ;;
 esac
-
-progress "building the app in release mode"
-if ! xcodebuild -project "$clone/App/Seamerge.xcodeproj" -scheme Seamerge -configuration Release \
-  -destination platform=macOS -derivedDataPath "$work/build" \
-  -packageCachePath "$work/package-cache" -packageAuthorizationProvider netrc \
-  -onlyUsePackageVersionsFromResolvedFile CODE_SIGNING_ALLOWED=NO -quiet build \
-  > "$work/build.log" 2>&1; then
-  grep -E 'error:' "$work/build.log" | head -n 20 >&2
-  echo "build failed (log: $work/build.log)" >&2
-  keep=true
-  exit 1
-fi
-ditto "$built" "$copy" || exit 1
-plist=$copy/Contents/Info.plist
-/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $bundle_id" "$plist" || exit 1
-/usr/libexec/PlistBuddy -c "Delete :NSServices" "$plist" 2> /dev/null
-/usr/libexec/PlistBuddy -c "Delete :SUEnableAutomaticChecks" "$plist" 2> /dev/null
-/usr/libexec/PlistBuddy -c "Add :SUEnableAutomaticChecks bool false" "$plist" || exit 1
-codesign --force --deep --sign - "$copy" > "$work/sign.log" 2>&1 || {
-  cat "$work/sign.log" >&2
-  exit 1
-}
-
-case $arrangement in
-  aligned) connects=false single=false ;;
-  connected) connects=true single=false ;;
-  single) connects=false single=true ;;
-esac
-defaults write "$bundle_id" ConnectsChanges -bool "$connects"
-defaults write "$bundle_id" ShowsSingleColumn -bool "$single"
-defaults write "$bundle_id" HidesBase -bool "$hides_base"
-# The driver finds the sheet and the button by their English titles.
-defaults write "$bundle_id" AppleLanguages -array en
-
-# Drives the copy as the user does: presses Compare or Merge in the sheet that
-# the files fill on the welcome window, through the accessibility of the copy,
-# and plays flicks as a trackpad
-# sends them, over the larger pane of the comparison: the fingers move for a
-# quarter of a second, then the content glides on with momentum for a second
-# and a half, at 120 events a second, down and up again. The events go where
-# the pointer is, so each flick starts only while a window of the copy is the
-# front one at that point.
-cat > "$work/Driver.swift" << 'SWIFT'
-import AppKit
-import ApplicationServices
-import QuartzCore
-
-func fail(_ message: String) -> Never {
-  FileHandle.standardError.write(Data((message + "\n").utf8))
-  exit(1)
-}
-
-func windows(of pid: pid_t) -> [(name: String, frame: CGRect)] {
-  let all = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]]
-  return (all ?? []).compactMap { window in
-    guard (window[kCGWindowOwnerPID as String] as? pid_t) == pid,
-      (window[kCGWindowLayer as String] as? Int) == 0,
-      let bounds = window[kCGWindowBounds as String] as? NSDictionary,
-      let frame = CGRect(dictionaryRepresentation: bounds)
-    else { return nil }
-    return (window[kCGWindowName as String] as? String ?? "", frame)
-  }
-}
-
-func frontOwner(at point: CGPoint) -> pid_t? {
-  let all = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]]
-  let front = (all ?? []).first { window in
-    guard (window[kCGWindowLayer as String] as? Int) == 0,
-      let bounds = window[kCGWindowBounds as String] as? NSDictionary,
-      let frame = CGRect(dictionaryRepresentation: bounds)
-    else { return false }
-    return frame.contains(point)
-  }
-  return front?[kCGWindowOwnerPID as String] as? pid_t
-}
-
-func children(of element: AXUIElement) -> [AXUIElement] {
-  var value: CFTypeRef?
-  AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &value)
-  return value as? [AXUIElement] ?? []
-}
-
-func button(titled title: String, in element: AXUIElement) -> AXUIElement? {
-  var role: CFTypeRef?
-  var name: CFTypeRef?
-  AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role)
-  AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &name)
-  if role as? String == kAXButtonRole, name as? String == title { return element }
-  return children(of: element).lazy.compactMap { button(titled: title, in: $0) }.first
-}
-
-// The windows that are not the comparison: the welcome window and its sheets.
-let setupWindows = ["Welcome", "Compare Files", "Merge Files"]
-
-func pressCompare(in pid: pid_t) {
-  let app = AXUIElementCreateApplication(pid)
-  guard let compare = button(titled: "Compare", in: app) ?? button(titled: "Merge", in: app) else {
-    fail("the sheet of \(pid) has no button Compare or Merge")
-  }
-  guard AXUIElementPerformAction(compare, kAXPressAction as CFString) == .success else {
-    fail("Compare could not be pressed")
-  }
-}
-
-func post(_ delta: Double, phase: Int64, momentum: Int64, at point: CGPoint) {
-  guard
-    let event = CGEvent(
-      scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 1, wheel1: Int32(delta.rounded()),
-      wheel2: 0, wheel3: 0)
-  else { return }
-  event.location = point
-  event.setIntegerValueField(.scrollWheelEventIsContinuous, value: 1)
-  event.setIntegerValueField(.scrollWheelEventScrollPhase, value: phase)
-  event.setIntegerValueField(.scrollWheelEventMomentumPhase, value: momentum)
-  event.setDoubleValueField(.scrollWheelEventPointDeltaAxis1, value: delta)
-  event.setDoubleValueField(.scrollWheelEventFixedPtDeltaAxis1, value: delta)
-  event.post(tap: .cghidEventTap)
-  usleep(8_333)
-}
-
-func flick(_ count: Int, in pid: pid_t) {
-  guard let window = windows(of: pid).filter({ !setupWindows.contains($0.name) })
-    .max(by: { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height })
-  else { fail("no comparison of \(pid) on the screen") }
-  let point = CGPoint(x: window.frame.minX + window.frame.width * 0.75, y: window.frame.midY)
-  NSRunningApplication(processIdentifier: pid)?.activate()
-  usleep(500_000)
-  CGWarpMouseCursorPosition(point)
-  let start = CACurrentMediaTime()
-  for flick in 0..<(2 * count) {
-    guard frontOwner(at: point) == pid else { fail("another window lies over the comparison") }
-    let direction: Double = flick < count ? -1 : 1
-    post(0, phase: 1, momentum: 0, at: point)
-    for step in 0..<30 { post(direction * Double(4 + step), phase: 2, momentum: 0, at: point) }
-    post(0, phase: 4, momentum: 0, at: point)
-    var delta = direction * 34
-    post(delta, phase: 0, momentum: 1, at: point)
-    for _ in 0..<180 {
-      delta *= 0.975
-      post(delta, phase: 0, momentum: 2, at: point)
-    }
-    post(0, phase: 0, momentum: 3, at: point)
-    usleep(200_000)
-  }
-  // On the clock of the display link, so that the frames of the flicks can be told apart, and
-  // the frame rate of the screen the comparison is on.
-  let height = NSScreen.screens.first?.frame.height ?? 0
-  let screen = NSScreen.screens.first { $0.frame.contains(CGPoint(x: point.x, y: height - point.y)) }
-  print("flicks", start, CACurrentMediaTime(), screen?.maximumFramesPerSecond ?? 60)
-}
-
-// Moves the comparison to the top left of the screen with the lowest or the highest frame rate,
-// at the size it has.
-func place(in pid: pid_t, fast: Bool) {
-  let screens = NSScreen.screens.sorted { $0.maximumFramesPerSecond < $1.maximumFramesPerSecond }
-  guard let screen = fast ? screens.last : screens.first, let primary = NSScreen.screens.first
-  else { fail("no screen") }
-  var value: CFTypeRef?
-  AXUIElementCopyAttributeValue(
-    AXUIElementCreateApplication(pid), kAXWindowsAttribute as CFString, &value)
-  for window in value as? [AXUIElement] ?? [] {
-    var title: CFTypeRef?
-    AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &title)
-    guard !setupWindows.contains(title as? String ?? "") else { continue }
-    let visible = screen.visibleFrame
-    var origin = CGPoint(x: visible.minX + 20, y: primary.frame.height - visible.maxY + 20)
-    guard let position = AXValueCreate(.cgPoint, &origin),
-      AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, position) == .success
-    else { fail("the comparison could not be moved") }
-  }
-}
-
-let arguments = CommandLine.arguments
-guard arguments.count >= 3, let pid = pid_t(arguments[2]) else { fail("usage: driver <command> <pid> …") }
-switch arguments[1] {
-case "compare": pressCompare(in: pid)
-case "flicks": flick(arguments.count > 3 ? Int(arguments[3]) ?? 1 : 1, in: pid)
-case "windows": for window in windows(of: pid) { print(window.name) }
-case "place": place(in: pid, fast: arguments.count > 3 && arguments[3] == "fast")
-default: fail("unknown command \(arguments[1])")
-}
-SWIFT
-swiftc -O -o "$work/driver" "$work/Driver.swift" > "$work/driver-build.log" 2>&1 || {
-  cat "$work/driver-build.log" >&2
-  exit 1
-}
-
-# Waits up to 30 seconds until the copy shows a window whose title matches the
-# extended regular expression $1, or one that does not with --other.
-wait_for_window() {
-  local other=false
-  [ "$1" = --other ] && other=true && shift
-  for _ in $(seq 1 30); do
-    if $other; then
-      "$work/driver" windows "$pid" | grep -Eqvx "$1" && return 0
-    else
-      "$work/driver" windows "$pid" | grep -Eqx "$1" && return 0
-    fi
-    sleep 1
-  done
-  return 1
-}
-
-opening=(-n -a "$copy")
-if $counter; then
-  # Counts the frames of the key window: each time the display link of its
-  # content view fires, a line with the time of the frame, the time of the
-  # next one and the time now. A frame the main thread is too busy for never
-  # fires. The library takes itself out of the environment, so that the
-  # processes the copy starts do not load it.
-  cat > "$work/FrameCounter.m" << 'OBJC'
-#import <AppKit/AppKit.h>
-#import <QuartzCore/QuartzCore.h>
-
-@interface SMFrameCounter : NSObject
-@property(nonatomic) FILE *output;
-@property(nonatomic, strong) CADisplayLink *link;
-@end
-
-@implementation SMFrameCounter
-- (void)frame:(CADisplayLink *)link {
-  fprintf(self.output, "%.6f %.6f %.6f\n", link.timestamp, link.targetTimestamp,
-          CACurrentMediaTime());
-}
-
-- (void)windowDidChangeScreen:(NSNotification *)notification {
-  NSWindow *window = notification.object;
-  if (window.isKeyWindow) [self windowDidBecomeKey:notification];
-}
-
-- (void)windowDidBecomeKey:(NSNotification *)notification {
-  NSWindow *window = notification.object;
-  [self.link invalidate];
-  self.link = [window.contentView displayLinkWithTarget:self selector:@selector(frame:)];
-  // On a screen whose rate varies, as with ProMotion, the link asks for the highest one, which
-  // scrolling gets from the system anyway; otherwise it would count at 60 Hz.
-  float highest = (float)window.screen.maximumFramesPerSecond;
-  self.link.preferredFrameRateRange = CAFrameRateRangeMake(highest, highest, highest);
-  [self.link addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
-  fprintf(self.output, "# window %s\n", window.title.UTF8String);
-}
-@end
-
-__attribute__((constructor)) static void startCounting(void) {
-  const char *path = getenv("SEAMERGE_FRAMES_OUTPUT");
-  unsetenv("DYLD_INSERT_LIBRARIES");
-  unsetenv("SEAMERGE_FRAMES_OUTPUT");
-  if (path == NULL) return;
-  static SMFrameCounter *counter;
-  counter = [SMFrameCounter new];
-  counter.output = fopen(path, "w");
-  if (counter.output == NULL) return;
-  setvbuf(counter.output, NULL, _IOLBF, 0);
-  [NSNotificationCenter.defaultCenter addObserver:counter
-                                         selector:@selector(windowDidBecomeKey:)
-                                             name:NSWindowDidBecomeKeyNotification
-                                           object:nil];
-  [NSNotificationCenter.defaultCenter addObserver:counter
-                                         selector:@selector(windowDidChangeScreen:)
-                                             name:NSWindowDidChangeScreenNotification
-                                           object:nil];
-}
-OBJC
-  clang -dynamiclib -fobjc-arc -O2 -framework AppKit -framework QuartzCore \
-    -o "$work/FrameCounter.dylib" "$work/FrameCounter.m" > "$work/counter-build.log" 2>&1 || {
-    cat "$work/counter-build.log" >&2
-    exit 1
-  }
-  codesign --force --sign - "$work/FrameCounter.dylib" > /dev/null 2>&1 || exit 1
-  opening+=(--env "DYLD_INSERT_LIBRARIES=$work/FrameCounter.dylib"
-    --env "SEAMERGE_FRAMES_OUTPUT=$work/frames.txt")
-fi
+copy_build || exit 1
+copy_settings "$arrangement" "$hides_base"
 
 progress "opening ${files[*]##*/} in the copy, $arrangement"
-open "${opening[@]}" "${files[@]}" || exit 1
-for _ in $(seq 1 30); do
-  pid=$(pgrep -f "^$copy/Contents/MacOS/" | head -n 1)
-  [ -n "$pid" ] && break
-  sleep 1
-done
-[ -n "$pid" ] || { echo "the copy did not start" >&2; exit 1; }
-# The sheet is no window of its own on the screen, so press its default button
-# as soon as the accessibility of the copy shows it.
-pressed=false
-for _ in $(seq 1 30); do
-  "$work/driver" compare "$pid" 2> /dev/null && pressed=true && break
-  sleep 1
-done
-$pressed || { echo "the copy shows no sheet of files" >&2; exit 1; }
-wait_for_window --other "Welcome|Compare Files|Merge Files" || { echo "the comparison did not open" >&2; exit 1; }
-sleep 1
-"$work/driver" place "$pid" "$screen" || exit 1
+copy_launch "SEAMERGE_PROBE_FLICKS=$flicks" "SEAMERGE_PROBE_SCREEN=$screen" \
+  "SEAMERGE_PROBE_TRANSPARENT=$($transparent && echo 1 || echo 0)" \
+  "SEAMERGE_PROBE_COUNT_FRAMES=$($counter && echo 1 || echo 0)" "SEAMERGE_PROBE_GO=$work/go" ||
+  exit 1
+copy_wait_for 900 ' comparison open: ' || exit 1
+seconds=$((flicks * 2 * 2 + 4))
+
+# The lines of the frames and of the flicks, which the library writes as they come.
+frames=$probe_output
 
 header() {
   printf '# Scrolling on the screen, %s, %d flicks down and up, %s, %s\n' "$arrangement" \
@@ -518,23 +150,38 @@ header() {
     "$($hides_base && echo hidden || echo shown)"
 }
 
+# Plays the flicks: the library starts them a second after the file go appears,
+# and writes a line with when they began and ended and the frame rate of the
+# screen, which flicked takes. Fails if the library ended the copy, as when it
+# came to the front.
+play_flicks() {
+  : > "$work/go"
+  copy_wait_for $((seconds + 60)) '^flicks ' || return 1
+  copy_wait_for 10 ' done$' || return 1
+  flicked=$(grep -m 1 '^flicks ' "$frames")
+}
+
+copy_wait_for 60 ' showing the window ' || exit 1
+progress "$(grep -m 1 ' showing the window ' "$frames" | sed 's/^[0-9.]* //')"
 if $counter; then
   progress "counting frames while playing $flicks flicks down and up"
-  sleep 1
-  sampler=""
   if [ -n "$sample_file" ]; then
     sample "$pid" $((flicks * 4)) 1 -mayDie -file "$sample_file" > /dev/null 2>&1 &
     sampler=$!
   fi
-  flicked=$("$work/driver" flicks "$pid" "$flicks") || exit 1
+  play_flicks || exit 1
   [ -z "$sampler" ] || wait "$sampler"
+  sampler=""
+  progress "$(grep -m 1 ' the last glide ended ' "$frames" | sed 's/^[0-9.]* //')"
   header "frames counted in the copy"
-  # The frames between the first and the last event of the flicks: a gap
-  # between two frames longer than one and a half frames lost the frames in
-  # it, and a gap of more than three frames is a hang over two frames.
+  # The frames from the first event of the flicks to the end of the last
+  # glide: a gap between two frames longer than one and a half frames lost
+  # the frames in it, and a gap of more than three frames is a hang over two
+  # frames.
   awk -v flicked="$flicked" '
     BEGIN { split(flicked, times, " "); from = times[2]; to = times[3] }
-    /^#/ { next }
+    # The frames have three times each; the other lines of the library are notes.
+    NF != 3 || $2 !~ /^[0-9.]+$/ { next }
     $1 >= from && $1 <= to {
       if (count > 0) {
         gap = $1 - last
@@ -560,24 +207,34 @@ if $counter; then
       printf "refresh-rate %.0f Hz\nframes %d\nmissed-frames %d\nmissed-percent %.2f\n", \
         1 / frame, count + missed, missed, 100 * missed / (count + missed)
       printf "longest-gap %.1f ms\nhangs-over-two-frames %d\n", longest * 1000, hangs + 0
-    }' "$work/frames.txt"
+    }' "$frames"
   exit
 fi
 
-seconds=$((flicks * 2 * 2 + 4))
 trace=$work/scrolling.trace
 progress "recording $seconds s of hitches while playing $flicks flicks down and up"
 # Attached to one process, Instruments never ends its recording; it records all
-# of them, and only the hitches of the copy count.
+# of them, and only the hitches of the copy count. It writes the recording
+# into a file of its own in the temporary folder, which it keeps after saving
+# the trace; the file that appears once it starts is that one.
+recordings() {
+  find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'instruments*.ktrace' 2> /dev/null | sort
+}
+recordings > "$work/recordings-before"
 xcrun xctrace record --template 'Animation Hitches' --all-processes --time-limit "${seconds}s" \
   --output "$trace" --no-prompt < /dev/null > "$work/record.log" 2>&1 &
 recorder=$!
-sleep 2
-flicked=$("$work/driver" flicks "$pid" "$flicks") || { kill "$recorder" 2> /dev/null; exit 1; }
-echo "$flicked" > "$work/flicks.txt"
-# Once it has saved the trace, Instruments may still not exit; two minutes past
-# its time limit, it is stopped either way.
-for _ in $(seq 1 $((seconds + 120))); do
+for _ in $(seq 1 50); do
+  ktrace=$(recordings | comm -13 "$work/recordings-before" - | head -n 1)
+  [ -n "$ktrace" ] && break
+  sleep 0.1
+done
+sleep 1
+play_flicks || exit 1
+# Saving takes Instruments long, more than a minute for a few seconds of
+# recording, and it may still not exit then; ten minutes past its time limit,
+# it is stopped either way.
+for _ in $(seq 1 $((seconds + 600))); do
   kill -0 "$recorder" 2> /dev/null || break
   grep -q "Output file saved" "$work/record.log" && break
   sleep 1

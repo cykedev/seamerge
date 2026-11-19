@@ -1,7 +1,9 @@
 // A library that the scripts load into a copy of the app, never into the app as shipped, to see
-// a comparison without the permission for recording the screen: it presses the default button
-// of the sheet the files fill, gives the window of the comparison a size, an appearance and a
-// scroll position, and then draws the window into a PNG while every window stays transparent.
+// and drive a comparison without the permissions for recording the screen or controlling the
+// computer: it presses the default button of the sheet the files fill, gives the window of the
+// comparison a size, an appearance and a scroll position, and then draws the window into a PNG
+// while every window stays transparent, or shows it without activating the app, counts its
+// frames and scrolls it with flicks as a trackpad does, through events it posts to the copy.
 // It turns away the requests of the app to come to the front, and should the copy come to the
 // front all the same, it ends it with a line that says so.
 //
@@ -41,7 +43,7 @@ func seamergeProbeStart() {
   }
 }
 
-/// The windows of the copy, which nobody at the screen sees.
+/// The windows of the copy, which nobody at the screen sees unless the probe shows one.
 ///
 /// Every window is fully transparent and lets the mouse through from the moment it is made, and
 /// stays so whatever the app or AppKit sets later, however it comes onto a screen: through the
@@ -50,6 +52,9 @@ func seamergeProbeStart() {
 /// AppKit moves it back onto one when it is ordered in, and the copy shows its windows even when
 /// it is launched hidden.
 enum ProbeWindows {
+  /// The windows the probe shows itself, which may take the transparency the probe gives them.
+  @MainActor static var shown: Set<ObjectIdentifier> = []
+
   /// Makes every window transparent from the moment it is made, for the rest of the process,
   /// noting in `log` each time the app asks a window to be seen.
   static func turnTransparent(log: ProbeLog) {
@@ -102,19 +107,21 @@ enum ProbeWindows {
     }
   }
 
-  /// Keeps every window fully transparent, whatever transparency the app or AppKit gives it, and
-  /// notes in `log` each time one is asked to be seen.
+  /// Keeps every window but those the probe shows fully transparent, whatever transparency the
+  /// app or AppKit gives it, and notes in `log` each time one is asked to be seen.
   private static func replaceAlphaSetter(log: ProbeLog) {
     typealias Setter = @convention(c) (NSWindow, Selector, CGFloat) -> Void
     let selector = #selector(setter: NSWindow.alphaValue)
     guard let method = class_getInstanceMethod(NSWindow.self, selector) else { return }
     let original = unsafeBitCast(method_getImplementation(method), to: Setter.self)
     let replacement: @convention(block) (NSWindow, CGFloat) -> Void = { window, alpha in
-      if alpha > 0 {
-        let number = MainActor.assumeIsolated { window.windowNumber }
+      let (isShown, number) = MainActor.assumeIsolated {
+        (shown.contains(ObjectIdentifier(window)), window.windowNumber)
+      }
+      if !isShown, alpha > 0 {
         log.note("window \(number) asked for alpha \(alpha), stays at 0")
       }
-      original(window, selector, 0)
+      original(window, selector, isShown ? alpha : 0)
     }
     method_setImplementation(method, imp_implementationWithBlock(replacement))
   }
@@ -186,6 +193,11 @@ struct ProbeTask: Sendable {
   enum Goal: Sendable {
     /// Draw the window into a PNG at this path, without showing it.
     case picture(path: String)
+
+    /// Show the window on the screen with the lowest frame rate, or the highest one if `fast`,
+    /// fully transparent if `transparent`, count its frames if `counts`, and play `count` flicks
+    /// down and as many up a second after a file appears at `go`.
+    case flicks(count: Int, fast: Bool, transparent: Bool, counts: Bool, go: String)
   }
 
   /// The file the probe writes its lines to.
@@ -205,15 +217,24 @@ struct ProbeTask: Sendable {
   /// scroll; `nil` leaves it where the window opens.
   var scrollFraction: Double?
 
-  /// How long the window may settle after it is laid out, before it is drawn.
+  /// How long the window may settle after it is laid out, before it is drawn or scrolled.
   var settleTime: TimeInterval
 
   /// Reads the task from `environment`, or gives `nil` if it names no output or no goal.
   init?(_ environment: [String: String]) {
     guard let outputPath = environment["SEAMERGE_PROBE_OUTPUT"] else { return nil }
     self.outputPath = outputPath
-    guard let path = environment["SEAMERGE_PROBE_PICTURE"] else { return nil }
-    goal = .picture(path: path)
+    if let path = environment["SEAMERGE_PROBE_PICTURE"] {
+      goal = .picture(path: path)
+    } else if let flicks = environment["SEAMERGE_PROBE_FLICKS"].flatMap(Int.init), flicks > 0 {
+      goal = .flicks(
+        count: flicks, fast: environment["SEAMERGE_PROBE_SCREEN"] == "fast",
+        transparent: environment["SEAMERGE_PROBE_TRANSPARENT"] == "1",
+        counts: environment["SEAMERGE_PROBE_COUNT_FRAMES"] != "0",
+        go: environment["SEAMERGE_PROBE_GO"] ?? "")
+    } else {
+      return nil
+    }
     look = ProbeLook(name: environment["SEAMERGE_PROBE_APPEARANCE"] ?? "light")
     switch environment["SEAMERGE_PROBE_SIZE"] {
     case nil, "": contentSize = nil
@@ -268,7 +289,7 @@ struct ProbeLog: @unchecked Sendable {
   }
 }
 
-/// Opens the comparison, prepares its window and draws it.
+/// Opens the comparison, prepares its window and draws or scrolls it.
 @MainActor
 final class Probe: NSObject {
   /// The probe of the process, once the app is about to finish launching.
@@ -277,8 +298,12 @@ final class Probe: NSObject {
   private let task: ProbeTask
   private let log: ProbeLog
   private var poll: Timer?
+  private var scrolledSpan: ClosedRange<CGFloat>?
+  private var isLiveScrolling = false
+  private var liveScrollEnd: CFTimeInterval = 0
   private var pressedSheet = false
   private var window: NSWindow?
+  private var link: CADisplayLink?
   private var screenWatch: ProbeScreenWatch?
   private let started = CACurrentMediaTime()
 
@@ -304,9 +329,11 @@ final class Probe: NSObject {
         + (task.look.increasesContrast ? " with increased contrast" : "")
         + ", may post events to the system \(CGPreflightPostEventAccess())"
         + ", may record the screen \(CGPreflightScreenCaptureAccess())")
-    // Until the window is drawn.
+    // Until the window is drawn or shown, before anything is measured.
     screenWatch = ProbeScreenWatch(log: log)
-    ProbeWindows.drawComparisonsAsKey()
+    if case .picture = task.goal {
+      ProbeWindows.drawComparisonsAsKey()
+    }
     watchActivation()
     poll = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
       MainActor.assumeIsolated {
@@ -416,7 +443,7 @@ final class Probe: NSObject {
     log.note(String(format: "scrolling the larger pane by %.0f points", distance))
   }
 
-  /// Draws the window, once it has settled.
+  /// Draws the window or plays the flicks, once it has settled.
   private func finish() {
     guard let window else { return }
     switch task.goal {
@@ -424,6 +451,16 @@ final class Probe: NSObject {
       drawPicture(of: window, to: path)
       screenWatch?.stop()
       log.note("done")
+    case .flicks(let count, let fast, let transparent, let counts, let go):
+      show(window, fast: fast, transparent: transparent)
+      if counts {
+        countFrames(of: window)
+      }
+      poll = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
+        MainActor.assumeIsolated {
+          Probe.current?.playFlicks(count, onceThereIs: go)
+        }
+      }
     }
   }
 
@@ -468,6 +505,151 @@ final class Probe: NSObject {
           return first.frame.minX < second.frame.minX ? .orderedAscending : .orderedDescending
         }, context: nil)
     }
+  }
+
+  // MARK: - Flicks
+
+  /// Moves `window` to the top left of the screen with the lowest frame rate, or the highest if
+  /// `fast`, and shows it there above other windows, without activating the app or taking the
+  /// key focus, and letting the pointer through to the windows below; fully transparent if
+  /// `transparent`.
+  private func show(_ window: NSWindow, fast: Bool, transparent: Bool) {
+    let screens = NSScreen.screens.sorted {
+      $0.maximumFramesPerSecond < $1.maximumFramesPerSecond
+    }
+    guard let screen = fast ? screens.last : screens.first else { return fail("no screen") }
+    let visible = screen.visibleFrame
+    window.setFrameTopLeftPoint(CGPoint(x: visible.minX + 20, y: visible.maxY - 20))
+    window.level = .floating
+    screenWatch?.stop()
+    ProbeWindows.shown.insert(ObjectIdentifier(window))
+    window.alphaValue = transparent ? 0 : 1
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(windowDidChangeScreen(_:)),
+      name: NSWindow.didChangeScreenNotification, object: window)
+    NSApp.unhideWithoutActivation()
+    window.orderFrontRegardless()
+    log.note(
+      "showing the window on \(screen.localizedName) at \(screen.maximumFramesPerSecond) Hz"
+        + (transparent ? ", transparent" : "") + ", app active \(NSApp.isActive)")
+  }
+
+  @objc private func windowDidChangeScreen(_ notification: Notification) {
+    guard let window, link != nil else { return }
+    countFrames(of: window)
+  }
+
+  /// Writes a line for each frame of `window`.
+  ///
+  /// Each time the display link of its content view fires, the line has the time of the frame,
+  /// the time of the next one and the time now. A frame the main thread is too busy for never
+  /// fires.
+  private func countFrames(of window: NSWindow) {
+    guard let content = window.contentView else { return }
+    link?.invalidate()
+    let link = content.displayLink(target: self, selector: #selector(frame(_:)))
+    // On a screen whose rate varies, as with ProMotion, the link asks for the highest one, which
+    // scrolling gets from the system anyway; otherwise it would count at 60 Hz.
+    let highest = Float(window.screen?.maximumFramesPerSecond ?? 60)
+    link.preferredFrameRateRange = CAFrameRateRange(
+      minimum: highest, maximum: highest, preferred: highest)
+    link.add(to: .main, forMode: .common)
+    self.link = link
+    log.write("# window \(window.title)")
+  }
+
+  @objc private func frame(_ link: CADisplayLink) {
+    log.write(
+      String(
+        format: "%.6f %.6f %.6f", link.timestamp, link.targetTimestamp, CACurrentMediaTime()))
+  }
+
+  /// Plays `count` flicks down and as many up a second after a file appears at `go`, or at once
+  /// if `go` is empty.
+  private func playFlicks(_ count: Int, onceThereIs go: String) {
+    guard go.isEmpty || FileManager.default.fileExists(atPath: go) else { return }
+    poll?.invalidate()
+    poll = nil
+    // A second for the frames to settle, and for whatever measures them to start.
+    Timer.scheduledTimer(withTimeInterval: 1, repeats: false) { _ in
+      MainActor.assumeIsolated {
+        Probe.current?.playFlicks(count)
+      }
+    }
+  }
+
+  /// Plays `count` flicks down and as many up over the larger pane, on a thread of their own,
+  /// then writes when they began and ended and the frame rate of the screen.
+  private func playFlicks(_ count: Int) {
+    guard let window, let pane = Self.largestPane(in: window) else {
+      return fail("the window has no pane to scroll")
+    }
+    let flicks = ProbeFlicks(
+      window: window.windowNumber, point: Self.center(of: pane, in: window), count: count)
+    let rate = window.screen?.maximumFramesPerSecond ?? 60
+    let queue = ProbeEventQueue(application: NSApp)
+    scrolledSpan = pane.contentView.bounds.minY...pane.contentView.bounds.minY
+    let center = NotificationCenter.default
+    center.addObserver(
+      self, selector: #selector(paneDidScroll(_:)), name: NSView.boundsDidChangeNotification,
+      object: pane.contentView)
+    center.addObserver(
+      self, selector: #selector(liveScrollDidStart(_:)),
+      name: NSScrollView.willStartLiveScrollNotification, object: pane)
+    center.addObserver(
+      self, selector: #selector(liveScrollDidEnd(_:)),
+      name: NSScrollView.didEndLiveScrollNotification, object: pane)
+    Thread.detachNewThread {
+      let (start, posted) = flicks.play(into: queue)
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated {
+          Probe.current?.endFlicks(startedAt: start, postedUntil: posted, rate: rate)
+        }
+      }
+    }
+  }
+
+  @objc private func liveScrollDidStart(_ notification: Notification) {
+    isLiveScrolling = true
+  }
+
+  @objc private func liveScrollDidEnd(_ notification: Notification) {
+    isLiveScrolling = false
+    liveScrollEnd = CACurrentMediaTime()
+  }
+
+  /// Keeps how far the pane scrolled during the flicks.
+  @objc private func paneDidScroll(_ notification: Notification) {
+    guard let clip = notification.object as? NSClipView, let span = scrolledSpan else { return }
+    let offset = clip.bounds.minY
+    scrolledSpan = min(span.lowerBound, offset)...max(span.upperBound, offset)
+  }
+
+  /// Writes when the flicks began and ended and the frame rate of the screen, once the glide
+  /// that AppKit adds after the last event has come to rest, at most three seconds after it:
+  /// the flicks end with the later of the last event and the end of the glide.
+  private func endFlicks(
+    startedAt start: CFTimeInterval, postedUntil posted: CFTimeInterval, rate: Int
+  ) {
+    guard !isLiveScrolling || CACurrentMediaTime() - posted > 3 else {
+      Timer.scheduledTimer(withTimeInterval: 0.02, repeats: false) { _ in
+        MainActor.assumeIsolated {
+          Probe.current?.endFlicks(startedAt: start, postedUntil: posted, rate: rate)
+        }
+      }
+      return
+    }
+    let end = max(posted, liveScrollEnd)
+    log.write("flicks \(start) \(end) \(rate)")
+    log.note(
+      String(format: "the last glide ended %.0f ms after the last event", (end - posted) * 1000))
+    if let span = scrolledSpan {
+      log.note(
+        String(
+          format: "the pane scrolled between %.0f and %.0f points", span.lowerBound, span.upperBound
+        ))
+    }
+    log.note("done")
   }
 
   // MARK: - Views
@@ -551,6 +733,96 @@ final class ProbeScreenWatch: @unchecked Sendable {
       stopped = true
       log.note("screen check: \(checks) checks, stopped")
     }
+  }
+}
+
+/// The queue of events of the app, which takes events from any thread.
+///
+/// `postEvent(_:atStart:)` is documented as safe to call from any thread, but Swift sees only
+/// that `NSApplication` belongs to the main actor; so it is called through its implementation.
+struct ProbeEventQueue: @unchecked Sendable {
+  private typealias PostEvent = @convention(c) (AnyObject, Selector, NSEvent, ObjCBool) -> Void
+
+  private let application: NSApplication
+  private let post: PostEvent
+  private static let selector = #selector(NSApplication.postEvent(_:atStart:))
+
+  /// The queue of `application`.
+  init(application: NSApplication) {
+    self.application = application
+    post = unsafeBitCast(
+      class_getMethodImplementation(NSApplication.self, Self.selector), to: PostEvent.self)
+  }
+
+  /// Puts `event` at the end of the queue, behind the events the system sent before.
+  func post(_ event: NSEvent) {
+    post(application, Self.selector, event, false)
+  }
+}
+
+/// Flicks of two fingers on a trackpad, as events the copy posts to itself over a point of a
+/// window: the fingers move for a quarter of a second, then the content glides on, at 120 events
+/// a second, down and up again.
+///
+/// The events go into the queue of the app from a thread of their own, at the times a trackpad
+/// sends them, and wait there while the main thread is busy, as the events of the system do.
+/// AppKit glides on by itself from the speed of the fingers as they lift; the events of the
+/// momentum phase only carry the phase, as AppKit takes no distance from them.
+struct ProbeFlicks: Sendable {
+  /// The number of the window the events go to.
+  var window: Int
+
+  /// The point of the window, in its coordinates, that the events go to.
+  var point: CGPoint
+
+  /// The flicks down, and as many up.
+  var count: Int
+
+  /// The time between two events.
+  static let interval: TimeInterval = 1 / 120.0
+
+  /// Plays the flicks into `queue` and returns when the first event went out and when the last
+  /// did, on the clock of the display link.
+  func play(into queue: ProbeEventQueue) -> (start: CFTimeInterval, end: CFTimeInterval) {
+    var events: [(delta: Double, phase: Int64, momentum: Int64)] = []
+    var pauses: [Int] = []
+    for flick in 0..<(2 * count) {
+      let direction: Double = flick < count ? -1 : 1
+      events.append((0, 1, 0))
+      for step in 0..<30 { events.append((direction * Double(4 + step), 2, 0)) }
+      events.append((0, 4, 0))
+      var delta = direction * 34
+      events.append((delta, 0, 1))
+      for _ in 0..<180 {
+        delta *= 0.975
+        events.append((delta, 0, 2))
+      }
+      events.append((0, 0, 3))
+      pauses.append(events.count)
+    }
+    let start = CACurrentMediaTime()
+    var due = start
+    var pauseIterator = pauses.makeIterator()
+    var nextPause = pauseIterator.next()
+    for (index, event) in events.enumerated() {
+      if index == nextPause {
+        // A fifth of a second between two flicks.
+        due += 0.2
+        nextPause = pauseIterator.next()
+      }
+      let wait = due - CACurrentMediaTime()
+      if wait > 0 {
+        Thread.sleep(forTimeInterval: wait)
+      }
+      if let scroll = ProbeEvents.scroll(
+        delta: event.delta, phase: event.phase, momentum: event.momentum, window: window,
+        at: point)
+      {
+        queue.post(scroll)
+      }
+      due += Self.interval
+    }
+    return (start, CACurrentMediaTime())
   }
 }
 
