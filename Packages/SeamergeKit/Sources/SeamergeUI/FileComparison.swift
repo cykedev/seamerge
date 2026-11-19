@@ -1,5 +1,5 @@
-import Foundation
-import MergeModel
+public import Foundation
+public import MergeModel
 
 /// Files that the user put together in the welcome window, each in its role: two to compare, three
 /// to merge, or two folders to compare file by file.

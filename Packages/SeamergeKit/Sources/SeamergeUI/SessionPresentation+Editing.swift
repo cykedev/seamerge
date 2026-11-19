@@ -1,5 +1,6 @@
 import MergeModel
 import PaneKit
+import os
 
 /// Editing the result: typing goes through the plans of the result document, and commands carry
 /// out plans in the result pane, so that the text of the pane and the segments of the document

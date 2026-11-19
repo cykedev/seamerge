@@ -1,4 +1,5 @@
 import AppKit
+import MergeModel
 
 /// The list of recent comparisons in the welcome window, grouped into those opened today and
 /// those opened earlier.

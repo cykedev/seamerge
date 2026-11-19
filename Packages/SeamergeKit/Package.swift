@@ -2,7 +2,13 @@
 
 import PackageDescription
 
-let swiftSettings: [SwiftSetting] = [.treatAllWarnings(as: .error)]
+// Imports are internal unless marked otherwise, and a file uses only the members of the modules
+// it imports itself, so that every dependency a file and an interface take on is written down.
+let swiftSettings: [SwiftSetting] = [
+  .treatAllWarnings(as: .error),
+  .enableUpcomingFeature("InternalImportsByDefault"),
+  .enableUpcomingFeature("MemberImportVisibility"),
+]
 
 /// The modules of the app and the modules each of them may import.
 ///

@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// The facts about a commit that tell the user where a side comes from.
 public struct CommitDetails: Sendable, Hashable {

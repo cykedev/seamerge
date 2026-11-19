@@ -1,4 +1,5 @@
 import AppKit
+import GitSupport
 import MergeModel
 import Testing
 

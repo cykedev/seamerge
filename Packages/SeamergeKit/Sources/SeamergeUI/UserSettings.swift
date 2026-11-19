@@ -1,5 +1,5 @@
-import AppKit
-import MergeModel
+public import AppKit
+public import MergeModel
 import Observation
 
 /// The settings of the app and what its windows remember, kept in the user defaults; the only

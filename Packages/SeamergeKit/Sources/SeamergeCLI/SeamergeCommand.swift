@@ -1,6 +1,6 @@
-import Foundation
+public import Foundation
 import GitSupport
-import SessionIPC
+public import SessionIPC
 import os
 
 /// The `seamerge` command: hands a merge or a comparison to the app and ends with its outcome.

@@ -1,4 +1,6 @@
+import AppKit
 import Foundation
+import GitSupport
 import Testing
 
 @testable import SeamergeUI

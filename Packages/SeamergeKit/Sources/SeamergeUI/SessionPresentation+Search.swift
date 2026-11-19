@@ -1,4 +1,5 @@
 import AppKit
+import MergeModel
 import PaneKit
 
 /// The search over the panes of the window: which rows it goes through in which order, and the

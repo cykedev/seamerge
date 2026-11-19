@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 
 /// An open merge or comparison: its files, the blocks the engine found and the row grid that
 /// aligns them.

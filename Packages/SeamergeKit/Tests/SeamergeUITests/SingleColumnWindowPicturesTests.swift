@@ -1,5 +1,6 @@
 import AppKit
 import MergeModel
+import PaneKit
 import Testing
 
 @testable import SeamergeUI

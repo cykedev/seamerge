@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// Where a file that Git or Tower hands to the tool comes from.
 public enum FileOrigin: Sendable, Hashable {

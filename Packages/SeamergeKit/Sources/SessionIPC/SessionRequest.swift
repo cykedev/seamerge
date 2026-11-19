@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// A request from the command-line tool to the app to open a merge or a comparison.
 ///

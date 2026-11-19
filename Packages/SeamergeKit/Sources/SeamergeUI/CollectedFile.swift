@@ -1,5 +1,5 @@
 import Foundation
-import GitSupport
+public import GitSupport
 
 /// One file of a window that compares several: its two sides and what Git says about them.
 public struct CollectedFile: Sendable, Hashable {

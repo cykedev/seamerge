@@ -1,4 +1,5 @@
 import AppKit
+import MergeModel
 
 extension SessionWindowController {
   /// Hides the footer of every session window, or shows it again.

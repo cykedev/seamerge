@@ -1,4 +1,5 @@
-import AppKit
+package import AppKit
+import Synchronization
 
 /// The search as the finder sees it: the searchable pieces of the panes' lines as one string, the
 /// selection of one pane, and the panes that show the matches.

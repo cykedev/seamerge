@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 import GitSupport
 
 /// The files that one window compares: those that the calls of one origin hand over, in the

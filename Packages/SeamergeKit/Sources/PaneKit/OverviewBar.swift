@@ -1,4 +1,4 @@
-import AppKit
+package import AppKit
 
 /// Receives the clicks on the marks of an overview bar.
 @MainActor

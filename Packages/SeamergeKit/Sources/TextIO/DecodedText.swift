@@ -1,5 +1,5 @@
-import Foundation
-import TextBasics
+package import Foundation
+package import TextBasics
 
 /// The text of a file, decoded, together with what is needed to write it back in the same form.
 package struct DecodedText: Sendable {

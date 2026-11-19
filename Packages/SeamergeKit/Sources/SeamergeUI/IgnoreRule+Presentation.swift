@@ -1,3 +1,4 @@
+import Foundation
 import MergeModel
 
 extension IgnoreRule.Problem {

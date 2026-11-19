@@ -1,5 +1,6 @@
 import AppKit
 import MergeModel
+import PaneKit
 
 /// The page Ignored Text of Settings: the table of the ignore rules, the buttons that add,
 /// remove and duplicate them, and the field in which the selected rule is tried.

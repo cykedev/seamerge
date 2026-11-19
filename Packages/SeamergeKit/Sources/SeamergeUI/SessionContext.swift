@@ -1,5 +1,5 @@
-import Foundation
-import GitSupport
+public import Foundation
+public import GitSupport
 
 /// What the window knows about a session besides its files: where the result of a merge goes,
 /// and what Git is doing.

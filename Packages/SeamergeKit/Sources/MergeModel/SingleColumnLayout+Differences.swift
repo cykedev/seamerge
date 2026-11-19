@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 extension InlineHighlights {
   /// The highlights of the lines of `role` in a single column, as UTF-16 ranges in its

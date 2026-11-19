@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 extension SessionRequest {
   /// Two folders whose files are compared: those that `git difftool --dir-diff` fills with the

@@ -1,6 +1,6 @@
-import Foundation
+public import Foundation
 import GitSupport
-import MergeModel
+public import MergeModel
 import os
 
 /// A file to read for a session, with the label its header shows where nothing else names its

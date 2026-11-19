@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 extension SessionRequest {
   /// What Git is doing while it asks for a merge, as the headers and the subtitle show it.

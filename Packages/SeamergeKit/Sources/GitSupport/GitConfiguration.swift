@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// The entries of the global Git configuration that make the tool Git's mergetool and difftool.
 ///

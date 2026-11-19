@@ -1,5 +1,5 @@
-import Foundation
-import TextBasics
+package import Foundation
+package import TextBasics
 
 /// Converts between the byte positions of UTF-8 text and the UTF-16 positions that `NSString`
 /// and TextKit use.

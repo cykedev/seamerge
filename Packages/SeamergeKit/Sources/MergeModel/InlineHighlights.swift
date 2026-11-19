@@ -1,4 +1,6 @@
 import Foundation
+import TextBasics
+import TextIO
 
 /// The characters of a block that changed, and the places where a side removed text, for the
 /// stronger tint and the removal marks within lines.

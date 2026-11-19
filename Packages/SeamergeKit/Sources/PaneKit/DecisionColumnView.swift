@@ -1,4 +1,4 @@
-import AppKit
+package import AppKit
 
 /// The narrow column at the right edge of the result pane that shows how each block came by its
 /// text and offers the toggles that decide it.

@@ -1,5 +1,6 @@
 import MergeModel
 import SwiftUI
+import TextBasics
 
 /// What the header above the result says: where the result goes, the encoding and line endings
 /// it is written with, and whether B mixes line endings, which the result does not.

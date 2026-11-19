@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 import os
 
 /// The side of the app: accepts the connections of command-line tools and serves each with a

@@ -1,5 +1,5 @@
 import AppKit
-import MergeModel
+public import MergeModel
 import os
 
 extension SessionWindowController {

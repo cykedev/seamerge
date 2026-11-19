@@ -1,3 +1,4 @@
+import Foundation
 import MergeModel
 
 /// An ignore rule that comes with the app, for text that changes on every run: Settings lists

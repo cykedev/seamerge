@@ -1,4 +1,4 @@
-import AppKit
+package import AppKit
 import Synchronization
 
 /// One find bar for several panes: the standard find bar of AppKit, searching the panes one

@@ -1,5 +1,6 @@
 import MergeModel
 import Testing
+import TextBasics
 
 struct LineEndingTests {
   @Test func fileEndingEveryLineInCRMatchesTheSameFileWithLFInExactMode() async throws {

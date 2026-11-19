@@ -1,4 +1,4 @@
-import AppKit
+public import AppKit
 import GitSupport
 import os
 

@@ -1,5 +1,5 @@
 import CMergeEngine
-import Foundation
+public import Foundation
 
 /// A three-way merge computed by the Perforce merge engine.
 ///

@@ -1,5 +1,5 @@
-import AppKit
-import MergeModel
+public import AppKit
+public import MergeModel
 import SwiftUI
 
 /// The window Keyboard Shortcuts, which the Help menu opens: every shortcut of a merge or of a

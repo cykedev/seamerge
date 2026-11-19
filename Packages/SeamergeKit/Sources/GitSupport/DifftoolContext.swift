@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// What Git passes to the tool when it compares a file through `git difftool`.
 ///

@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 import os
 
 /// The side of the command-line tool: hands a request to the app and waits for its outcome.

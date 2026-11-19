@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 import os
 
 /// The comparisons and merges last opened from the welcome window, newest first, each with the

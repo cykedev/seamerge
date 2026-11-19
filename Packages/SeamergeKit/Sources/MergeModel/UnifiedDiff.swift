@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// Files compared and written as a unified diff, as `git diff` writes it, which `git apply` and
 /// `patch -p1` take.

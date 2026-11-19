@@ -1,4 +1,5 @@
 import AppKit
+import MergeModel
 import Testing
 
 @testable import SeamergeUI

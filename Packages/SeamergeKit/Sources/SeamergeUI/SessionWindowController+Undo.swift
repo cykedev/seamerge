@@ -1,5 +1,6 @@
 import AppKit
 import MergeModel
+import PaneKit
 
 /// A run of typing in the result, which one step of undo takes back whole.
 ///

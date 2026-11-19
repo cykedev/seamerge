@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 extension Git {
   /// A runner for the installed `git`, or `nil` if there is none.

@@ -1,5 +1,5 @@
 import Darwin
-import Foundation
+public import Foundation
 
 /// Where the app listens for the command-line tool.
 public enum SessionSocket {

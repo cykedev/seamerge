@@ -1,5 +1,5 @@
-import AppKit
-import MergeModel
+public import AppKit
+public import MergeModel
 
 extension SessionCommand {
   /// The key equivalent of the command in a window of `kind`, with its modifier keys, or `nil`

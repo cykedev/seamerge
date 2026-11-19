@@ -1,4 +1,4 @@
-import GitSupport
+public import GitSupport
 
 /// Where the comparisons of a window that collects them come from: one run of Git in one
 /// repository.

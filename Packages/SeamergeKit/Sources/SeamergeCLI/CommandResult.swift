@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 import os
 
 /// What the command writes and the status it ends with.

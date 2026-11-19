@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 import MergeModel
 
 /// Why the files of a session cannot be opened in a window.

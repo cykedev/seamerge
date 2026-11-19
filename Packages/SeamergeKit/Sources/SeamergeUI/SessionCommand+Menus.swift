@@ -1,3 +1,5 @@
+import Foundation
+
 extension SessionCommand {
   /// A menu of the main menu that holds commands of a session window.
   public enum Menu: CaseIterable, Sendable {

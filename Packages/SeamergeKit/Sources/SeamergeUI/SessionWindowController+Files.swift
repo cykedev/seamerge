@@ -1,5 +1,6 @@
 import AppKit
 import MergeModel
+import os
 
 /// The files behind the window: watched on disk and reloaded when they change, and chosen anew
 /// with Change Files.

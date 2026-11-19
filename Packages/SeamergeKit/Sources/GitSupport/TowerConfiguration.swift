@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// The entry that lists the tool among Tower's diff and merge tools.
 ///

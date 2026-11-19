@@ -1,4 +1,5 @@
 import AppKit
+import Synchronization
 import Testing
 
 @testable import PaneKit

@@ -1,4 +1,4 @@
-import AppKit
+package import AppKit
 
 /// The four appearances that the palette gives values of their own.
 enum PaletteAppearance: Sendable, CaseIterable {

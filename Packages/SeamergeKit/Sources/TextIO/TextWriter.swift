@@ -1,5 +1,5 @@
-import Foundation
-import TextBasics
+package import Foundation
+package import TextBasics
 import os
 
 /// Writes text to a file with one encoding and one line ending.

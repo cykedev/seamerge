@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 /// The marks of the overview bar as they are drawn and hit: each at least as high as the

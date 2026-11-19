@@ -1,4 +1,4 @@
-import Darwin
+public import Darwin
 import Foundation
 
 /// A process as it ran: its process ID together with the moment it started, which together name

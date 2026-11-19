@@ -1,4 +1,4 @@
-import AppKit
+package import AppKit
 
 /// Learns where the user clicks in a pane, supplies its context menu and expands its collapsed
 /// runs.

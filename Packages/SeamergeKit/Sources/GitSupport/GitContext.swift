@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 import os
 
 /// What Git is doing when it asks the tool to merge a file: the operation, the three sides and the

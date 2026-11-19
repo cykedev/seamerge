@@ -1,4 +1,4 @@
-import AppKit
+public import AppKit
 import SwiftUI
 
 /// Whether the app checks for new versions by itself, as the window Settings shows and changes

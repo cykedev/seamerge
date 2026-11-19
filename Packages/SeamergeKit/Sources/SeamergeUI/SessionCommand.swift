@@ -1,4 +1,4 @@
-import AppKit
+public import AppKit
 import MergeModel
 
 /// A command of a session window: its name, the action it sends along the responder chain, its

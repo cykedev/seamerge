@@ -1,6 +1,7 @@
 import Foundation
 import MergeModel
 import Testing
+import TextBasics
 
 struct ResultFormatTests {
   private func session(base: Data, a: Data, b: Data) async throws -> Session {

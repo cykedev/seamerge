@@ -1,4 +1,4 @@
-import AppKit
+package import AppKit
 
 /// The fonts, metrics and colors that the panes are drawn with.
 ///

@@ -1,4 +1,4 @@
-import AppKit
+package import AppKit
 
 /// The view that shows the find bar of a ``PaneSearch``: the standard find bar of AppKit, across
 /// the full width of the view, as high as the bar while it shows and without height while it is

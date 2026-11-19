@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 extension Git {
   /// The top folder of the working tree that contains `directory`, or `nil` outside a working

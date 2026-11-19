@@ -1,4 +1,5 @@
-import Foundation
+import AppKit
+public import Foundation
 import MergeModel
 import os
 

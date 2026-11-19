@@ -1,3 +1,5 @@
+import Foundation
+
 /// What the decision column shows for one block of the result: its bar of toggles, which also
 /// shows its state, and beside it the arrow that resets it.
 package struct BlockDecision: Sendable, Hashable {

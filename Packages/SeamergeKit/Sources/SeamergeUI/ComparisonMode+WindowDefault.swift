@@ -1,4 +1,4 @@
-import MergeModel
+public import MergeModel
 
 extension ComparisonMode {
   /// The mode a session window compares in unless the user chooses another: whitespace changes

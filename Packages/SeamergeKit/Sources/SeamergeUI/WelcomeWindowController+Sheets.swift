@@ -1,4 +1,4 @@
-import AppKit
+public import AppKit
 import MergeModel
 
 /// The sheets Compare Files and Merge Files on the welcome window, and what the window does with

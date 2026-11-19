@@ -1,5 +1,5 @@
-import Foundation
-import TextBasics
+public import Foundation
+public import TextBasics
 import TextIO
 
 /// How the result of a merge is written: its encoding, whether it starts with a byte order mark,

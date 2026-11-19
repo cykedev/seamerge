@@ -2,6 +2,7 @@ import AppKit
 import GitSupport
 import MergeModel
 import PaneKit
+import os
 
 extension SessionWindowController {
   /// Hides the pane of the base, or shows it again; without a base it does nothing.

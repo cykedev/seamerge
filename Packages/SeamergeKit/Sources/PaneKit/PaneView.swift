@@ -1,4 +1,4 @@
-import AppKit
+package import AppKit
 
 /// A pane: the text of one side on the row grid, with line numbers and markers in its gutter.
 ///

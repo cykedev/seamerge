@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// The token-by-token differences between two short inputs, for
 /// highlighting changes within lines.

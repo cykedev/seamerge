@@ -1,3 +1,5 @@
+import Foundation
+
 /// The line numbers of a pane that shows both files of a comparison in one column: for each row,
 /// its line in the file on the left and in the file on the right.
 ///

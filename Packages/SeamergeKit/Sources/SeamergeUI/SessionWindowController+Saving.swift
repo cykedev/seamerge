@@ -1,5 +1,6 @@
 import AppKit
 import MergeModel
+import TextBasics
 
 /// Saving the result of a merge and closing its window, each way out reported exactly once.
 extension SessionWindowController {

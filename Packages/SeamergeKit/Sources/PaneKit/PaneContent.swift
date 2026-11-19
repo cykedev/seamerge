@@ -1,5 +1,5 @@
-import Foundation
-import TextBasics
+package import Foundation
+package import TextBasics
 
 /// What a pane shows: its rows on the grid, the line number of each row and the blocks.
 ///

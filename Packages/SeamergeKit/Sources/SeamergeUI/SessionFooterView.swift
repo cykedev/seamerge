@@ -1,5 +1,6 @@
 import AppKit
 import PaneKit
+import SyntaxKit
 
 /// The footer of a session window: on the leading side the comparison mode and the language the
 /// code is colored as, each in a pop-up button, beside them the toggles of how the panes show

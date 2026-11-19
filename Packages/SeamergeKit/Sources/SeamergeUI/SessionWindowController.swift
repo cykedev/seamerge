@@ -1,5 +1,5 @@
-import AppKit
-import MergeModel
+public import AppKit
+public import MergeModel
 import PaneKit
 import SyntaxKit
 

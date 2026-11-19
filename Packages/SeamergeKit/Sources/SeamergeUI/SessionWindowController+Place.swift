@@ -1,4 +1,5 @@
 import AppKit
+import MergeModel
 
 /// Where a session window opens: where the last window of its kind closed, at its size and with
 /// its split between the inputs and the result.

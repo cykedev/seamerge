@@ -1,4 +1,6 @@
-import Foundation
+public import Foundation
+import TextBasics
+import TextIO
 
 /// The lines that differ from the line they are compared with, although the comparison counts
 /// them as equal: they differ only in whitespace, in their line ending or in text that ignore

@@ -1,6 +1,8 @@
 import AppKit
 import Foundation
 import GitSupport
+import MergeModel
+import PaneKit
 import Testing
 
 @testable import SeamergeUI

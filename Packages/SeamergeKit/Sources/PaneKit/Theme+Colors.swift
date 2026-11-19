@@ -1,4 +1,4 @@
-import AppKit
+package import AppKit
 
 extension Theme {
   /// The color behind the text and the gutter.

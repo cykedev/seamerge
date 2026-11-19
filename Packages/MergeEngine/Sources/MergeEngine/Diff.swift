@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// The line-by-line differences between two inputs, computed by the
 /// Perforce diff engine.

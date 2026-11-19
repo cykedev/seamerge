@@ -1,6 +1,7 @@
 import AppKit
 import MergeModel
 import Testing
+import TextBasics
 
 @testable import SeamergeUI
 

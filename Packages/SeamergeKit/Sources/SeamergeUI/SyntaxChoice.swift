@@ -1,4 +1,4 @@
-import AppKit
+public import AppKit
 import SyntaxKit
 
 /// A choice of the language that the code of a window is colored as: the one the window

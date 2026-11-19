@@ -3,8 +3,13 @@
 import PackageDescription
 
 // For the Swift targets only: the vendored Perforce code is compiled unchanged
-// and has warnings of its own.
-let swiftSettings: [SwiftSetting] = [.treatAllWarnings(as: .error)]
+// and has warnings of its own. Imports are internal unless marked otherwise,
+// and a file uses only the members of the modules it imports itself.
+let swiftSettings: [SwiftSetting] = [
+  .treatAllWarnings(as: .error),
+  .enableUpcomingFeature("InternalImportsByDefault"),
+  .enableUpcomingFeature("MemberImportVisibility"),
+]
 
 let package = Package(
   name: "MergeEngine",

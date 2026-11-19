@@ -1,4 +1,5 @@
 import AppKit
+import MergeModel
 import PaneKit
 
 extension SessionPresentation: PaneViewDelegate {

@@ -1,4 +1,4 @@
-import Foundation
+package import Foundation
 
 /// A file as read from disk: its bytes and, unless it is binary, its decoded text.
 package struct LoadedFile: Sendable {

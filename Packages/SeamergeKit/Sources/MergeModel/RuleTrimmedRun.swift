@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 
 /// A changed run of a token comparison without the lines that ignore rules match entirely.
 ///

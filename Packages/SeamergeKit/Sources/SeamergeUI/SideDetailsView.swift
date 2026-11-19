@@ -1,3 +1,4 @@
+import GitSupport
 import PaneKit
 import SwiftUI
 

@@ -1,5 +1,5 @@
-import Foundation
-import TextBasics
+public import Foundation
+public import TextBasics
 import TextIO
 
 /// A file that a session compares: its name, its bytes and its text.

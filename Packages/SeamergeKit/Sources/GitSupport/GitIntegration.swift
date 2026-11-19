@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 import os
 
 /// Makes the tool Git's mergetool and difftool, tells whether it is, and takes it back.

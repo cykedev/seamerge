@@ -1,3 +1,5 @@
+import Foundation
+
 /// The mark in the gutter at the first row of a block that tells how a side changed it.
 package enum Marker: Sendable, Hashable {
   /// The side added lines; shown as `+`.

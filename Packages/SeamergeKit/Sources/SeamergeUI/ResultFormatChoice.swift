@@ -1,6 +1,6 @@
-import AppKit
-import MergeModel
-import TextBasics
+public import AppKit
+public import MergeModel
+public import TextBasics
 
 /// A choice of how the result of a merge is written: its encoding or its line endings.
 ///

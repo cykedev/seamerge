@@ -1,4 +1,4 @@
-import AppKit
+package import AppKit
 import TextBasics
 
 /// The seam between two panes side by side that connect their changes rather than line up their

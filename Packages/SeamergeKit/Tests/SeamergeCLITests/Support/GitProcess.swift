@@ -1,4 +1,5 @@
 import Foundation
+import GitSupport
 import Testing
 
 /// The exit status and the combined output of a finished `git` command.

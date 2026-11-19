@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// An input of a diff or merge together with the engine's split of it into
 /// lines.

@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// Two folders compared with each other, the older on the left.
 public struct FolderPair: Sendable, Hashable {
