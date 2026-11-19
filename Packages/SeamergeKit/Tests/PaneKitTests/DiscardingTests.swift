@@ -24,6 +24,26 @@ import Testing
     window.contentView?.layoutSubtreeIfNeeded()
   }
 
+  /// The rows of a page of `pane`, its visible height.
+  private func page(of pane: PaneView) -> Int {
+    Int((pane.documentView.visibleRect.height / pane.theme.rowHeight).rounded(.up))
+  }
+
+  /// The first row in view after which the pane has left fewer rows than a page behind the
+  /// pages it keeps above the view, which wait for scrolling to rest.
+  private func restingRow(of pane: PaneView) -> Int {
+    PaneTextView.pagesKept * page(of: pane) + page(of: pane) / 2
+  }
+
+  /// Scrolls `pane` down a row at a time from its top until `row` is the first row in view,
+  /// laying out the text on the way as the window does.
+  private func scrollDown(_ pane: PaneView, in window: NSWindow, toRow row: Int) {
+    for step in 0...row {
+      pane.scroll(to: CGPoint(x: 0, y: CGFloat(step) * pane.theme.rowHeight))
+      window.contentView?.layoutSubtreeIfNeeded()
+    }
+  }
+
   /// Lets the wait for scrolling to rest end at once, as the timer does after the rest interval.
   private func letScrollingRest(_ textView: PaneTextView) {
     textView.scrollRestTimer?.fire()
@@ -57,38 +77,68 @@ import Testing
     return manager.textLayoutFragment(for: location)?.state == .layoutAvailable
   }
 
-  @Test func scrollingThroughAndBackDiscardsTheLayoutFarBelowTheView() throws {
+  @Test func scrollingFarDiscardsTheLayoutLeftBehindOnTheWay() throws {
     let (pane, window, _) = EditingTests.editablePane(text: Self.text)
     defer { window.close() }
     let textView = pane.textView
-    scrollThrough(pane, in: window, backTo: .zero)
+    scrollThrough(pane, in: window, backTo: CGPoint(x: 0, y: 400 * pane.theme.rowHeight))
+
+    #expect(try !isLaidOut(row: 100, of: textView))
+    // The jump back from the end left the end behind laid out, as a place to jump back to.
+    #expect(try isLaidOut(row: 595, of: textView))
+    #expect(!textView.rowsNearView.contains(100))
+    #expect(try isLaidOut(row: 400, of: textView))
+
     letScrollingRest(textView)
-    #expect(try isLaidOut(row: 500, of: textView))
-
-    #expect(!textView.rowsToDiscard.isEmpty)
     discardEverything(in: textView)
-
     #expect(textView.rowsToDiscard.isEmpty)
-    #expect(try !isLaidOut(row: 500, of: textView))
-    #expect(try isLaidOut(row: 0, of: textView))
+    #expect(try isLaidOut(row: 400, of: textView))
   }
 
-  @Test func restingFarDownDiscardsTheLayoutFarAboveTheViewAndKeepsThePagesNearIt() throws {
+  @Test func jumpsKeepThePlacesLeftUntilTheViewScrollsOn() throws {
     let (pane, window, _) = EditingTests.editablePane(text: Self.text)
     defer { window.close() }
     let textView = pane.textView
     let rowHeight = pane.theme.rowHeight
-    let page = Int((textView.visibleRect.height / rowHeight).rounded(.up))
-    scrollThrough(pane, in: window, backTo: CGPoint(x: 0, y: 400 * rowHeight))
-    letScrollingRest(textView)
-    #expect(try isLaidOut(row: 100, of: textView))
+    for row in [0, 400, 0, 400, 200] {
+      pane.scroll(to: CGPoint(x: 0, y: CGFloat(row) * rowHeight))
+      window.contentView?.layoutSubtreeIfNeeded()
+    }
+    #expect(try isLaidOut(row: 400, of: textView))
+    #expect(try isLaidOut(row: 0, of: textView))
 
+    pane.scroll(to: CGPoint(x: 0, y: 201 * rowHeight))
+    window.contentView?.layoutSubtreeIfNeeded()
+    #expect(try isLaidOut(row: 400, of: textView))
+
+    // Scrolling on discards a few rows left behind for each row scrolled, the farthest first.
+    let page = page(of: pane)
+    for step in 1...3 {
+      pane.scroll(to: CGPoint(x: 0, y: CGFloat(201 - step * page) * rowHeight))
+      window.contentView?.layoutSubtreeIfNeeded()
+    }
+    #expect(try !isLaidOut(row: 400, of: textView))
+    #expect(try !isLaidOut(row: 0, of: textView))
+    #expect(try isLaidOut(row: 201 - 3 * page, of: textView))
+  }
+
+  @Test func restingDiscardsTheFewRowsLeftBehindAndKeepsThePagesNearTheView() throws {
+    let (pane, window, _) = EditingTests.editablePane(text: Self.text)
+    defer { window.close() }
+    let textView = pane.textView
+    let page = page(of: pane)
+    let resting = restingRow(of: pane)
+    scrollDown(pane, in: window, toRow: resting)
+    #expect(try isLaidOut(row: 0, of: textView))
+
+    letScrollingRest(textView)
+    #expect(!textView.rowsToDiscard.isEmpty)
     discardEverything(in: textView)
 
-    #expect(try !isLaidOut(row: 100, of: textView))
-    #expect(try !isLaidOut(row: 500, of: textView))
-    #expect(try isLaidOut(row: 400, of: textView))
-    #expect(try isLaidOut(row: 400 - (PaneTextView.pagesKept - 1) * page, of: textView))
+    #expect(textView.rowsToDiscard.isEmpty)
+    #expect(try !isLaidOut(row: 0, of: textView))
+    #expect(try isLaidOut(row: resting, of: textView))
+    #expect(try isLaidOut(row: resting - (PaneTextView.pagesKept - 1) * page, of: textView))
   }
 
   @Test func scrollingBackToTheTopAfterDiscardingLaysOutOnlyTheRowsInViewAtTheirPlaces() throws {
@@ -110,36 +160,38 @@ import Testing
     #expect(try !isLaidOut(row: 250, of: textView))
   }
 
-  /// Discarding makes the content storage make new elements for the paragraphs below the view.
+  /// Discarding makes the content storage make new elements for the paragraphs left behind.
   ///
   /// TextKit drops the elements of paragraphs only where the text storage reports an edit; the
   /// pane relies on it doing so for an edit of attributes that changes none, which no
   /// documentation promises. This test guards that behavior for new versions of macOS: should it
   /// change, discarding keeps the elements and editing after scrolling is slow again.
-  @Test func discardingMakesTheStorageLetGoOfTheElementsBelowTheView() throws {
+  @Test func discardingMakesTheStorageLetGoOfTheElementsLeftBehind() throws {
     let (pane, window, _) = EditingTests.editablePane(text: Self.text)
     defer { window.close() }
     let textView = pane.textView
-    scrollThrough(pane, in: window, backTo: .zero)
+    let resting = restingRow(of: pane)
+    scrollDown(pane, in: window, toRow: resting)
     letScrollingRest(textView)
-    let below = try element(ofRow: 500, in: textView)
-    let inView = try element(ofRow: 2, in: textView)
-    #expect(try element(ofRow: 500, in: textView) === below)
+    let behind = try element(ofRow: 0, in: textView)
+    let inView = try element(ofRow: resting + 2, in: textView)
+    #expect(try element(ofRow: 0, in: textView) === behind)
 
     discardEverything(in: textView)
 
-    #expect(try element(ofRow: 500, in: textView) !== below)
-    #expect(try element(ofRow: 2, in: textView) === inView)
+    #expect(try element(ofRow: 0, in: textView) !== behind)
+    #expect(try element(ofRow: resting + 2, in: textView) === inView)
   }
 
-  @Test func nothingIsDiscardedWhileTheViewMovesButOnceScrollingRests() throws {
+  @Test func fewerRowsLeftBehindThanAPageWaitForScrollingToRest() throws {
     let (pane, window, _) = EditingTests.editablePane(text: Self.text)
     defer { window.close() }
     let textView = pane.textView
-    scrollThrough(pane, in: window, backTo: .zero)
     let rowHeight = pane.theme.rowHeight
+    let resting = restingRow(of: pane)
+    scrollDown(pane, in: window, toRow: resting - 5)
     for step in 1...5 {
-      pane.scroll(to: CGPoint(x: 0, y: CGFloat(step) * rowHeight))
+      pane.scroll(to: CGPoint(x: 0, y: CGFloat(resting - 5 + step) * rowHeight))
       window.contentView?.layoutSubtreeIfNeeded()
       #expect(textView.isScrolling)
       #expect(!textView.discardNextParagraphs())
@@ -147,19 +199,19 @@ import Testing
     let scrollView = try #require(textView.enclosingScrollView)
     NotificationCenter.default.post(
       name: NSScrollView.willStartLiveScrollNotification, object: scrollView)
-    pane.scroll(to: CGPoint(x: 0, y: 8 * rowHeight))
+    pane.scroll(to: CGPoint(x: 0, y: CGFloat(resting + 2) * rowHeight))
     #expect(textView.scrollRestTimer == nil)
     #expect(!textView.discardNextParagraphs())
     NotificationCenter.default.post(
       name: NSScrollView.didEndLiveScrollNotification, object: scrollView)
     #expect(!textView.discardNextParagraphs())
-    #expect(try isLaidOut(row: 500, of: textView))
+    #expect(try isLaidOut(row: 0, of: textView))
 
     letScrollingRest(textView)
 
     #expect(!textView.isScrolling)
     discardEverything(in: textView)
-    #expect(try !isLaidOut(row: 500, of: textView))
+    #expect(try !isLaidOut(row: 0, of: textView))
   }
 
   @Test func rowsOnceInViewAtTheEndAreDiscardedAfterScrollingBackToTheTop() throws {
@@ -201,8 +253,15 @@ import Testing
       forName: NSText.didChangeNotification, object: textView, queue: nil
     ) { _ in MainActor.assumeIsolated { textChanges += 1 } }
     defer { NotificationCenter.default.removeObserver(observer) }
-    let origin = CGPoint(x: 0, y: 5 * pane.theme.rowHeight)
-    scrollThrough(pane, in: window, backTo: origin)
+    // From the end up, so that the rows left behind hold the block and the preview.
+    var y = textView.rowsHeight - textView.visibleRect.height
+    for _ in 0...restingRow(of: pane) {
+      pane.scroll(to: CGPoint(x: 0, y: y))
+      window.contentView?.layoutSubtreeIfNeeded()
+      y -= pane.theme.rowHeight
+    }
+    let origin = textView.visibleRect.origin
+    #expect(try isLaidOut(row: 599, of: textView))
     letScrollingRest(textView)
     textView.setSelectedRange(NSRange(location: 30, length: 4))
     let colored = try DrawnColors.coloredRanges(in: textView)
@@ -210,7 +269,7 @@ import Testing
 
     discardEverything(in: textView)
 
-    #expect(try !isLaidOut(row: 500, of: textView))
+    #expect(try !isLaidOut(row: 599, of: textView))
     #expect(recorder.asked.isEmpty && recorder.carriedOut.isEmpty && recorder.unannounced.isEmpty)
     #expect(textChanges == 0)
     #expect(!undoManager.canUndo)
@@ -237,7 +296,7 @@ import Testing
     let (pane, window, _) = EditingTests.editablePane(text: Self.text)
     defer { window.close() }
     let textView = pane.textView
-    scrollThrough(pane, in: window, backTo: .zero)
+    scrollDown(pane, in: window, toRow: restingRow(of: pane))
     #expect(textView.scrollRestTimer != nil)
 
     // Away while it waits for scrolling to rest.
@@ -257,32 +316,34 @@ import Testing
 
     letScrollingRest(textView)
     discardEverything(in: textView)
-    #expect(try !isLaidOut(row: 500, of: textView))
+    #expect(try !isLaidOut(row: 0, of: textView))
   }
 
   @Test func discardingWaitsWhileTheInputMethodMarksText() throws {
     let (pane, window, recorder) = EditingTests.editablePane(text: Self.text)
     defer { window.close() }
     let textView = pane.textView
-    textView.setSelectedRange(NSRange(location: 4, length: 0))
-    scrollThrough(pane, in: window, backTo: .zero)
+    let resting = restingRow(of: pane)
+    scrollDown(pane, in: window, toRow: resting)
+    let caret = textView.grid.offsets(ofRow: resting + 1).lowerBound + 4
+    textView.setSelectedRange(NSRange(location: caret, length: 0))
     letScrollingRest(textView)
     textView.setMarkedText(
       "´", selectedRange: NSRange(location: 1, length: 0),
       replacementRange: NSRange(location: NSNotFound, length: 0))
-    #expect(textView.markedRange() == NSRange(location: 4, length: 1))
+    #expect(textView.markedRange() == NSRange(location: caret, length: 1))
 
     textView.discardNextParagraphsWhenIdle(
       Notification(name: PaneTextView.idleToDiscardNotification, object: textView))
     #expect(!textView.isDiscardPassPending)
-    #expect(try isLaidOut(row: 500, of: textView))
-    #expect(textView.markedRange() == NSRange(location: 4, length: 1))
+    #expect(try isLaidOut(row: 0, of: textView))
+    #expect(textView.markedRange() == NSRange(location: caret, length: 1))
 
     textView.insertText("é", replacementRange: NSRange(location: NSNotFound, length: 0))
     #expect(recorder.carriedOut.count == 2)
     #expect(textView.isDiscardPassPending)
     discardEverything(in: textView)
-    #expect(try !isLaidOut(row: 500, of: textView))
+    #expect(try !isLaidOut(row: 0, of: textView))
   }
 }
 

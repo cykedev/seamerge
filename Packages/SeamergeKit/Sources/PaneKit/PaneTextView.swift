@@ -42,6 +42,12 @@ final class PaneTextView: NSTextView {
   /// Whether the user is scrolling by hand, with the scroller or a gesture.
   var isLiveScrolling = false
 
+  /// The top of the visible text when it last moved, which tells a scroll from a jump.
+  var visibleTopAtLastMove: CGFloat?
+
+  /// The rows the view has scrolled since the pane last discarded rows it left behind.
+  var rowsScrolledSinceDiscarding = 0
+
   /// Fires once the visible text has stayed where it is for the rest interval.
   var scrollRestTimer: Timer?
 
@@ -281,6 +287,9 @@ final class PaneTextView: NSTextView {
         NSAttributedString(string: text, attributes: attributes))
       rowsToDiscard = IndexSet()
       rowsNearView = IndexSet()
+      // The first move in the new text tells nothing of scrolling.
+      visibleTopAtLastMove = nil
+      rowsScrolledSinceDiscarding = 0
     }
   }
 
