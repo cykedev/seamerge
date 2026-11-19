@@ -1,4 +1,5 @@
 import AppKit
+import TextBasics
 
 /// The left margin of a pane: the line numbers, the markers of the blocks and the filled cells of
 /// the current block, on the tint of each row.

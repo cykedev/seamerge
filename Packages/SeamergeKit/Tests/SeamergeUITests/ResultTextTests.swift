@@ -1,6 +1,7 @@
 import MergeModel
 import PaneKit
 import Testing
+import TextBasics
 
 @testable import SeamergeUI
 
@@ -72,7 +73,7 @@ struct ResultTextTests {
 
     #expect(rows.text == "a😀\nb\nc")
     #expect(rows.starts == [0, 4, 6, 8])
-    #expect(rows.lineEndings == [.lineFeed, .carriageReturnLineFeed, .none])
+    #expect(rows.lineEndings == [.lf, .crlf, nil])
     #expect(rows.row(ofPaneOffset: 5) == 1)
     // The file's text: "a😀\n" takes 0..<4, "b\r\n" 4..<7.
     #expect(rows.rows(ofUTF16: 4..<7) == 1..<2)

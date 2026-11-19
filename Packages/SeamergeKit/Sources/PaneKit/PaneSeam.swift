@@ -1,4 +1,5 @@
 import AppKit
+import TextBasics
 
 /// The seam between two panes side by side that connect their changes rather than line up their
 /// rows: for each changed block, a band from its rows in the left pane to its rows in the right.

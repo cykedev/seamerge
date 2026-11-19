@@ -1,6 +1,7 @@
 import AppKit
 import PaneKit
 import Testing
+import TextBasics
 
 /// Checks that copying, dragging and services take only the lines of the file, never filler
 /// rows or invisible characters.
@@ -43,7 +44,7 @@ import Testing
     let pane = PaneView()
     pane.content = PaneContent(
       text: "a b\tc\nd", lineNumbers: [0, 1],
-      lineEndings: [.carriageReturnLineFeed, .none])
+      lineEndings: [.crlf, nil])
     pane.showsInvisibles = true
     let window = Rendering.host(pane, size: CGSize(width: 300, height: 100))
     defer { window.close() }

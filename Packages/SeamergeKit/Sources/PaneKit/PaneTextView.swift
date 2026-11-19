@@ -1,4 +1,5 @@
 import AppKit
+import TextBasics
 
 /// The text view of a pane: read-only text on the row grid, drawn with TextKit 2.
 ///

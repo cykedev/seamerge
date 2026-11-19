@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 
 /// What a pane shows: its rows on the grid, the line number of each row and the blocks.
 ///
@@ -34,8 +35,12 @@ public struct PaneContent: Sendable {
   /// ranges of the text, sorted and apart; empty unless the places are to be shown.
   public var ignoredDifferencePlaces: [Range<Int>]
 
-  /// How the line of each row ends in the file, shown among the invisible characters.
-  public var lineEndings: [LineEnding]
+  /// How the line of each row ends in the file, shown among the invisible characters; `nil` for
+  /// the last line of a file without a final line break and for a filler row.
+  ///
+  /// The text of a pane separates its rows with line feeds whatever the file uses, so the pane
+  /// learns the real ending of each line from here.
+  public var lineEndings: [LineEnding?]
 
   /// The rows tinted otherwise than their block, or tinted outside every block, by row: lines
   /// typed by hand, and the lines of a block that takes the texts of several sources, each in
@@ -66,7 +71,7 @@ public struct PaneContent: Sendable {
   public init(
     text: String, lineNumbers: [Int32], sideLineNumbers: SideLineNumbers? = nil,
     blocks: [PaneBlock] = [], ignoredDifferenceRows: IndexSet = [],
-    ignoredDifferencePlaces: [Range<Int>] = [], lineEndings: [LineEnding]? = nil,
+    ignoredDifferencePlaces: [Range<Int>] = [], lineEndings: [LineEnding?]? = nil,
     previews: [PanePreview] = [], rowTints: [Int: BlockStyle] = [:],
     marksBlocksWithoutRows: Bool = false
   ) {
@@ -85,7 +90,7 @@ public struct PaneContent: Sendable {
     self.lineEndings =
       lineEndings
       ?? lineNumbers.indices.map { row in
-        lineNumbers[row] < 0 || row == lineNumbers.count - 1 ? .none : .lineFeed
+        lineNumbers[row] < 0 || row == lineNumbers.count - 1 ? nil : .lf
       }
   }
 
@@ -94,18 +99,9 @@ public struct PaneContent: Sendable {
 
   /// The index of the block that `row` belongs to, or `nil` if the row is unchanged.
   func blockIndex(atRow row: Int) -> Int? {
-    var low = 0
-    var high = blocks.count
-    while low < high {
-      let middle = (low + high) / 2
-      if blocks[middle].rows.upperBound <= row {
-        low = middle + 1
-      } else {
-        high = middle
-      }
-    }
-    guard low < blocks.count, blocks[low].rows.contains(row) else { return nil }
-    return low
+    let index = blocks.partitioningIndex { $0.rows.upperBound > row }
+    guard index < blocks.count, blocks[index].rows.contains(row) else { return nil }
+    return index
   }
 
   /// The index of the block without rows that lies on the boundary before `row`, if blocks
@@ -134,13 +130,13 @@ public struct PaneContent: Sendable {
   private func newLineEnding(for change: RowChange) -> LineEnding {
     let first = change.oldRows.lowerBound
     for row in [first, first - 1] where lineEndings.indices.contains(row) {
-      if lineEndings[row] != .none { return lineEndings[row] }
+      if let ending = lineEndings[row] { return ending }
     }
     var counts: [LineEnding: Int] = [:]
-    for ending in lineEndings where ending != .none {
+    for case let ending? in lineEndings {
       counts[ending, default: 0] += 1
     }
-    return counts.max { $0.value < $1.value }?.key ?? .lineFeed
+    return counts.max { $0.value < $1.value }?.key ?? .lf
   }
 
   /// Takes over an edit of the text, now `text`, that replaced `range` by `length` code units and

@@ -1,4 +1,5 @@
 import AppKit
+import TextBasics
 
 extension PaneTextView {
   /// Whether some text of the pane has a color of its own: previews, or code colored by its

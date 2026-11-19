@@ -1,6 +1,7 @@
 import AppKit
 import MergeModel
 import PaneKit
+import TextBasics
 
 extension SessionPresentation {
   /// The text of the input of `role` without filler rows, made once.
@@ -9,7 +10,7 @@ extension SessionPresentation {
   }
 
   /// How each line of the input of `role` ends, worked out once.
-  func lineEndings(of role: Role) -> [LineEnding] {
+  func lineEndings(of role: Role) -> [LineEnding?] {
     lines.endings(of: role)
   }
 

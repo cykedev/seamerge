@@ -20,8 +20,8 @@ let modules: [(name: String, dependencies: [Target.Dependency])] = [
   ("SessionIPC", []),
   ("SeamergeCLI", ["SessionIPC", "GitSupport"]),
   ("SyntaxKit", []),
-  ("PaneKit", []),
-  ("SeamergeUI", ["PaneKit", "MergeModel", "SyntaxKit", "GitSupport"]),
+  ("PaneKit", ["TextBasics"]),
+  ("SeamergeUI", ["PaneKit", "MergeModel", "SyntaxKit", "GitSupport", "TextBasics"]),
 ]
 
 let package = Package(

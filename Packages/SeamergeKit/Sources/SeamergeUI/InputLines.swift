@@ -1,5 +1,6 @@
 import MergeModel
 import PaneKit
+import TextBasics
 
 /// The lines of the inputs of a session as the panes show them without filler rows, and how
 /// each of them ends: worked out once for a comparison, when a pane first needs them, and kept
@@ -12,7 +13,7 @@ struct InputLines: Sendable {
   private var texts: [Role: DisplayText] = [:]
 
   /// How each line of each input ends, as far as it is worked out.
-  private var endings: [Role: [LineEnding]] = [:]
+  private var endings: [Role: [LineEnding?]] = [:]
 
   /// The lines of the inputs of `session`, none worked out yet.
   init(session: Session) {
@@ -65,7 +66,7 @@ struct InputLines: Sendable {
   /// How each line of the input of `role` ends.
   ///
   /// - Precondition: `role` takes part in the session.
-  mutating func endings(of role: Role) -> [LineEnding] {
+  mutating func endings(of role: Role) -> [LineEnding?] {
     if let endings = endings[role] {
       return endings
     }

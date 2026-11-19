@@ -1,6 +1,7 @@
 import Foundation
 import MergeModel
 import PaneKit
+import TextBasics
 import os
 
 extension PaneContent {
@@ -20,7 +21,7 @@ extension PaneContent {
   /// - Precondition: `column` lays out the session of `changes`, a comparison, and `lineEndings`
   ///   has the endings of both its files.
   init(
-    column: SingleColumnLayout, of changes: SessionChanges, lineEndings: [Role: [LineEnding]],
+    column: SingleColumnLayout, of changes: SessionChanges, lineEndings: [Role: [LineEnding?]],
     ignoredDifferences: IgnoredDifferences, showsIgnoredPlaces: Bool
   ) {
     let session = changes.session
@@ -36,7 +37,7 @@ extension PaneContent {
     }
     var left: [Int32] = []
     var right: [Int32] = []
-    var endings: [LineEnding] = []
+    var endings: [LineEnding?] = []
     left.reserveCapacity(column.rowCount)
     right.reserveCapacity(column.rowCount)
     endings.reserveCapacity(column.rowCount)

@@ -1,6 +1,7 @@
 import AppKit
 import PaneKit
 import Testing
+import TextBasics
 
 /// Checks the symbols for spaces, tabs and line endings: hidden until asked for, then in the
 /// cell of their character, one symbol for each kind of line ending.
@@ -56,7 +57,7 @@ import Testing
   }
 
   @Test func everyLineEndingHasASymbolOfItsOwn() throws {
-    let endings: [LineEnding] = [.lineFeed, .carriageReturnLineFeed, .carriageReturn, .none]
+    let endings: [LineEnding?] = [.lf, .crlf, .cr, nil]
     let pane = PaneView(theme: theme)
     pane.content = PaneContent(
       text: "x\nx\nx\nx", lineNumbers: [0, 1, 2, 3], lineEndings: endings)

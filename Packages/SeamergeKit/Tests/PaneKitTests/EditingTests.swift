@@ -1,6 +1,7 @@
 import AppKit
 import PaneKit
 import Testing
+import TextBasics
 
 /// Checks the single way into an editable pane's text: every edit asks the editing delegate
 /// first, the pane carries out exactly what the delegate answers, and a change that bypasses the
@@ -335,7 +336,7 @@ import Testing
     textView.insertNewline(nil)
     #expect(pane.content.lineNumbers == [0, 1, 2, 3, 4])
     #expect(pane.content.blocks.map(\.rows) == [1..<3, 4..<5])
-    #expect(pane.content.lineEndings == [.lineFeed, .lineFeed, .lineFeed, .lineFeed, .none])
+    #expect(pane.content.lineEndings == [.lf, .lf, .lf, .lf, nil])
     // Deleting from the end of row 1 into row 3 joins them; the joined row goes to the block in
     // which the deletion starts.
     textView.setSelectedRange(NSRange(location: 7, length: 4))
@@ -364,7 +365,7 @@ import Testing
   @Test func linesTypedInAFileWithCRLFEndLikeTheLineTheyWereTypedIn() {
     let pane = PaneView()
     pane.content = PaneContent(
-      text: "one\ntwo", lineNumbers: [0, 1], lineEndings: [.carriageReturnLineFeed, .none])
+      text: "one\ntwo", lineNumbers: [0, 1], lineEndings: [.crlf, nil])
     pane.showsInvisibles = true
     let recorder = EditRecorder()
     pane.editingDelegate = recorder
@@ -373,13 +374,13 @@ import Testing
     let textView = pane.documentView
     textView.setSelectedRange(NSRange(location: 3, length: 0))
     textView.insertNewline(nil)
-    #expect(pane.content.lineEndings == [.carriageReturnLineFeed, .carriageReturnLineFeed, .none])
+    #expect(pane.content.lineEndings == [.crlf, .crlf, nil])
     // At the end of the text, the last line has no ending; the new line takes the one before.
     textView.setSelectedRange(NSRange(location: textView.string.utf16.count, length: 0))
     textView.insertNewline(nil)
     #expect(
       pane.content.lineEndings == [
-        .carriageReturnLineFeed, .carriageReturnLineFeed, .carriageReturnLineFeed, .none,
+        .crlf, .crlf, .crlf, nil,
       ])
     #expect(recorder.carriedOut.count == 2)
   }
@@ -389,7 +390,7 @@ import Testing
     defer { window.close() }
     pane.documentView.setSelectedRange(NSRange(location: 4, length: 0))
     pane.documentView.insertNewline(nil)
-    #expect(pane.content.lineEndings == [.lineFeed, .none])
+    #expect(pane.content.lineEndings == [.lf, nil])
     #expect(recorder.carriedOut.count == 1)
   }
 

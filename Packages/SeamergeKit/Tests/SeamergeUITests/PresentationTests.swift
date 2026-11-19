@@ -2,6 +2,7 @@ import AppKit
 import MergeModel
 import PaneKit
 import Testing
+import TextBasics
 
 @testable import SeamergeUI
 
@@ -108,10 +109,10 @@ import Testing
     for (_, pane) in controller.layout.sourcePanes {
       let content = pane.content
       let endings = zip(content.lineNumbers, content.lineEndings).filter { $0.0 >= 0 }.map(\.1)
-      #expect(Set(endings) == [.carriageReturnLineFeed])
+      #expect(Set(endings) == [.crlf])
     }
     let result = try controller.mergeResult.content
-    #expect(Set(result.lineEndings) == [.carriageReturnLineFeed])
+    #expect(Set(result.lineEndings) == [.crlf])
     #expect(!result.text.contains("\r"))
   }
 
@@ -119,14 +120,14 @@ import Testing
     let mixed = SourceFile(bytes: Data("one\r\ntwö\nthree\r\nlast".utf8), label: "mixed")
     #expect(
       PaneContent.lineEndings(of: mixed, lineCount: 4) == [
-        .carriageReturnLineFeed, .lineFeed, .carriageReturnLineFeed, .none,
+        .crlf, .lf, .crlf, nil,
       ])
     let classic = SourceFile(bytes: Data("one\rtwo\r".utf8), label: "classic")
     #expect(
-      PaneContent.lineEndings(of: classic, lineCount: 2) == [.carriageReturn, .carriageReturn])
+      PaneContent.lineEndings(of: classic, lineCount: 2) == [.cr, .cr])
     #expect(
       PaneContent.lineEndings(of: classic, lineCount: 3)
-        == Array(repeating: .carriageReturn, count: 3))
+        == Array(repeating: .cr, count: 3))
     let empty = SourceFile(bytes: Data(), label: "empty")
     #expect(PaneContent.lineEndings(of: empty, lineCount: 0) == [])
   }
@@ -136,7 +137,7 @@ import Testing
     #expect(rows.text == "one\ntwo\nthree\nfour\nfive")
     #expect(
       rows.lineEndings == [
-        .carriageReturnLineFeed, .carriageReturn, .lineFeed, .lineFeed, .none,
+        .crlf, .cr, .lf, .lf, nil,
       ])
     #expect(rows.starts == [0, 4, 8, 14, 19, 24])
     #expect(rows.rows(ofUTF16: 0..<5) == 0..<1)
@@ -149,10 +150,10 @@ import Testing
   @Test func resultEndingWithALineBreakHasNoEmptyRowAfterIt() async throws {
     let rows = ResultPaneContent.rows(of: "one\r\ntwo\n")
     #expect(rows.text == "one\ntwo")
-    #expect(rows.lineEndings == [.carriageReturnLineFeed, .lineFeed])
+    #expect(rows.lineEndings == [.crlf, .lf])
     #expect(rows.rows(ofUTF16: 9..<9) == 2..<2)
-    #expect(ResultPaneContent.rows(of: "\n").lineEndings == [.lineFeed])
-    #expect(ResultPaneContent.rows(of: "").lineEndings == [.none])
+    #expect(ResultPaneContent.rows(of: "\n").lineEndings == [.lf])
+    #expect(ResultPaneContent.rows(of: "").lineEndings == [nil])
 
     // Like the panes of the inputs: B has 9 lines, the result 15, each with its number.
     let controller = try await helloWorldWindow()
@@ -198,7 +199,7 @@ import Testing
         let line = map.targetPosition(at: Double(layout.rows(of: block).lowerBound))
         #expect(Double(paneBlock.rows.lowerBound) == line, "block \(block.id)")
       }
-      let endedLines = content.lineEndings.count { $0 != .none }
+      let endedLines = content.lineEndings.count { $0 != nil }
       #expect(map.targetPosition(at: Double(layout.rowCount)) == Double(endedLines))
     }
   }

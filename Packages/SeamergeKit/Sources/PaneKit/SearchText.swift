@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 
 /// The text that a search over several panes goes through: the searchable pieces of their text,
 /// one after the other in the order the owner of the panes gave, as one long string.

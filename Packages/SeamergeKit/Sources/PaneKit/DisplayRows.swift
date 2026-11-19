@@ -1,3 +1,5 @@
+import TextBasics
+
 /// The rows of a pane as it shows them: every row of its grid, except that each collapsed run
 /// takes a single *display row*, the row of its bar.
 ///
@@ -234,13 +236,8 @@ struct DisplayRows {
   /// The last index of the bars for which `isAtOrBefore` holds, given that once it fails, it
   /// fails for every later one.
   private func lastIndex(where isAtOrBefore: (Int) -> Bool) -> Int? {
-    var low = 0
-    var high = runs.count
-    while low < high {
-      let middle = (low + high) / 2
-      if isAtOrBefore(middle) { low = middle + 1 } else { high = middle }
-    }
-    return low > 0 ? low - 1 : nil
+    let end = runs.indices.partitioningIndex { !isAtOrBefore($0) }
+    return end > 0 ? end - 1 : nil
   }
 
   /// The last index of the runs for which `isAtOrBefore` holds, given that once it fails, it

@@ -1,4 +1,5 @@
 import AppKit
+import TextBasics
 
 /// The content storage of a pane's text view, which steps over the text that collapsed runs hide
 /// in one go when TextKit enumerates the paragraphs.

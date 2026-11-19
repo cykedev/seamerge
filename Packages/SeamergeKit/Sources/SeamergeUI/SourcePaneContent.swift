@@ -1,6 +1,7 @@
 import Foundation
 import MergeModel
 import PaneKit
+import TextBasics
 import os
 
 extension PaneContent {
@@ -19,7 +20,7 @@ extension PaneContent {
   ///     tinted and which pane carries the mark of a conflict.
   /// - Precondition: `role` takes part in the session.
   init(
-    source role: Role, of changes: SessionChanges, lineEndings endingsByLine: [LineEnding],
+    source role: Role, of changes: SessionChanges, lineEndings endingsByLine: [LineEnding?],
     document: ResultDocument?, ignoredDifferences: IgnoredDifferences, showsIgnoredPlaces: Bool,
     baseIsShown: Bool
   ) {
@@ -41,7 +42,7 @@ extension PaneContent {
       }
     }
     let lineEndings = lineNumbers.map { line in
-      line < 0 ? LineEnding.none : endingsByLine[Int(line)]
+      line < 0 ? nil : endingsByLine[Int(line)]
     }
     let blocks = Self.blocks(
       source: role, of: changes, document: document, baseIsShown: baseIsShown, alignsLines: true)
@@ -75,7 +76,7 @@ extension PaneContent {
   ///     tinted and which pane carries the mark of a conflict.
   /// - Precondition: `role` takes part in the session.
   init(
-    lines role: Role, text: DisplayText, of changes: SessionChanges, lineEndings: [LineEnding],
+    lines role: Role, text: DisplayText, of changes: SessionChanges, lineEndings: [LineEnding?],
     document: ResultDocument?, ignoredDifferences: IgnoredDifferences, showsIgnoredPlaces: Bool,
     baseIsShown: Bool
   ) {
@@ -152,31 +153,31 @@ extension PaneContent {
   /// The lines are those of the comparison: they end at LF, or at CR in a file whose lines all
   /// end in CR. Where the file splits into another number of lines, as a comparison mode that
   /// also ends lines at a lone CR does, each line counts as ending like most lines of the file.
-  static func lineEndings(of file: SourceFile, lineCount: Int) -> [LineEnding] {
+  static func lineEndings(of file: SourceFile, lineCount: Int) -> [LineEnding?] {
     // Line endings are ASCII, so the UTF-8 of the text finds them without a copy of it.
     let text = file.text?.utf8 ?? "".utf8
     let separator = file.lineEndings == .cr ? Self.carriageReturn : Self.lineFeed
-    var endings: [LineEnding] = []
+    var endings: [LineEnding?] = []
     endings.reserveCapacity(lineCount)
     var previous: UInt8?
     for unit in text {
       defer { previous = unit }
       guard unit == separator else { continue }
       if separator == Self.carriageReturn {
-        endings.append(.carriageReturn)
+        endings.append(.cr)
       } else {
-        endings.append(previous == Self.carriageReturn ? .carriageReturnLineFeed : .lineFeed)
+        endings.append(previous == Self.carriageReturn ? .crlf : .lf)
       }
     }
     if previous != separator && previous != nil {
-      endings.append(.none)
+      endings.append(nil)
     }
     guard endings.count == lineCount else {
       let usual: LineEnding =
         switch file.lineEndings {
-        case .crlf: .carriageReturnLineFeed
-        case .cr: .carriageReturn
-        case .lf, .mixed, nil: .lineFeed
+        case .crlf: .crlf
+        case .cr: .cr
+        case .lf, .mixed, nil: .lf
         }
       return Array(repeating: usual, count: lineCount)
     }

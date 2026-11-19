@@ -1,4 +1,5 @@
 import Foundation
+import TextBasics
 
 /// The rows of a pane's text: where each starts and how many columns the widest one takes.
 ///
@@ -160,17 +161,7 @@ struct RowGrid {
   /// The row that the character at `offset` belongs to; the end of the text belongs to the last
   /// row.
   func row(containingOffset offset: Int) -> Int {
-    var low = 0
-    var high = rowStarts.count
-    while high - low > 1 {
-      let middle = (low + high) / 2
-      if rowStarts[middle] <= offset {
-        low = middle
-      } else {
-        high = middle
-      }
-    }
-    return low
+    rowStarts.indices.lastIndex(holding: { rowStarts[$0] <= offset })
   }
 
   /// The offsets of `row`, its line feed included.

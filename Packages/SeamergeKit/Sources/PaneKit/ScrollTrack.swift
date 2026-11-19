@@ -1,4 +1,5 @@
 import CoreGraphics
+import TextBasics
 
 /// The common track over which panes side by side scroll that show the lines of their files
 /// rather than line up their rows: each stretch, a changed block or the unchanged rows between

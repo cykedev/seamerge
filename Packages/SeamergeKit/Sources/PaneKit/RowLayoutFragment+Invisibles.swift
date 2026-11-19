@@ -1,4 +1,5 @@
 import AppKit
+import TextBasics
 
 extension RowLayoutFragment {
   /// Draws a symbol in the cell of each space and tab of the fragment's lines and one for the
@@ -90,13 +91,25 @@ extension RowLayoutFragment {
       space = line("·")
       tab = line("→")
       endings = Dictionary(
-        uniqueKeysWithValues: LineEnding.allCases.filter { $0 != .none }.map {
-          ($0, line($0.symbol))
-        })
+        uniqueKeysWithValues: LineEnding.allCases.map { ($0, line(Self.symbol(for: $0))) })
     }
 
-    func lineEnding(_ ending: LineEnding) -> CTLine? {
-      endings[ending]
+    /// The symbol for `ending`, or `nil` for a row without one.
+    func lineEnding(_ ending: LineEnding?) -> CTLine? {
+      ending.flatMap { endings[$0] }
+    }
+
+    /// The characters that stand for a line ending: `¬` for a line feed, `¤` for a carriage
+    /// return.
+    ///
+    /// The code font has `¤` in the width of a cell; the symbol for a carriage return, `␍`, comes
+    /// from a fallback font as two letters too small to read at the size of code.
+    private static func symbol(for ending: LineEnding) -> String {
+      switch ending {
+      case .lf: "¬"
+      case .crlf: "¤¬"
+      case .cr: "¤"
+      }
     }
   }
 }

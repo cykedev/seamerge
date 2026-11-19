@@ -1,6 +1,7 @@
 import Foundation
 import MergeModel
 import PaneKit
+import TextBasics
 
 /// What the result pane shows: the text of the result, a block for each changed block of the
 /// merge, the previews of open conflicts, and what the decision column shows for each block.
@@ -191,7 +192,7 @@ struct ResultPaneContent {
     let starts: [Int]
 
     /// How the line of each row ended in the result.
-    let lineEndings: [LineEnding]
+    let lineEndings: [LineEnding?]
 
     /// The UTF-16 offset in the result text of the last unit of the line break that ends each
     /// row, and for a last row without one, the length of the result text.
@@ -230,7 +231,7 @@ struct ResultPaneContent {
       return low
     }
 
-    init(text: String, starts: [Int], lineEndings: [LineEnding], breakOffsets: [Int]) {
+    init(text: String, starts: [Int], lineEndings: [LineEnding?], breakOffsets: [Int]) {
       self.text = text
       self.starts = starts
       self.lineEndings = lineEndings
@@ -244,7 +245,7 @@ struct ResultPaneContent {
   /// A text that ends with a line break has no row after it; a text without any has one row.
   static func rows(of text: String) -> Rows {
     var starts = [0]
-    var lineEndings: [LineEnding] = []
+    var lineEndings: [LineEnding?] = []
     var breakOffsets: [Int] = []
     // UTF-16 offsets into the text, and into the pane's text, which has one unit for CRLF.
     var offset = 0
@@ -259,18 +260,18 @@ struct ResultPaneContent {
       var length = 1
       var units = 1
       switch byte {
-      case 0x0A: ending = .lineFeed
+      case 0x0A: ending = .lf
       case 0x0D where utf8[index + 1] == 0x0A:
-        ending = .carriageReturnLineFeed
+        ending = .crlf
         length = 2
         units = 2
-      case 0x0D: ending = .carriageReturn
+      case 0x0D: ending = .cr
       case 0xC2 where utf8[index + 1] == 0x85:
-        ending = .lineFeed
+        ending = .lf
         length = 2
       case 0xE2
       where utf8[index + 1] == 0x80 && (utf8[index + 2] == 0xA8 || utf8[index + 2] == 0xA9):
-        ending = .lineFeed
+        ending = .lf
         length = 3
       case 0x80..<0xC0: units = 0
       case 0xF0...: units = 2
@@ -293,7 +294,7 @@ struct ResultPaneContent {
     }
     let endsWithBreak = starts.count > 1 && starts[starts.count - 1] == paneOffset
     if !endsWithBreak {
-      lineEndings.append(.none)
+      lineEndings.append(nil)
       breakOffsets.append(offset)
       starts.append(paneOffset + 1)
     }

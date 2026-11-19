@@ -1,4 +1,5 @@
 import AppKit
+import TextBasics
 
 /// What a search over several panes asks of the text view of each: where a match lies on
 /// screen, how the find indicator draws it, which text is in view, and replacing a match the way

@@ -1,6 +1,7 @@
 import AppKit
 import PaneKit
 import Testing
+import TextBasics
 
 /// Draws the pictures of the coupled panes with their overview bars and of the invisible
 /// characters, for the visual review.
@@ -32,13 +33,13 @@ import Testing
   @Test(arguments: Look.all)
   func invisibleCharactersArePictured(look: Look) throws {
     let theme = Theme(increasesContrast: look.increasesContrast)
-    let rows: [(text: String, ending: LineEnding, style: BlockStyle)] = [
-      ("func decode(_ bytes: Data) -> String? {", .lineFeed, .unchanged),
-      ("\tlet text = String(bytes: bytes, encoding: .utf8)", .carriageReturnLineFeed, .tinted(.a)),
-      ("    return text  // two spaces before the comment", .carriageReturn, .tinted(.b)),
-      ("\t\treturn nil", .lineFeed, .tinted(.conflict)),
-      ("", .lineFeed, .original),
-      ("}", .none, .unchanged),
+    let rows: [(text: String, ending: LineEnding?, style: BlockStyle)] = [
+      ("func decode(_ bytes: Data) -> String? {", .lf, .unchanged),
+      ("\tlet text = String(bytes: bytes, encoding: .utf8)", .crlf, .tinted(.a)),
+      ("    return text  // two spaces before the comment", .cr, .tinted(.b)),
+      ("\t\treturn nil", .lf, .tinted(.conflict)),
+      ("", .lf, .original),
+      ("}", nil, .unchanged),
     ]
     let pane = PaneView(theme: theme)
     pane.content = PaneContent(

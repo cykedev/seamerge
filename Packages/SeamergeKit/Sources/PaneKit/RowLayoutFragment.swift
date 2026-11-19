@@ -1,4 +1,5 @@
 import AppKit
+import TextBasics
 
 /// A layout fragment that draws its rows the way a pane shows them: the row fills across the
 /// full width of the pane, the highlights of changed runs, the selection, the text in the middle
@@ -75,9 +76,9 @@ final class RowLayoutFragment: NSTextLayoutFragment {
 
   /// The symbols for spaces, tabs and line endings.
   struct Invisibles: Sendable {
-    /// How the line of each of the fragment's rows ends, or `nil` if only the places of ignored
-    /// differences get symbols.
-    var lineEndings: [LineEnding]?
+    /// How the line of each of the fragment's rows ends, `nil` for a row without an ending, or
+    /// `nil` altogether if only the places of ignored differences get symbols.
+    var lineEndings: [LineEnding?]?
     /// The places of ignored differences, as UTF-16 offsets into the text, sorted and apart,
     /// whose spaces and tabs get symbols in a color of their own.
     var places: [Range<Int>]
