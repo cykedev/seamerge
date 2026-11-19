@@ -125,8 +125,9 @@ public final class PaneSearch: NSObject {
   /// whether the owner or the user in the bar switched it.
   public var replaceablePane: PaneView?
 
-  /// The finder that runs the find bar.
-  private let finder = NSTextFinder()
+  /// The finder that runs the find bar; internal for the tests, which take its find indicator
+  /// away.
+  let finder = NSTextFinder()
 
   /// The text as the find bar reads it, which the search takes anew after a change once it is
   /// asked for.

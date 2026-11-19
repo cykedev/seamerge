@@ -200,6 +200,11 @@ import Testing
       pane.textView.scrollRestTimer?.fire()
       while pane.textView.discardNextParagraphs() {}
     }
+    // Once the panes scrolled, AppKit fades the find indicator of the search out, and lets go
+    // of it, of its window and of the text view it points into only as the fading ends, which
+    // it never does while the display sleeps, as when the checks run unattended. The window
+    // would keep its text views however it gives them back; the indicator goes at once here.
+    controller.presentation.search.finder.cancelFindIndicator()
   }
 
   /// Closes the window of `controller` and returns its parts.
