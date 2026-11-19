@@ -10,6 +10,7 @@ let swiftSettings: [SwiftSetting] = [.treatAllWarnings(as: .error)]
 /// table is the module graph. Arrows only point downwards: the user interface
 /// knows the model, the model never knows the user interface.
 let modules: [(name: String, dependencies: [Target.Dependency])] = [
+  ("TextBasics", []),
   ("TextIO", []),
   ("MergeModel", [.product(name: "MergeEngine", package: "MergeEngine"), "TextIO"]),
   ("GitSupport", []),
