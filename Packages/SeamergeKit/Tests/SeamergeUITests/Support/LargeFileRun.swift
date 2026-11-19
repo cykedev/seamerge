@@ -277,14 +277,20 @@ final class LargeFileRun {
   }
 
   /// Carries out `body` as the run loop handles an event: what it leaves to the autorelease
-  /// pool is released afterwards.
+  /// pool is released afterwards, and what it changed in the layers of the window is committed,
+  /// as the run loop commits it before it waits for the next event.
   ///
   /// The measurement runs in one long task on the main actor, whose pool would otherwise keep
   /// everything that every step left to it, such as the views and fragments of text replaced
-  /// or scrolled out of view, until the end; the memory would grow with each step as it never
-  /// does in the app.
+  /// or scrolled out of view, until the end; and Core Animation would keep what every step drew,
+  /// such as the display lists of the text, until its transaction commits, which without a run
+  /// loop it never does. The memory would grow with each step as it never does in the app.
   func asOneEvent<Result>(_ body: () throws -> Result) rethrows -> Result {
-    try autoreleasepool(invoking: body)
+    try autoreleasepool {
+      let result = try body()
+      CATransaction.flush()
+      return result
+    }
   }
 
   /// Draws the whole window into a bitmap, as the screen would show it.
