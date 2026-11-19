@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# Checks the repository: the format of every Swift file, then build and tests
-# of each package under Packages/ and of the Xcode project under App/.
+# Checks the repository: the format of every Swift file and string catalog,
+# then build and tests of each package under Packages/ and of the Xcode
+# project under App/.
 #
 # Usage: Scripts/check.sh [--quick]
 #
@@ -202,6 +203,7 @@ launch_app() {
 }
 
 run_step "format" lint_format
+run_step "string catalogs" Scripts/format-strings.sh --check
 
 for manifest in Packages/*/Package.swift; do
   package=$(dirname "$manifest")
