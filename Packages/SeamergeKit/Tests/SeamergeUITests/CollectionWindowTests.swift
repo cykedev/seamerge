@@ -175,4 +175,33 @@ import Testing
     #expect(controller.phase.unavailable == nil)
     #expect(controller.layout.sourcePanes.allSatisfy { !$0.pane.isHidden })
   }
+  /// A file shows fewer changes than when the window last showed it, as after another comparison
+  /// mode, and its lines are laid out otherwise: its current change is one that it still has.
+  @Test func fileWithFewerChangesSinceComesBackAtAChangeItHas() async throws {
+    let folder = try SampleCollections.folder()
+    let old = (0..<10).map { "line \($0)\nkeep \($0)\n" }.joined()
+    let new = (0..<10).map { $0 < 3 ? "changed \($0)\nkeep \($0)\n" : "line  \($0)\nkeep \($0)\n" }
+      .joined()
+    let files = [
+      try SampleCollections.file("Spaces.txt", old: old, new: new, number: 1, count: 2, in: folder),
+      try SampleCollections.file(
+        "Other.txt", old: "a\n", new: "b\n", number: 2, count: 2, in: folder),
+    ]
+    let controller = try await Windows.controller(for: FileCollection(files: files))
+    defer { controller.window?.close() }
+    await controller.switchComparison(to: ComparisonOptions(mode: .exact))
+    #expect(controller.presentation.changes.blocks.count == 10)
+    controller.presentation.setCurrentBlock(8)
+    let arrangement = controller.presentation.lineArrangement
+
+    controller.showFile(at: 1)
+    await controller.fileLoad?.value
+    await controller.switchComparison(to: ComparisonOptions(mode: .ignoreWhitespaceAmount))
+    controller.show(arrangement == .aligned ? .connected : .aligned)
+    controller.showFile(at: 0)
+    await controller.fileLoad?.value
+
+    #expect(controller.presentation.changes.blocks.count == 3)
+    #expect(controller.presentation.currentBlock == 2)
+  }
 }

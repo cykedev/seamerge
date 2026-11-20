@@ -503,6 +503,9 @@ extension SessionWindowController {
   }
 
   /// Shows `file` where the window left it, or from its top at its first change.
+  ///
+  /// The file may have fewer changes than when the window left it, as after another comparison
+  /// mode; the current change is then its last.
   private func restorePlace(of file: CollectedFile) {
     guard let pane = presentation.leadingPane ?? layout.sourcePanes.first?.pane else { return }
     guard let place = collectionNavigator?.place(of: file) else {
@@ -510,7 +513,9 @@ extension SessionWindowController {
       presentation.showCurrentBlock()
       return
     }
-    presentation.setCurrentBlock(place.currentBlock)
+    let lastBlock = presentation.changes.blocks.indices.last
+    presentation.setCurrentBlock(
+      place.currentBlock.flatMap { block in lastBlock.map { min(block, $0) } })
     guard place.lineArrangement == presentation.lineArrangement else {
       // The row counts otherwise since the arrangement changed; the current block stays in view.
       presentation.showCurrentBlock()
