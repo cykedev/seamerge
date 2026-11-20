@@ -4,10 +4,26 @@ All notable changes to Seamerge are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-20
+
+Users of 0.6.0 get this version through Seamerge ▸ Check for Updates… or the automatic check. This release adds no features: it makes Seamerge steadier, leaner with memory and faster in large files.
+
 ### Changed
 
 - A window of several files, a folder comparison and `git difftool --dir-diff` open at once. The chosen file is compared in the background; a large one shows "Comparing…" until its lines are ready, and switching to another file no longer waits for the one before.
 - Scrolling does less work: the text of a pane is no longer prepared for text checking it never uses, the decision bars keep their symbols, and the gutter sets its help tags only when they change.
+- Seamerge needs much less memory with long lines: a pane lets go of the layout of lines far from the view while it scrolls, not only once scrolling rests, and a file is no longer held in several copies as it opens.
+- Searching for a common word in a large file no longer holds the window, and expanding a collapsed run of lines lays out only what comes into view.
+- For contributors: `Scripts/check.sh` also runs the core tests under Address, Undefined Behavior and Thread Sanitizer, and fails on any warning of the Swift compiler. The code of folder comparisons and of the Git setup lives in modules of its own.
+
+### Fixed
+
+- Every change of the comparison mode kept a copy of the files for as long as the window stayed open, and a closed window could keep all the comparisons it had shown.
+- A window of several files crashed when it came back to a file that had fewer changes by then than the one it had been left at.
+- A window of two folders crashed when the file it was reading went from both folders and no file was left.
+- A window of two folders could wait for a file with empty panes when the file's sides became equal on disk while it was read.
+- When the file in view went from the folders, the window briefly showed and announced the first file of the list instead of the one that took its place.
+- A file that changed on disk while it was read, or while the window opened, showed its old content until it changed once more; and a reloaded file of a collection showed its old content again after going to another file and back.
 
 ## [0.6.0] - 2026-11-17
 
