@@ -77,6 +77,7 @@ extension SessionWindowController {
       @escaping @Sendable (Session.Inputs<SourceFile>) async throws(SessionLoadingError) -> Session
   ) async throws(SessionLoadingError) -> SessionWindowController {
     let start = ContinuousClock.now
+    let readSince = Date()
     let read = try await Session.read(files)
     // The comparison may end while the window is made, before anyone can wait for it. It runs
     // detached, so that it notes its outcome the moment it is there, not once the main actor,
@@ -99,6 +100,7 @@ extension SessionWindowController {
       settings: settings, syntaxChoices: .shared, window: SessionWindow(),
       pendingComparison: comparison)
     controller.observeDisplayOptions()
+    controller.diskWatch.lookIfModified(since: readSince)
     var outcome = arrived.withLock { $0 }
     let waited = (ContinuousClock.now - start) / .seconds(1)
     if outcome == nil, waited < wait {

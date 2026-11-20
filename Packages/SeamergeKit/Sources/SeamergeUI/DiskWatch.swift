@@ -103,6 +103,48 @@ final class DiskWatch {
     filesMayHaveChanged()
   }
 
+  /// Looks at the files once if one of them may have been modified since `date`, when the
+  /// window began to read them; a change before the watchers began goes unreported otherwise.
+  ///
+  /// Only the dates are read, not the files; a file whose date cannot be read is looked at.
+  func lookIfModified(since date: Date) {
+    let isModified = watchedURLs.contains { url in
+      let attributes: [FileAttributeKey: Any]
+      do {
+        attributes = try FileManager.default.attributesOfItem(
+          atPath: url.path(percentEncoded: false))
+      } catch {
+        return true
+      }
+      // A device such as /dev/null, the missing side of a new file, changes all the time.
+      guard attributes[.type] as? FileAttributeType == .typeRegular else { return false }
+      return (attributes[.modificationDate] as? Date).map {
+        Self.mayHaveBeenModified(at: $0, since: date)
+      } ?? true
+    }
+    if isModified {
+      filesMayHaveChanged()
+    }
+  }
+
+  /// Whether a file whose date of modification is `modified` may have changed at or after
+  /// `date`.
+  ///
+  /// A date with a fraction of a second comes from a file system that keeps them, and is taken
+  /// as it is. A date in whole seconds may be cut down to them, or to two, as HFS+, SMB and FAT
+  /// do, so it counts as modified up to two seconds before. A change that keeps the date of the
+  /// file, as a copy that keeps it does, or the clock of a server that lags behind, goes unseen
+  /// here; the watchers tell of every change after they began.
+  static func mayHaveBeenModified(at modified: Date, since date: Date) -> Bool {
+    let isInWholeSeconds =
+      modified.timeIntervalSinceReferenceDate.rounded(.down)
+      == modified.timeIntervalSinceReferenceDate
+    return modified >= (isInWholeSeconds ? date - coarseDateLeeway : date)
+  }
+
+  /// How far a date in whole seconds may lie before the moment the file changed.
+  private static let coarseDateLeeway: TimeInterval = 2
+
   /// Whether the window has seen `bytes` as the content of the file at `url` before, reloaded
   /// or not, so that it neither reloads nor asks about them again.
   func hasSeen(_ bytes: Data, at url: URL) -> Bool {

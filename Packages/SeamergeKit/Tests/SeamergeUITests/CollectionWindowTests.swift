@@ -204,4 +204,29 @@ import Testing
     #expect(controller.presentation.changes.blocks.count == 3)
     #expect(controller.presentation.currentBlock == 2)
   }
+  /// The next file was read ahead before it changed on disk, and no watcher saw the change, as
+  /// the window began to watch it only once it showed it: it looks at the file at once and
+  /// shows what it holds now.
+  @Test func fileChangedOnDiskSinceItWasReadAheadShowsWhatItHoldsNow() async throws {
+    let collection = FileCollection(
+      files: try SampleCollections.commit(in: try SampleCollections.folder()))
+    let controller = try await Windows.controller(for: collection)
+    defer { controller.window?.close() }
+    await controller.fileLoad?.value
+    let next = collection.files[1]
+    #expect(controller.collectionNavigator?.readFiles[next] != nil, "Read ahead")
+    try Data("struct Discount {}\n".utf8).write(to: next.new.url, options: .atomic)
+
+    controller.showFile(at: 1)
+    await controller.fileLoad?.value
+    // A look that the window began as it showed the file runs before this task.
+    await Task {}.value
+    #expect(controller.diskWatch.isReloading, "Looks at the file as it shows it")
+    let shownText = { controller.presentation.changes.session.inputs.b.text }
+    for _ in 0..<500 where shownText() != "struct Discount {}\n" {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+
+    #expect(shownText() == "struct Discount {}\n")
+  }
 }

@@ -482,6 +482,9 @@ extension SessionWindowController {
     comparisonSwitcher.forgetShownBefore()
     sessionDidChange()
     watchFiles()
+    if let readSince = collected.readSince {
+      diskWatch.lookIfModified(since: readSince)
+    }
     if placing {
       restorePlace(of: file)
     }

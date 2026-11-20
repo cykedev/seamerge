@@ -135,4 +135,35 @@ struct DiskWatchTests {
 
     #expect(await counts.next() == 1)
   }
+
+  @Test func fileModifiedSinceItWasReadIsLookedAtOnceAndOnlyThen() async throws {
+    let folder = FileManager.default.temporaryDirectory.appending(
+      path: "DiskWatchTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { #expect(throws: Never.self) { try FileManager.default.removeItem(at: folder) } }
+    let url = folder.appending(path: "read.txt")
+    let readSince = Date()
+    try Data("one\n".utf8).write(to: url)
+    let window = Window()
+    let watch = DiskWatch()
+    watch.delegate = window
+    watch.watch([url, URL(filePath: "/dev/null")])
+
+    watch.lookIfModified(since: Date.distantFuture)
+    await Task {}.value
+    #expect(window.reloadCount == 0)
+
+    watch.lookIfModified(since: readSince)
+    await Task {}.value
+    #expect(window.reloadCount == 1)
+  }
+
+  @Test func dateWithAFractionCountsAsItIsAndOneInWholeSecondsWithLeeway() {
+    let read = Date(timeIntervalSinceReferenceDate: 800_000_000.5)
+
+    #expect(DiskWatch.mayHaveBeenModified(at: read, since: read))
+    #expect(!DiskWatch.mayHaveBeenModified(at: read - 0.001, since: read))
+    #expect(DiskWatch.mayHaveBeenModified(at: read - 1.5, since: read))
+    #expect(!DiskWatch.mayHaveBeenModified(at: read - 2.5, since: read))
+  }
 }

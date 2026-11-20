@@ -24,6 +24,9 @@ struct CollectedComparison {
   var session: Session
   var unavailable: UnavailableComparison?
 
+  /// When the window began to read the files, or `nil` if it did not read them.
+  var readSince: Date?
+
   /// Reads both sides of `file` and compares them in `mode` without the text that the enabled
   /// rules of `rules` match; a file that cannot be compared, such as an image, gets an empty
   /// comparison that names it, and the reason.
@@ -33,6 +36,7 @@ struct CollectedComparison {
   init(
     reading file: CollectedFile, mode: ComparisonMode, ignoring rules: [IgnoreRule]
   ) async throws(SessionLoadingError) {
+    readSince = Date()
     do {
       session = try await Session.loadDiff(
         old: file.old, new: file.new, mode: mode, ignoring: rules)
@@ -47,6 +51,7 @@ struct CollectedComparison {
   init(session: Session, unavailable: UnavailableComparison?) {
     self.session = session
     self.unavailable = unavailable
+    readSince = nil
   }
 }
 
@@ -172,7 +177,8 @@ final class CollectionNavigator {
   ///
   /// What the list says about the file may have changed since, as when its sides became equal on
   /// disk. The window cancels a reading once the sides of the file in view change, so that the
-  /// path is enough.
+  /// path is enough to tell the file; bytes that changed while it read them, it reloads once it
+  /// shows them, as the watch of the files sees their date.
   func shows(_ file: CollectedFile) -> Bool {
     shownFile?.path == file.path
   }
