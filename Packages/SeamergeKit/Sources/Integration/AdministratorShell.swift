@@ -1,4 +1,6 @@
+import Dispatch
 import Foundation
+import GitSupport
 import os
 
 /// Runs scripts for `/bin/sh` with the rights of an administrator.
@@ -126,6 +128,10 @@ package struct AppleScriptShell: AdministratorShell {
 
   /// Runs `osascript` with `arguments` and returns its exit status and what it wrote as errors,
   /// once it has ended.
+  ///
+  /// What it writes is read as it arrives, which occupies no thread while the dialog of macOS
+  /// waits for the user. A cancelled run stops `osascript` and still waits for its end, since a
+  /// process has a status only once it has ended.
   private static func osascript(_ arguments: [String]) async throws -> (
     status: Int32, error: String
   ) {
@@ -134,16 +140,26 @@ package struct AppleScriptShell: AdministratorShell {
     process.arguments = arguments
     process.standardInput = FileHandle.nullDevice
     process.standardOutput = FileHandle.nullDevice
-    let errors = Pipe()
-    process.standardError = errors
-    let (ended, end) = AsyncStream.makeStream(of: Int32.self)
-    process.terminationHandler = { end.yield($0.terminationStatus) }
-    try process.run()
-    let error = await Task.detached {
-      String(decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-    }.value
-    var iterator = ended.makeAsyncIterator()
-    let status = await iterator.next() ?? process.terminationStatus
-    return (status, error)
+    let errors = PipeReader()
+    process.standardError = errors.pipe
+    let finished = DispatchGroup()
+    finished.enter()
+    process.terminationHandler = { _ in finished.leave() }
+    do {
+      try process.run()
+    } catch {
+      // Dispatch stops the app when a group goes while it still counts a member.
+      finished.leave()
+      throw error
+    }
+    errors.readToEnd(in: finished)
+    await withTaskCancellationHandler {
+      await withCheckedContinuation { continuation in
+        finished.notify(queue: .global()) { @Sendable in continuation.resume() }
+      }
+    } onCancel: {
+      process.terminate()
+    }
+    return (process.terminationStatus, String(decoding: errors.data, as: UTF8.self))
   }
 }

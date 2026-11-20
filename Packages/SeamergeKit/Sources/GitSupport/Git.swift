@@ -1,6 +1,5 @@
 import Dispatch
 public import Foundation
-import Synchronization
 import os
 
 /// Runs the `git` command-line tool.
@@ -117,32 +116,6 @@ public struct Git: Sendable {
       }
     }
     return URL(filePath: "/usr/bin/git")
-  }
-}
-
-/// Collects everything a process writes into a pipe.
-private final class PipeReader: Sendable {
-  let pipe = Pipe()
-  private let collected = Mutex(Data())
-
-  /// What has been read so far; everything once the group of ``readToEnd(in:)`` has finished.
-  var data: Data { collected.withLock { $0 } }
-
-  /// Reads the pipe to its end in the background, as a member of `group`.
-  ///
-  /// Reading as data arrives keeps the pipe from filling up, which would block the process, and
-  /// occupies no thread while the process is silent.
-  func readToEnd(in group: DispatchGroup) {
-    group.enter()
-    pipe.fileHandleForReading.readabilityHandler = { handle in
-      let chunk = handle.availableData
-      if chunk.isEmpty {
-        handle.readabilityHandler = nil
-        group.leave()
-      } else {
-        self.collected.withLock { $0.append(chunk) }
-      }
-    }
   }
 }
 

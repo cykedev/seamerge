@@ -41,6 +41,28 @@ import Testing
     }
   }
 
+  @Test func errorsLongerThanThePipeHoldsAreReadToTheirEnd() async {
+    // osascript writes the message of the failure at once; one larger than the buffer of the pipe
+    // arrives in several pieces.
+    let message = String(repeating: "x", count: 200_000)
+
+    await #expect(throws: CommandLineToolFailure.failed(message: message)) {
+      try await AppleScriptShell(asksForAdministrator: false).run(
+        "head -c 200000 /dev/zero | tr '\\0' x >&2; exit 5", arguments: [], prompt: "")
+    }
+  }
+
+  @Test func cancelledRunEnds() async {
+    // The script would outlast the time limit of the suite unless the cancelled run ended early.
+    let run = Task {
+      try await AppleScriptShell(asksForAdministrator: false).run(
+        "sleep 90", arguments: [], prompt: "")
+    }
+    run.cancel()
+
+    await #expect(throws: CommandLineToolFailure.self) { try await run.value }
+  }
+
   @Test func answersOfOsascriptBecomeTheFailuresOfTheSheet() {
     func failure(_ error: String, status: Int32 = 1) -> CommandLineToolFailure? {
       AppleScriptShell.failure(status: status, error: error)
