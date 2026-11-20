@@ -54,7 +54,7 @@ import Testing
     #expect(try validates("undo:", in: controller))
 
     undoManager.undo()
-    #expect(controller.comparisonReturn != nil)
+    #expect(controller.comparisonSwitcher.bringingBack != nil)
     #expect(!textView.isEditable)
     #expect(
       SessionCommand.allCases.filter(controller.canPerform).allSatisfy(
@@ -65,8 +65,8 @@ import Testing
     textView.insertText("typed", replacementRange: NSRange(location: NSNotFound, length: 0))
     #expect(try controller.segmentTexts == switched, "typing changes nothing while it waits")
 
-    await controller.comparisonReturn?.value
-    #expect(controller.comparisonReturn == nil)
+    await controller.comparisonSwitcher.bringingBack?.value
+    #expect(controller.comparisonSwitcher.bringingBack == nil)
     #expect(controller.comparisonOptions.mode == .windowDefault)
     #expect(try controller.segmentTexts == decided)
     try controller.checkResultIsShownAsModelled()
@@ -81,24 +81,24 @@ import Testing
     defer { controller.window?.close() }
 
     undoManager.undo()
-    await controller.comparisonReturn?.value
+    await controller.comparisonSwitcher.bringingBack?.value
     #expect(try controller.segmentTexts == decided)
     #expect(undoManager.redoActionName == SessionWindowController.switchName)
 
     undoManager.redo()
-    #expect(controller.comparisonReturn != nil)
-    await controller.comparisonReturn?.value
+    #expect(controller.comparisonSwitcher.bringingBack != nil)
+    await controller.comparisonSwitcher.bringingBack?.value
     #expect(controller.comparisonOptions.mode == .exact)
     #expect(try controller.segmentTexts == switched)
     try controller.checkResultIsShownAsModelled()
 
     undoManager.undo()
-    await controller.comparisonReturn?.value
+    await controller.comparisonSwitcher.bringingBack?.value
     #expect(controller.comparisonOptions.mode == .windowDefault)
     #expect(try controller.segmentTexts == decided)
     // The step before the switch, the decision, belongs to the text the undo brought back.
     undoManager.undo()
-    #expect(controller.comparisonReturn == nil)
+    #expect(controller.comparisonSwitcher.bringingBack == nil)
     #expect(controller.presentation.navigation.openConflictCount > 0)
     try controller.checkResultIsShownAsModelled()
     #expect(!undoManager.canUndo)
@@ -111,7 +111,7 @@ import Testing
       await controller.switchComparison(to: ComparisonOptions(mode: .ignoreAllWhitespace))
     }
     await Task.yield()
-    #expect(controller.isSwitchingComparison)
+    #expect(controller.comparisonSwitcher.isComparing)
     #expect(try !validates("undo:", in: controller))
     // The switch registers its step once it shows, after it compared away from the main actor.
     undoManager.beginUndoGrouping()
@@ -131,7 +131,7 @@ import Testing
     }
     undoManager.undo()
     await queued.value
-    await controller.comparisonReturn?.value
+    await controller.comparisonSwitcher.bringingBack?.value
     #expect(controller.comparisonOptions.mode == .windowDefault)
     #expect(try controller.segmentTexts == decided)
     try controller.checkResultIsShownAsModelled()
@@ -162,7 +162,7 @@ import Testing
     await reloading.value
     // The reload waits for the comparison that undo brings back, then looks again.
     #expect(controller.presentation.changes.session.inputs.b.text == "a\nb c\nd\ne\n")
-    await controller.comparisonReturn?.value
+    await controller.comparisonSwitcher.bringingBack?.value
     #expect(controller.comparisonOptions.mode == .windowDefault)
     // The window looks again on its own once the comparison is back.
     while controller.presentation.changes.session.inputs.b.text != "a\nb c\nd\ne\nf\n",
@@ -186,7 +186,7 @@ import Testing
       await controller.switchComparison(to: ComparisonOptions(mode: .ignoreAllWhitespace))
     }
     await Task.yield()
-    #expect(controller.isSwitchingComparison)
+    #expect(controller.comparisonSwitcher.isComparing)
     #expect(try validates("undo:", in: controller))
     undoManager.undo()
     #expect(try controller.segmentTexts != decided)
@@ -225,7 +225,7 @@ import Testing
       await controller.switchComparison(to: ComparisonOptions(mode: .ignoreAllWhitespace))
     }
     await Task.yield()
-    #expect(controller.isSwitchingComparison)
+    #expect(controller.comparisonSwitcher.isComparing)
     #expect(try !validates("undo:", in: controller))
     // What the Edit menu would let through; undone now, the group would bring back its
     // comparison alongside the switch.
@@ -251,13 +251,13 @@ import Testing
     }
     #expect(try controller.segmentTexts == switched, "no decision while it waits")
     #expect(!controller.isInTextMode)
-    await controller.comparisonReturn?.value
+    await controller.comparisonSwitcher.bringingBack?.value
   }
 
   @Test func windowClosedWhileUndoBringsBackAComparisonShowsNothingMore() async throws {
     let (controller, undoManager, _, switched) = try await switchedMerge()
     undoManager.undo()
-    let returning = try #require(controller.comparisonReturn)
+    let returning = try #require(controller.comparisonSwitcher.bringingBack)
     controller.window?.close()
     await returning.value
     #expect(controller.comparisonOptions.mode == .exact)
@@ -276,7 +276,7 @@ import Testing
     await controller.switchComparison(to: ComparisonOptions(mode: .exact))
     undoManager.endUndoGrouping()
     undoManager.undo()
-    let returning = try #require(controller.comparisonReturn)
+    let returning = try #require(controller.comparisonSwitcher.bringingBack)
     let progress = ProgressListener()
     controller.presentation.announce = { text in
       progress.hear(text, showing: controller.showsComparisonProgress)

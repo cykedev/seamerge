@@ -229,7 +229,7 @@ extension SessionWindowController: DiskWatchDelegate {
     if hasFinished || phase.unavailable != nil {
       return .nothingToReload
     }
-    return isSwitchingComparison || isSaving || waitsForComparison ? .busy : .ready
+    return comparisonSwitcher.isComparing || isSaving || waitsForComparison ? .busy : .ready
   }
 
   /// Reloads what changed on disk: asks about a result file that another app changed, and

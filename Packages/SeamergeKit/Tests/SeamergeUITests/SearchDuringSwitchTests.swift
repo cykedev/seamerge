@@ -277,12 +277,12 @@ struct SearchDuringSwitchTests {
             undoManager.redo()
           }
           try driver.type(typed)
-          await controller.comparisonReturn?.value
+          await controller.comparisonSwitcher.bringingBack?.value
         default:
           try driver.type(Self.common)
           try driver.type(typed)
         }
-        #expect(!controller.isSwitchingComparison, comment)
+        #expect(!controller.comparisonSwitcher.isComparing, comment)
         try await expectMatches(
           of: Self.rare(Self.randomUnchangedLine(using: &generator)), with: driver)
       }

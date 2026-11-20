@@ -249,14 +249,14 @@ import Testing
     }
     // The empty panes are not compared anew.
     #expect(controller.waitsForComparison)
-    #expect(!controller.isSwitchingComparison)
+    #expect(!controller.comparisonSwitcher.isComparing)
     #expect(controller.presentation.changes.session.ignoreRules.isEmpty)
 
     waiting.finish()
     await controller.phase.filling?.value
     let rules = settings.ignoreRules.filter(\.isEnabled)
     for _ in 0..<200
-    where controller.isSwitchingComparison
+    where controller.comparisonSwitcher.isComparing
       || controller.presentation.changes.session.ignoreRules != rules
     {
       try await Task.sleep(for: .milliseconds(10))

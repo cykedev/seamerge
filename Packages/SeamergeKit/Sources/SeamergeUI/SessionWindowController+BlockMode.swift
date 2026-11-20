@@ -32,7 +32,7 @@ extension SessionWindowController: SessionKeyHandling {
     }
     guard isInBlockMode, modifiers.isDisjoint(with: [.command, .control]) else { return false }
     if let command = SessionCommand(blockModeKey: Keystroke(key, modifiers)) {
-      if comparisonReturn != nil {
+      if comparisonSwitcher.bringingBack != nil {
         // No command acts until the comparison that undo or redo brings back shows; the key
         // sounds as an invalid command does, rather than getting lost unheard.
         NSSound.beep()

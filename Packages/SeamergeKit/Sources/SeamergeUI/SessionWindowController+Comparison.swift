@@ -16,8 +16,8 @@ extension SessionWindowController {
   /// a sheet asks first. The switch is a single step of undo. While one switch runs, another one
   /// does nothing.
   public func switchComparison(to options: ComparisonOptions) async {
-    guard options != comparisonOptions, !isSwitchingComparison else { return }
-    await whileComparingAnew {
+    guard options != comparisonOptions, !comparisonSwitcher.isComparing else { return }
+    await comparisonSwitcher.whileComparingAnew {
       let switched: Session
       do throws(MergeModelError) {
         switched = try await presentation.changes.session.recomputed(options: options)
@@ -81,52 +81,6 @@ extension SessionWindowController {
     }
   }
 
-  /// Carries out `body`, which compares the files anew, as the one comparison under way: the
-  /// toolbar says so once it takes a moment, and afterwards the window looks at what changed
-  /// meanwhile, its files and the ignore rules of Settings.
-  ///
-  /// - Precondition: No other comparison is under way.
-  func whileComparingAnew(_ body: () async -> Void) async {
-    let progressTimer = beginComparingAnew()
-    await body()
-    endComparingAnew(progressTimer)
-  }
-
-  /// Makes the comparison that begins now the one under way, whose progress the toolbar shows
-  /// and VoiceOver hears once it takes a moment, with the timer that shows it.
-  ///
-  /// Every way to compare anew begins here, a switch or a reload as soon as its task runs, undo
-  /// and redo at once; each of them does nothing, or waits, while another is under way.
-  ///
-  /// - Precondition: No other comparison is under way.
-  private func beginComparingAnew() -> Timer {
-    precondition(!isSwitchingComparison, "One comparison runs at a time")
-    isSwitchingComparison = true
-    let progressTimer = Timer(timeInterval: Self.progressDelay, repeats: false) { [weak self] _ in
-      // Timers of the main run loop fire on the main thread.
-      MainActor.assumeIsolated {
-        guard let controller = self else { return }
-        controller.showsComparisonProgress = true
-        controller.stateDidChange()
-        controller.presentation.announce(SessionToolbar.comparingText)
-      }
-    }
-    RunLoop.main.add(progressTimer, forMode: .common)
-    return progressTimer
-  }
-
-  /// Ends the comparison under way, which `progressTimer` shows the progress of, and looks at
-  /// what changed meanwhile, unless the window closed.
-  private func endComparingAnew(_ progressTimer: Timer) {
-    progressTimer.invalidate()
-    isSwitchingComparison = false
-    showsComparisonProgress = false
-    stateDidChange()
-    guard !hasFinished else { return }
-    diskWatch.lookAgainIfAsked()
-    followIgnoreRules()
-  }
-
   /// Compares lines byte for byte.
   @objc func compareExactly(_ sender: Any?) {
     switchMode(to: .exact)
@@ -183,18 +137,13 @@ extension SessionWindowController {
     let session = prepared.changes.session
     resultUndo.endTypingRun()
     presentation.showComparedAnew(prepared)
-    if let older = comparisonShownBefore,
-      !older.rowLayout.sharesDisplayTexts(with: session.rowLayout)
-    {
-      older.rowLayout.letGoOfDisplayTexts()
-    }
-    comparisonShownBefore = previous.shown.session
+    comparisonSwitcher.keepShownBefore(previous.shown.session, showing: session)
     presentation.show(SideHeader.headers(of: session, context: context))
     detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
     presentation.colorSyntax(as: syntaxLanguage)
     sessionDidChange()
     if let name {
-      registerReturn(to: previous, named: name)
+      comparisonSwitcher.registerReturn(to: previous, named: name)
     }
     showResultFormat()
     watchFiles()
@@ -206,65 +155,14 @@ extension SessionWindowController {
     ShownComparison(shown: presentation.shown, usesIgnoreRules: usesIgnoreRules)
   }
 
-  /// Registers the step that shows `comparison` again, named `name`: on the undo stack, or on
-  /// the redo stack while undoing.
-  private func registerReturn(to comparison: ShownComparison, named name: String) {
-    sessionUndoManager.registerUndo(withTarget: self) { controller in
-      controller.bringBack(comparison, named: name)
-    }
-    sessionUndoManager.setActionName(name)
-    // The mark stays with the group of the step, whatever names a later step in it gives it.
-    sessionUndoManager.setActionUserInfoValue(true, forKey: Self.bringsBackComparison)
-  }
-
-  /// The key of the user info by which the undo manager marks a group that brings back an
-  /// earlier comparison.
-  static let bringsBackComparison = UndoManager.UserInfoKey("bringsBackComparison")
-
-  /// Shows `comparison` again, as undo or redo of a switch or a reload: registers the step that
-  /// comes back to what the window shows now at once, as the undo manager asks, and becomes the
-  /// comparison under way at once, then makes the panes ready away from the main actor and
-  /// shows them.
-  ///
-  /// Until then the window takes no edit and no command, nor another undo or redo: each would
-  /// change what the step registered for this comparison, which it brings back as it was. Once
-  /// the window shows another file or closes meanwhile, it shows nothing.
-  ///
-  /// - Precondition: No other comparison is under way.
-  private func bringBack(_ comparison: ShownComparison, named name: String) {
-    resultUndo.endTypingRun()
-    registerReturn(to: shownComparison, named: name)
-    presentation.acceptsEdits = false
-    let progressTimer = beginComparingAnew()
-    comparisonReturn = Task {
-      var prepared: PreparedSession?
-      while prepared == nil, !Task.isCancelled {
-        prepared = await presentation.prepare(comparison.shown)
-      }
-      if let prepared, !Task.isCancelled {
-        show(prepared, named: nil)
-        usesIgnoreRules = comparison.usesIgnoreRules
-      }
-      comparisonReturn = nil
-      presentation.acceptsEdits = true
-      endComparingAnew(progressTimer)
-    }
-    stateDidChange()
-  }
-
-  /// Stops bringing back an earlier comparison, as the window shows another file or closes.
-  func stopBringingBack() {
-    comparisonReturn?.cancel()
-  }
-
   /// Whether undo or redo of a group of steps can act now, which `bringsBack` tells whether it
   /// brings back an earlier comparison: none while the window brings one back, and none that
   /// brings one back while it compares or reloads its files; the steps of decisions and typing
   /// can, since the comparison under way starts over from the result they leave, as after a
   /// decision.
   func allowsStep(bringingBackAComparison bringsBack: Bool) -> Bool {
-    guard comparisonReturn == nil else { return false }
-    return !bringsBack || !(isSwitchingComparison || diskWatch.isReloading)
+    guard comparisonSwitcher.bringingBack == nil else { return false }
+    return !bringsBack || !(comparisonSwitcher.isComparing || diskWatch.isReloading)
   }
 
   /// What Undo calls the switch to another comparison mode.
@@ -281,17 +179,40 @@ extension SessionWindowController {
     await prompts.reportFailedComparison(in: window)
   }
 
-  /// How long a comparison runs before the toolbar says that it is under way.
-  static let progressDelay: TimeInterval = 0.15
-
   nonisolated static let logger = Logger(subsystem: "app.eiden.seamerge", category: "SeamergeUI")
 }
 
-/// A comparison that the window showed, with all that undo and redo bring back of it.
-private struct ShownComparison {
-  /// The comparison of the files, with the result of a merge.
-  var shown: ShownSession
+extension SessionWindowController: ComparisonSwitcherDelegate {
+  func shownComparison(for switcher: ComparisonSwitcher) -> ShownComparison {
+    shownComparison
+  }
 
-  /// Whether the window used the ignore rules of Settings.
-  var usesIgnoreRules: Bool
+  func comparisonSwitcher(
+    _ switcher: ComparisonSwitcher, bringsBack comparison: ShownComparison,
+    as prepared: PreparedSession
+  ) {
+    show(prepared, named: nil)
+    usesIgnoreRules = comparison.usesIgnoreRules
+  }
+
+  func comparisonSwitcherDidBeginBringingBack(_ switcher: ComparisonSwitcher) {
+    stateDidChange()
+  }
+
+  /// Shows the progress of the comparison in the toolbar, and tells VoiceOver.
+  func comparisonSwitcherTakesAMoment(_ switcher: ComparisonSwitcher) {
+    showsComparisonProgress = true
+    stateDidChange()
+    presentation.announce(SessionToolbar.comparingText)
+  }
+
+  /// Looks at what changed meanwhile, the files and the ignore rules of Settings, unless the
+  /// window closed.
+  func comparisonSwitcherDidEnd(_ switcher: ComparisonSwitcher) {
+    showsComparisonProgress = false
+    stateDidChange()
+    guard !hasFinished else { return }
+    diskWatch.lookAgainIfAsked()
+    followIgnoreRules()
+  }
 }

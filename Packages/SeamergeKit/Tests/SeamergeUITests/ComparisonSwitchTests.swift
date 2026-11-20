@@ -34,12 +34,12 @@ import Testing
     #expect(undoManager.undoMenuItemTitle == "Undo Change Comparison")
 
     undoManager.undo()
-    await controller.comparisonReturn?.value
+    await controller.comparisonSwitcher.bringingBack?.value
     #expect(controller.comparisonOptions.mode == .windowDefault)
     #expect(controller.presentation.changes.blocks.count == blocksBefore)
     #expect(window.subtitle == subtitleBefore)
     undoManager.redo()
-    await controller.comparisonReturn?.value
+    await controller.comparisonSwitcher.bringingBack?.value
     #expect(controller.comparisonOptions.mode == .exact)
   }
 
@@ -106,12 +106,12 @@ import Testing
     let controller = try Windows.controller(for: try await decidedSample())
     let first = Task { await controller.switchComparison(to: ComparisonOptions(mode: .exact)) }
     await Task.yield()
-    #expect(controller.isSwitchingComparison)
+    #expect(controller.comparisonSwitcher.isComparing)
     #expect(!controller.canPerform(.ignoreAllWhitespace))
     await controller.switchComparison(to: ComparisonOptions(mode: .ignoreAllWhitespace))
     await first.value
     #expect(controller.comparisonOptions.mode == .exact)
-    #expect(!controller.isSwitchingComparison)
+    #expect(!controller.comparisonSwitcher.isComparing)
   }
 
   @Test func decisionMadeWhileTheSwitchIsUnderWayIsKept() async throws {
@@ -122,7 +122,7 @@ import Testing
       await controller.switchComparison(to: ComparisonOptions(mode: .exact))
     }
     await Task.yield()
-    #expect(controller.isSwitchingComparison)
+    #expect(controller.comparisonSwitcher.isComparing)
     controller.resolveOpenConflicts(with: [.a])
     #expect(controller.presentation.navigation.openConflictCount == 0)
 
@@ -142,7 +142,7 @@ import Testing
       await controller.switchComparison(to: ComparisonOptions(mode: .exact))
     }
     await Task.yield()
-    #expect(controller.isSwitchingComparison)
+    #expect(controller.comparisonSwitcher.isComparing)
     controller.presentation.setAlignsLines(false)
 
     await switching.value

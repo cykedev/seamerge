@@ -116,17 +116,9 @@ public final class SessionWindowController: NSWindowController {
   /// The merge of a file that is not text, whose window asks which side to take, or `nil`.
   let binaryMerge: BinaryMerge?
 
-  /// Whether the files are being compared anew.
-  var isSwitchingComparison = false
-
-  /// The return to an earlier comparison that undo or redo brings back, while the window makes
-  /// it ready away from the main actor; until it shows, the window takes no edit and no
-  /// command.
-  var comparisonReturn: Task<Void, Never>?
-
-  /// The comparison the window showed before the one it shows now, which keeps the texts of its
-  /// panes so that undo brings it back at once; those before it let go of theirs.
-  var comparisonShownBefore: Session?
+  /// The comparison of the files anew, one at a time, and the return to an earlier one that undo
+  /// or redo brings back.
+  let comparisonSwitcher: ComparisonSwitcher
 
   /// Whether a comparison of two files leaves out the text that the ignore rules of Settings
   /// match; every window starts with it, since whoever writes rules wants them.
@@ -312,7 +304,10 @@ public final class SessionWindowController: NSWindowController {
       language: settings.highlightsSyntax
         ? syntaxChoices[syntaxPath].language(detected: detectedLanguage) : nil,
       alignsLines: settings.alignsLines, search: search)
-    resultUndo = ResultUndo(undoManager: undoManager, presentation: presentation, now: now)
+    let resultUndo = ResultUndo(undoManager: undoManager, presentation: presentation, now: now)
+    self.resultUndo = resultUndo
+    comparisonSwitcher = ComparisonSwitcher(
+      undoManager: undoManager, presentation: presentation, resultUndo: resultUndo)
     presentation.wrapsLines = settings.wrapsLines
     for pane in presentation.allPanes {
       pane.showsInvisibles = settings.showsInvisibles
@@ -348,6 +343,7 @@ public final class SessionWindowController: NSWindowController {
     }
     super.init(window: window)
     diskWatch.delegate = self
+    comparisonSwitcher.delegate = self
     // The delegate comes first: the window asks it for its undo manager once and keeps the
     // answer.
     window.delegate = self
@@ -427,14 +423,16 @@ public final class SessionWindowController: NSWindowController {
   var allowsUndo: Bool {
     allowsStep(
       bringingBackAComparison:
-        sessionUndoManager.undoActionUserInfoValue(forKey: Self.bringsBackComparison) != nil)
+        sessionUndoManager.undoActionUserInfoValue(forKey: ComparisonSwitcher.bringsBackComparison)
+        != nil)
   }
 
   /// Whether Redo can act now on the step it would carry out again.
   var allowsRedo: Bool {
     allowsStep(
       bringingBackAComparison:
-        sessionUndoManager.redoActionUserInfoValue(forKey: Self.bringsBackComparison) != nil)
+        sessionUndoManager.redoActionUserInfoValue(forKey: ComparisonSwitcher.bringsBackComparison)
+        != nil)
   }
 
   /// Remembers which pane above the result has the focus, which gets it back when text mode
@@ -528,7 +526,7 @@ extension SessionWindowController: NSWindowDelegate {
   /// to its file, and closing a comparison means it was seen, so that Git goes on to the next
   /// file.
   public func windowWillClose(_ notification: Notification) {
-    stopBringingBack()
+    comparisonSwitcher.stopBringingBack()
     fileLoad?.cancel()
     presentation.search.close()
     // The steps of undo keep the comparisons they bring back. The find bar's field editor may
@@ -652,7 +650,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
   /// remaining files, the commands of the list, and in a window of several files the patch of
   /// all of them can.
   func canPerform(_ command: SessionCommand) -> Bool {
-    let takesCommandsOfTheLines = if case .ready = phase { comparisonReturn == nil } else { false }
+    let takesCommandsOfTheLines =
+      if case .ready = phase { comparisonSwitcher.bringingBack == nil } else { false }
     if !takesCommandsOfTheLines,
       ![
         .skipRemainingFiles, .toggleFooter, .nextFile, .previousFile, .filterFiles,
@@ -682,10 +681,10 @@ extension SessionWindowController: NSUserInterfaceValidations {
     case .replacing:
       presentation.search.showsReplaceField && presentation.search.hasFoundMatches
     case .noComparisonUnderWay:
-      !isSwitchingComparison
+      !comparisonSwitcher.isComparing
     case .ignoreRules:
       presentation.changes.session.kind == .diff && hasEffectiveIgnoreRule
-        && !isSwitchingComparison
+        && !comparisonSwitcher.isComparing
     case .basePane:
       presentation.changes.hasBase && !layout.maximizesResult
     case .panesSideBySide:
@@ -731,11 +730,11 @@ extension SessionWindowController: NSUserInterfaceValidations {
     case .openConflicts:
       (presentation.result?.document.openConflictCount ?? 0) > 0
     case .result:
-      saving != nil && !isSwitchingComparison && !isAskingToClose
+      saving != nil && !comparisonSwitcher.isComparing && !isAskingToClose
     case .waitingCaller:
       saving != nil && context.waitingCaller != nil && !isAskingToClose
     case .ownFiles:
-      context.waitingCaller == nil && context.difftool == nil && !isSwitchingComparison
+      context.waitingCaller == nil && context.difftool == nil && !comparisonSwitcher.isComparing
     case .nothing:
       true
     }

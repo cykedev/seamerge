@@ -142,7 +142,7 @@ extension LargeFileRun {
         }
         // Undo and redo set off the comparison they bring back; the window shows it once it is
         // ready.
-        await controller.comparisonReturn?.value
+        await controller.comparisonSwitcher.bringingBack?.value
         contentView.layoutSubtreeIfNeeded()
       }
       recorder.record(metric, clock.now - start)

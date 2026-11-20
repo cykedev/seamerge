@@ -125,11 +125,10 @@ import Testing
     await controller.switchComparison(to: ComparisonOptions(mode: .exact))
     #expect(popUp.titleOfSelectedItem == "Exact")
 
-    controller.isSwitchingComparison = true
-    controller.stateDidChange()
-    #expect(!popUp.isEnabled)
-    controller.isSwitchingComparison = false
-    controller.stateDidChange()
+    await controller.comparisonSwitcher.whileComparingAnew {
+      controller.stateDidChange()
+      #expect(!popUp.isEnabled)
+    }
     #expect(popUp.isEnabled)
   }
 

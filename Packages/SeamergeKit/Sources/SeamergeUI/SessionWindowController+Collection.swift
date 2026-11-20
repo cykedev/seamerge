@@ -457,7 +457,7 @@ extension SessionWindowController {
     placing: Bool = true
   ) {
     guard let collectionNavigator else { return }
-    stopBringingBack()
+    comparisonSwitcher.stopBringingBack()
     var difftool = file.difftool
     difftool.filePosition = collectionNavigator.filePosition
     context = SessionContext(
@@ -478,7 +478,7 @@ extension SessionWindowController {
     syntaxPath = SessionSyntax.path(of: session, resultURL: nil)
     presentation.colorSyntax(as: syntaxLanguage)
     sessionUndoManager.removeAllActions()
-    comparisonShownBefore = nil
+    comparisonSwitcher.forgetShownBefore()
     sessionDidChange()
     watchFiles()
     if placing {

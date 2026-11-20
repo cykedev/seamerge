@@ -49,7 +49,7 @@ import Testing
     defer { controller.window?.close() }
     await controller.switchComparison(to: ComparisonOptions(mode: .exact))
     controller.sessionUndoManager.undo()
-    let returning = try #require(controller.comparisonReturn)
+    let returning = try #require(controller.comparisonSwitcher.bringingBack)
 
     controller.showFile(at: 1)
     await controller.fileLoad?.value

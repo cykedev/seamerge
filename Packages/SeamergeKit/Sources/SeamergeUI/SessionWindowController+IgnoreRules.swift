@@ -55,7 +55,7 @@ extension SessionWindowController {
   ///
   /// A rule that was only renamed changes nothing.
   func followIgnoreRules() {
-    guard !isSwitchingComparison, !waitsForComparison, showsComparedLines,
+    guard !comparisonSwitcher.isComparing, !waitsForComparison, showsComparedLines,
       !presentation.changes.session.ignoreRules.hasTheSameEffect(as: requestedIgnoreRules)
     else { return }
     Task { await compareWithRequestedRules(usingIgnoreRules: nil) }
@@ -70,8 +70,8 @@ extension SessionWindowController {
   /// given, the window then uses ignore rules or not as it says, as a step of undo; otherwise
   /// the window follows the rules of Settings as it uses them, as no step of undo.
   func compareWithRequestedRules(usingIgnoreRules: Bool?) async {
-    guard !isSwitchingComparison, showsComparedLines else { return }
-    await whileComparingAnew {
+    guard !comparisonSwitcher.isComparing, showsComparedLines else { return }
+    await comparisonSwitcher.whileComparingAnew {
       let session = presentation.changes.session
       let uses = usingIgnoreRules ?? usesIgnoreRules
       let rules = ignoreRules(whenUsing: uses)

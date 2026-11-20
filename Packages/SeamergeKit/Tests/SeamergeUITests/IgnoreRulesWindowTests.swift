@@ -147,12 +147,12 @@ struct IgnoreRulesWindowTests {
     #expect(undoManager.undoMenuItemTitle == "Undo Change Comparison")
 
     undoManager.undo()
-    await controller.comparisonReturn?.value
+    await controller.comparisonSwitcher.bringingBack?.value
     #expect(controller.usesIgnoreRules)
     #expect(presentation.changes.session.ignoreRules == settings.ignoreRules.filter(\.isEnabled))
     #expect(window.subtitle == "Ignore rules applied")
     undoManager.redo()
-    await controller.comparisonReturn?.value
+    await controller.comparisonSwitcher.bringingBack?.value
     #expect(!controller.usesIgnoreRules)
   }
 
