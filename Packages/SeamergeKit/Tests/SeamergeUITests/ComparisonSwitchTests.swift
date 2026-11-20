@@ -102,6 +102,21 @@ import Testing
     #expect(controller.presentation.changes.blocks == blocks)
   }
 
+  /// The progress shows only once a comparison takes a moment, so this waits past that moment
+  /// after a quick one.
+  @Test func quickComparisonAnewNeverSaysThatItCompares() async throws {
+    let controller = try Windows.controller(for: try await SampleMerges.helloWorld())
+    defer { controller.window?.close() }
+    var announcements: [String] = []
+    controller.presentation.announce = { announcements.append($0) }
+
+    await controller.comparisonSwitcher.whileComparingAnew {}
+    try await Task.sleep(for: ComparisonSwitcher.progressDelay * 2)
+
+    #expect(!controller.showsComparisonProgress)
+    #expect(!announcements.contains(SessionToolbar.comparingText))
+  }
+
   @Test func secondSwitchWhileOneIsUnderWayDoesNothing() async throws {
     let controller = try Windows.controller(for: try await decidedSample())
     let first = Task { await controller.switchComparison(to: ComparisonOptions(mode: .exact)) }

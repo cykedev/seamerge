@@ -63,6 +63,20 @@ import Testing
     #expect(!controller.showsComparisonProgress)
   }
 
+  @Test func windowThatWaitsAMomentSaysSoInTheToolbarUntilItFills() async throws {
+    let waiting = try await waiting()
+    let controller = waiting.controller
+    defer { controller.window?.close() }
+
+    for _ in 0..<500 where !controller.showsComparisonProgress {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(controller.showsComparisonProgress)
+
+    await waiting.fill(with: .success(try await SampleDiffs.greeting()))
+    #expect(!controller.showsComparisonProgress)
+  }
+
   @Test func windowThatWaitsComparesInTheModeItWasAskedFor() async throws {
     let empty = try await SessionWindowController.emptySession(
       of: Self.files, kind: .diff, mode: .exact)

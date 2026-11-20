@@ -123,8 +123,8 @@ extension SessionWindowController {
   static let comparisonWait: TimeInterval = 0.08
 
   /// How long a window that opens without the lines of its files waits for their comparison
-  /// before the toolbar says that it is under way, in seconds.
-  static let openingProgressDelay: TimeInterval = 0.5
+  /// before the toolbar says that it is under way.
+  static let openingProgressDelay: Duration = .milliseconds(500)
 
   /// The outcome of `comparison` if it is there within `delay` seconds, or `nil`.
   static func outcome<Outcome: Sendable>(
@@ -199,16 +199,21 @@ extension SessionWindowController {
       layout.show(header)
     }
     phase = .loading(filling)
-    let progressTimer = Timer(timeInterval: Self.openingProgressDelay, repeats: false) {
-      [weak self] _ in
-      // Timers of the main run loop fire on the main thread.
-      MainActor.assumeIsolated {
-        guard let self, self.phase.filling == filling else { return }
-        self.showsComparisonProgress = true
-        self.stateDidChange()
+    let progress = Task { [weak self] in
+      do {
+        try await Task.sleep(for: Self.openingProgressDelay)
+      } catch {
+        // The lines were ready before it took a moment.
+        return
       }
+      guard let self, phase.filling == filling else { return }
+      showsComparisonProgress = true
+      stateDidChange()
     }
-    RunLoop.main.add(progressTimer, forMode: .common)
+    Task {
+      await filling.value
+      progress.cancel()
+    }
     sessionDidChange()
   }
 

@@ -40,8 +40,8 @@ final class ComparisonSwitcher {
   /// The comparison the window showed before the one it shows now.
   private var shownBefore: Session?
 
-  /// The timer that says that the comparison under way takes a moment.
-  private var progressTimer: Timer?
+  /// The task that says that the comparison under way takes a moment, once it has.
+  private var progress: Task<Void, Never>?
 
   private let undoManager: UndoManager
   private let presentation: SessionPresentation
@@ -52,7 +52,7 @@ final class ComparisonSwitcher {
   static let bringsBackComparison = UndoManager.UserInfoKey("bringsBackComparison")
 
   /// How long a comparison runs before the delegate says that it is under way.
-  static let progressDelay: TimeInterval = 0.15
+  static let progressDelay: Duration = .milliseconds(150)
 
   /// Creates the switcher of a window whose steps of undo go to `undoManager`, which shows
   /// its comparisons in `presentation`, and whose runs of typing `resultUndo` ends.
@@ -78,21 +78,23 @@ final class ComparisonSwitcher {
   private func beginComparing() {
     precondition(!isComparing, "One comparison runs at a time")
     isComparing = true
-    let progressTimer = Timer(timeInterval: Self.progressDelay, repeats: false) { [weak self] _ in
-      // Timers of the main run loop fire on the main thread.
-      MainActor.assumeIsolated {
-        guard let self else { return }
-        self.delegate?.comparisonSwitcherTakesAMoment(self)
+    progress = Task { [weak self] in
+      do {
+        try await Task.sleep(for: Self.progressDelay)
+      } catch {
+        // The comparison ended before it took a moment.
+        return
       }
+      // It may also have ended while the task waited for the main actor.
+      guard !Task.isCancelled, let self else { return }
+      delegate?.comparisonSwitcherTakesAMoment(self)
     }
-    RunLoop.main.add(progressTimer, forMode: .common)
-    self.progressTimer = progressTimer
   }
 
   /// Ends the comparison under way.
   private func endComparing() {
-    progressTimer?.invalidate()
-    progressTimer = nil
+    progress?.cancel()
+    progress = nil
     isComparing = false
     delegate?.comparisonSwitcherDidEnd(self)
   }

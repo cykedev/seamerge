@@ -266,9 +266,7 @@ final class IgnoredTextViewController: NSViewController {
     settings.customIgnoreRules = rules.custom
     let undoManager = view.window?.undoManager
     undoManager?.registerUndo(withTarget: self) { page in
-      MainActor.assumeIsolated {
-        page.change(to: previous, named: name, selecting: previousSelection)
-      }
+      page.change(to: previous, named: name, selecting: previousSelection)
     }
     undoManager?.setActionName(name)
     reloadRules(selecting: selection)
