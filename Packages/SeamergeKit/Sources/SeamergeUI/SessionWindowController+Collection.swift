@@ -609,9 +609,10 @@ extension SessionWindowController {
   }
 
   /// Reads the file after `file` in the list ahead, and forgets the files that are not beside
-  /// the one in view.
+  /// the one in view; nothing once the window shows `file` no more, as after it went from the
+  /// folders.
   private func readAhead(after file: CollectedFile) async {
-    guard let collection else { return }
+    guard let collection, shownFile == file else { return }
     let next = neighborIndex(forward: true)
     let neighbors = [neighborIndex(forward: false), fileIndex, next].compactMap(\.self)
     let kept = Set(neighbors.map { collection.files[$0] })

@@ -171,6 +171,37 @@ import Testing
     #expect(!controller.showsComparisonProgress)
   }
 
+  @Test func fileWaitedForThatWentFromTheFoldersEndsTheWait() async throws {
+    let folders = try SampleFolders()
+    try folders.write("README.md", left: "old\n", right: "new\n")
+    let comparer = FolderComparer(
+      folders: folders.pair, linkFolder: folders.folder.appending(path: "links"))
+    let collection = FileCollection(comparer: comparer)
+    collection.take(
+      .listed(
+        comparer.pairs(at: "").map { comparer.file(for: $0, change: comparer.change(of: $0)) },
+        waiting: 0))
+    collection.take(.finished)
+    let waiting = try await waiting(for: collection)
+    let controller = waiting.controller
+    defer { controller.window?.close() }
+    #expect(controller.waitsForComparison)
+
+    collection.take(.replaced([]))
+
+    #expect(controller.phase.placeholder == .sameFiles)
+    #expect(!controller.waitsForComparison)
+    #expect(controller.toolbarCount == .nothing)
+    #expect(!controller.showsComparisonProgress)
+    for pane in Windows.panes(of: controller) {
+      #expect(pane.documentView.accessibilityPlaceholderValue() == nil)
+    }
+    waiting.finish()
+    await controller.fileLoad?.value
+    #expect(controller.phase.placeholder == .sameFiles)
+    #expect(!controller.waitsForComparison)
+  }
+
   @Test func rulesChangedWhileTheFirstFileIsComparedApplyOnceItShows() async throws {
     let settings = UserSettings.private()
     let collection = try Self.commit()
