@@ -31,7 +31,7 @@ struct ResultFormatTests {
 
     #expect(ResultFormat(resultOf: mostlyCRLF).lineEnding == .crlf)
     #expect(ResultFormat(resultOf: tie).lineEnding == .lf)
-    #expect(mostlyCRLF.file(for: .b)?.predominantLineEnding == .crlf)
+    #expect(mostlyCRLF.inputs.b.predominantLineEnding == .crlf)
   }
 
   @Test func bWithoutLineBreakTakesTheLineEndingOfAThenOfTheBaseThenLF() async throws {

@@ -7,16 +7,16 @@ struct SessionTests {
     let session = try await merge(base: "a\n", a: "b\n", b: "a\n")
 
     #expect(session.kind == .merge)
-    #expect(session.roles == [.base, .a, .b])
-    #expect(session.file(for: .base)?.label == "base")
+    #expect(session.inputs.roles == [.base, .a, .b])
+    #expect(session.inputs.base?.label == "base")
     #expect(session.blocks.map(\.kind) == [.changedInA])
   }
 
   @Test func mergeWithoutABaseMergesAAndBAlone() async throws {
     let session = try await merge(base: nil, a: "same\nonly a\n", b: "same\n")
 
-    #expect(session.roles == [.a, .b])
-    #expect(session.file(for: .base) == nil)
+    #expect(session.inputs.roles == [.a, .b])
+    #expect(session.inputs.base == nil)
     #expect(session.rowLayout.displayText(for: .base) == nil)
     #expect(session.blocks.allSatisfy { $0.base.isEmpty })
   }
@@ -25,8 +25,8 @@ struct SessionTests {
     let session = try await diff("old\n", "new\n", mode: .ignoreAllWhitespace)
 
     #expect(session.kind == .diff)
-    #expect(session.roles == [.a, .b])
-    #expect(session.file(for: .a)?.text == "old\n")
+    #expect(session.inputs.roles == [.a, .b])
+    #expect(session.inputs.a.text == "old\n")
     #expect(session.options.mode == .ignoreAllWhitespace)
     #expect(session.blocks.map(\.kind) == [.changed])
   }
@@ -42,7 +42,7 @@ struct SessionTests {
     let session = try await merge(
       base: RowLayoutTests.base, a: RowLayoutTests.a, b: RowLayoutTests.b)
 
-    for role in session.roles {
+    for role in session.inputs.roles {
       var next = 0
       for block in session.blocks {
         #expect(block.lines(in: role).lowerBound == next)

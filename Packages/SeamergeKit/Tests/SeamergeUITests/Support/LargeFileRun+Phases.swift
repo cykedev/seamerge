@@ -15,7 +15,7 @@ extension LargeFileRun {
     let syntax = controller.presentation.syntax
     let session = controller.presentation.changes.session
     guard syntax.language != nil else { return }
-    let isColored = { session.roles.allSatisfy { syntax.tokens(of: $0) != nil } }
+    let isColored = { session.inputs.roles.allSatisfy { syntax.tokens(of: $0) != nil } }
     // The lexing began with the window, but its results come in on the main actor, which this
     // has held since; the observer is in place before the first of them.
     if !isColored() {
@@ -37,7 +37,7 @@ extension LargeFileRun {
     draw()
     recorder.record("syntax-window-drawn", clock.now - start)
 
-    let text = session.file(for: .b)?.text ?? ""
+    let text = session.inputs.b.text ?? ""
     let language = LanguageDescription(fileName: "file.\(largeCase.fileExtension)")
     let lexing = clock.measure {
       _ = LexedText(
@@ -209,7 +209,7 @@ extension LargeFileRun {
     var pieces = controller.layout.sourcePanes.filter { source in
       searched.contains { $0 === source.pane }
     }.map { source -> (NSString, NSRange) in
-      let fileText = (session.file(for: source.role)?.text ?? "") as NSString
+      let fileText = (session.inputs[source.role]?.text ?? "") as NSString
       return (fileText, NSRange(location: 0, length: fileText.length))
     }
     if let resultPane = controller.layout.resultPane,

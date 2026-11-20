@@ -99,7 +99,7 @@ import Testing
     let file = collection.files[2]
     #expect(controller.shownFile == file)
     #expect(controller.window?.title == file.path)
-    #expect(controller.presentation.changes.session.file(for: .b)?.label == file.new.label)
+    #expect(controller.presentation.changes.session.inputs.b.label == file.new.label)
     #expect(!controller.waitsForComparison)
     #expect(!controller.presentation.changes.blocks.isEmpty)
   }
@@ -166,7 +166,7 @@ import Testing
     let file = collection.files[3]
     #expect(controller.shownFile == file)
     #expect(controller.window?.title == file.path)
-    #expect(controller.presentation.changes.session.file(for: .b)?.label == file.new.label)
+    #expect(controller.presentation.changes.session.inputs.b.label == file.new.label)
     #expect(!controller.waitsForComparison)
     #expect(!controller.showsComparisonProgress)
   }

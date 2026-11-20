@@ -274,7 +274,7 @@ struct IgnoreRulesWindowTests {
     let reloaded = controller.presentation.changes.session
     #expect(reloaded.ignoreRules == [BuiltInIgnoreRule.timestamps.rule(isEnabled: true)])
     #expect(reloaded.blocks.filter { $0.kind == .changed }.count == 1)
-    let text = try #require(reloaded.file(for: .b)).bytes
+    let text = reloaded.inputs.b.bytes
     #expect(String(decoding: text, as: UTF8.self).contains("notarize"))
   }
 

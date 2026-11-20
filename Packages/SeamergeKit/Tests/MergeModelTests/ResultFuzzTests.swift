@@ -92,7 +92,7 @@ struct ResultFuzzTests {
   private static func randomAction(
     for buffer: ResultBuffer, using generator: inout SplitMix64
   ) -> Action {
-    let roles = buffer.document.session.roles
+    let roles = buffer.document.session.inputs.roles
     let block = Int.random(in: 0..<max(buffer.blocks.count, 1), using: &generator)
     func someRoles() -> [Role] {
       (0..<Int.random(in: 0...3, using: &generator)).compactMap { _ in

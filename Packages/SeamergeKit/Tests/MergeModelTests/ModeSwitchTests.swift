@@ -22,7 +22,7 @@ struct ModeSwitchTests {
 
     #expect(lenient.kind == .merge)
     #expect(lenient.options.mode == .ignoreWhitespaceAmount)
-    #expect(lenient.file(for: .a)?.text == Self.a)
+    #expect(lenient.inputs.a.text == Self.a)
     #expect(lenient.blocks.map(\.kind) == Self.kinds)
     #expect(lenient.blocks[1].a == 1..<2)
     #expect(exact.blocks[1].a == 1..<3)

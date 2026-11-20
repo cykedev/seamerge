@@ -26,7 +26,7 @@ import TextBasics
     await SyntaxFixture.lexing(of: controller)
 
     for (role, pane) in controller.layout.sourcePanes {
-      let text = try #require(controller.presentation.changes.session.file(for: role)?.text)
+      let text = try #require(controller.presentation.changes.session.inputs[role]?.text)
       try SyntaxFixture.expectTokens(of: pane, asInLexOf: text, "\(role)")
     }
     let result = try controller.mergeResult

@@ -41,7 +41,7 @@ struct LargeSessionTests {
     let layout = session.rowLayout
     #expect(layout.lineCount(in: .base) == Self.lineCount)
     #expect(session.blocks.contains { $0.kind == .conflict })
-    for role in session.roles {
+    for role in session.inputs.roles {
       let text = try #require(layout.displayText(for: role))
       #expect(text.rowCount == layout.rowCount)
       for line in stride(from: 0, to: layout.lineCount(in: role), by: 997) {

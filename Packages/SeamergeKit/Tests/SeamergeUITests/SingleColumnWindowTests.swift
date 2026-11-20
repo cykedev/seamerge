@@ -392,7 +392,7 @@ import Testing
     let scenario = try #require(Scenario.merges.first { $0.name == "big" })
     let (merge, _) = try await scenario.load()
     let session = try await Session.diff(
-      old: try #require(merge.file(for: .base)), new: try #require(merge.file(for: .b)),
+      old: try #require(merge.inputs.base), new: merge.inputs.b,
       mode: .windowDefault)
     let controller = try Windows.controller(for: session)
     let clock = ContinuousClock()

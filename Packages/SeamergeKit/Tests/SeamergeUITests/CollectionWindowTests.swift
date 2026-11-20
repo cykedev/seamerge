@@ -56,7 +56,7 @@ import Testing
     await returning.value
     let file = collection.files[1]
     #expect(controller.window?.title == file.path)
-    #expect(controller.presentation.changes.session.file(for: .b)?.label == file.new.label)
+    #expect(controller.presentation.changes.session.inputs.b.label == file.new.label)
     #expect(!controller.sessionUndoManager.canUndo && !controller.sessionUndoManager.canRedo)
   }
 

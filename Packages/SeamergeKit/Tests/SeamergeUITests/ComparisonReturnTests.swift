@@ -161,11 +161,11 @@ import Testing
     undoManager.undo()
     await reloading.value
     // The reload waits for the comparison that undo brings back, then looks again.
-    #expect(controller.presentation.changes.session.file(for: .b)?.text == "a\nb c\nd\ne\n")
+    #expect(controller.presentation.changes.session.inputs.b.text == "a\nb c\nd\ne\n")
     await controller.comparisonReturn?.value
     #expect(controller.comparisonOptions.mode == .windowDefault)
     // The window looks again on its own once the comparison is back.
-    while controller.presentation.changes.session.file(for: .b)?.text != "a\nb c\nd\ne\nf\n",
+    while controller.presentation.changes.session.inputs.b.text != "a\nb c\nd\ne\nf\n",
       !Task.isCancelled
     {
       await Task.yield()

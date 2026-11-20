@@ -57,7 +57,7 @@ struct DiskChangeTests {
     func url(_ name: String) -> URL { folder.appending(path: name) }
 
     func text(of role: Role) -> String? {
-      controller.presentation.changes.session.file(for: role)?.text
+      controller.presentation.changes.session.inputs[role]?.text
     }
 
     var conflict: Block? {

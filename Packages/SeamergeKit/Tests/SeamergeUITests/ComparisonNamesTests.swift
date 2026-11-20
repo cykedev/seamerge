@@ -24,7 +24,7 @@ import Testing
 
     #expect(try #require(controller.window).title == "added.txt")
     #expect(labels(of: controller) == ["A, New File", "B, added.txt"])
-    #expect(session.file(for: .a)?.text == "")
+    #expect(session.inputs.a.text == "")
   }
 
   /// Git, also the Git inside Tower, passes `/dev/null` for the missing side of a new file.
@@ -41,8 +41,8 @@ import Testing
       new: SessionFile(url: added, label: "tsconfig.storybook.json"), mode: .windowDefault)
     let controller = try Windows.controller(for: session)
 
-    #expect(session.file(for: .a)?.text == "")
-    #expect(session.file(for: .b)?.text?.hasPrefix("{") == true)
+    #expect(session.inputs.a.text == "")
+    #expect(session.inputs.b.text?.hasPrefix("{") == true)
     #expect(try #require(controller.window).title == "tsconfig.storybook.json")
     #expect(labels(of: controller) == ["A, New File", "B, tsconfig.storybook.json"])
   }

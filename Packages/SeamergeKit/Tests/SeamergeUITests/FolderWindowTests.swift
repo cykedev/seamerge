@@ -206,7 +206,7 @@ import Testing
     await controller.fileLoad?.value
 
     #expect(controller.shownFile?.path == path)
-    let right = controller.presentation.changes.session.file(for: .b)?.text
+    let right = controller.presentation.changes.session.inputs.b.text
     #expect(right?.contains("7") == true)
   }
 

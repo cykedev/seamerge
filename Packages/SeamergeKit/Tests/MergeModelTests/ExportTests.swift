@@ -127,7 +127,7 @@ struct ExportTests {
     in block: Block, of document: ResultDocument, using generator: inout SplitMix64
   ) -> (Merge.Source, [Role]) {
     var choices: [(Merge.Source, [Role])] = [(.a, [.a]), (.b, [.b])]
-    if document.session.roles.contains(.base) {
+    if document.session.inputs.base != nil {
       choices.append((.base, [.base]))
     }
     // A sequence of two toggles is the concatenation the engine writes only if they differ and

@@ -85,7 +85,7 @@ struct IgnoreRuleComparisonTests {
     let unmasked = try await diff(old, new, mode: mode)
 
     for (role, text, date) in [(Role.a, old, "2026-01-01"), (.b, new, "2026-11-15")] {
-      #expect(session.file(for: role)?.bytes == Data(text.utf8))
+      #expect(session.inputs[role]?.bytes == Data(text.utf8))
       #expect(try session.lineTexts(of: role) == unmasked.lineTexts(of: role))
       #expect(try session.lineTexts(of: role).first == "Grüße 😀 \(date)")
       #expect(try !session.displayString(of: role).contains("\u{FFFD}"))

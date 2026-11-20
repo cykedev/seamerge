@@ -227,14 +227,6 @@ public struct Session: Sendable {
   /// constant first.
   public var inputs: Inputs<SourceFile> { files.mapValues(\.file) }
 
-  /// The inputs that take part, in the order base, A, B.
-  public var roles: [Role] { files.roles }
-
-  /// The file of `role`, or `nil` if the input does not take part.
-  public func file(for role: Role) -> SourceFile? {
-    files[role]?.file
-  }
-
   /// Whether the files that have line breaks end their lines differently.
   ///
   /// A file with mixed line endings differs from one with uniform line endings, but not from

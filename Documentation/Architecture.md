@@ -59,6 +59,8 @@ While the app is quitting, `SessionCoordinator` rejects new sessions with `Sessi
 
 A merge is one `Session` with its blocks and one `ResultDocument`.
 
+A session holds its files as `Session.Inputs` (`MergeModel/Session+Inputs.swift`): A and B always, the base only in a merge that has one. The window holds what it shows as `ShownSession` (`SeamergeUI/ShownSession.swift`): a comparison, or a merge with its result, whose session is the session of the result, since only a merge has one.
+
 - A **block** (`MergeModel/Block.swift`) is a region of the inputs with its lines in each input. The blocks cover every input completely and in order. A block is unchanged, changed on one side, changed identically on both sides, in conflict, or, in a comparison, different. Blocks are numbered by position.
 - A **segment** (`MergeModel/Segment.swift`) is the part of the result that belongs to one block. The segments lie back to back in the order of the blocks. Each segment records how it got its text: unchanged, taken from a source, chosen by the user, edited by hand, or an open conflict.
 - A **toggle** (`MergeModel/Toggle.swift`) switches the text of one or more inputs into a block. Inputs with identical text in a block share a toggle. Whitespace differences that the comparison ignores still get their own toggle, because the bytes differ. Switching on a toggle that has no text removes the block's text and switches the other toggles off.

@@ -136,7 +136,7 @@ struct ReloadTests {
 
     #expect(buffer.text == text)
     #expect(buffer.document.segments == segments)
-    #expect(buffer.document.session.file(for: .a)?.text == Self.a)
+    #expect(buffer.document.session.inputs.a.text == Self.a)
   }
 
   /// A decision lands only where its block went, in random merges.

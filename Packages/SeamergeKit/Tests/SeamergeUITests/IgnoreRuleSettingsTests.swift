@@ -125,8 +125,7 @@ struct BuiltInIgnoreRuleTests {
     var files: [(String, String)] = []
     for scenario in Scenario.merges {
       let (session, _) = try await scenario.load()
-      for role in Role.allCases {
-        guard let file = session.file(for: role) else { continue }
+      for (role, file) in session.inputs {
         files.append(("\(scenario.name) \(role)", String(decoding: file.bytes, as: UTF8.self)))
       }
     }

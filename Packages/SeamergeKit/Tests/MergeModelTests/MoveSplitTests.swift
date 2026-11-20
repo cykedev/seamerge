@@ -81,7 +81,7 @@ struct MoveSplitTests {
       moveCount += session.moves.count
 
       #expect(session.blocks.map(\.id) == Array(session.blocks.indices), context)
-      for role in session.roles {
+      for role in session.inputs.roles {
         var next = 0
         for block in session.blocks {
           #expect(block.lines(in: role).lowerBound == next, context)

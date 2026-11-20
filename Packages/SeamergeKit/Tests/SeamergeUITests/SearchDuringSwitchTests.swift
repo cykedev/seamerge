@@ -225,7 +225,7 @@ struct SearchDuringSwitchTests {
         let reloading = Task { await controller.reloadChangedFiles() }
         try driver.type(Self.rare(801 + index))
         await reloading.value
-        #expect(controller.presentation.changes.session.file(for: .b)?.text == text)
+        #expect(controller.presentation.changes.session.inputs.b.text == text)
         try await expectMatches(of: Self.rare(901 + index), with: driver)
       }
     }

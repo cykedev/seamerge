@@ -334,7 +334,7 @@ struct CollapsedRowsTests {
     sourceLocation: SourceLocation = #_sourceLocation
   ) throws {
     let grid = session.rowLayout
-    let hasBase = session.kind == .diff || session.file(for: .base) != nil
+    let hasBase = session.kind == .diff || session.inputs.base != nil
     let equalKinds: Set<Block.Kind> = hasBase ? [.unchanged] : [.unchanged, .changedInBoth]
     for run in collapsed.runs {
       let rows = grid.rows(of: run.block)

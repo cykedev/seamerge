@@ -29,7 +29,7 @@ struct LineEndingTests {
       session.blocks.map(\.kind) == [
         .unchanged, .changedInB, .unchanged, .changedInA, .unchanged, .changedInB,
       ])
-    for role in session.roles {
+    for role in session.inputs.roles {
       let shown = (0..<layout.rowCount).compactMap { layout.line(atRow: $0, in: role) }
       #expect(shown == Array(0..<layout.lineCount(in: role)))
       for line in shown {
@@ -43,14 +43,14 @@ struct LineEndingTests {
   @Test func fileKeepsItsLineEndingsWhenItIsCompared() async throws {
     let session = try await diff("one\rtwo\r", "one\ntwo\n")
 
-    #expect(session.file(for: .a)?.text == "one\rtwo\r")
-    #expect(session.file(for: .a)?.lineEndingStyle == .uniform(.cr))
+    #expect(session.inputs.a.text == "one\rtwo\r")
+    #expect(session.inputs.a.lineEndingStyle == .uniform(.cr))
   }
 
   @Test func loneCarriageReturnInAFileWithOtherLineEndingsStaysVisible() async throws {
     let session = try await diff("x\r\ny\rz\r\n", "x\r\nyz\r\n")
 
-    #expect(session.file(for: .a)?.lineEndingStyle?.isMixed == true)
+    #expect(session.inputs.a.lineEndingStyle?.isMixed == true)
     #expect(try session.rowTexts(of: .a) == ["x", "y\u{240D}z"])
   }
 
