@@ -125,7 +125,7 @@ extension SessionWindowController {
     isSaving = true
     defer {
       isSaving = false
-      lookAtFilesAgainIfAsked()
+      diskWatch.lookAgainIfAsked()
     }
     typingRun = nil
     let openCount = shown.document.openConflictCount

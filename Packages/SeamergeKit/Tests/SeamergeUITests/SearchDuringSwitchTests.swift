@@ -222,7 +222,7 @@ struct SearchDuringSwitchTests {
       for (index, text) in texts.enumerated() {
         try Data(text.utf8).write(to: new)
         try driver.type(Self.common)
-        let reloading = Task { await controller.reloadChangedFiles() }
+        let reloading = Task { await controller.diskWatch.reloadChangedFiles() }
         try driver.type(Self.rare(801 + index))
         await reloading.value
         #expect(controller.presentation.changes.session.inputs.b.text == text)
@@ -267,7 +267,7 @@ struct SearchDuringSwitchTests {
         case 1:
           let lineCount = Bool.random(using: &generator) ? Self.lineCount : Self.lineCount * 3 / 4
           try Data(Self.newerFile(prefix: lineCount).utf8).write(to: new)
-          let reloading = Task { await controller.reloadChangedFiles() }
+          let reloading = Task { await controller.diskWatch.reloadChangedFiles() }
           try driver.type(typed)
           await reloading.value
         case 2 where controller.allowsUndo && (undoManager.canUndo || undoManager.canRedo):

@@ -269,7 +269,7 @@ struct IgnoreRulesWindowTests {
       mode: settings.comparisonMode, ignoring: settings.ignoreRules)
     let controller = try Windows.controller(for: session, settings: settings)
     try Data(Self.new.replacingOccurrences(of: "sign", with: "notarize").utf8).write(to: new)
-    await controller.reloadChangedFiles()
+    await controller.diskWatch.reloadChangedFiles()
 
     let reloaded = controller.presentation.changes.session
     #expect(reloaded.ignoreRules == [BuiltInIgnoreRule.timestamps.rule(isEnabled: true)])

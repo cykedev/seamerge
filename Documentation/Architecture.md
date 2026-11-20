@@ -74,6 +74,12 @@ A session holds its files as `Session.Inputs` (`MergeModel/Session+Inputs.swift`
 
 The decisions themselves are commands in `SeamergeUI` (`SessionCommand.swift`). The keys for them are in `SessionCommand+Keys.swift`. The menus and the keyboard shortcut window (`ShortcutOverview.swift`) both read these tables, so the overview cannot disagree with the menus. The VoiceOver rotors for conflicts and changes are in `BlockRotors.swift`; they find blocks by their text and leave the current block where it is.
 
+## The session window
+
+`SessionWindowController` (`SeamergeUI/SessionWindowController.swift`) carries out the commands of a window and validates them. The parts of the window that keep state of their own are types of their own, which the controller owns:
+
+- `DiskWatch` (`SeamergeUI/DiskWatch.swift`) watches the files of the session and the file of the result. It joins a burst of changes into one look at the files, holds back while the window saves or compares and looks afterwards, and remembers the bytes the window has seen of each file, so that it asks about them only once. The window reloads through `DiskWatchDelegate`.
+
 ## Settings
 
 `UserSettings` (`SeamergeUI/UserSettings.swift`) is the only type that reads the defaults of the windows. It is `@Observable`, and `SettingsWindowController` edits it.

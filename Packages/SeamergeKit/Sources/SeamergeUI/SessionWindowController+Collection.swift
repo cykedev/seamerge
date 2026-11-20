@@ -321,7 +321,7 @@ extension SessionWindowController {
     }
     show(ready.collected, prepared: ready.prepared, of: file)
     guard waited else { return }
-    lookAtFilesAgainIfAsked()
+    diskWatch.lookAgainIfAsked()
     followIgnoreRules()
     guard window?.isVisible == true else { return }
     presentation.announce(unavailable?.title ?? comparedAnnouncement)

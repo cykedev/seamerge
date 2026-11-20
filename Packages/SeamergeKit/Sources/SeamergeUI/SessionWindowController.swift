@@ -78,22 +78,9 @@ public final class SessionWindowController: NSWindowController {
   /// Whether the window is asking whether to save before it closes.
   var isAskingToClose = false
 
-  /// The watchers of the files of the session and of the result.
-  var fileWatchers: [FileWatcher] = []
-
-  /// Whether the window will look at its files soon, because one of them may have changed.
-  var isReloadPending = false
-
-  /// Whether the window is looking at its files or reloading them.
-  var isReloading = false
-
-  /// Whether the files may have changed while the window was busy, so that it looks at them
-  /// again afterwards.
-  var looksAtFilesAgain = false
-
-  /// The bytes of each file on disk that the window has seen, reloaded or not, which it does not
-  /// reload or ask about again.
-  var seenOnDisk: [URL: Data] = [:]
+  /// The watch of the files of the session and of the result on disk, which has the window
+  /// reload them once they change.
+  let diskWatch = DiskWatch()
 
   /// Whether the window is saving its result, which a reload waits for.
   var isSaving = false
@@ -392,6 +379,7 @@ public final class SessionWindowController: NSWindowController {
       window.styleMask.insert(.fullSizeContentView)
     }
     super.init(window: window)
+    diskWatch.delegate = self
     // The delegate comes first: the window asks it for its undo manager once and keeps the
     // answer.
     window.delegate = self
@@ -578,7 +566,7 @@ extension SessionWindowController: NSWindowDelegate {
     // keep the undo manager of the window once it has closed; without its steps, it is small.
     sessionUndoManager.removeAllActions()
     rememberPlace()
-    fileWatchers = []
+    diskWatch.stop()
     // A merge without a result yet, as while the window waits for it, was not saved.
     let isSaved =
       binaryMerge == nil

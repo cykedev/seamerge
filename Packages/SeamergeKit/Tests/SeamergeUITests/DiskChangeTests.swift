@@ -76,7 +76,7 @@ struct DiskChangeTests {
     let changed = "zero\n" + Self.a
     try Data(changed.utf8).write(to: fixture.url("a.txt"))
 
-    await fixture.controller.reloadChangedFiles()
+    await fixture.controller.diskWatch.reloadChangedFiles()
 
     #expect(fixture.text(of: .a) == changed)
     #expect(fixture.conflictState == .chosen)
@@ -94,7 +94,7 @@ struct DiskChangeTests {
     let firstLine = "#!/bin/zsh"
     try Data((firstLine + "\n" + Self.b).utf8).write(to: fixture.url("b.txt"))
 
-    await fixture.controller.reloadChangedFiles()
+    await fixture.controller.diskWatch.reloadChangedFiles()
 
     let script = LanguageDescription(fileName: fixture.url("b.txt").path, firstLine: firstLine)
     #expect(script != plain)
@@ -107,8 +107,8 @@ struct DiskChangeTests {
     let changed = Self.a.replacingOccurrences(of: "two from A", with: "two, now from A")
     try Data(changed.utf8).write(to: fixture.url("a.txt"), options: .atomic)
 
-    await fixture.controller.reloadChangedFiles()
-    await fixture.controller.reloadChangedFiles()
+    await fixture.controller.diskWatch.reloadChangedFiles()
+    await fixture.controller.diskWatch.reloadChangedFiles()
 
     #expect(fixture.prompts.questions == ["reload a.txt, 1 decisions"])
     #expect(fixture.text(of: .a) == Self.a)
@@ -117,7 +117,7 @@ struct DiskChangeTests {
     fixture.prompts.reloadsAnyway = true
     let again = changed + "six\n"
     try Data(again.utf8).write(to: fixture.url("a.txt"), options: .atomic)
-    await fixture.controller.reloadChangedFiles()
+    await fixture.controller.diskWatch.reloadChangedFiles()
     #expect(fixture.text(of: .a) == again)
     #expect(fixture.conflictState == .open)
   }
@@ -174,7 +174,7 @@ struct DiskChangeTests {
     try Data("one\ntwo, now A\nthree\nfour\nfive A\nsix\n".utf8).write(
       to: folder.appending(path: "a.txt"), options: .atomic)
 
-    await controller.reloadChangedFiles()
+    await controller.diskWatch.reloadChangedFiles()
     #expect(prompts.questions == ["reload a.txt, 1 decisions", "reload a.txt, 1 decisions"])
     let reloaded = conflicts()
     try #require(reloaded.count == 2)
@@ -186,7 +186,7 @@ struct DiskChangeTests {
     let fixture = try await Fixture()
     try FileManager.default.removeItem(at: fixture.url("a.txt"))
 
-    await fixture.controller.reloadChangedFiles()
+    await fixture.controller.diskWatch.reloadChangedFiles()
 
     #expect(fixture.text(of: .a) == Self.a)
     #expect(fixture.conflictState == .chosen)
@@ -198,8 +198,8 @@ struct DiskChangeTests {
     let text = fixture.controller.presentation.result?.text
     try Data("edited elsewhere\n".utf8).write(to: fixture.url("result.txt"))
 
-    await fixture.controller.reloadChangedFiles()
-    await fixture.controller.reloadChangedFiles()
+    await fixture.controller.diskWatch.reloadChangedFiles()
+    await fixture.controller.diskWatch.reloadChangedFiles()
 
     #expect(fixture.prompts.questions == ["reload changed result.txt"])
     #expect(fixture.controller.presentation.result?.text == text)
@@ -213,7 +213,7 @@ struct DiskChangeTests {
     let text = fixture.controller.presentation.result?.text
     try Data("edited elsewhere\n".utf8).write(to: fixture.url("result.txt"), options: .atomic)
 
-    await fixture.controller.reloadChangedFiles()
+    await fixture.controller.diskWatch.reloadChangedFiles()
 
     #expect(fixture.controller.presentation.result?.text == "edited elsewhere\n")
     #expect(fixture.controller.window?.isDocumentEdited == false)
@@ -237,7 +237,7 @@ struct DiskChangeTests {
     var outcomes: [SessionOutcome] = []
     controller.onFinish = { outcomes.append($0) }
 
-    await controller.reloadChangedFiles()
+    await controller.diskWatch.reloadChangedFiles()
 
     #expect(controller.window?.isDocumentEdited == true)
     #expect(await !controller.closeAskingFirst())
@@ -251,12 +251,12 @@ struct DiskChangeTests {
     let fixture = try await Fixture()
     let changed = "zero\n" + Self.a
     try Data(changed.utf8).write(to: fixture.url("a.txt"))
-    await fixture.controller.reloadChangedFiles()
+    await fixture.controller.diskWatch.reloadChangedFiles()
     fixture.controller.endEvent()
 
     fixture.undoManager.undo()
     await fixture.controller.comparisonReturn?.value
-    await fixture.controller.reloadChangedFiles()
+    await fixture.controller.diskWatch.reloadChangedFiles()
 
     #expect(fixture.text(of: .a) == Self.a)
     #expect(fixture.undoManager.canRedo)
@@ -278,7 +278,7 @@ struct DiskChangeTests {
       } catch {
         Issue.record(error)
       }
-      await controller.reloadChangedFiles()
+      await controller.diskWatch.reloadChangedFiles()
     }
 
     #expect(await controller.save())
@@ -286,9 +286,9 @@ struct DiskChangeTests {
     #expect(try Data(contentsOf: destination) == Data(expected.utf8))
     #expect(controller.window?.isDocumentEdited == false)
     #expect(fixture.text(of: .a) == Self.a)
-    await controller.reloadChangedFiles()
+    await controller.diskWatch.reloadChangedFiles()
     #expect(fixture.text(of: .a) == "zero\n" + Self.a)
-    #expect(controller.fileWatchers.map(\.url).contains(destination))
+    #expect(controller.diskWatch.watchedURLs.contains(destination))
   }
 
   @Test func ownSavingIsNoChangeByAnotherApp() async throws {
@@ -296,7 +296,7 @@ struct DiskChangeTests {
     fixture.prompts.openConflictsChoice = .saveWithMarkers
     #expect(await fixture.controller.save())
 
-    await fixture.controller.reloadChangedFiles()
+    await fixture.controller.diskWatch.reloadChangedFiles()
 
     #expect(fixture.prompts.questions.isEmpty)
   }

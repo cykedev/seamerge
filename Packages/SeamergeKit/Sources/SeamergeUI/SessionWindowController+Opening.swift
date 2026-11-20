@@ -267,7 +267,7 @@ extension SessionWindowController {
     showResultFormat()
     watchFiles()
     stateDidChange()
-    lookAtFilesAgainIfAsked()
+    diskWatch.lookAgainIfAsked()
     followIgnoreRules()
     // A window that fills before it shows says nothing: VoiceOver reads it as it appears.
     guard window?.isVisible == true else { return }

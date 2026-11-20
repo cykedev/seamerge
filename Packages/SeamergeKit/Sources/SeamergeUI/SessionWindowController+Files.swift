@@ -12,50 +12,7 @@ extension SessionWindowController {
     if let url = saving?.url {
       urls.append(url)
     }
-    let unique = urls.reduce(into: [URL]()) { unique, url in
-      if !unique.contains(url) {
-        unique.append(url)
-      }
-    }
-    guard unique != fileWatchers.map(\.url) else { return }
-    fileWatchers = unique.map { url in
-      FileWatcher(url: url) { [weak self] in self?.filesMayHaveChanged() }
-    }
-  }
-
-  /// Looks at the files soon, once for every change that arrives before.
-  func filesMayHaveChanged() {
-    guard !hasFinished, !isReloadPending else { return }
-    isReloadPending = true
-    Task { await reloadChangedFiles() }
-  }
-
-  /// Reloads what changed on disk: asks about a result file that another app changed, and
-  /// compares the files of the session anew, keeping the decisions that belong to the same
-  /// blocks, after asking if others would be lost.
-  ///
-  /// While the window reloads, saves or compares its files already, it looks again afterwards.
-  func reloadChangedFiles() async {
-    isReloadPending = false
-    guard !hasFinished, unavailable == nil else { return }
-    guard !isReloading, !isSwitchingComparison, !isSaving, !waitsForComparison else {
-      looksAtFilesAgain = true
-      return
-    }
-    isReloading = true
-    defer {
-      isReloading = false
-      lookAtFilesAgainIfAsked()
-    }
-    await reloadChangedResult()
-    await reloadChangedSources()
-  }
-
-  /// Looks at the files once more if they may have changed while the window was busy.
-  func lookAtFilesAgainIfAsked() {
-    guard looksAtFilesAgain else { return }
-    looksAtFilesAgain = false
-    filesMayHaveChanged()
+    diskWatch.watch(urls)
   }
 
   /// Asks whether to reload the result file if another app changed it: keeping the window's
@@ -111,7 +68,7 @@ extension SessionWindowController {
     let files = session.inputs.mapValuesWithRoles { role, file in
       guard let url = file.url,
         let bytes = FileManager.default.contents(atPath: url.path(percentEncoded: false)),
-        bytes != file.bytes, seenOnDisk[url] != bytes
+        bytes != file.bytes, !diskWatch.hasSeen(bytes, at: url)
       else { return file }
       changed.append(role)
       return SourceFile(bytes: bytes, label: file.label, url: url)
@@ -125,7 +82,7 @@ extension SessionWindowController {
     // that brings back the files before stays.
     for role in changed {
       if let file = files[role], let url = file.url {
-        seenOnDisk[url] = file.bytes
+        diskWatch.remember(file.bytes, at: url)
       }
     }
   }
@@ -262,5 +219,24 @@ extension SessionWindowController {
     self.saving = saving
     showResultFormat()
     stateDidChange()
+  }
+}
+
+extension SessionWindowController: DiskWatchDelegate {
+  /// Whether the window can reload its files: none once it closed or while it shows why they
+  /// cannot be compared, and none yet while it saves, compares or waits for their lines.
+  func readinessToReload(for watch: DiskWatch) -> DiskWatch.Readiness {
+    if hasFinished || unavailable != nil {
+      return .nothingToReload
+    }
+    return isSwitchingComparison || isSaving || waitsForComparison ? .busy : .ready
+  }
+
+  /// Reloads what changed on disk: asks about a result file that another app changed, and
+  /// compares the files of the session anew, keeping the decisions that belong to the same
+  /// blocks, after asking if others would be lost.
+  func reloadChangedFiles(for watch: DiskWatch) async {
+    await reloadChangedResult()
+    await reloadChangedSources()
   }
 }

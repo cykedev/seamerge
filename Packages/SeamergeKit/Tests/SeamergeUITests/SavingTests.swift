@@ -365,7 +365,7 @@ struct SavingTests {
 
     #expect(prompts.questions.filter { $0.hasPrefix("where") }.count == 1)
     #expect(controller.window?.representedURL == prompts.destination)
-    #expect(controller.fileWatchers.map(\.url) == [prompts.destination].compactMap(\.self))
+    #expect(controller.diskWatch.watchedURLs == [prompts.destination].compactMap(\.self))
     #expect(FileManager.default.fileExists(atPath: folder.appending(path: "Merged.java").path))
   }
 

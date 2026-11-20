@@ -123,7 +123,7 @@ extension SessionWindowController {
     showsComparisonProgress = false
     stateDidChange()
     guard !hasFinished else { return }
-    lookAtFilesAgainIfAsked()
+    diskWatch.lookAgainIfAsked()
     followIgnoreRules()
   }
 
@@ -264,7 +264,7 @@ extension SessionWindowController {
   /// decision.
   func allowsStep(bringingBackAComparison bringsBack: Bool) -> Bool {
     guard comparisonReturn == nil else { return false }
-    return !bringsBack || !(isSwitchingComparison || isReloading)
+    return !bringsBack || !(isSwitchingComparison || diskWatch.isReloading)
   }
 
   /// What Undo calls the switch to another comparison mode.

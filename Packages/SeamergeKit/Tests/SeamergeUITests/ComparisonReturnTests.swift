@@ -157,7 +157,7 @@ import Testing
     await controller.switchComparison(to: ComparisonOptions(mode: .exact))
     try Data("a\nb c\nd\ne\nf\n".utf8).write(to: new)
 
-    let reloading = Task { await controller.reloadChangedFiles() }
+    let reloading = Task { await controller.diskWatch.reloadChangedFiles() }
     undoManager.undo()
     await reloading.value
     // The reload waits for the comparison that undo brings back, then looks again.
@@ -262,7 +262,7 @@ import Testing
     await returning.value
     #expect(controller.comparisonOptions.mode == .exact)
     #expect(try controller.segmentTexts == switched)
-    #expect(controller.fileWatchers.isEmpty)
+    #expect(controller.diskWatch.watchedURLs.isEmpty)
   }
 
   @Test func progressOfABringBackThatTakesAMomentShowsAndIsHeard() async throws {
