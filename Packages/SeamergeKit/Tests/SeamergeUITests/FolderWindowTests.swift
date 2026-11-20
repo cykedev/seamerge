@@ -252,6 +252,39 @@ import Testing
     #expect(controller.phase.unavailable != nil)
   }
 
+  /// The file before the one that went takes its place at once: the first file of the list is
+  /// neither announced nor read on the way, and keeps its own place.
+  @Test func fileInViewThatWentGivesWayWithoutPassingTheFirstFile() async throws {
+    let folders = try SampleFolders()
+    for name in ["a.txt", "b.txt", "c.txt"] {
+      try folders.write(name, left: "old\n", right: "new\n")
+    }
+    let old = (0..<4).map { "line \($0)\nkeep \($0)\n" }.joined()
+    let new = (0..<4).map { "changed \($0)\nkeep \($0)\n" }.joined()
+    try folders.write("d.txt", left: old, right: new)
+    let comparer = FolderComparer(
+      folders: folders.pair, linkFolder: folders.folder.appending(path: "links"))
+    let collection = FileCollection(comparer: comparer)
+    collection.take(.listed(Self.files(of: comparer), waiting: 0))
+    collection.take(.finished)
+    let controller = try await Windows.controller(for: collection)
+    defer { controller.window?.close() }
+    let navigator = try #require(controller.collectionNavigator)
+    controller.showFile(at: 3)
+    await controller.fileLoad?.value
+    controller.presentation.setCurrentBlock(2)
+    let placeOfTheFirst = navigator.place(of: collection.files[0])
+    var announcements: [String] = []
+    controller.presentation.announce = { announcements.append($0) }
+
+    collection.take(.replaced(Array(collection.files.prefix(3))))
+    await controller.fileLoad?.value
+
+    #expect(navigator.shownFile?.path == "c.txt")
+    #expect(navigator.place(of: collection.files[0]) == placeOfTheFirst)
+    #expect(!announcements.contains { $0.contains("a.txt") })
+  }
+
   /// The files of the folders of `comparer` as comparing them now finds them, in the order of
   /// the list.
   static func files(of comparer: FolderComparer) -> [CollectedFile] {

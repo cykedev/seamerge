@@ -361,8 +361,9 @@ extension SessionWindowController {
       }
       load(file)
     case .went(let next):
-      // The next file in the order takes its place.
-      listFiles(scrolling: false)
+      // The next file in the order takes its place. The list in view follows after it, as for
+      // every change of the files: shown with no file in view, it would show its first.
+      collectionNavigator.listFiles()
       if let index = collectionNavigator.listedIndex(from: next) {
         showFile(at: index)
       }
