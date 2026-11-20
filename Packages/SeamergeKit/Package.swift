@@ -28,9 +28,13 @@ let modules: [(name: String, dependencies: [Target.Dependency])] = [
   ("SyntaxKit", []),
   ("PaneKit", ["TextBasics"]),
   ("FolderCompare", ["MergeModel", "GitSupport"]),
+  ("Integration", ["GitSupport"]),
   (
     "SeamergeUI",
-    ["PaneKit", "MergeModel", "SyntaxKit", "GitSupport", "TextBasics", "FolderCompare"]
+    [
+      "PaneKit", "MergeModel", "SyntaxKit", "GitSupport", "TextBasics", "FolderCompare",
+      "Integration",
+    ]
   ),
 ]
 
@@ -49,6 +53,7 @@ let package = Package(
     // Only the modules the app and the command-line tool link directly.
     .library(name: "SeamergeUI", targets: ["SeamergeUI"]),
     .library(name: "FolderCompare", targets: ["FolderCompare"]),
+    .library(name: "Integration", targets: ["Integration"]),
     .library(name: "MergeModel", targets: ["MergeModel"]),
     .library(name: "SeamergeCLI", targets: ["SeamergeCLI"]),
     .library(name: "SessionIPC", targets: ["SessionIPC"]),

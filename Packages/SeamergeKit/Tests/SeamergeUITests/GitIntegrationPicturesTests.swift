@@ -2,6 +2,7 @@ import AppKit
 import GitSupport
 import Testing
 
+@testable import Integration
 @testable import SeamergeUI
 
 /// Draws the sheet Set Up Git Integration and the line about Git for the visual review: the

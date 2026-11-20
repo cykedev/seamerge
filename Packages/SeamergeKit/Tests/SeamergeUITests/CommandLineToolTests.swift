@@ -1,6 +1,7 @@
 import AppKit
 import Testing
 
+@testable import Integration
 @testable import SeamergeUI
 
 /// The seamerge command: what lies at its place, what installing, updating and removing do in a
@@ -145,97 +146,6 @@ import Testing
     #expect(result.status == 0, "\(result.error)")
     #expect(folder.linkDestination == folder.helper.path)
     #expect(!folder.ranSmuggledCommand)
-  }
-
-  @Test func typedCommandQuotesOnlyWhatNeedsIt() {
-    let status = CommandLineToolStatus(
-      entry: .none, link: URL(filePath: "/usr/local/bin/seamerge"),
-      helper: URL(filePath: "/Applications/Seamerge.app/Contents/Helpers/seamerge"),
-      hasLinkFolder: true, problem: nil)
-
-    #expect(
-      CommandLineToolChange.typedCommands(for: status) == [
-        "sudo ln -sf /Applications/Seamerge.app/Contents/Helpers/seamerge /usr/local/bin/seamerge"
-      ])
-    #expect(CommandLineToolChange.shellQuoted("/Apps/Ada's Tools") == #"'/Apps/Ada'\''s Tools'"#)
-  }
-
-  @Test func appleScriptHandsEveryArgumentToTheShellAsOneWordUnchanged() async throws {
-    let folder = try CommandLineToolFolder()
-    let output = folder.folder.appending(path: "words")
-    let marker = folder.folder.appending(path: "smuggled").path
-    let words = [
-      "-n", "--", "two words", "'single'", "\"double\"", "$(touch '\(marker)')",
-      "`touch '\(marker)'`", "; touch '\(marker)'", "line\nbreak", "trailing\n\n",
-      "back\\slash", "*?[a]", "Grüße", "",
-    ]
-    let script = #"out=$1; shift; for word; do printf '%s\0' "$word"; done > "$out""#
-
-    try await AppleScriptShell(asksForAdministrator: false).run(
-      script, arguments: [output.path] + words, prompt: "")
-
-    let written = try Data(contentsOf: output)
-    #expect(
-      written.split(separator: 0, omittingEmptySubsequences: false).dropLast().map {
-        String(decoding: $0, as: UTF8.self)
-      } == words)
-    #expect(!FileManager.default.fileExists(atPath: marker))
-  }
-
-  @Test func appleScriptTellsARefusalOfTheScriptFromAFailure() async {
-    let shell = AppleScriptShell(asksForAdministrator: false)
-
-    await #expect(throws: CommandLineToolFailure.otherFile) {
-      try await shell.run("exit 3", arguments: [], prompt: "")
-    }
-    await #expect(throws: CommandLineToolFailure.failed(message: "no space left")) {
-      try await shell.run("echo 'no space left' >&2; exit 5", arguments: [], prompt: "")
-    }
-  }
-
-  @Test func answersOfOsascriptBecomeTheFailuresOfTheSheet() {
-    func failure(_ error: String, status: Int32 = 1) -> CommandLineToolFailure? {
-      AppleScriptShell.failure(status: status, error: error)
-    }
-
-    #expect(failure("", status: 0) == nil)
-    #expect(failure("7:30: execution error: User canceled. (-128)\n") == .notAllowed)
-    #expect(
-      failure(
-        "7:30: execution error: The administrator user name or password was "
-          + "incorrect. (-60005)") == .notAllowed)
-    #expect(
-      failure("7:76: execution error: The command exited with a non-zero status. (3)")
-        == .otherFile)
-    #expect(
-      failure("7:76: execution error: ln: /usr/local/bin: Read-only file system (1)")
-        == .failed(message: "ln: /usr/local/bin: Read-only file system"))
-  }
-
-  @Test func dialogNamesSeamergeAndWhatItDoes() {
-    func prompt(_ entry: CommandLineToolStatus.Entry) -> String {
-      CommandLineToolStatus(
-        entry: entry, link: URL(filePath: "/usr/local/bin/seamerge"),
-        helper: URL(filePath: "/Applications/Seamerge.app/Contents/Helpers/seamerge"),
-        hasLinkFolder: true, problem: nil
-      ).dialogPrompt
-    }
-
-    #expect(prompt(.none) == "Seamerge wants to install the seamerge command in /usr/local/bin.")
-    #expect(
-      prompt(.otherCopy(app: "/Volumes/Seamerge/Seamerge.app"))
-        == "Seamerge wants to update the seamerge command in /usr/local/bin.")
-    #expect(
-      prompt(.thisCopy) == "Seamerge wants to remove the seamerge command from /usr/local/bin.")
-  }
-
-  @Test func dialogAsksForAnAdministratorWithAPromptOfItsOwn() {
-    #expect(
-      AppleScriptShell.administrator.sourceLines.contains(
-        "do shell script commandLine with administrator privileges with prompt (item 1 of argv)"))
-    #expect(
-      !AppleScriptShell(asksForAdministrator: false).sourceLines.joined().contains(
-        "administrator"))
   }
 
   @Test func linkThatNamesTheHelperThroughALinkedFolderIsThisCopy() throws {

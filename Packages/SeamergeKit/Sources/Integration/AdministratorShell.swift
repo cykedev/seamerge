@@ -3,7 +3,7 @@ import os
 
 /// Runs scripts for `/bin/sh` with the rights of an administrator.
 @MainActor
-protocol AdministratorShell {
+package protocol AdministratorShell {
   /// Runs `script` with `arguments` as its positional parameters `$1`, `$2` and so on, after
   /// macOS asked for the rights with `prompt`, and returns once it has ended.
   ///
@@ -14,7 +14,7 @@ protocol AdministratorShell {
 }
 
 /// Why the link of the seamerge command could not be changed.
-enum CommandLineToolFailure: LocalizedError, Equatable {
+package enum CommandLineToolFailure: LocalizedError, Equatable {
   /// The user cancelled the dialog of macOS, or is no administrator.
   case notAllowed
 
@@ -53,12 +53,12 @@ enum CommandLineToolFailure: LocalizedError, Equatable {
 /// while the dialog is shown. The script and its arguments reach AppleScript as the arguments of
 /// that process, and AppleScript's `quoted form` puts each into the command line, so that no
 /// text is ever parsed as AppleScript or as a command.
-struct AppleScriptShell: AdministratorShell {
+package struct AppleScriptShell: AdministratorShell {
   /// Whether the scripts run with the rights of an administrator, which macOS asks for.
   let asksForAdministrator: Bool
 
   /// The shell behind the dialog of macOS.
-  static let administrator = AppleScriptShell(asksForAdministrator: true)
+  package static let administrator = AppleScriptShell(asksForAdministrator: true)
 
   private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "CommandLineTool")
 
@@ -84,7 +84,7 @@ struct AppleScriptShell: AdministratorShell {
 
   /// Runs `script`; the dialog of macOS says `prompt`, since it would otherwise name
   /// `osascript` as the app that asks.
-  func run(_ script: String, arguments: [String], prompt: String)
+  package func run(_ script: String, arguments: [String], prompt: String)
     async throws(CommandLineToolFailure)
   {
     let result: (status: Int32, error: String)

@@ -1,10 +1,10 @@
-import Foundation
+package import Foundation
 
 /// What lies at the place of the seamerge command, and whether this copy of Seamerge can put its
 /// link there.
-struct CommandLineToolStatus: Sendable, Equatable {
+package struct CommandLineToolStatus: Sendable, Equatable {
   /// What lies at the place of the command.
-  enum Entry: Sendable, Equatable {
+  package enum Entry: Sendable, Equatable {
     /// Nothing, and Homebrew did not install the command either.
     case none
 
@@ -23,13 +23,13 @@ struct CommandLineToolStatus: Sendable, Equatable {
   }
 
   /// What lies at the place of the command.
-  var entry: Entry
+  package var entry: Entry
 
   /// The place of the command.
-  var link: URL
+  package var link: URL
 
   /// The helper of this copy, which the link names.
-  var helper: URL
+  package var helper: URL
 
   /// Whether the folder of the link exists; installing creates it if not.
   var hasLinkFolder: Bool
@@ -39,19 +39,25 @@ struct CommandLineToolStatus: Sendable, Equatable {
 }
 
 /// Where the seamerge command goes, and where Homebrew puts it.
-struct CommandLinePlace: Sendable {
+package struct CommandLinePlace: Sendable {
   /// The link that puts the command into the `PATH`.
   let link: URL
 
   /// The folders Homebrew can be installed in, each with its own `bin` and `Caskroom`.
   let homebrewPrefixes: [URL]
 
+  /// Names the place of the link at `link`, with Homebrew looked for in `homebrewPrefixes`.
+  package init(link: URL, homebrewPrefixes: [URL]) {
+    self.link = link
+    self.homebrewPrefixes = homebrewPrefixes
+  }
+
   /// The end of the path of the helper in every bundle of Seamerge.
   static let helperSuffix = ".app/Contents/Helpers/seamerge"
 
   /// What lies at the place of the command, as the file system says, for the copy at
   /// `location`.
-  func status(for location: AppLocation) -> CommandLineToolStatus {
+  package func status(for location: AppLocation) -> CommandLineToolStatus {
     let entry: CommandLineToolStatus.Entry
     switch Self.item(at: link) {
     case .missing:

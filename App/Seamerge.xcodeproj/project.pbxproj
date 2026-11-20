@@ -13,6 +13,7 @@
 		5EA300000000000000000104 /* MergeModel in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000904 /* MergeModel */; };
 		5EA300000000000000000105 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000905 /* Sparkle */; };
 		5EA300000000000000000106 /* FolderCompare in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000906 /* FolderCompare */; };
+		5EA300000000000000000107 /* Integration in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000907 /* Integration */; };
 		5EA300000000000000000111 /* SeamergeCLI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000911 /* SeamergeCLI */; };
 		5EA300000000000000000121 /* SeamergeUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000921 /* SeamergeUI */; };
 		5EA300000000000000000122 /* SessionIPC in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000922 /* SessionIPC */; };
@@ -21,6 +22,7 @@
 		5EA300000000000000000125 /* SeamergeCLI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000925 /* SeamergeCLI */; };
 		5EA300000000000000000126 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000926 /* Sparkle */; };
 		5EA300000000000000000127 /* FolderCompare in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000927 /* FolderCompare */; };
+		5EA300000000000000000128 /* Integration in Frameworks */ = {isa = PBXBuildFile; productRef = 5EA300000000000000000928 /* Integration */; };
 		5EA300000000000000000131 /* seamerge in Embed Helper */ = {isa = PBXBuildFile; fileRef = 5EA300000000000000000302 /* seamerge */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -115,6 +117,7 @@
 				5EA300000000000000000104 /* MergeModel in Frameworks */,
 				5EA300000000000000000105 /* Sparkle in Frameworks */,
 				5EA300000000000000000106 /* FolderCompare in Frameworks */,
+				5EA300000000000000000107 /* Integration in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -137,6 +140,7 @@
 				5EA300000000000000000125 /* SeamergeCLI in Frameworks */,
 				5EA300000000000000000126 /* Sparkle in Frameworks */,
 				5EA300000000000000000127 /* FolderCompare in Frameworks */,
+				5EA300000000000000000128 /* Integration in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -204,6 +208,7 @@
 				5EA300000000000000000904 /* MergeModel */,
 				5EA300000000000000000905 /* Sparkle */,
 				5EA300000000000000000906 /* FolderCompare */,
+				5EA300000000000000000907 /* Integration */,
 			);
 			productName = Seamerge;
 			productReference = 5EA300000000000000000301 /* Seamerge.app */;
@@ -259,6 +264,7 @@
 				5EA300000000000000000925 /* SeamergeCLI */,
 				5EA300000000000000000926 /* Sparkle */,
 				5EA300000000000000000927 /* FolderCompare */,
+				5EA300000000000000000928 /* Integration */,
 			);
 			productName = SeamergeTests;
 			productReference = 5EA300000000000000000303 /* SeamergeTests.xctest */;
@@ -596,6 +602,11 @@
 			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
 			productName = FolderCompare;
 		};
+		5EA300000000000000000907 /* Integration */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
+			productName = Integration;
+		};
 		5EA300000000000000000911 /* SeamergeCLI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
@@ -635,6 +646,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
 			productName = FolderCompare;
+		};
+		5EA300000000000000000928 /* Integration */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EA300000000000000000A01 /* XCLocalSwiftPackageReference "../Packages/SeamergeKit" */;
+			productName = Integration;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -1,9 +1,9 @@
-import Foundation
+package import Foundation
 
 /// Where the running copy of the app is, and whether Git can be pointed at it.
-struct AppLocation: Sendable, Equatable {
+package struct AppLocation: Sendable, Equatable {
   /// Why Git cannot be pointed at this copy.
-  enum Problem: Sendable, Equatable {
+  package enum Problem: Sendable, Equatable {
     /// The command-line helper is missing from the bundle.
     case incomplete
 
@@ -16,7 +16,7 @@ struct AppLocation: Sendable, Equatable {
   let bundle: URL
 
   /// The command-line helper inside the bundle, which Git runs.
-  var helper: URL { Self.helper(inBundle: bundle) }
+  package var helper: URL { Self.helper(inBundle: bundle) }
 
   /// Why Git cannot be pointed at this copy, or `nil` if it can.
   let problem: Problem?
@@ -44,12 +44,12 @@ struct AppLocation: Sendable, Equatable {
   }
 
   /// The command-line helper inside the app's bundle at `bundle`.
-  static func helper(inBundle bundle: URL) -> URL {
+  package static func helper(inBundle bundle: URL) -> URL {
     bundle.appending(path: "Contents/Helpers/seamerge")
   }
 
   /// The location of the bundle at `bundle`, as the file system reports it.
-  static func current(bundle: URL) -> AppLocation {
+  package static func current(bundle: URL) -> AppLocation {
     let isOnReadOnlyVolume: Bool
     do {
       isOnReadOnlyVolume =

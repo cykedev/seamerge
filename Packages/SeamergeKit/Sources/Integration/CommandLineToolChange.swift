@@ -7,7 +7,7 @@ import Foundation
 /// It checks again what lies at the link and stops with ``refusalStatus`` rather than touch a
 /// file that is not a link to Seamerge. It names every program by its full path, so that no
 /// `PATH` chooses which one runs.
-enum CommandLineToolChange: Sendable, Equatable {
+package enum CommandLineToolChange: Sendable, Equatable {
   /// Puts a link to the helper at the place of the command, where nothing or a link to a copy
   /// of Seamerge is, and creates the folder if it is missing.
   case install
@@ -20,7 +20,7 @@ enum CommandLineToolChange: Sendable, Equatable {
   static let refusalStatus: Int32 = 3
 
   /// The script that carries out the change.
-  var script: String {
+  package var script: String {
     switch self {
     case .install:
       """
@@ -51,7 +51,7 @@ enum CommandLineToolChange: Sendable, Equatable {
 
   /// The commands that install the link by hand in Terminal, for the user to read or copy:
   /// creating the folder if it is missing, then the link.
-  static func typedCommands(for status: CommandLineToolStatus) -> [String] {
+  package static func typedCommands(for status: CommandLineToolStatus) -> [String] {
     let folder = status.link.deletingLastPathComponent().path
     let link = "sudo ln -sf \(shellQuoted(status.helper.path)) \(shellQuoted(status.link.path))"
     return status.hasLinkFolder ? [link] : ["sudo mkdir -p \(shellQuoted(folder))", link]

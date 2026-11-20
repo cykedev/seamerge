@@ -4,7 +4,7 @@ import Foundation
 /// lies at the place of the command.
 extension CommandLineToolStatus {
   /// What the sheet offers.
-  enum Offer: Equatable {
+  package enum Offer: Equatable {
     /// Installing the link, where nothing or a file of someone else is.
     case install
 
@@ -19,7 +19,7 @@ extension CommandLineToolStatus {
   }
 
   /// What the sheet offers.
-  var offer: Offer {
+  package var offer: Offer {
     switch entry {
     case .none, .otherFile: .install
     case .otherCopy: .update
@@ -29,7 +29,7 @@ extension CommandLineToolStatus {
   }
 
   /// The change the button of the offer makes, or `nil` if the sheet offers nothing.
-  var change: CommandLineToolChange? {
+  package var change: CommandLineToolChange? {
     switch offer {
     case .install, .update: .install
     case .remove: .remove
@@ -39,7 +39,7 @@ extension CommandLineToolStatus {
 
   /// Whether the button of the offer works: a file of someone else is never replaced, and a copy
   /// in a temporary place never linked.
-  var canConfirm: Bool {
+  package var canConfirm: Bool {
     switch offer {
     case .remove: true
     case .install, .update:
@@ -49,7 +49,7 @@ extension CommandLineToolStatus {
   }
 
   /// Whether the sheet has Show Command: wherever it offers to make the link.
-  var showsCommands: Bool {
+  package var showsCommands: Bool {
     switch entry {
     case .none, .otherCopy: true
     case .thisCopy, .homebrew, .otherFile: false
@@ -57,7 +57,7 @@ extension CommandLineToolStatus {
   }
 
   /// The title of the sheet: the offer, or the state once the command is installed.
-  var sheetTitle: String {
+  package var sheetTitle: String {
     switch offer {
     case .install:
       String(
@@ -75,7 +75,7 @@ extension CommandLineToolStatus {
   }
 
   /// What the change does, or who installed the command.
-  var sheetMessage: String {
+  package var sheetMessage: String {
     let link = link.path
     switch offer {
     case .install:
@@ -107,7 +107,7 @@ extension CommandLineToolStatus {
   }
 
   /// What lies in the way of the link, or `nil` if nothing does.
-  var otherFileText: String? {
+  package var otherFileText: String? {
     guard case .otherFile(let destination) = entry else { return nil }
     guard let destination else {
       return String(
@@ -122,13 +122,13 @@ extension CommandLineToolStatus {
   }
 
   /// Why this copy cannot be linked, or `nil` if it can or the sheet does not offer it.
-  var problemText: String? {
+  package var problemText: String? {
     guard offer == .install || offer == .update else { return nil }
     return problem?.text
   }
 
   /// What the dialog of macOS that asks for the password says: who asks, and what for.
-  var dialogPrompt: String {
+  package var dialogPrompt: String {
     let folder = link.deletingLastPathComponent().path
     return switch offer {
     case .install, .none:
@@ -150,7 +150,7 @@ extension CommandLineToolStatus {
   }
 
   /// The sentence below the commands: the folder that the shell must search.
-  var pathNote: String {
+  package var pathNote: String {
     let folder = link.deletingLastPathComponent().path
     return String(
       localized: "If Terminal doesn’t find seamerge, add \(folder) to the PATH of your shell.",
@@ -159,7 +159,7 @@ extension CommandLineToolStatus {
   }
 
   /// What VoiceOver says once the sheet has made `change`.
-  static func announcement(after change: CommandLineToolChange) -> String {
+  package static func announcement(after change: CommandLineToolChange) -> String {
     switch change {
     case .install:
       String(

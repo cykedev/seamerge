@@ -1,4 +1,5 @@
 import AppKit
+import Integration
 
 /// The sheet Set Up Git Integration: it says in words what setting up changes and replaces, or,
 /// once Git uses the app, what removing restores, and changes nothing until the user confirms.

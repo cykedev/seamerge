@@ -1,6 +1,7 @@
 import AppKit
 import Testing
 
+@testable import Integration
 @testable import SeamergeUI
 
 /// Draws the sheet Install the seamerge Command for the visual review: every state, in every

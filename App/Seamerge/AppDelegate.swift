@@ -1,5 +1,6 @@
 import AppKit
 import FolderCompare
+import Integration
 import MergeModel
 import SeamergeUI
 import os

@@ -255,7 +255,7 @@ sanitize() {
         --filter '^(MergeModelTests|SyntaxKitTests|TextBasicsTests|TextIOTests)\.' \
         --filter '^PaneKitTests\.PaneSearch' --skip '^SyntaxKitTests\.RobustnessTests'
       run_sanitized thread "$1" \
-        --filter '^(FolderCompareTests|GitSupportTests|SeamergeCLITests|SessionIPCTests)\.' \
+        --filter '^(FolderCompareTests|GitSupportTests|IntegrationTests|SeamergeCLITests|SessionIPCTests)\.' \
         --filter '^PaneKitTests\.PaneSearch'
       ;;
   esac

@@ -1,4 +1,5 @@
 import AppKit
+import Integration
 import os
 
 /// The line about Git at the bottom of the window and the sheet Set Up Git Integration.

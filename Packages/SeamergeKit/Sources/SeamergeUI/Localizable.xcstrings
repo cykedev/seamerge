@@ -74,20 +74,6 @@
     "%@ copy" : {
       "comment" : "Settings: the name of a copy of an ignore rule, such as Timestamps copy."
     },
-    "%@ for merge and %@ for diff" : {
-      "comment" : "Set Up Git Integration: two replaced tools, such as Kaleidoscope for merge…"
-    },
-    "%@ is a link to %@. Seamerge doesn’t replace it." : {
-      "comment" : "Install the seamerge Command: a link of someone else is where the link goes.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is a link to %2$@. Seamerge doesn’t replace it."
-          }
-        }
-      }
-    },
     "%@ mixes line endings. The result is written with %@ throughout." : {
       "comment" : "Notice below the result header: B ends its lines in more than one way, such as main mixes line endings. The result is written with LF throughout.",
       "localizations" : {
@@ -366,15 +352,6 @@
     "✓ Added to Tower" : {
       "comment" : "Set Up Git Integration: Tower lists the app already."
     },
-    "✓ Git uses Seamerge for diff." : {
-      "comment" : "Compare Files: the line about Git when it uses the app for diffs only."
-    },
-    "✓ Git uses Seamerge for merge and diff" : {
-      "comment" : "Compare Files: the line about Git when it uses the app for both."
-    },
-    "✓ Git uses Seamerge for merge." : {
-      "comment" : "Compare Files: the line about Git when it uses the app for merges only."
-    },
     "A" : {
       "comment" : "The badge of the incoming side."
     },
@@ -396,12 +373,6 @@
     "Add to Tower" : {
       "comment" : "Set Up Git Integration: the button that adds the app to Tower's tools."
     },
-    "Adds a link at %@ so that you can compare files in Terminal, for example seamerge old.txt new.txt. macOS asks for an administrator’s name and password." : {
-      "comment" : "Install the seamerge Command: what installing does; the path of the link."
-    },
-    "Adds Seamerge to the list of tools in Tower’s settings and creates a script for it. The other tools stay." : {
-      "comment" : "Set Up Git Integration: what adding to Tower adds when it lists other tools."
-    },
     "After Use A, Use B and the like on an open conflict." : {
       "comment" : "Settings: when the window goes on to the next conflict."
     },
@@ -419,12 +390,6 @@
     },
     "Also Use %@" : {
       "comment" : "Context menu of a changed block of a side: add its lines after those taken."
-    },
-    "Another file is at %@. Seamerge doesn’t replace it." : {
-      "comment" : "Install the seamerge Command: a file of someone else is where the link goes."
-    },
-    "Another file is in the way." : {
-      "comment" : "Install the seamerge Command: a file appeared where the link goes."
     },
     "Arrangement" : {
       "comment" : "Toolbar item: the choice of how the lines of the files are laid out."
@@ -723,9 +688,6 @@
     "CR" : {
       "comment" : "Line endings: carriage return."
     },
-    "Creates a list of tools and a script for Seamerge in Tower’s settings." : {
-      "comment" : "Set Up Git Integration: what adding to Tower creates."
-    },
     "CRLF" : {
       "comment" : "Line endings: CR LF."
     },
@@ -882,26 +844,8 @@
     "General" : {
       "comment" : "Settings: the page of the font, new windows, merging and updates."
     },
-    "Git couldn’t save the settings." : {
-      "comment" : "Set Up Git Integration: writing Git's configuration failed."
-    },
-    "Git doesn’t use Seamerge yet." : {
-      "comment" : "Compare Files: the line about Git when it uses the app for neither."
-    },
     "Git is no longer waiting for this merge." : {
       "comment" : "Notice below the result header after the Git command that asked has ended."
-    },
-    "Git isn’t installed." : {
-      "comment" : "Set Up Git Integration: the reason of a failure when Git is missing."
-    },
-    "Git isn’t installed. Install the Xcode Command Line Tools to use Seamerge with Git." : {
-      "comment" : "Compare Files: the line about Git when Git is missing."
-    },
-    "Git opens Seamerge when you run git mergetool or git difftool. This applies to all repositories that don’t set their own tool." : {
-      "comment" : "Set Up Git Integration: what setting up does."
-    },
-    "Git points to a copy of Seamerge that has moved." : {
-      "comment" : "Compare Files: the line about Git when it uses another copy of the app."
     },
     "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decisions in %lld blocks are lost." : {
       "comment" : "Sheet before leaving a merge unresolved: Git restores the file it had before the merge tool, such as in 3 blocks.",
@@ -925,24 +869,6 @@
           }
         }
       }
-    },
-    "Git runs Seamerge with a command of your own." : {
-      "comment" : "Compare Files: the line about Git when the user changed the command of the app."
-    },
-    "Git uses an earlier setup of Seamerge. Set it up again to renew it." : {
-      "comment" : "Compare Files: the line about Git when an earlier version set it up."
-    },
-    "Git Uses Seamerge for Merge and Diff" : {
-      "comment" : "Set Up Git Integration: the title once Git uses the app."
-    },
-    "Git will no longer ask before opening a tool or keep .orig backup files." : {
-      "comment" : "Set Up Git Integration: both general switches change."
-    },
-    "Git will no longer ask before opening a tool." : {
-      "comment" : "Set Up Git Integration: Git stops asking before it opens a tool."
-    },
-    "Git will no longer keep .orig backup files." : {
-      "comment" : "Set Up Git Integration: Git stops keeping backups of merged files."
     },
     "Go" : {
       "comment" : "Button: jump to the line.\nMenu bar."
@@ -1001,14 +927,8 @@
     "Highlight Syntax" : {
       "comment" : "View menu command."
     },
-    "Homebrew installed the seamerge command." : {
-      "comment" : "Install the seamerge Command: Homebrew made the link."
-    },
     "Identical" : {
       "comment" : "A file in the sidebar whose two sides hold the same bytes."
-    },
-    "If Terminal doesn’t find seamerge, add %@ to the PATH of your shell." : {
-      "comment" : "Install the seamerge Command: below the commands; the folder of the link."
     },
     "If you don’t save, your decisions are lost and Git keeps the file unresolved." : {
       "comment" : "Sheet before closing a merge that Git waits for: what follows."
@@ -1039,9 +959,6 @@
     },
     "Install" : {
       "comment" : "Install the seamerge Command: the button that makes the link."
-    },
-    "Install the seamerge Command" : {
-      "comment" : "Install the seamerge Command: the title of the offer."
     },
     "Invisibles" : {
       "comment" : "VoiceOver: the footer toggle that shows spaces, tabs and line endings."
@@ -1109,9 +1026,6 @@
     "Mac Roman" : {
       "comment" : "Encoding."
     },
-    "macOS didn’t allow the change." : {
-      "comment" : "Install the seamerge Command: the dialog for the password was cancelled."
-    },
     "Make a copy of the selected rule that you can change" : {
       "comment" : "Help tag of Duplicate below the ignore rules."
     },
@@ -1141,9 +1055,6 @@
     },
     "Modified" : {
       "comment" : "A file in the sidebar whose two sides differ."
-    },
-    "Move Seamerge to the Applications folder first." : {
-      "comment" : "Set Up Git Integration: the app runs from a disk image or Downloads."
     },
     "Name" : {
       "comment" : "Settings: the column of the rule names, and the placeholder of a rule without one."
@@ -1292,38 +1203,11 @@
     "Remove this file from the field" : {
       "comment" : "Help tag of the button that empties a field of Compare Files."
     },
-    "Removing also takes Seamerge out of Tower." : {
-      "comment" : "Set Up Git Integration: removing changes Tower too."
-    },
-    "Removing leaves Git without a merge and diff tool." : {
-      "comment" : "Set Up Git Integration: removing when Git had no tool before."
-    },
-    "Removing restores: %@ for merge and %@ for diff." : {
-      "comment" : "Set Up Git Integration: removing brings back two tools, such as Kaleidoscope."
-    },
-    "Removing restores: %@." : {
-      "comment" : "Set Up Git Integration: removing brings back a tool, such as Kaleidoscope."
-    },
-    "Removing takes Seamerge out of Git’s settings. Git’s general settings for tools stay as they are." : {
-      "comment" : "Set Up Git Integration: what removing does after a setup by hand."
-    },
-    "Renews the entry and the script of Seamerge in Tower’s settings." : {
-      "comment" : "Set Up Git Integration: adding to Tower renews an earlier entry."
-    },
     "Reopen All Conflicts" : {
       "comment" : "Merge menu command."
     },
     "Replace All" : {
       "comment" : "Edit > Find: replace every match of the search in the result."
-    },
-    "Replaces the entry and the script of another copy of Seamerge in Tower." : {
-      "comment" : "Set Up Git Integration: adding to Tower replaces a copy."
-    },
-    "Replaces: %@." : {
-      "comment" : "Set Up Git Integration: the replaced copy of the app."
-    },
-    "Replaces: %@. Its settings stay in place, so you can switch back." : {
-      "comment" : "Set Up Git Integration: the replaced tool, such as Kaleidoscope."
     },
     "Reset" : {
       "comment" : "Resetting decisions: the button of the sheet before resetting every one, and the submenu of a context menu with the ways to reset."
@@ -1400,9 +1284,6 @@
     "Seamerge asks www.seamerge.app once a day whether a new version exists." : {
       "comment" : "Settings: what checking for updates sends where."
     },
-    "Seamerge at %@" : {
-      "comment" : "Set Up Git Integration: another copy of the app, such as Seamerge at /Volumes/A.app."
-    },
     "Seamerge can’t merge “%@”" : {
       "comment" : "Merge window: the files cannot be merged, such as “Settings.swift”."
     },
@@ -1423,15 +1304,6 @@
     },
     "Seamerge couldn’t compare the files." : {
       "comment" : "Alert: the comparison of the files of a session failed."
-    },
-    "Seamerge wants to install the seamerge command in %@." : {
-      "comment" : "The dialog of macOS that asks for an administrator's password; a folder."
-    },
-    "Seamerge wants to remove the seamerge command from %@." : {
-      "comment" : "The dialog of macOS that asks for an administrator's password; a folder."
-    },
-    "Seamerge wants to update the seamerge command in %@." : {
-      "comment" : "The dialog of macOS that asks for an administrator's password; a folder."
     },
     "Seamerge works with text. Use the app that made the file instead." : {
       "comment" : "Alert: what to do with a binary file."
@@ -1612,9 +1484,6 @@
     "The folders have the same files." : {
       "comment" : "Window of two folders: no file differs."
     },
-    "The link couldn’t be changed." : {
-      "comment" : "Install the seamerge Command: changing the link failed for another reason."
-    },
     "The pattern also matches empty text, so the rule ignores nothing." : {
       "comment" : "Settings: why an ignore rule takes no effect: its pattern matches empty text."
     },
@@ -1623,18 +1492,6 @@
     },
     "The pattern takes too long to match, so the rule ignores nothing." : {
       "comment" : "Settings: why an ignore rule takes no effect: matching it takes too long."
-    },
-    "The seamerge Command Is Installed" : {
-      "comment" : "Install the seamerge Command: the title once the command is installed."
-    },
-    "The seamerge command is installed." : {
-      "comment" : "VoiceOver: the link of the command was made or updated."
-    },
-    "The seamerge command is removed." : {
-      "comment" : "VoiceOver: the link of the command was removed."
-    },
-    "The seamerge command points to a copy of Seamerge that has moved. Updating points it to this copy. macOS asks for an administrator’s name and password." : {
-      "comment" : "Install the seamerge Command: the link names another copy of the app."
     },
     "The switch discards %lld decisions." : {
       "comment" : "Sheet before switching the comparison, such as The switch discards 3 decisions.",
@@ -1661,9 +1518,6 @@
     },
     "The window still shows the previous comparison." : {
       "comment" : "Sheet after switching the comparison failed: what happens next."
-    },
-    "This copy of Seamerge is incomplete. Download it again." : {
-      "comment" : "Set Up Git Integration: the helper is missing from the app."
     },
     "This discards handwritten text in %lld blocks." : {
       "comment" : "Sheet before resetting every decision, such as in 3 blocks.",
@@ -1706,12 +1560,6 @@
     "Toggle Source" : {
       "comment" : "Merge menu: the submenu that adds or removes a side."
     },
-    "Tower’s list of tools can’t be read, so Seamerge can’t add itself to it." : {
-      "comment" : "Set Up Git Integration: Tower's list is damaged."
-    },
-    "Tower’s list of tools couldn’t be changed." : {
-      "comment" : "Set Up Git Integration: writing Tower's list of tools failed."
-    },
     "Treat “a  b” and “ab” as equal" : {
       "comment" : "Help tag of Compare > Ignore All Whitespace, with an example."
     },
@@ -1735,9 +1583,6 @@
     },
     "Update" : {
       "comment" : "Install the seamerge Command: the button that points the link to this copy."
-    },
-    "Update the seamerge Command" : {
-      "comment" : "Install the seamerge Command: the title when the link names a moved copy."
     },
     "Updates" : {
       "comment" : "Settings: heading of the group of updates."
@@ -1765,9 +1610,6 @@
     },
     "Use None" : {
       "comment" : "Merge menu command."
-    },
-    "Use Seamerge for Git Merges and Diffs" : {
-      "comment" : "Set Up Git Integration: the title of the offer."
     },
     "Use Selection for Find" : {
       "comment" : "Edit > Find."
@@ -1826,9 +1668,6 @@
     "Wrap long lines at the width of the panes" : {
       "comment" : "Help tag of the footer toggle of line wrapping while lines run on."
     },
-    "You can compare files in Terminal, for example seamerge old.txt new.txt. Removing deletes the link at %@. macOS asks for an administrator’s name and password." : {
-      "comment" : "Install the seamerge Command: what removing does; the path of the link."
-    },
     "Your changes will be lost if you don’t save them." : {
       "comment" : "Sheet before closing a merge of files with unsaved changes: what follows."
     },
@@ -1857,9 +1696,6 @@
           }
         }
       }
-    },
-    "your own command for Seamerge" : {
-      "comment" : "Set Up Git Integration: a command of the app that the user changed."
     },
     "yours" : {
       "comment" : "Role: the branch the user is on."

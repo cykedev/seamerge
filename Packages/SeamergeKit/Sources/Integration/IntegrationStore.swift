@@ -1,9 +1,10 @@
-public import AppKit
-import GitSupport
+import AppKit
+public import Foundation
+package import GitSupport
 import os
 
 /// Reads and writes the settings that make Git and Tower open the app.
-protocol IntegrationStore: Sendable {
+package protocol IntegrationStore: Sendable {
   /// What the settings say now.
   ///
   /// - Throws: ``IntegrationFailure`` if Git's configuration cannot be read.
@@ -27,7 +28,7 @@ protocol IntegrationStore: Sendable {
 }
 
 /// Why the settings of Git or Tower could not be read or written.
-enum IntegrationFailure: LocalizedError, Equatable {
+package enum IntegrationFailure: LocalizedError, Equatable {
   /// Git is not installed.
   case gitMissing
 
@@ -37,7 +38,7 @@ enum IntegrationFailure: LocalizedError, Equatable {
   /// Tower's list of tools could not be read or written.
   case tower(TowerConfigurationError)
 
-  var errorDescription: String? {
+  package var errorDescription: String? {
     switch self {
     case .gitMissing, .git:
       String(
@@ -50,7 +51,7 @@ enum IntegrationFailure: LocalizedError, Equatable {
     }
   }
 
-  var failureReason: String? {
+  package var failureReason: String? {
     switch self {
     case .gitMissing:
       String(
@@ -103,7 +104,7 @@ public struct SystemIntegrationStore: IntegrationStore {
     }
   }
 
-  @concurrent func status() async throws(IntegrationFailure) -> IntegrationStatus {
+  @concurrent package func status() async throws(IntegrationFailure) -> IntegrationStatus {
     let location = AppLocation.current(bundle: bundle)
     let commands = GitConfiguration(helper: location.helper).commands
     var status = IntegrationStatus(
@@ -127,7 +128,7 @@ public struct SystemIntegrationStore: IntegrationStore {
     return status
   }
 
-  @concurrent func setUp(addingToTower: Bool) async throws(IntegrationFailure) {
+  @concurrent package func setUp(addingToTower: Bool) async throws(IntegrationFailure) {
     let integration = try gitIntegration()
     let towerToAdd = addingToTower ? tower : nil
     let earlierTower: TowerConfiguration.Snapshot?
@@ -153,7 +154,7 @@ public struct SystemIntegrationStore: IntegrationStore {
     }
   }
 
-  @concurrent func addToTower() async throws(IntegrationFailure) {
+  @concurrent package func addToTower() async throws(IntegrationFailure) {
     do {
       try tower?.add()
     } catch {
@@ -161,7 +162,7 @@ public struct SystemIntegrationStore: IntegrationStore {
     }
   }
 
-  @concurrent func remove() async throws(IntegrationFailure) {
+  @concurrent package func remove() async throws(IntegrationFailure) {
     let integration = try gitIntegration()
     do {
       try integration.remove(restoring: storedBackup())

@@ -1,4 +1,5 @@
 import AppKit
+import Integration
 import SeamergeUI
 import SessionIPC
 

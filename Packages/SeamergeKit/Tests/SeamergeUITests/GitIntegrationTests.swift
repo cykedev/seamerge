@@ -2,6 +2,7 @@ import AppKit
 import GitSupport
 import Testing
 
+@testable import Integration
 @testable import SeamergeUI
 
 /// The line about Git in the welcome window and the sheet Set Up Git Integration: what
@@ -278,25 +279,6 @@ import Testing
     #expect(
       pasteboard.string(forType: .string)
         == IntegrationStatus.kaleidoscope.commands.joined(separator: "\n") + "\n")
-  }
-
-  @Test func appInDownloadsOnADiskImageOrTranslocatedCannotBeSetUp() {
-    let downloads = URL(filePath: "/Users/ada/Downloads")
-    func problem(_ path: String, readOnly: Bool = false, helper: Bool = true)
-      -> AppLocation.Problem?
-    {
-      AppLocation(
-        bundle: URL(filePath: path), downloads: downloads, isOnReadOnlyVolume: readOnly,
-        hasHelper: helper
-      ).problem
-    }
-    #expect(problem("/Applications/Seamerge.app") == nil)
-    #expect(problem("/Users/ada/Applications/Seamerge.app") == nil)
-    #expect(problem("/Users/ada/Downloads/Seamerge.app") == .temporaryPlace)
-    #expect(problem("/Volumes/Seamerge/Seamerge.app", readOnly: true) == .temporaryPlace)
-    #expect(
-      problem("/private/var/folders/x/AppTranslocation/1234/d/Seamerge.app") == .temporaryPlace)
-    #expect(problem("/Applications/Seamerge.app", helper: false) == .incomplete)
   }
 
   /// A welcome window for `status` with its sheet shown.

@@ -1,8 +1,8 @@
 import Foundation
-import GitSupport
+package import GitSupport
 
 /// Whether Git and Tower open this copy of Seamerge, and what setting it up would change.
-struct IntegrationStatus: Sendable, Equatable {
+package struct IntegrationStatus: Sendable, Equatable {
   /// What Git says.
   enum GitStatus: Sendable, Equatable {
     /// Git is not installed.
@@ -13,7 +13,7 @@ struct IntegrationStatus: Sendable, Equatable {
   }
 
   /// What Tower says, if it is installed.
-  enum TowerStatus: Sendable, Equatable {
+  package enum TowerStatus: Sendable, Equatable {
     /// Tower lists this copy.
     case added
 
@@ -28,30 +28,30 @@ struct IntegrationStatus: Sendable, Equatable {
   var git: GitStatus
 
   /// What Tower says, or `nil` if Tower is not installed.
-  var tower: TowerStatus?
+  package var tower: TowerStatus?
 
   /// What an earlier setup from the app remembered, or `nil` if there was none.
   var backup: GitBackup?
 
   /// Why Git cannot be pointed at this copy, or `nil` if it can.
-  var problem: AppLocation.Problem?
+  package var problem: AppLocation.Problem?
 
   /// The commands that set up Git, for the user to read or copy.
-  var commands: [String]
+  package var commands: [String]
 
   /// The state of Git's configuration, or `nil` if Git is not installed.
-  var gitState: GitIntegrationState? {
+  package var gitState: GitIntegrationState? {
     guard case .installed(let state) = git else { return nil }
     return state
   }
 
   /// Whether Git uses this copy for both merges and diffs, so that the sheet offers to remove it.
-  var isSetUp: Bool {
+  package var isSetUp: Bool {
     gitState?.merge == .seamerge && gitState?.diff == .seamerge
   }
 
   /// The line at the bottom of the welcome window: whether Git opens Seamerge.
-  var line: String {
+  package var line: String {
     guard let state = gitState else {
       return String(
         localized:
@@ -96,12 +96,12 @@ struct IntegrationStatus: Sendable, Equatable {
 
   /// Whether the line offers the sheet: Git is installed and does not use this copy for both
   /// merges and diffs, or Tower is installed and does not list it.
-  var offersSetUp: Bool {
+  package var offersSetUp: Bool {
     gitState != nil && (!isSetUp || offersAddingToTower)
   }
 
   /// Whether Tower is installed and does not list this copy, so that the sheet offers to add it.
-  var offersAddingToTower: Bool {
+  package var offersAddingToTower: Bool {
     if case .notAdded? = tower { true } else { false }
   }
 }

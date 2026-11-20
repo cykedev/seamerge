@@ -1,4 +1,5 @@
 import AppKit
+import Integration
 
 /// The sheet Install the seamerge Command: it says what lies at the place of the command and
 /// offers to install, update or remove the link, built like the sheet of the Git setup.

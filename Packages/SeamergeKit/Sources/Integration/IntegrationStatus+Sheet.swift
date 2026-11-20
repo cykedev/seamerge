@@ -4,7 +4,7 @@ import GitSupport
 /// The words of the sheet Set Up Git Integration, as they follow from the settings.
 extension IntegrationStatus {
   /// The title of the sheet: the offer, or, once Git uses this copy for both, the state.
-  var sheetTitle: String {
+  package var sheetTitle: String {
     isSetUp
       ? String(
         localized: "Git Uses Seamerge for Merge and Diff", bundle: .module,
@@ -15,7 +15,7 @@ extension IntegrationStatus {
   }
 
   /// What setting up does, or what removing restores.
-  var sheetMessage: String {
+  package var sheetMessage: String {
     guard isSetUp else {
       return String(
         localized: """
@@ -49,7 +49,7 @@ extension IntegrationStatus {
   }
 
   /// The tools that setting up replaces, or `nil` if it replaces none.
-  var replacedTools: String? {
+  package var replacedTools: String? {
     guard !isSetUp, let state = gitState else { return nil }
     let merge = state.merge.replacedName
     let diff = state.diff.replacedName
@@ -76,7 +76,7 @@ extension IntegrationStatus {
   }
 
   /// What setting up changes for other tools too, or `nil` if it changes nothing for them.
-  var changedSwitches: String? {
+  package var changedSwitches: String? {
     guard !isSetUp, let switches = gitState?.changedSwitches, !switches.isEmpty else {
       return nil
     }
@@ -95,7 +95,7 @@ extension IntegrationStatus {
   }
 
   /// Why this copy cannot be set up, or `nil` if it can.
-  var problemText: String? {
+  package var problemText: String? {
     switch problem {
     case nil: nil
     case .incomplete:
@@ -111,7 +111,7 @@ extension IntegrationStatus {
 
   /// What adding Seamerge to Tower creates or adds, or what removing does there; `nil` if Tower
   /// is not installed or there is nothing to say.
-  var towerText: String? {
+  package var towerText: String? {
     switch (tower, isSetUp) {
     case (.added?, true):
       String(
@@ -146,7 +146,7 @@ extension IntegrationStatus {
   }
 
   /// Whether the offer to set up Git has the box Add Seamerge to Tower.
-  var offersTower: Bool {
+  package var offersTower: Bool {
     !isSetUp && offersAddingToTower
   }
 }

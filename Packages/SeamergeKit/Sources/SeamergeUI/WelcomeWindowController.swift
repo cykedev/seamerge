@@ -1,4 +1,5 @@
 public import AppKit
+public import Integration
 import MergeModel
 
 /// What the welcome window asks of the app: to open a session.

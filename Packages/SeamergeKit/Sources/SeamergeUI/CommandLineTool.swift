@@ -1,4 +1,5 @@
 public import AppKit
+import Integration
 
 /// The seamerge command in Terminal: whether this copy of Seamerge has put its link into the
 /// `PATH`, and the sheet that installs, updates or removes the link.

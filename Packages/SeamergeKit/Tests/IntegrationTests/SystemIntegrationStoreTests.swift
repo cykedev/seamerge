@@ -2,7 +2,7 @@ import Foundation
 import GitSupport
 import Testing
 
-@testable import SeamergeUI
+@testable import Integration
 
 /// The settings of a Mac of its own: a copy of the app, a global Git configuration, Tower's
 /// folder of tools and user defaults, all in a temporary folder.

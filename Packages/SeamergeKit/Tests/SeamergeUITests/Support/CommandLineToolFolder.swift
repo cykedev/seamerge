@@ -1,6 +1,7 @@
 import AppKit
 import Testing
 
+@testable import Integration
 @testable import SeamergeUI
 
 /// A temporary folder that stands in for the Mac in tests of the seamerge command: a copy of

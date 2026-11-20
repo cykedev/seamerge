@@ -2,6 +2,7 @@ import AppKit
 import GitSupport
 import Testing
 
+@testable import Integration
 @testable import SeamergeUI
 
 /// Settings of Git and Tower that answer as the test says and record what they were asked to
