@@ -36,11 +36,11 @@ public struct CollectionCache: Sendable {
   /// `file` with each side that lies outside `workingTree` and is not missing replaced by a copy
   /// in `collectionFolder`.
   ///
-  /// - Throws: ``SessionLoadingError/unreadableFile(_:)`` if a side cannot be copied.
+  /// - Throws: ``CollectionCacheError/copyFailed(_:)`` if a side cannot be copied.
   @concurrent
   public func keep(
     _ file: CollectedFile, in collectionFolder: URL, workingTree: URL
-  ) async throws(SessionLoadingError) -> CollectedFile {
+  ) async throws(CollectionCacheError) -> CollectedFile {
     let fileFolder = collectionFolder.appending(
       path: UUID().uuidString, directoryHint: .isDirectory)
     var kept = file
@@ -63,7 +63,7 @@ public struct CollectionCache: Sendable {
 
   private func copy(
     _ url: URL, to folder: URL, unlessIn workingTree: URL
-  ) throws(SessionLoadingError) -> URL {
+  ) throws(CollectionCacheError) -> URL {
     let path = url.standardizedFileURL.resolvingSymlinksInPath().path
     let tree = workingTree.standardizedFileURL.resolvingSymlinksInPath().path
     guard FileOrigin(url: url) != .missing, !path.hasPrefix(tree.hasSuffix("/") ? tree : tree + "/")
@@ -74,7 +74,7 @@ public struct CollectionCache: Sendable {
       try FileManager.default.copyItem(at: url, to: copy)
     } catch {
       Self.logger.error("Cannot keep a copy of \(path): \(error, privacy: .public)")
-      throw .unreadableFile(url)
+      throw .copyFailed(url)
     }
     return copy
   }

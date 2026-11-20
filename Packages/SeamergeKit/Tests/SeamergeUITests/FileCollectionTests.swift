@@ -149,6 +149,18 @@ import Testing
     #expect(kept.change == .added)
   }
 
+  @Test func sideThatCannotBeCopiedIsNamedInTheError() async throws {
+    let folder = try SampleCollections.folder()
+    let file = try SampleCollections.file("a.txt", old: "old\n", new: "new\n", in: folder)
+    let blocked = folder.appending(path: "blocked")
+    try Data().write(to: blocked)
+    let cache = CollectionCache(folder: folder.appending(path: "cache"))
+
+    await #expect(throws: CollectionCacheError.copyFailed(file.old.url)) {
+      try await cache.keep(file, in: blocked, workingTree: folder.appending(path: "repository"))
+    }
+  }
+
   @Test func copiesLeftBehindByACrashGoAtOnce() throws {
     let folder = try SampleCollections.folder()
     let cache = CollectionCache(folder: folder.appending(path: "cache"))
