@@ -1,5 +1,6 @@
 import Foundation
 import GitSupport
+import MergeModel
 import SeamergeUI
 import SessionIPC
 

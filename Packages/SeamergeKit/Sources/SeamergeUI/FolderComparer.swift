@@ -1,5 +1,6 @@
 import Foundation
 import GitSupport
+import MergeModel
 import os
 
 /// Compares two folders entry by entry: pairs the entries of both by their paths, and tells what

@@ -1,5 +1,6 @@
 public import Foundation
 import GitSupport
+import MergeModel
 import os
 
 /// The folder that keeps copies of the files of collections while their windows are open.

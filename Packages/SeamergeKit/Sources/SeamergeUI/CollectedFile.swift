@@ -1,5 +1,6 @@
 import Foundation
 public import GitSupport
+public import MergeModel
 
 /// One file of a window that compares several: its two sides and what Git says about them.
 public struct CollectedFile: Sendable, Hashable {

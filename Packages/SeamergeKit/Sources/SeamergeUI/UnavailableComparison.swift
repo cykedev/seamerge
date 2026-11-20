@@ -1,6 +1,6 @@
 import Foundation
 import GitSupport
-import MergeModel
+public import MergeModel
 
 /// A comparison of two files that cannot be compared, such as one of an image, with what its
 /// window says in place of their lines.

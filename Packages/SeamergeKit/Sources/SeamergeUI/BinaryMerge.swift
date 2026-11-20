@@ -1,6 +1,6 @@
 import AppKit
 public import Foundation
-import MergeModel
+public import MergeModel
 import os
 
 /// A merge of a file that is not text, such as an image, which Seamerge cannot merge line by

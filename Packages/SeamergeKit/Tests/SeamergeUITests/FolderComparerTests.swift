@@ -1,4 +1,5 @@
 import Foundation
+import MergeModel
 import Testing
 
 @testable import SeamergeUI
