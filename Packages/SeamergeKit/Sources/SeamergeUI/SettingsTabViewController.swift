@@ -31,7 +31,7 @@ final class SettingsTabViewController: NSTabViewController {
   override func transition(
     from fromViewController: NSViewController, to toViewController: NSViewController,
     options: NSViewController.TransitionOptions = [],
-    completionHandler completion: (() -> Void)? = nil
+    completionHandler completion: (@Sendable () -> Void)? = nil
   ) {
     super.transition(
       from: fromViewController, to: toViewController, options: options,
