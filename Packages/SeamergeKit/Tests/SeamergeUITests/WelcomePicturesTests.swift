@@ -1,4 +1,5 @@
 import AppKit
+import FolderCompare
 import Testing
 
 @testable import SeamergeUI

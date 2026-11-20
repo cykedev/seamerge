@@ -1,3 +1,4 @@
+import FolderCompare
 public import Foundation
 import os
 

@@ -1,3 +1,4 @@
+import FolderCompare
 import Foundation
 import GitSupport
 import MergeModel

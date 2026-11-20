@@ -1,6 +1,8 @@
 import AppKit
+import FolderCompareTestSupport
 import Testing
 
+@testable import FolderCompare
 @testable import SeamergeUI
 
 /// Draws the pictures of comparisons of folders: the sheet Compare Files with two folders, the window with

@@ -1,9 +1,9 @@
+import FolderCompare
+import FolderCompareTestSupport
 import Foundation
 import GitSupport
 import MergeModel
 import Testing
-
-@testable import SeamergeUI
 
 /// The files of a collection: their order, the end of receiving, and the copies they keep.
 @MainActor

@@ -1,8 +1,9 @@
+import FolderCompareTestSupport
 import Foundation
 import MergeModel
 import Testing
 
-@testable import SeamergeUI
+@testable import FolderCompare
 
 /// Two folders compared entry by entry: how paths pair, what counts as changed, what is left out
 /// or cannot be read, and links, which are never followed.
@@ -74,9 +75,6 @@ import Testing
     #expect(changes["Logs"] == .unreadable(reason: reason))
     #expect(changes["Logs/today.txt"] == nil, "The files below a folder that cannot be read")
     #expect(changes["secret.txt"] == .unreadable(reason: reason))
-    let presentation = try #require(changes["Logs"]).presentation
-    #expect(presentation.word == "Can’t Read")
-    #expect(presentation.toolTip(for: "Logs") == "Logs (Can’t Read: \(reason))")
   }
 
   /// A link to the folder above it would make a loop if it were followed; it is compared by its

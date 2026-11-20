@@ -1,4 +1,5 @@
 import AppKit
+import FolderCompareTestSupport
 import MergeModel
 import Testing
 

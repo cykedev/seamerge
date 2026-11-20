@@ -1,4 +1,5 @@
 public import AppKit
+public import FolderCompare
 public import MergeModel
 import PaneKit
 import SyntaxKit

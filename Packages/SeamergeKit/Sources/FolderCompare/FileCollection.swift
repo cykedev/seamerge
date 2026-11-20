@@ -25,7 +25,7 @@ public final class FileCollection {
 
   /// The folders whose names tell the sides of a file apart, or `nil` where Git names the sides:
   /// for the files of calls, and for the folders of `git difftool --dir-diff`.
-  var namingFolders: FolderPair? {
+  package var namingFolders: FolderPair? {
     isFromGit ? nil : folders
   }
 
@@ -49,10 +49,10 @@ public final class FileCollection {
 
   /// Learns of every change: a file that came, at its index, files of folders that were compared
   /// or changed on disk, or the end of receiving.
-  var onChange: ((Change) -> Void)?
+  package var onChange: ((Change) -> Void)?
 
   /// A change of a collection.
-  enum Change: Equatable {
+  package enum Change: Equatable {
     /// A file came and stands at the index.
     case inserted(Int)
 

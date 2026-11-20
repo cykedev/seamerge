@@ -1,7 +1,9 @@
 import AppKit
+import FolderCompareTestSupport
 import MergeModel
 import Testing
 
+@testable import FolderCompare
 @testable import SeamergeUI
 
 /// The window of two folders: it opens before they are compared, lists identical files only on

@@ -1,4 +1,5 @@
 import AppKit
+import FolderCompare
 import PaneKit
 
 /// Learns which file the user chose in the list of a window that compares several files, and

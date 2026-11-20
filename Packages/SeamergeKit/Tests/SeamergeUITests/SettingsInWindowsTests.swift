@@ -1,8 +1,10 @@
 import AppKit
+import FolderCompareTestSupport
 import MergeModel
 import PaneKit
 import Testing
 
+@testable import FolderCompare
 @testable import SeamergeUI
 
 /// The settings in the session windows: the text settings take effect in every open window at

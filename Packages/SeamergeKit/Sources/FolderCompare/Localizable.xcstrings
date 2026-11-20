@@ -1,0 +1,15 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ ↔ %@" : {
+      "comment" : "The names of the left and the right file of a comparison, in a title or list."
+    },
+    "It is neither a file, a folder nor a link." : {
+      "comment" : "Why an entry of a comparison of folders, such as a socket, is not compared."
+    },
+    "You don’t have permission to read it." : {
+      "comment" : "Why a file or folder of a comparison of folders cannot be read."
+    }
+  },
+  "version" : "1.0"
+}

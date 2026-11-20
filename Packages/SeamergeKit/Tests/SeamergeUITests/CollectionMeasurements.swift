@@ -5,6 +5,7 @@ import MergeModel
 import PaneKit
 import Testing
 
+@testable import FolderCompare
 @testable import SeamergeUI
 
 /// Measures how long the main actor is held at a stretch while a window that compares several

@@ -1,8 +1,10 @@
 import AppKit
+import FolderCompareTestSupport
 import GitSupport
 import MergeModel
 import Testing
 
+@testable import FolderCompare
 @testable import SeamergeUI
 
 /// Export as Patch and Copy as Patch: the patch counts every byte whatever the window shows,

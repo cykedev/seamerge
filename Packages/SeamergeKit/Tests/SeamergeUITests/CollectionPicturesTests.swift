@@ -1,7 +1,9 @@
 import AppKit
+import FolderCompareTestSupport
 import PaneKit
 import Testing
 
+@testable import FolderCompare
 @testable import SeamergeUI
 
 /// Draws the pictures of the window that compares several files: a commit of a few files and of

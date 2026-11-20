@@ -1,4 +1,5 @@
 import AppKit
+import FolderCompare
 import Foundation
 import SeamergeUI
 import SessionIPC

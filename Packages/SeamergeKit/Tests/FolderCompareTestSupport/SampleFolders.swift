@@ -1,22 +1,23 @@
-import Foundation
+package import Foundation
 import Testing
 
-@testable import SeamergeUI
+@testable package import FolderCompare
 
 /// Two folders on disk for the tests of comparisons of folders, in a temporary folder of their
 /// own that goes with the value.
-struct SampleFolders: ~Copyable {
+package struct SampleFolders: ~Copyable {
   /// The folder that holds both.
-  let folder: URL
+  package let folder: URL
 
   /// The folder on the left.
-  let left: URL
+  package let left: URL
 
   /// The folder on the right.
-  let right: URL
+  package let right: URL
 
   /// Makes two empty folders named `leftName` and `rightName`.
-  init(left leftName: String = "Orders 1.0", right rightName: String = "Orders 1.1") throws {
+  package init(left leftName: String = "Orders 1.0", right rightName: String = "Orders 1.1") throws
+  {
     folder = FileManager.default.temporaryDirectory.appending(
       path: "SampleFolders-\(UUID().uuidString)", directoryHint: .isDirectory)
     left = folder.appending(path: leftName, directoryHint: .isDirectory)
@@ -43,13 +44,13 @@ struct SampleFolders: ~Copyable {
   }
 
   /// The pair of the two folders.
-  var pair: FolderPair {
+  package var pair: FolderPair {
     FolderPair(left: left, right: right)
   }
 
   /// Writes `text` to the file at `path` in the left folder, if `text` is not `nil`, and
   /// `rightText` to the same path in the right folder.
-  func write(_ path: String, left text: String?, right rightText: String?) throws {
+  package func write(_ path: String, left text: String?, right rightText: String?) throws {
     if let text {
       try write(text, to: left.appending(path: path))
     }
@@ -59,7 +60,7 @@ struct SampleFolders: ~Copyable {
   }
 
   /// Writes `text` to the file at `url`, with the folders it needs.
-  func write(_ text: String, to url: URL) throws {
+  package func write(_ text: String, to url: URL) throws {
     try FileManager.default.createDirectory(
       at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
     try Data(text.utf8).write(to: url)
@@ -67,7 +68,7 @@ struct SampleFolders: ~Copyable {
 
   /// Fills the folders with two versions of a small project: changed, new, deleted and
   /// identical files, a file that changed but kept its size, and a deep path with a long name.
-  @MainActor func fillWithProject() throws {
+  @MainActor package func fillWithProject() throws {
     try write(
       "Sources/Orders/OrderService.swift", left: SampleCollections.orderOld,
       right: SampleCollections.orderNew)
@@ -86,14 +87,14 @@ struct SampleFolders: ~Copyable {
     try write(".git/HEAD", left: "ref: refs/heads/main\n", right: "ref: refs/heads/next\n")
   }
 
-  static let order = "struct Order {\n  var items: [String]\n}\n"
+  package static let order = "struct Order {\n  var items: [String]\n}\n"
   static let receipt = "struct Receipt {\n  var total: Double\n}\n"
 }
 
 extension FileCollection {
   /// A collection that compares `folders` and gathers changes on disk quickly, compared once.
   @MainActor
-  static func compared(_ folders: borrowing SampleFolders) async -> FileCollection {
+  package static func compared(_ folders: borrowing SampleFolders) async -> FileCollection {
     let collection = FileCollection(
       comparer: FolderComparer(
         folders: folders.pair, linkFolder: folders.folder.appending(path: "links")),

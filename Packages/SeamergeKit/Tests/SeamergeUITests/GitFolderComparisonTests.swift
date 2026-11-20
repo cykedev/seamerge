@@ -1,9 +1,11 @@
 import AppKit
+import FolderCompareTestSupport
 import Foundation
 import GitSupport
 import MergeModel
 import Testing
 
+@testable import FolderCompare
 @testable import SeamergeUI
 
 /// The two folders of `git difftool --dir-diff`, compared like any two folders: a link of Git to

@@ -1,3 +1,4 @@
+import FolderCompare
 import Foundation
 
 /// Which files of a collection its list shows: those whose path holds the text typed in the

@@ -27,8 +27,19 @@ let modules: [(name: String, dependencies: [Target.Dependency])] = [
   ("SeamergeCLI", ["SessionIPC", "GitSupport"]),
   ("SyntaxKit", []),
   ("PaneKit", ["TextBasics"]),
-  ("SeamergeUI", ["PaneKit", "MergeModel", "SyntaxKit", "GitSupport", "TextBasics"]),
+  ("FolderCompare", ["MergeModel", "GitSupport"]),
+  (
+    "SeamergeUI",
+    ["PaneKit", "MergeModel", "SyntaxKit", "GitSupport", "TextBasics", "FolderCompare"]
+  ),
 ]
+
+/// Samples on disk that the tests of more than one module share, with the modules whose tests
+/// use them.
+let testSupport: (name: String, dependencies: [Target.Dependency], users: Set<String>) = (
+  "FolderCompareTestSupport", ["FolderCompare", "MergeModel", "GitSupport"],
+  ["FolderCompare", "SeamergeUI"]
+)
 
 let package = Package(
   name: "SeamergeKit",
@@ -37,6 +48,7 @@ let package = Package(
   products: [
     // Only the modules the app and the command-line tool link directly.
     .library(name: "SeamergeUI", targets: ["SeamergeUI"]),
+    .library(name: "FolderCompare", targets: ["FolderCompare"]),
     .library(name: "MergeModel", targets: ["MergeModel"]),
     .library(name: "SeamergeCLI", targets: ["SeamergeCLI"]),
     .library(name: "SessionIPC", targets: ["SessionIPC"]),
@@ -55,10 +67,18 @@ let package = Package(
       // A test may use what its module uses, such as the types of the module's interface.
       .testTarget(
         name: "\(module.name)Tests",
-        dependencies: [.target(name: module.name)] + module.dependencies,
+        dependencies: [.target(name: module.name)] + module.dependencies
+          + (testSupport.users.contains(module.name) ? [.target(name: testSupport.name)] : []),
         swiftSettings: swiftSettings
       ),
     ]
-  },
+  } + [
+    .target(
+      name: testSupport.name,
+      dependencies: testSupport.dependencies,
+      path: "Tests/\(testSupport.name)",
+      swiftSettings: swiftSettings
+    )
+  ],
   swiftLanguageModes: [.v6]
 )

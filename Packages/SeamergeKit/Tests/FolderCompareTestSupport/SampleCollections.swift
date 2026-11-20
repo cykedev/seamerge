@@ -1,14 +1,12 @@
-import Foundation
+package import FolderCompare
+package import Foundation
 import GitSupport
 import MergeModel
-import Testing
-
-@testable import SeamergeUI
 
 /// Files of collections for the tests of windows that compare several files: real files in a
 /// temporary folder, as Git hands them over.
 @MainActor
-enum SampleCollections {
+package enum SampleCollections {
   /// The temporary folder that holds the folders of this test process; it is removed as the
   /// process exits, since the tests hand the folders on and none of them owns one.
   nonisolated private static let root: URL = {
@@ -19,7 +17,7 @@ enum SampleCollections {
   }()
 
   /// A new, empty temporary folder.
-  static func folder() throws -> URL {
+  package static func folder() throws -> URL {
     let folder = root.appending(path: UUID().uuidString, directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     return folder
@@ -27,7 +25,7 @@ enum SampleCollections {
 
   /// A file of a run at `path`, number `number` of `count`, whose sides hold `old` and `new`; a
   /// missing side is `/dev/null`.
-  static func file(
+  package static func file(
     _ path: String, old: String?, new: String?, number: Int? = nil, count: Int? = nil,
     in folder: URL
   ) throws -> CollectedFile {
@@ -49,7 +47,7 @@ enum SampleCollections {
 
   /// Five files of a commit: two changed, one new, one deleted, one in a deep folder with a long
   /// name.
-  static func commit(in folder: URL) throws -> [CollectedFile] {
+  package static func commit(in folder: URL) throws -> [CollectedFile] {
     let count = 5
     return [
       try file(
@@ -71,7 +69,7 @@ enum SampleCollections {
 
   /// `count` changed files in folders of ten, numbered as Git numbers them; they share their
   /// sides on disk.
-  static func many(_ count: Int, in folder: URL) throws -> [CollectedFile] {
+  package static func many(_ count: Int, in folder: URL) throws -> [CollectedFile] {
     let first = try file("Sources/Module0/File0.swift", old: orderOld, new: orderNew, in: folder)
     return (0..<count).map { index in
       var copy = first
@@ -84,7 +82,7 @@ enum SampleCollections {
     }
   }
 
-  static let orderOld = """
+  package static let orderOld = """
     import Foundation
 
     struct OrderService {
@@ -98,7 +96,7 @@ enum SampleCollections {
 
     """
 
-  static let orderNew = """
+  package static let orderNew = """
     import Foundation
 
     struct OrderService {

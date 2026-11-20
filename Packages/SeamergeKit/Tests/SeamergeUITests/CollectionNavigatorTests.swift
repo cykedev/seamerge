@@ -3,6 +3,7 @@ import GitSupport
 import MergeModel
 import Testing
 
+@testable import FolderCompare
 @testable import SeamergeUI
 
 /// Which file of a collection the window shows: the files its list shows, the next and the

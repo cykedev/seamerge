@@ -240,6 +240,7 @@ run_sanitized() {
 # The sanitizers look at the code that handles memory by hand or works across
 # threads: the engine with its bridge to C++, the modules of text, syntax and
 # model with their unsafe buffers, the search of the panes, which works off the
+# main actor, the comparison of folders, which reads and watches them off the
 # main actor, and the modules that run processes and talk over sockets. Tests
 # that show windows stay out; under the sanitizers they would only cost time.
 # So do the tests that hold the lexers to a time limit, which the slower code
@@ -254,7 +255,7 @@ sanitize() {
         --filter '^(MergeModelTests|SyntaxKitTests|TextBasicsTests|TextIOTests)\.' \
         --filter '^PaneKitTests\.PaneSearch' --skip '^SyntaxKitTests\.RobustnessTests'
       run_sanitized thread "$1" \
-        --filter '^(GitSupportTests|SeamergeCLITests|SessionIPCTests)\.' \
+        --filter '^(FolderCompareTests|GitSupportTests|SeamergeCLITests|SessionIPCTests)\.' \
         --filter '^PaneKitTests\.PaneSearch'
       ;;
   esac

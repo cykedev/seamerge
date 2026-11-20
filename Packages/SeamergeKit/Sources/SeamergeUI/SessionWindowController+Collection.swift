@@ -1,4 +1,5 @@
 public import AppKit
+public import FolderCompare
 import GitSupport
 import MergeModel
 import PaneKit

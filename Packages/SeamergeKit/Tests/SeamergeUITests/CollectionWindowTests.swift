@@ -1,8 +1,10 @@
 import AppKit
+import FolderCompareTestSupport
 import GitSupport
 import MergeModel
 import Testing
 
+@testable import FolderCompare
 @testable import SeamergeUI
 
 /// The window that compares several files: going from file to file, what stays with each file,

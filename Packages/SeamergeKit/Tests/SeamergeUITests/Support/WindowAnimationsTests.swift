@@ -1,6 +1,8 @@
 import AppKit
+import FolderCompareTestSupport
 import Testing
 
+@testable import FolderCompare
 @testable import SeamergeUI
 
 /// That every helper that makes a window turns off the animations of windows, so that a test that

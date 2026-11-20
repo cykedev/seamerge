@@ -107,7 +107,7 @@ public struct CollectedFile: Sendable, Hashable {
 
   /// Whether the file comes before `other` in the list: in the order of Git where both have a
   /// number, else by path as the Finder sorts names.
-  func precedes(_ other: CollectedFile) -> Bool {
+  package func precedes(_ other: CollectedFile) -> Bool {
     if let number, let otherNumber = other.number, number != otherNumber {
       return number < otherNumber
     }

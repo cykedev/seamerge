@@ -1049,9 +1049,6 @@
     "ISO 8859-1" : {
       "comment" : "Encoding: ISO Latin 1."
     },
-    "It is neither a file, a folder nor a link." : {
-      "comment" : "Why an entry of a comparison of folders, such as a socket, is not compared."
-    },
     "Keep My Version" : {
       "comment" : "Button: keep the result of the window and ignore the change on disk."
     },
@@ -1831,9 +1828,6 @@
     },
     "You can compare files in Terminal, for example seamerge old.txt new.txt. Removing deletes the link at %@. macOS asks for an administrator’s name and password." : {
       "comment" : "Install the seamerge Command: what removing does; the path of the link."
-    },
-    "You don’t have permission to read it." : {
-      "comment" : "Why a file or folder of a comparison of folders cannot be read."
     },
     "Your changes will be lost if you don’t save them." : {
       "comment" : "Sheet before closing a merge of files with unsaved changes: what follows."

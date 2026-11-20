@@ -1,3 +1,4 @@
+public import FolderCompare
 public import Foundation
 public import GitSupport
 

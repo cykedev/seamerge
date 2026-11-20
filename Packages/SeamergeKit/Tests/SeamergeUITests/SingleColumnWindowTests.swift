@@ -1,8 +1,10 @@
 import AppKit
+import FolderCompareTestSupport
 import MergeModel
 import SwiftUI
 import Testing
 
+@testable import FolderCompare
 @testable import PaneKit
 @testable import SeamergeUI
 

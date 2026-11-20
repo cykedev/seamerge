@@ -1,8 +1,10 @@
 import AppKit
+import FolderCompareTestSupport
 import MergeModel
 import PaneKit
 import Testing
 
+@testable import FolderCompare
 @testable import SeamergeUI
 
 /// A window that compares several files and shows before a file is compared: it opens with the

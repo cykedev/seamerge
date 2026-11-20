@@ -1,8 +1,10 @@
 import AppKit
+import FolderCompareTestSupport
 import MergeModel
 import PaneKit
 import Testing
 
+@testable import FolderCompare
 @testable import SeamergeUI
 
 /// The search of a session window: one find bar below the panes, the order of Find Next in a

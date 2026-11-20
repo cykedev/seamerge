@@ -1,8 +1,10 @@
 import AppKit
+import FolderCompareTestSupport
 import MergeModel
 import PaneKit
 import Testing
 
+@testable import FolderCompare
 @testable import SeamergeUI
 
 /// Compare ▸ Use Ignore Rules in a window: when it is valid, what switching it does, how the

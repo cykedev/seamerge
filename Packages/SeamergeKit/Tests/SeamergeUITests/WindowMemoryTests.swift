@@ -1,8 +1,10 @@
 import AppKit
 import Darwin
+import FolderCompareTestSupport
 import MergeModel
 import Testing
 
+@testable import FolderCompare
 @testable import PaneKit
 @testable import SeamergeUI
 
