@@ -181,7 +181,7 @@ extension SessionWindowController {
   func show(_ prepared: PreparedSession, named name: String?) {
     let previous = shownComparison
     let session = prepared.changes.session
-    typingRun = nil
+    resultUndo.endTypingRun()
     presentation.showComparedAnew(prepared)
     if let older = comparisonShownBefore,
       !older.rowLayout.sharesDisplayTexts(with: session.rowLayout)
@@ -210,7 +210,7 @@ extension SessionWindowController {
   /// the redo stack while undoing.
   private func registerReturn(to comparison: ShownComparison, named name: String) {
     sessionUndoManager.registerUndo(withTarget: self) { controller in
-      MainActor.assumeIsolated { controller.bringBack(comparison, named: name) }
+      controller.bringBack(comparison, named: name)
     }
     sessionUndoManager.setActionName(name)
     // The mark stays with the group of the step, whatever names a later step in it gives it.
@@ -232,7 +232,7 @@ extension SessionWindowController {
   ///
   /// - Precondition: No other comparison is under way.
   private func bringBack(_ comparison: ShownComparison, named name: String) {
-    typingRun = nil
+    resultUndo.endTypingRun()
     registerReturn(to: shownComparison, named: name)
     presentation.acceptsEdits = false
     let progressTimer = beginComparingAnew()

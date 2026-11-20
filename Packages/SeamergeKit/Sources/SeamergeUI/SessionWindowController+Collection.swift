@@ -528,7 +528,7 @@ extension SessionWindowController {
     } else {
       layout.showLinesAgain()
     }
-    typingRun = nil
+    resultUndo.endTypingRun()
     presentation.showOtherFiles(prepared)
     presentation.show(SideHeader.headers(of: session, context: context))
     detectedLanguage = SessionSyntax.language(of: session, resultURL: nil)

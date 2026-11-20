@@ -127,7 +127,7 @@ extension SessionWindowController {
       isSaving = false
       diskWatch.lookAgainIfAsked()
     }
-    typingRun = nil
+    resultUndo.endTypingRun()
     let openCount = shown.document.openConflictCount
     if openCount > 0 {
       switch await prompts.confirmSavingWithOpenConflicts(
@@ -260,9 +260,9 @@ extension SessionWindowController {
     let previous = saving.format
     saving.format = format
     self.saving = saving
-    typingRun = nil
+    resultUndo.endTypingRun()
     sessionUndoManager.registerUndo(withTarget: self) { controller in
-      MainActor.assumeIsolated { controller.setResultFormat(previous, named: name) }
+      controller.setResultFormat(previous, named: name)
     }
     sessionUndoManager.setActionName(name)
     showResultFormat()

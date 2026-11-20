@@ -79,6 +79,7 @@ The decisions themselves are commands in `SeamergeUI` (`SessionCommand.swift`). 
 `SessionWindowController` (`SeamergeUI/SessionWindowController.swift`) carries out the commands of a window and validates them. The parts of the window that keep state of their own are types of their own, which the controller owns:
 
 - `DiskWatch` (`SeamergeUI/DiskWatch.swift`) watches the files of the session and the file of the result. It joins a burst of changes into one look at the files, holds back while the window saves or compares and looks afterwards, and remembers the bytes the window has seen of each file, so that it asks about them only once. The window reloads through `DiskWatchDelegate`.
+- `ResultUndo` (`SeamergeUI/ResultUndo.swift`) registers the steps of the result in the undo manager of the window, its only owner. A command is one step. A run of typing is one step until a pause, a move of the insertion point, a command of a menu or any other step of undo ends it. A replacement of the search is one step of its own.
 
 ## Settings
 
@@ -161,7 +162,7 @@ The window has one find bar, the standard `NSTextFinder` bar in the container `S
 
 The finder receives parts of at most 65,536 characters per section, not one part per line. Lines inside a part are separated by line feeds, so a match cannot reach across a line break; a match that holds one belongs to no pane, and Find Next moves to its end. `PaneSearch` keeps the matches while the finder drops them on losing focus, and drops them on a change of the text.
 
-`SearchText` is an immutable snapshot of a pane's text, kept behind a `Mutex`. Only the main thread replaces the snapshot, as a whole, and `string(at:)` may be called on the finder's threads. Replacing goes through `PaneEditingDelegate` of the pane that is editable, and a replace-all forms one undo step named Replace All, which the controller collects from the steps of the replacement. `PaneSearch.close()` removes the find indicator and detaches the finder from the window; the window calls it when it closes and in its deinit, because the finder otherwise uses a released indicator. `OverviewBar.matchRows` marks the matches in the overview bar.
+`SearchText` is an immutable snapshot of a pane's text, kept behind a `Mutex`. Only the main thread replaces the snapshot, as a whole, and `string(at:)` may be called on the finder's threads. Replacing goes through `PaneEditingDelegate` of the pane that is editable, and a replace-all forms one undo step named Replace All, which `ResultUndo` collects from the steps of the replacement. `PaneSearch.close()` removes the find indicator and detaches the finder from the window; the window calls it when it closes and in its deinit, because the finder otherwise uses a released indicator. `OverviewBar.matchRows` marks the matches in the overview bar.
 
 ## Updates
 

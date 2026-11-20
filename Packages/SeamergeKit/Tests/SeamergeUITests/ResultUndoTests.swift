@@ -77,6 +77,29 @@ import Testing
     #expect(try controller.segmentTexts[1] == "Aab1\n")
   }
 
+  @Test func commandOfAMenuEndsTheRunOfTyping() async throws {
+    let controller = try Windows.controller(for: try await EditingFixture.nineBlocks())
+    let undoManager = controller.sessionUndoManager
+    let textView = try controller.resultTextView
+    let menu = NSMenu()
+    let target = MenuTarget()
+    let item = menu.addItem(
+      withTitle: "Nothing", action: #selector(MenuTarget.doNothing(_:)), keyEquivalent: "")
+    item.target = target
+    textView.setSelectedRange(NSRange(location: 4, length: 0))
+
+    textView.insertText("a", replacementRange: NSRange(location: NSNotFound, length: 0))
+    controller.endEvent()
+    menu.performActionForItem(at: 0)
+    textView.insertText("b", replacementRange: NSRange(location: NSNotFound, length: 0))
+    controller.endEvent()
+
+    undoManager.undo()
+    #expect(try controller.segmentTexts[1] == "Aa1\n")
+    undoManager.undo()
+    #expect(try controller.segmentTexts[1] == "A1\n")
+  }
+
   @Test func commandMoveOfTheCaretOrPauseEndsTheRunOfTyping() async throws {
     var time = ContinuousClock.now
     let controller = try controller(for: try await EditingFixture.nineBlocks()) { time }
@@ -291,4 +314,9 @@ import Testing
     try #require(controller.window).contentView?.layoutSubtreeIfNeeded()
     return controller
   }
+}
+
+/// The target of a command of a menu that does nothing.
+private final class MenuTarget: NSObject {
+  @objc func doNothing(_ sender: Any?) {}
 }

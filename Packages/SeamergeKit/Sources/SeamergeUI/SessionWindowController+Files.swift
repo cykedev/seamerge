@@ -47,10 +47,10 @@ extension SessionWindowController {
     guard let result = presentation.result else { return }
     let name = Self.reloadName
     sessionUndoManager.beginUndoGrouping()
-    carryOut(result.document.planResolvingOpenConflicts(with: []), named: name)
+    resultUndo.carryOut(result.document.planResolvingOpenConflicts(with: []), named: name)
     if let result = presentation.result {
       let replacement = TextReplacement(range: 0..<result.text.utf16.count, text: text)
-      carryOut(result.document.plan(for: replacement), named: name)
+      resultUndo.carryOut(result.document.plan(for: replacement), named: name)
     }
     sessionUndoManager.endUndoGrouping()
     if var saving, let result = presentation.result {

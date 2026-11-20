@@ -174,15 +174,8 @@ public final class SessionWindowController: NSWindowController {
   /// The pane above the result that had the focus last, which gets it back when text mode ends.
   private(set) weak var lastSourcePane: PaneView?
 
-  /// The typing that the last step of undo takes back, as long as further typing joins it.
-  var typingRun: TypingRun?
-
-  /// The steps of the replacement of the search under way, which become one step of undo once
-  /// it is over, or `nil` while the search replaces nothing.
-  var replacementSteps: [UndoStep]?
-
-  /// The time now, which tells when typing paused.
-  let now: () -> ContinuousClock.Instant
+  /// The steps of undo of the result, among them the runs of typing.
+  let resultUndo: ResultUndo
 
   /// The accessibility settings the window draws with.
   var displayOptions: DisplayOptions {
@@ -327,7 +320,6 @@ public final class SessionWindowController: NSWindowController {
     self.pasteboard = pasteboard
     self.workspace = workspace
     self.prompts = prompts
-    self.now = now
     toolbar = SessionToolbar(
       kind: session.kind, doneStyle: doneStyle, hasSidebar: collection != nil)
     self.collection = collection
@@ -345,6 +337,7 @@ public final class SessionWindowController: NSWindowController {
       language: settings.highlightsSyntax
         ? syntaxChoices[syntaxPath].language(detected: detectedLanguage) : nil,
       alignsLines: settings.alignsLines, search: search)
+    resultUndo = ResultUndo(undoManager: undoManager, presentation: presentation, now: now)
     presentation.wrapsLines = settings.wrapsLines
     for pane in presentation.allPanes {
       pane.showsInvisibles = settings.showsInvisibles
@@ -412,7 +405,6 @@ public final class SessionWindowController: NSWindowController {
       window.initialFirstResponder = first
       window.makeFirstResponder(first)
     }
-    observeStepsOfUndo()
     observeFooterVisibility()
     observeTextSettings()
     observeIgnoreRules()
@@ -785,7 +777,7 @@ extension SessionWindowController: SessionPresentationDelegate {
   func presentation(
     _ presentation: SessionPresentation, didMoveInsertionPointTo selection: NSRange
   ) {
-    endTypingRun(unlessContinuedAt: selection)
+    resultUndo.endTypingRun(unlessContinuedAt: selection)
     updateFooter()
   }
 
@@ -794,24 +786,24 @@ extension SessionWindowController: SessionPresentationDelegate {
   }
 
   func presentationDidTakeOverUnannouncedChange(_ presentation: SessionPresentation) {
-    typingRun = nil
+    resultUndo.endTypingRun()
     sessionUndoManager.removeAllActions()
   }
 
   func presentation(
     _ presentation: SessionPresentation, didType step: UndoStep, at range: Range<Int>, caret: Int
   ) {
-    recordTyping(step, at: range, caret: caret)
+    resultUndo.recordTyping(step, at: range, caret: caret)
   }
 
   func presentationWillReplaceMatches(_ presentation: SessionPresentation) {
-    searchWillReplace()
+    resultUndo.beginReplacement()
   }
 
   func presentation(
     _ presentation: SessionPresentation, didReplaceAllMatches replacesAll: Bool
   ) {
-    searchDidReplace(all: replacesAll)
+    resultUndo.endReplacement(named: PaneSearch.undoActionName(replacingAll: replacesAll))
   }
 
   func presentation(

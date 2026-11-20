@@ -9,7 +9,8 @@ extension SessionWindowController {
     guard canPerform(.resetChange), let block = currentResultBlock,
       let document = presentation.result?.document
     else { return }
-    carryOut(document.planResetting(block), named: SessionCommand.resetChange.undoName ?? "")
+    resultUndo.carryOut(
+      document.planResetting(block), named: SessionCommand.resetChange.undoName ?? "")
     if let current = presentation.currentBlock {
       announceState(ofBlock: current)
     }
@@ -21,8 +22,8 @@ extension SessionWindowController {
       return
     }
     let name = SessionCommand.reopenAllConflicts.undoName ?? ""
-    carryOut(document.planResettingConflicts(), named: name)
-    announceOutcome(name)
+    resultUndo.carryOut(document.planResettingConflicts(), named: name)
+    presentation.announceOutcome(name)
   }
 
   /// Returns every block to how it was after loading, so that the window shows the merge as it
@@ -45,7 +46,7 @@ extension SessionWindowController {
     // The document may have changed while the sheet was up.
     guard let current = presentation.result?.document else { return }
     let name = SessionCommand.resetAllDecisions.undoName ?? ""
-    carryOut(current.planResettingAll(), named: name)
-    announceOutcome(name)
+    resultUndo.carryOut(current.planResettingAll(), named: name)
+    presentation.announceOutcome(name)
   }
 }

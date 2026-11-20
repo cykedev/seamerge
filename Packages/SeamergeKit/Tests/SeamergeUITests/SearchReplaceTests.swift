@@ -66,7 +66,6 @@ struct SearchReplaceTests {
       #expect(Windows.panes(of: controller).dropLast().map(\.documentView.string) == sources)
       try controller.checkResultIsShownAsModelled()
       #expect(undoManager.undoActionName == "Replace All")
-      #expect(controller.typingRun == nil)
 
       undoManager.undo()
       texts = try controller.segmentTexts
@@ -114,7 +113,6 @@ struct SearchReplaceTests {
       driver.perform(.replace)
       #expect(try controller.segmentTexts[8] == "w8\n")
       #expect(undoManager.undoActionName == "Replace")
-      #expect(controller.typingRun == nil)
       // The search found the text, so Replace All stays at hand after a replacement.
       #expect(controller.canPerform(.replaceAll))
 

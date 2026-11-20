@@ -1,3 +1,4 @@
+import Foundation
 import MergeModel
 import PaneKit
 import os
@@ -29,6 +30,19 @@ extension SessionPresentation {
     isCarryingOut = false
     show(ResultState(document: document, resultText: text), in: resultPane, after: edits)
     return step
+  }
+
+  /// Tells VoiceOver `outcome`, what a command or undo did, with the open conflicts that are
+  /// left, in the words of the toolbar.
+  func announceOutcome(_ outcome: String) {
+    guard let document = result?.document else { return }
+    let count = SessionToolbar.countText(
+      openConflictCount: document.openConflictCount,
+      hasConflicts: changes.blocks.contains { $0.kind == .conflict })
+    announce(
+      String(
+        localized: "\(outcome). \(count)", bundle: .module,
+        comment: "VoiceOver after a decision, such as Chosen: B. 2 Conflicts Left."))
   }
 }
 

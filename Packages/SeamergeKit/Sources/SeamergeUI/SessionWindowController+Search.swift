@@ -1,5 +1,4 @@
 import AppKit
-import MergeModel
 import PaneKit
 
 /// The search of the window: one find bar below the panes for all of them, which Find… opens
@@ -55,28 +54,5 @@ extension SessionWindowController {
   @objc func useSelectionForFind(_ sender: Any?) {
     guard canPerform(.useSelectionForFind) else { return }
     presentation.search.perform(.setSearchString)
-  }
-}
-
-extension SessionWindowController {
-  /// Ends the run of typing and gathers the steps of the replacement of the search under way,
-  /// which the result reports as typing, into one step of their own.
-  func searchWillReplace() {
-    typingRun = nil
-    replacementSteps = []
-  }
-
-  /// Registers the steps of the replacement of the search as one step of undo, named after it:
-  /// Replace All if it replaced all matches, else Replace.
-  func searchDidReplace(all replacesAll: Bool) {
-    let steps = replacementSteps ?? []
-    replacementSteps = nil
-    typingRun = nil
-    guard let first = steps.first else { return }
-    guard let joined = steps.dropFirst().reduce(Optional(first), { $0?.coalesced(with: $1) })
-    else {
-      preconditionFailure("The result reports every replacement as typing, which always joins")
-    }
-    registerUndo(of: joined, named: PaneSearch.undoActionName(replacingAll: replacesAll))
   }
 }

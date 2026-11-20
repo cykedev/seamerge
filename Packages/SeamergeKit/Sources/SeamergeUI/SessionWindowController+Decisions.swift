@@ -58,7 +58,7 @@ extension SessionWindowController {
       let result = presentation.result, let resultPane = layout.resultPane, let window
     else { return }
     let resolution = result.document.planResolvingByHand(block)
-    carryOut(resolution.plan, named: SessionCommand.resolveManually.undoName ?? "")
+    resultUndo.carryOut(resolution.plan, named: SessionCommand.resolveManually.undoName ?? "")
     if let current = presentation.currentBlock {
       announceState(ofBlock: current)
     }
@@ -160,7 +160,7 @@ extension SessionWindowController {
       let plan = decisionPlan(choosing: command.chosenRoles ?? [])
     else { return }
     let wasOpen = presentation.navigation.isOpenConflict[block]
-    carryOut(plan, named: command.undoName ?? command.title)
+    resultUndo.carryOut(plan, named: command.undoName ?? command.title)
     announceState(ofBlock: block)
     if wasOpen, settings.goesToNextConflict,
       let next = presentation.navigation.target(of: .nextOpenConflict)
@@ -176,15 +176,24 @@ extension SessionWindowController {
       let block = presentation.currentBlock,
       let plan = decisionPlan(toggling: role)
     else { return }
-    carryOut(plan, named: command.undoName ?? command.title)
+    resultUndo.carryOut(plan, named: command.undoName ?? command.title)
     announceState(ofBlock: block)
   }
 
   /// Resolves every open conflict with the text of `role`, as `command` does.
   private func resolveOpenConflicts(with role: Role, command: SessionCommand) {
     guard canPerform(command), let document = presentation.result?.document else { return }
-    carryOut(
+    resultUndo.carryOut(
       document.planResolvingOpenConflicts(with: [role]), named: command.undoName ?? command.title)
-    announceOutcome(command.undoName ?? command.title)
+    presentation.announceOutcome(command.undoName ?? command.title)
+  }
+
+  /// Tells VoiceOver how changed block `block` stands after a command, with the open
+  /// conflicts that are left.
+  func announceState(ofBlock block: Int) {
+    guard let state = presentation.decisionColumn?.decisions[block]?.state.spokenName else {
+      return
+    }
+    presentation.announceOutcome(state)
   }
 }
