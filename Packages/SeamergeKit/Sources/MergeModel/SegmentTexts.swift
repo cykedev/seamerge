@@ -8,7 +8,7 @@ import Foundation
 /// the same bytes as the engine's.
 struct SegmentTexts: Sendable {
   /// The files of the session.
-  private let files: [Role: ComparedFile]
+  private let files: Session.Inputs<ComparedFile>
 
   /// The inputs that take part, in the order base, A, B.
   private let roles: [Role]
@@ -30,10 +30,10 @@ struct SegmentTexts: Sendable {
 
   /// Prepares the texts of `blocks` from `files`, with `removalNotes` for the previews of
   /// conflicts in which a side removed the lines of the base.
-  init(files: [Role: ComparedFile], blocks: [Block], removalNotes: [Role: String]) {
+  init(files: Session.Inputs<ComparedFile>, blocks: [Block], removalNotes: [Role: String]) {
     self.files = files
     self.removalNotes = removalNotes
-    roles = Role.allCases.filter { files[$0] != nil }
+    roles = files.roles
     lineEnding =
       [Role.b, .a, .base].lazy.compactMap { files[$0]?.file.utf8 }.compactMap(Self.lineEnding(in:))
       .first ?? "\n"

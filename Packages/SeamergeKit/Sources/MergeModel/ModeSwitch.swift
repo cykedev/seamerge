@@ -138,7 +138,7 @@ private struct LineShift {
       return
     }
     // Lines must be split as the sessions split them, or no place is certain.
-    guard comparison.lineStarts[.a] == old.lineStarts, comparison.lineStarts[.b] == new.lineStarts
+    guard comparison.lineStarts.a == old.lineStarts, comparison.lineStarts.b == new.lineStarts
     else {
       runs = []
       return

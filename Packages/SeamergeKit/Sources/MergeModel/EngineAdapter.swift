@@ -13,9 +13,7 @@ enum EngineAdapter {
     var blocks: [Block]
 
     /// The byte offset where each line of an input starts, followed by its byte count.
-    ///
-    /// Inputs that take no part, such as the base of a comparison of two files, are missing.
-    var lineStarts: [Role: LineStarts]
+    var lineStarts: Session.Inputs<LineStarts>
   }
 
   /// The runs of tokens in which two texts differ.
@@ -40,23 +38,22 @@ enum EngineAdapter {
     var changedRuns: [Run]
   }
 
-  /// Merges the changes from the base to A and from the base to B, or merges A and B as if the
-  /// base were empty when there is none.
+  /// Merges the changes in `texts` from the base to A and from the base to B, or merges A and B
+  /// as if the base were empty when there is none.
   static func merge(
-    base: Data?, a: Data, b: Data, options: ComparisonOptions
+    _ texts: Session.Inputs<Data>, options: ComparisonOptions
   ) throws(MergeModelError) -> Comparison {
     let merge: Merge
     do {
       merge = try Merge(
-        base: base ?? Data(), a: a, b: b, whitespace: Whitespace(options.mode),
-        strategy: base == nil ? .twoWay : MergeEngine.MergeStrategy(options.strategy))
+        base: texts.base ?? Data(), a: texts.a, b: texts.b, whitespace: Whitespace(options.mode),
+        strategy: texts.base == nil ? .twoWay : MergeEngine.MergeStrategy(options.strategy))
     } catch {
       throw MergeModelError(error)
     }
-    var lineStarts = [Role.a: lineStarts(of: merge.a), .b: lineStarts(of: merge.b)]
-    if base != nil {
-      lineStarts[.base] = Self.lineStarts(of: merge.base)
-    }
+    let lineStarts = Session.Inputs(
+      base: texts.base.map { _ in Self.lineStarts(of: merge.base) },
+      a: Self.lineStarts(of: merge.a), b: Self.lineStarts(of: merge.b))
     let blocks = merge.blocks.enumerated().map { index, block in
       Block(
         id: index, kind: Block.Kind(block.kind), base: block.base.lines, a: block.a.lines,
@@ -81,7 +78,8 @@ enum EngineAdapter {
         a: block.a.lines, b: block.b.lines)
     }
     return Comparison(
-      blocks: blocks, lineStarts: [.a: lineStarts(of: diff.a), .b: lineStarts(of: diff.b)])
+      blocks: blocks,
+      lineStarts: Session.Inputs(a: lineStarts(of: diff.a), b: lineStarts(of: diff.b)))
   }
 
   /// Whether two texts have the same lines under `mode`, as a comparison of two files decides.

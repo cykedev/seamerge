@@ -85,10 +85,8 @@ public struct SingleColumnLayout: Sendable {
   public init(session: Session, firstSide: Role = .a) {
     precondition(session.kind == .diff, "Only a comparison shows in a single column")
     precondition(firstSide != .base, "A comparison has no base")
-    guard let first = session.files[firstSide], let second = session.files[firstSide.other]
-    else {
-      preconditionFailure("A comparison has two files")
-    }
+    let files = session.files
+    let (first, second) = firstSide == .a ? (files.a, files.b) : (files.b, files.a)
     self.firstSide = firstSide
     secondSide = firstSide.other
     blocks = session.blocks

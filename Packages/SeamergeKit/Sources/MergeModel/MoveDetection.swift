@@ -40,9 +40,9 @@ enum MoveDetection {
   ///
   /// - Throws: The error of the engine's comparison of a run.
   static func runs(
-    in blocks: [Block], files: [Role: ComparedFile], mode: ComparisonMode
+    in blocks: [Block], files: Session.Inputs<ComparedFile>, mode: ComparisonMode
   ) throws(MergeModelError) -> [Run] {
-    guard let old = files[.a], let new = files[.b] else { return [] }
+    let (old, new) = (files.a, files.b)
     let removed = ChangedLines(of: .a, in: blocks, file: old, mode: mode)
     let added = ChangedLines(of: .b, in: blocks, file: new, mode: mode)
     var isUsedInA = [Bool](repeating: false, count: old.lineCount)

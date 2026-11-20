@@ -10,12 +10,11 @@ extension MoveDetection {
   ///
   /// - Throws: The error of the engine's comparison of a pair.
   static func moves(
-    inMerge blocks: [Block], files: [Role: ComparedFile], mode: ComparisonMode
+    inMerge blocks: [Block], files: Session.Inputs<ComparedFile>, mode: ComparisonMode
   ) throws(MergeModelError) -> [Move] {
-    guard let base = files[.base] else { return [] }
+    guard let base = files.base else { return [] }
     var moves: [Move] = []
-    for side in [Role.a, .b] {
-      guard let file = files[side] else { continue }
+    for (side, file) in [(Role.a, files.a), (.b, files.b)] {
       var removals = UniqueBlocks()
       var additions = UniqueBlocks()
       for block in blocks where changers(of: block.kind).contains(side) {

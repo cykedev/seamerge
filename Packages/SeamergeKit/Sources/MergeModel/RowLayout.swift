@@ -14,16 +14,16 @@ public struct RowLayout: Sendable {
   private let blockRowStarts: [Int]
 
   /// The number of lines of each input that takes part.
-  private let lineCounts: [Role: Int]
+  private let lineCounts: Session.Inputs<Int>
 
   /// The text of each pane on the grid, until the grid lets go of it.
   private let displayTexts: PaneTexts
 
   /// The inputs that take part, whose lines the texts without filler rows show.
-  private let files: [Role: ComparedFile]
+  private let files: Session.Inputs<ComparedFile>
 
   /// Lays out `blocks` and the lines of `files` on one grid.
-  init(blocks: [Block], files: [Role: ComparedFile]) {
+  init(blocks: [Block], files: Session.Inputs<ComparedFile>) {
     var blockRowStarts = [0]
     blockRowStarts.reserveCapacity(blocks.count + 1)
     for block in blocks {
@@ -38,12 +38,9 @@ public struct RowLayout: Sendable {
 
   /// The text of the pane of each of `files` on the rows of `blocks`.
   private static func displayTexts(
-    of files: [Role: ComparedFile], on blocks: [Block]
-  ) -> [Role: DisplayText] {
-    Dictionary(
-      uniqueKeysWithValues: files.map { role, file in
-        (role, DisplayText(file: file, role: role, blocks: blocks))
-      })
+    of files: Session.Inputs<ComparedFile>, on blocks: [Block]
+  ) -> Session.Inputs<DisplayText> {
+    files.mapValuesWithRoles { role, file in DisplayText(file: file, role: role, blocks: blocks) }
   }
 
   /// The number of rows.
@@ -54,7 +51,7 @@ public struct RowLayout: Sendable {
   /// After ``letGoOfDisplayTexts()``, the first request lays out the texts anew, in time
   /// proportional to the size of the files.
   public func displayText(for role: Role) -> DisplayText? {
-    displayTexts.texts { [blocks, files] in Self.displayTexts(of: files, on: blocks) }[role]
+    displayTexts.text(of: role) { [blocks, files] in Self.displayTexts(of: files, on: blocks) }
   }
 
   /// Lets go of the texts of the panes, which every copy of the grid shares, until they are asked
@@ -136,19 +133,22 @@ public struct RowLayout: Sendable {
 /// The texts of the panes of a grid, shared by its copies: kept until the grid lets go of them,
 /// and laid out anew on the first request after.
 private final class PaneTexts: Sendable {
-  private let texts: Mutex<[Role: DisplayText]?>
+  private let texts: Mutex<Session.Inputs<DisplayText>?>
 
-  init(_ texts: [Role: DisplayText]) {
+  init(_ texts: Session.Inputs<DisplayText>) {
     self.texts = Mutex(texts)
   }
 
-  /// The texts, laid out by `make` if the grid let go of them.
-  func texts(orMake make: () -> [Role: DisplayText]) -> [Role: DisplayText] {
+  /// The text of `role`, or `nil` if the input does not take part; the texts are laid out by
+  /// `make` if the grid let go of them.
+  func text(
+    of role: Role, orMake make: () -> Session.Inputs<DisplayText>
+  ) -> DisplayText? {
     texts.withLock { texts in
-      if let texts { return texts }
-      let made = make()
-      texts = made
-      return made
+      if texts == nil {
+        texts = make()
+      }
+      return texts?[role]
     }
   }
 

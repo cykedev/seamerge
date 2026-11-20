@@ -53,7 +53,7 @@ public struct ScrollMap: Sendable {
   /// - Precondition: The inputs of both sides take part in the session.
   public init(session: Session, from source: Side, to target: Side) {
     for case .lines(let role) in [source, target] {
-      precondition(session.file(for: role) != nil, "The session has no input \(role)")
+      precondition(session.files[role] != nil, "The session has no input \(role)")
     }
     sourceStarts = session.rowLayout.blockStarts(on: source)
     targetStarts = session.rowLayout.blockStarts(on: target)

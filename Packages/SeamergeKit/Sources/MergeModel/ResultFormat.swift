@@ -34,11 +34,12 @@ public struct ResultFormat: Sendable, Hashable {
   /// breaks, in the same order, and LF if none has.
   public init(resultOf session: Session) {
     let order: [Role] = [.b, .a, .base]
-    let text = order.lazy.compactMap { session.file(for: $0) }.first { !$0.isBinary }
+    let files = session.inputs
+    let text = order.lazy.compactMap { files[$0] }.first { !$0.isBinary }
     encoding = text?.encoding ?? .utf8
     writesByteOrderMark = text?.hasByteOrderMark ?? false
     lineEnding =
-      order.lazy.compactMap { session.file(for: $0)?.predominantLineEnding }.first ?? .lf
+      order.lazy.compactMap { files[$0]?.predominantLineEnding }.first ?? .lf
   }
 
   /// This format with `encoding`: a Unicode encoding other than UTF-8 starts with its byte order

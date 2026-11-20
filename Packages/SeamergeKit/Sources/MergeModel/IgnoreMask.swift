@@ -108,10 +108,41 @@ extension IgnoreMask {
   ///   - texts: The compared text of each input, valid UTF-8.
   ///   - rules: Rules whose patterns are valid, each with its compiled pattern.
   static func masks(
-    of texts: [Role: Data], rules: [(rule: IgnoreRule, expression: NSRegularExpression)],
+    of texts: Session.Inputs<Data>, rules: [(rule: IgnoreRule, expression: NSRegularExpression)],
     mode: ComparisonMode
-  ) async -> (masks: [Role: IgnoreMask], slowRules: Set<IgnoreRule>) {
+  ) async -> (masks: Session.Inputs<IgnoreMask>, slowRules: Set<IgnoreRule>) {
     let files = texts.mapValues { RuleMatcher(text: LineText(splitting: $0, in: mode)) }
+    let found = await matches(of: rules, in: Array(files))
+    let masks = files.mapValuesWithRoles { role, file in
+      IgnoreMask(file, ranges: found.ranges[role] ?? [], mode: mode)
+    }
+    return (masks, found.slowRules)
+  }
+
+  /// The mask of `text`, valid UTF-8, and the rules of `rules` that took longer than
+  /// ``IgnoreRule/timeLimit`` for it, which mask nothing.
+  static func mask(
+    of text: Data, rules: [(rule: IgnoreRule, expression: NSRegularExpression)],
+    mode: ComparisonMode
+  ) async -> (mask: IgnoreMask, slowRules: Set<IgnoreRule>) {
+    let file = RuleMatcher(text: LineText(splitting: text, in: mode))
+    let found = await matches(of: rules, in: [(.a, file)])
+    return (IgnoreMask(file, ranges: found.ranges[.a] ?? [], mode: mode), found.slowRules)
+  }
+
+  /// The mask of the text of `file` that hides `ranges`, in any order.
+  private init(_ file: RuleMatcher, ranges: [Range<Int>], mode: ComparisonMode) {
+    self.init(
+      text: file.text, lineIndex: file.lineIndex,
+      ranges: ranges.sorted { $0.lowerBound < $1.lowerBound }, mode: mode)
+  }
+
+  /// The ranges that `rules` match in each of `files`, without those of the rules that took
+  /// longer than ``IgnoreRule/timeLimit`` for one of them, which are listed apart.
+  private static func matches(
+    of rules: [(rule: IgnoreRule, expression: NSRegularExpression)],
+    in files: [(role: Role, value: RuleMatcher)]
+  ) async -> (ranges: [Role: [Range<Int>]], slowRules: Set<IgnoreRule>) {
     let matches = await withTaskGroup(
       of: (role: Role, rule: Int, ranges: [Range<Int>]?).self
     ) { group in
@@ -127,12 +158,6 @@ extension IgnoreMask {
     for match in matches where !slowIndices.contains(match.rule) {
       rangesByRole[match.role, default: []].append(contentsOf: match.ranges ?? [])
     }
-    var masks: [Role: IgnoreMask] = [:]
-    for (role, file) in files {
-      masks[role] = IgnoreMask(
-        text: file.text, lineIndex: file.lineIndex,
-        ranges: (rangesByRole[role] ?? []).sorted { $0.lowerBound < $1.lowerBound }, mode: mode)
-    }
-    return (masks, Set(slowIndices.map { rules[$0].rule }))
+    return (rangesByRole, Set(slowIndices.map { rules[$0].rule }))
   }
 }

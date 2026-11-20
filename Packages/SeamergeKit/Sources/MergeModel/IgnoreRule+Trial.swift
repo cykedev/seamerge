@@ -29,11 +29,9 @@ extension IgnoreRule {
     // comparison would not take it.
     guard let compared = SourceFile(bytes: Data(text.utf8), label: "").comparedText(in: mode)
     else { return .matches([]) }
-    let masking = await IgnoreMask.masks(
-      of: [.a: compared], rules: [(self, expression)], mode: mode)
+    let masking = await IgnoreMask.mask(of: compared, rules: [(self, expression)], mode: mode)
     guard masking.slowRules.isEmpty else { return .problem(.exceedsTimeLimit) }
-    let byteRanges = masking.masks[.a]?.matches.ranges ?? []
-    return .matches(Self.utf16Ranges(of: byteRanges, in: text))
+    return .matches(Self.utf16Ranges(of: masking.mask.matches.ranges, in: text))
   }
 
   /// The UTF-16 offsets in `text` of `byteRanges`, sorted UTF-8 offsets that each start and end

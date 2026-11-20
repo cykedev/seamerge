@@ -67,7 +67,7 @@ public struct CollapsedRows: Sendable {
     // Without a base, the engine counts the lines that A and B share as a change both made to
     // an empty base; to the user they are unchanged lines like those of a comparison.
     let equalKinds: Set<Block.Kind> =
-      session.kind == .merge && session.file(for: .base) == nil
+      session.kind == .merge && session.files.base == nil
       ? [.unchanged, .changedInBoth] : [.unchanged]
     candidates = session.blocks.compactMap { block in
       let rows = session.rowLayout.rows(of: block)

@@ -33,15 +33,10 @@ extension UnifiedDiff {
     /// - Throws: The error of the comparison.
     init(old: TextFile, new: TextFile) throws(MergeModelError) {
       let comparison = try EngineAdapter.diff(old: old.bytes, new: new.bytes, mode: .exact)
-      guard let oldLineStarts = comparison.lineStarts[.a],
-        let newLineStarts = comparison.lineStarts[.b]
-      else {
-        preconditionFailure("A comparison of two files splits both into lines")
-      }
       self.old = old
       self.new = new
-      self.oldLineStarts = oldLineStarts
-      self.newLineStarts = newLineStarts
+      oldLineStarts = comparison.lineStarts.a
+      newLineStarts = comparison.lineStarts.b
       changes = comparison.blocks.filter { $0.kind != .unchanged }
     }
 
