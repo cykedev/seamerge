@@ -119,7 +119,7 @@ To build and test one package:
 swift test --package-path Packages/MergeEngine
 ```
 
-`Scripts/check.sh` is the complete check. It lints the format of all Swift files, then builds and tests each package and the app, and prints one line per step. It exits with 0 only when every step passes. The full output is written to `.build/check.log`. `Scripts/check.sh --quick` checks the format and the build without the tests.
+`Scripts/check.sh` is the complete check. It lints the format of all Swift files, then builds and tests each package and the app, runs the tests of the engine and of the core modules once more under the address, undefined behaviour and thread sanitizers, and prints one line per step. It exits with 0 only when every step passes. The full output is written to `.build/check.log`. `Scripts/check.sh --quick` checks the format and the build without the tests and the sanitizers.
 
 The `core.hooksPath` setting in the clone makes Git run the hooks in `Scripts/git-hooks`, which check the format of staged Swift files and the form of commit messages.
 

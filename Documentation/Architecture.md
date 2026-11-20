@@ -214,3 +214,4 @@ Tower passes two folders to the launch script when its setting "Perform director
 - Each module has a test target next to its sources, which may also import the modules its module depends on.
 - `App/SeamergeTests` tests the app. `SystemIntegrationStore` takes the bundle, the home folder and the environment as parameters, so the tests run in a sandbox folder and do not touch the real configuration. `App/SeamergeTests/Support/AppSandbox.swift` sets that up.
 - `Scripts/check.sh` runs the format check, the build and the tests of every package and of the app. It is the only check of the repository.
+- The same script runs the tests of the engine and of the core modules a second time under the sanitizers: address and undefined behaviour for the engine with its bridge to C++, for TextBasics, TextIO, SyntaxKit and MergeModel and for the search of PaneKit; thread for GitSupport, SessionIPC, SeamergeCLI and the search of PaneKit. Tests that show windows are left out.
