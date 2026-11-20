@@ -1,12 +1,13 @@
 #!/bin/bash
 #
 # Checks the repository: the format of every Swift file and string catalog,
-# then build and tests of each package under Packages/ and of the Xcode
-# project under App/.
+# then build and tests of each package under Packages/, a second run of the
+# tests of the engine and the core modules under the sanitizers, and build and
+# tests of the Xcode project under App/.
 #
 # Usage: Scripts/check.sh [--quick]
 #
-#   --quick  Check format and build only; skip the tests.
+#   --quick  Check format and build only; skip the tests and the sanitizers.
 #
 # Prints one line per step and the errors of failed steps. The full output of
 # every step is in .build/check.log. Exits with 0 when every step passed and
@@ -46,11 +47,13 @@ failed=0
 total=0
 max_error_lines=20
 
-# Compiler and linter diagnostics, SwiftPM errors and failed Swift tests. Left
-# out: the compiler's summary of a failed command, which repeats the diagnostics
-# above it, and the warnings of the vendored Perforce code, which a build from
-# scratch always prints and which are accepted. Errors there are still shown.
+# Compiler and linter diagnostics, SwiftPM errors, failed Swift tests and the
+# findings of the sanitizers. Left out: the compiler's summary of a failed
+# command, which repeats the diagnostics above it, and the warnings of the
+# vendored Perforce code, which a build from scratch always prints and which
+# are accepted. Errors there are still shown.
 diagnostic_pattern='^[^[:space:]].*:[0-9]+:[0-9]+: (error|warning):|^error: |recorded an issue at'
+diagnostic_pattern+='|^==[0-9]+==ERROR: [A-Za-z]+Sanitizer: |: runtime error: |^SUMMARY: [A-Za-z]+Sanitizer: '
 noise_pattern='failed with a nonzero exit code|^error: Build failed|/Vendor/.*: warning:'
 
 # Runs one step, records its output in the log and prints its outcome. The
@@ -202,6 +205,47 @@ launch_app() {
   $listens || { echo "Seamerge did not listen on a socket in $folder"; return 1; }
 }
 
+# Runs tests of a package once more, built with sanitizers into a folder of
+# their own so that the build above stays as it is. The first argument is
+# address, for the address sanitizer together with the one for undefined
+# behaviour, which looks at the C and C++ code of the engine, or thread, for
+# the thread sanitizer, which cannot be combined with the address sanitizer.
+# Undefined behaviour stops the run, as the other two do on their own.
+run_sanitized() {
+  local kind=$1 name=$2 sanitizers
+  shift 2
+  case $kind in
+    address) sanitizers=(--sanitize=address --sanitize=undefined) ;;
+    thread) sanitizers=(--sanitize=thread) ;;
+  esac
+  run_step --tests "sanitize $name $kind" env UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
+    swift test --package-path "Packages/$name" --scratch-path "$log_dir/sanitize/$kind/$name" \
+    "${sanitizers[@]}" "$@"
+}
+
+# The sanitizers look at the code that handles memory by hand or works across
+# threads: the engine with its bridge to C++, the modules of text, syntax and
+# model with their unsafe buffers, the search of the panes, which works off the
+# main actor, and the modules that run processes and talk over sockets. Tests
+# that show windows stay out; under the sanitizers they would only cost time.
+# So do the tests that hold the lexers to a time limit, which the slower code
+# of the address sanitizer cannot keep.
+sanitize() {
+  case $1 in
+    MergeEngine)
+      run_sanitized address "$1"
+      ;;
+    SeamergeKit)
+      run_sanitized address "$1" \
+        --filter '^(MergeModelTests|SyntaxKitTests|TextBasicsTests|TextIOTests)\.' \
+        --filter '^PaneKitTests\.PaneSearch' --skip '^SyntaxKitTests\.RobustnessTests'
+      run_sanitized thread "$1" \
+        --filter '^(GitSupportTests|SeamergeCLITests|SessionIPCTests)\.' \
+        --filter '^PaneKitTests\.PaneSearch'
+      ;;
+  esac
+}
+
 run_step "format" lint_format
 run_step "string catalogs" Scripts/format-strings.sh --check
 
@@ -223,6 +267,7 @@ for manifest in Packages/*/Package.swift; do
     else
       run_step --tests "test $name" swift test --package-path "$package" --skip-build
     fi
+    $quick || sanitize "$name"
   elif ! $quick; then
     skip_step "test $name" "build failed"
   fi

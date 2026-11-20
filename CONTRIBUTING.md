@@ -16,6 +16,8 @@ The build and test commands are in the [README](README.md#building-and-checking)
 
 `Scripts/check.sh` is the only check. The repository has no continuous integration, so run it yourself before you open a pull request. A change is ready when `Scripts/check.sh` exits with 0.
 
+After the tests, `Scripts/check.sh` runs the tests of the engine and of the core modules once more under the address, undefined behaviour and thread sanitizers, so that memory errors in the bridge to C++ and data races in callbacks from threads fail the check as well. `Scripts/check.sh --quick` skips them, as it skips the tests. Their builds are kept in `.build/sanitize/` in the repository root.
+
 Warnings in Swift code fail the build. The vendored Perforce code keeps its own warnings; `Scripts/check.sh` leaves them out of its output but still shows errors from that code.
 
 ## Formatting
