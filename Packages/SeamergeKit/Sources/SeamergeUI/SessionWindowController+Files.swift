@@ -73,7 +73,9 @@ extension SessionWindowController {
       changed.append(role)
       return SourceFile(bytes: bytes, label: file.label, url: url)
     }
-    guard !changed.isEmpty, let reloaded = await compare(files, as: session) else { return }
+    guard !changed.isEmpty else { return }
+    collectionNavigator?.shownFileChangedOnDisk()
+    guard let reloaded = await compare(files, as: session) else { return }
     let name = changed.count == 1 ? presentation.headers[changed[0]]?.distinctName : nil
     await replaceSession(with: reloaded) { count, window in
       await self.prompts.confirmReloading(name, discarding: count, in: window)

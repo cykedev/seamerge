@@ -229,4 +229,27 @@ import Testing
 
     #expect(shownText() == "struct Discount {}\n")
   }
+
+  /// The file in view was reloaded after it changed on disk; coming back to it from another
+  /// file shows it as reloaded, not as the window first read it.
+  @Test func fileReloadedAfterAChangeOnDiskComesBackAsReloaded() async throws {
+    let collection = FileCollection(
+      files: try SampleCollections.commit(in: try SampleCollections.folder()))
+    let controller = try await Windows.controller(for: collection)
+    defer { controller.window?.close() }
+    await controller.fileLoad?.value
+    let first = collection.files[0]
+    #expect(controller.collectionNavigator?.readFiles[first] != nil, "Read")
+    try Data("struct OrderService {}\n".utf8).write(to: first.new.url, options: .atomic)
+    await controller.diskWatch.reloadChangedFiles()
+    let shownText = { controller.presentation.changes.session.inputs.b.text }
+    #expect(shownText() == "struct OrderService {}\n")
+
+    controller.showFile(at: 1)
+    await controller.fileLoad?.value
+    controller.showFile(at: 0)
+    await controller.fileLoad?.value
+
+    #expect(shownText() == "struct OrderService {}\n")
+  }
 }

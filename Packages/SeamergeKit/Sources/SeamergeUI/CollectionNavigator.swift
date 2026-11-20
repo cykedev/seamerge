@@ -214,6 +214,16 @@ final class CollectionNavigator {
     diskGeneration += 1
   }
 
+  /// Forgets what the window read of the file in view, whose sides changed on disk since.
+  ///
+  /// Going back to the file reads it anew. A read still under way began before the change, so
+  /// it is not kept either.
+  func shownFileChangedOnDisk() {
+    guard let shownFile else { return }
+    readFiles = readFiles.filter { $0.key.path != shownFile.path }
+    diskGeneration += 1
+  }
+
   /// Finds the file in view again by its path after the files of the collection changed.
   ///
   /// A change of the bytes of the file in view, the window reloads by itself as it watches the
