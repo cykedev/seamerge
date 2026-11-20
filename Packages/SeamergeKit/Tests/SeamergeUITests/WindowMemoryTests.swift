@@ -96,7 +96,7 @@ import Testing
       await collection.waitUntilCompared()
       let controller = try await Windows.controller(for: collection)
       await controller.fileLoad?.value
-      #expect(controller.shownFile?.path == "Large.swift")
+      #expect(controller.collectionNavigator?.shownFile?.path == "Large.swift")
       try await use(controller, searchingFor: largeCase.searchTexts.common)
       controller.showFile(at: 1)
       await controller.fileLoad?.value

@@ -97,7 +97,7 @@ import Testing
     try await Task.sleep(for: .milliseconds(50))
 
     let file = collection.files[2]
-    #expect(controller.shownFile == file)
+    #expect(controller.collectionNavigator?.shownFile == file)
     #expect(controller.window?.title == file.path)
     #expect(controller.presentation.changes.session.inputs.b.label == file.new.label)
     #expect(!controller.waitsForComparison)
@@ -116,7 +116,7 @@ import Testing
     await load.value
 
     #expect(controller.presentation.changes.blocks.isEmpty)
-    #expect(controller.collectedComparisons.isEmpty)
+    #expect(controller.collectionNavigator?.readFiles.isEmpty == true)
     for pane in Windows.panes(of: controller) {
       #expect(pane.documentView.string.isEmpty)
     }
@@ -164,7 +164,7 @@ import Testing
     await waited.value
 
     let file = collection.files[3]
-    #expect(controller.shownFile == file)
+    #expect(controller.collectionNavigator?.shownFile == file)
     #expect(controller.window?.title == file.path)
     #expect(controller.presentation.changes.session.inputs.b.label == file.new.label)
     #expect(!controller.waitsForComparison)
@@ -228,7 +228,7 @@ import Testing
       try await Task.sleep(for: .milliseconds(10))
     }
     #expect(controller.presentation.changes.session.ignoreRules == rules)
-    #expect(controller.shownFile == collection.files[0])
+    #expect(controller.collectionNavigator?.shownFile == collection.files[0])
   }
 
   @Test func panesOfAComparisonAreMadeAlikeWhateverItsFilesAreCalled() async throws {

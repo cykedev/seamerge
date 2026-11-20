@@ -15,12 +15,6 @@ extension SessionWindowController {
     return settings.ignoreRules.filter(\.isEnabled)
   }
 
-  /// Whether two lists of switched-on rules leave out the same text: whether they have the same
-  /// patterns in the same order, whatever their names.
-  static func haveTheSameEffect(_ rules: [IgnoreRule], _ others: [IgnoreRule]) -> Bool {
-    rules.map(\.pattern) == others.map(\.pattern)
-  }
-
   /// Whether a rule of Settings is switched on and can take effect, which Use Ignore Rules
   /// needs.
   var hasEffectiveIgnoreRule: Bool {
@@ -62,7 +56,7 @@ extension SessionWindowController {
   /// A rule that was only renamed changes nothing.
   func followIgnoreRules() {
     guard !isSwitchingComparison, !waitsForComparison, showsComparedLines,
-      !Self.haveTheSameEffect(presentation.changes.session.ignoreRules, requestedIgnoreRules)
+      !presentation.changes.session.ignoreRules.hasTheSameEffect(as: requestedIgnoreRules)
     else { return }
     Task { await compareWithRequestedRules(usingIgnoreRules: nil) }
   }
@@ -81,7 +75,7 @@ extension SessionWindowController {
       let session = presentation.changes.session
       let uses = usingIgnoreRules ?? usesIgnoreRules
       let rules = ignoreRules(whenUsing: uses)
-      guard session.kind == .diff, !Self.haveTheSameEffect(rules, session.ignoreRules) else {
+      guard session.kind == .diff, !rules.hasTheSameEffect(as: session.ignoreRules) else {
         usesIgnoreRules = uses
         return
       }

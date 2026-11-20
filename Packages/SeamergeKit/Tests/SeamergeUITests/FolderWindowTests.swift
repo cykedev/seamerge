@@ -31,7 +31,7 @@ import Testing
     await controller.fileLoad?.value
 
     #expect(controller.phase.placeholder == nil)
-    #expect(controller.shownFile?.path == "prices.txt")
+    #expect(controller.collectionNavigator?.shownFile?.path == "prices.txt")
     #expect(controller.window?.title == "prices.txt")
     #expect(controller.window?.subtitle.contains("File 1 of 6 · Orders 1.0 ↔ Orders 1.1") == true)
     #expect(fileList.statusLine.accessibilityLabel() == "6 of 9 files differ")
@@ -135,7 +135,7 @@ import Testing
     }
     #expect(listed.contains("Sources/Orders/Invoice.swift"))
     #expect(!listed.contains("VERSION"))
-    #expect(controller.shownFile?.path == "README.md")
+    #expect(controller.collectionNavigator?.shownFile?.path == "README.md")
     #expect(listed.indices.contains(table.selectedRow) && listed[table.selectedRow] == "README.md")
   }
 
@@ -155,7 +155,7 @@ import Testing
     await controller.fileLoad?.value
 
     #expect(
-      controller.shownFile?.path
+      controller.collectionNavigator?.shownFile?.path
         == "Resources/Configuration/Environments/Production/prices-and-discounts-for-every-region.json"
     )
   }
@@ -196,16 +196,18 @@ import Testing
     let readme = try #require(collection.files.firstIndex { $0.path == "README.md" })
     controller.showFile(at: readme)
     await controller.fileLoad?.value
-    let next = try #require(controller.neighborIndex(forward: true))
+    let next = try #require(controller.collectionNavigator?.neighborIndex(forward: true))
     let path = collection.files[next].path
-    #expect(controller.collectedComparisons.keys.contains(collection.files[next]), "Read ahead")
+    #expect(
+      controller.collectionNavigator?.readFiles.keys.contains(collection.files[next]) == true,
+      "Read ahead")
 
     try folders.write("{\n  \"retries\": 7\n}\n", to: folders.right.appending(path: path))
     collection.take(.replaced(Self.files(of: comparer)))
     controller.showNextFile(nil)
     await controller.fileLoad?.value
 
-    #expect(controller.shownFile?.path == path)
+    #expect(controller.collectionNavigator?.shownFile?.path == path)
     let right = controller.presentation.changes.session.inputs.b.text
     #expect(right?.contains("7") == true)
   }
@@ -217,18 +219,19 @@ import Testing
     try folders.fillWithProject()
     let collection = await FileCollection.compared(folders)
     let controller = try await Windows.controller(for: collection)
-    let next = try #require(controller.neighborIndex(forward: true))
+    let navigator = try #require(controller.collectionNavigator)
+    let next = try #require(navigator.neighborIndex(forward: true))
     let file = collection.files[next]
-    let collected = try await SessionWindowController.load(
-      file, mode: .windowDefault, ignoring: [])
-    let generation = controller.diskGeneration
+    let collected = try await CollectedComparison(
+      reading: file, mode: .windowDefault, ignoring: [])
+    let generation = navigator.diskGeneration
 
     collection.take(.replaced(collection.files))
-    controller.keep(collected, of: file, readIn: generation)
+    navigator.keep(collected, of: file, readIn: generation)
 
-    #expect(controller.collectedComparisons[file] == nil)
-    controller.keep(collected, of: file, readIn: controller.diskGeneration)
-    #expect(controller.collectedComparisons[file] != nil)
+    #expect(navigator.readFiles[file] == nil)
+    navigator.keep(collected, of: file, readIn: navigator.diskGeneration)
+    #expect(navigator.readFiles[file] != nil)
   }
 
   @Test func fileInViewThatCannotBeReadAnyMoreSaysWhy() async throws {
@@ -236,7 +239,7 @@ import Testing
     try folders.write("notes.txt", left: "abc\n", right: "abd\n")
     let collection = await FileCollection.compared(folders)
     let controller = try await Windows.controller(for: collection)
-    #expect(controller.shownFile?.path == "notes.txt")
+    #expect(controller.collectionNavigator?.shownFile?.path == "notes.txt")
     #expect(controller.phase.unavailable == nil)
 
     try FileManager.default.setAttributes(
@@ -318,14 +321,15 @@ import Testing
     let all = collection.files
 
     _ = try listed(after: "swift", in: controller)
-    #expect(controller.shownFile?.path == "prices.txt", "The file in view stays")
+    #expect(
+      controller.collectionNavigator?.shownFile?.path == "prices.txt", "The file in view stays")
     controller.showNextFile(nil)
     await controller.fileLoad?.value
-    #expect(controller.shownFile?.path == "Sources/Orders/Discount.swift")
+    #expect(controller.collectionNavigator?.shownFile?.path == "Sources/Orders/Discount.swift")
     controller.showNextFile(nil)
     await controller.fileLoad?.value
 
-    #expect(controller.shownFile?.path == "Sources/Orders/OrderService.swift")
+    #expect(controller.collectionNavigator?.shownFile?.path == "Sources/Orders/OrderService.swift")
     #expect(!controller.canPerform(.nextFile))
     #expect(controller.window?.subtitle.contains("File 2 of 2") == true)
     #expect(collection.files == all, "The filter leaves the files of the window as they are")
@@ -339,11 +343,11 @@ import Testing
     #expect(
       try listed(after: "orders", in: controller)
         == ["Sources/Orders/OrderService.swift", "Sources/Orders/Discount.swift"])
-    #expect(controller.shownFile?.path == "Sources/Orders/OrderService.swift")
+    #expect(controller.collectionNavigator?.shownFile?.path == "Sources/Orders/OrderService.swift")
     controller.showNextFile(nil)
     await controller.fileLoad?.value
 
-    #expect(controller.shownFile?.path == "Sources/Orders/Discount.swift")
+    #expect(controller.collectionNavigator?.shownFile?.path == "Sources/Orders/Discount.swift")
     #expect(!controller.canPerform(.nextFile))
     #expect(controller.window?.subtitle.contains("File 2 of 2") == true)
   }

@@ -92,38 +92,18 @@ public final class SessionWindowController: NSWindowController {
   /// empty panes while it waits for the lines, or why it shows none.
   var phase = SessionPhase.ready
 
+  /// Which file of its collection a window that compares several files shows, and what it has
+  /// read of them; `nil` for a window of one session.
+  let collectionNavigator: CollectionNavigator?
+
   /// The files of a window that compares several, or `nil` for a window of one session.
-  public let collection: FileCollection?
+  public var collection: FileCollection? {
+    collectionNavigator?.collection
+  }
 
   /// The sidebar with the list of the files and the panes beside it, if the window compares
   /// several files.
   let collectionLayout: CollectionSplitViewController?
-
-  /// The index of the file the window shows among the files of its collection.
-  var fileIndex = 0
-
-  /// The file of the collection the window shows, or `nil` while it shows none, as before the
-  /// first file of two folders is known.
-  var shownFile: CollectedFile?
-
-  /// Which files of the collection the list shows.
-  var fileFilter = FileFilter()
-
-  /// The indices of the files of the collection that the list shows, in order.
-  var listedIndices: [Int] = []
-
-  /// The place in each file of the collection that the window showed, by path, which it shows
-  /// again when the user comes back to the file.
-  var filePlaces: [String: FilePlace] = [:]
-
-  /// The files of the collection that the window has read: the one it shows and those beside it.
-  ///
-  /// A file whose sides or change differ since is another file, which is read anew.
-  var collectedComparisons: [CollectedFile: CollectedComparison] = [:]
-
-  /// How often the files of the folders changed on disk since the window opened; a reading that
-  /// started before the last change is out of date when it ends.
-  var diskGeneration = 0
 
   /// The reading of the file the window is about to show, while it runs.
   var fileLoad: Task<Void, Never>?
@@ -315,7 +295,9 @@ public final class SessionWindowController: NSWindowController {
     self.prompts = prompts
     toolbar = SessionToolbar(
       kind: session.kind, doneStyle: doneStyle, hasSidebar: collection != nil)
-    self.collection = collection
+    collectionNavigator = collection.map {
+      CollectionNavigator(collection: $0, showsIdenticalFiles: settings.showsIdenticalFiles)
+    }
     collectionLayout = collection.map { _ in
       CollectionSplitViewController(
         fileList: FileListViewController(
@@ -660,7 +642,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
     case .toggleScrollSynchronization: presentation.scrollSync.isEnabled
     case .toggleSyntaxHighlighting: highlightsSyntax
     case .toggleLineWrapping: presentation.wrapsLines
-    case .toggleIdenticalFiles: fileFilter.showsIdenticalFiles
+    case .toggleIdenticalFiles: collectionNavigator?.filter.showsIdenticalFiles ?? false
     default: false
     }
   }
@@ -690,7 +672,7 @@ extension SessionWindowController: NSUserInterfaceValidations {
     case .anotherPane:
       focusablePanes.count > 1
     case .anotherFile(let forward):
-      neighborIndex(forward: forward) != nil
+      collectionNavigator?.neighborIndex(forward: forward) != nil
     case .comparedFolders:
       collection?.folders != nil
     case .fileList:
