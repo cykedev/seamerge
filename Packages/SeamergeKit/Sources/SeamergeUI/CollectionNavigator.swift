@@ -168,6 +168,15 @@ final class CollectionNavigator {
     return FilePosition(number: row + 1, count: count)
   }
 
+  /// Whether `file` is the file in view, found by its path.
+  ///
+  /// What the list says about the file may have changed since, as when its sides became equal on
+  /// disk. The window cancels a reading once the sides of the file in view change, so that the
+  /// path is enough.
+  func shows(_ file: CollectedFile) -> Bool {
+    shownFile?.path == file.path
+  }
+
   /// Whether the window can go to the file at `index`: one of the collection that it does not
   /// show yet.
   func canGo(toFileAt index: Int) -> Bool {
@@ -271,7 +280,7 @@ final class CollectionNavigator {
   func readAhead(
     after file: CollectedFile, mode: ComparisonMode, ignoring rules: [IgnoreRule]
   ) async {
-    guard shownFile == file else { return }
+    guard shows(file) else { return }
     let next = neighborIndex(forward: true)
     let neighbors = [neighborIndex(forward: false), fileIndex, next].compactMap(\.self)
     let kept = Set(neighbors.map { collection.files[$0] })

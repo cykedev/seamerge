@@ -239,7 +239,9 @@ extension SessionWindowController {
         collected: made.collected,
         prepared: await presentation.prepareLoaded(made.collected.session))
     }
-    guard !ready.isCancelled, collectionNavigator?.shownFile == file, !hasFinished else { return }
+    guard !ready.isCancelled, collectionNavigator?.shows(file) == true, !hasFinished else {
+      return
+    }
     show(outcome, of: file)
   }
 
@@ -251,7 +253,7 @@ extension SessionWindowController {
         of: Session.Inputs(a: file.old, b: file.new), kind: .diff, mode: comparisonOptions.mode)
     else { return false }
     let prepared = await presentation.prepareLoaded(empty)
-    guard !Task.isCancelled, collectionNavigator?.shownFile == file, !hasFinished else {
+    guard !Task.isCancelled, collectionNavigator?.shows(file) == true, !hasFinished else {
       return false
     }
     show(

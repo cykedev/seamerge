@@ -202,6 +202,40 @@ import Testing
     #expect(!controller.waitsForComparison)
   }
 
+  /// Making the sides of the file in view equal on disk changes only what the list says about
+  /// it, not its sides; the window goes on to show the file it reads and reads the next ahead.
+  @Test func fileInViewWhoseChangeAloneChangesWhileItIsReadShowsAndReadsAhead() async throws {
+    let folders = try SampleFolders()
+    try folders.write("notes.txt", left: "old\n", right: "new\n")
+    try folders.write("README.md", left: "old\n", right: "new\n")
+    let comparer = FolderComparer(
+      folders: folders.pair, linkFolder: folders.folder.appending(path: "links"))
+    let collection = FileCollection(comparer: comparer)
+    collection.take(
+      .listed(
+        comparer.pairs(at: "").map { comparer.file(for: $0, change: comparer.change(of: $0)) },
+        waiting: 0))
+    collection.take(.finished)
+    let waiting = try await waiting(for: collection)
+    let controller = waiting.controller
+    defer { controller.window?.close() }
+    let navigator = try #require(controller.collectionNavigator)
+    let shown = try #require(navigator.shownFile)
+    let next = collection.files[1]
+
+    let identical = CollectedFile(
+      old: shown.old, new: shown.new, difftool: shown.difftool, change: .identical)
+    collection.take(.replaced([identical, next]))
+    waiting.finish()
+    await controller.phase.filling?.value
+    await controller.fileLoad?.value
+
+    #expect(navigator.shownFile == identical)
+    #expect(!controller.waitsForComparison)
+    #expect(controller.layout.sourcePane(.b)?.documentView.string.isEmpty == false)
+    #expect(navigator.readFiles.keys.contains(next), "Read ahead")
+  }
+
   @Test func rulesChangedWhileTheFirstFileIsComparedApplyOnceItShows() async throws {
     let settings = UserSettings.private()
     let collection = try Self.commit()
