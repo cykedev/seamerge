@@ -19,7 +19,7 @@ import Testing
     controller.presentation.announce = { announcements.append($0) }
     let fileList = try #require(controller.collectionLayout?.fileList)
 
-    #expect(controller.collectionPlaceholder == .comparing)
+    #expect(controller.phase.placeholder == .comparing)
     #expect(controller.collectionLayout?.sidebarItem.isCollapsed == false)
     #expect(!controller.canPerform(.nextChange))
     #expect(!controller.canPerform(.nextFile))
@@ -30,7 +30,7 @@ import Testing
     await collection.waitUntilCompared()
     await controller.fileLoad?.value
 
-    #expect(controller.collectionPlaceholder == nil)
+    #expect(controller.phase.placeholder == nil)
     #expect(controller.shownFile?.path == "prices.txt")
     #expect(controller.window?.title == "prices.txt")
     #expect(controller.window?.subtitle.contains("File 1 of 6 · Orders 1.0 ↔ Orders 1.1") == true)
@@ -104,7 +104,7 @@ import Testing
 
     let controller = try await Windows.controller(for: collection)
 
-    #expect(controller.collectionPlaceholder == .sameFiles)
+    #expect(controller.phase.placeholder == .sameFiles)
     #expect(controller.collectionLayout?.fileList.tableView.numberOfRows == 0)
     #expect(
       controller.collectionLayout?.fileList.statusLine.accessibilityLabel()
@@ -237,7 +237,7 @@ import Testing
     let collection = await FileCollection.compared(folders)
     let controller = try await Windows.controller(for: collection)
     #expect(controller.shownFile?.path == "notes.txt")
-    #expect(controller.unavailable == nil)
+    #expect(controller.phase.unavailable == nil)
 
     try FileManager.default.setAttributes(
       [.posixPermissions: 0], ofItemAtPath: folders.right.appending(path: "notes.txt").path)
@@ -246,7 +246,7 @@ import Testing
     }
     await controller.fileLoad?.value
 
-    #expect(controller.unavailable != nil)
+    #expect(controller.phase.unavailable != nil)
   }
 
   /// The files of the folders of `comparer` as comparing them now finds them, in the order of

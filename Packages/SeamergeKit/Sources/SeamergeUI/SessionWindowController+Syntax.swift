@@ -29,7 +29,7 @@ extension SessionWindowController {
   /// Whether a language can be chosen now: while the code is colored and the window shows the
   /// lines of its files.
   var canChooseSyntax: Bool {
-    highlightsSyntax && unavailable == nil && binaryMerge == nil
+    highlightsSyntax && phase.unavailable == nil && binaryMerge == nil
   }
 
   /// Puts a checkmark at the choice in effect, names the recognized language in Automatic, and

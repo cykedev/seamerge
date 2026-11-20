@@ -88,9 +88,9 @@ public final class SessionWindowController: NSWindowController {
   /// The sheet of Change Files while it is open.
   var changeFilesSheet: CompareFilesWindowController?
 
-  /// The comparison whose files cannot be compared, which the window names and explains in
-  /// place of their lines, or `nil` if the window shows the lines.
-  var unavailable: UnavailableComparison?
+  /// What the window shows of the lines of its files: the lines, the headers of the files above
+  /// empty panes while it waits for the lines, or why it shows none.
+  var phase = SessionPhase.ready
 
   /// The files of a window that compares several, or `nil` for a window of one session.
   public let collection: FileCollection?
@@ -111,9 +111,6 @@ public final class SessionWindowController: NSWindowController {
 
   /// The indices of the files of the collection that the list shows, in order.
   var listedIndices: [Int] = []
-
-  /// What the window says in place of the lines while it shows no file of its collection.
-  var collectionPlaceholder: CollectionPlaceholder?
 
   /// The place in each file of the collection that the window showed, by path, which it shows
   /// again when the user comes back to the file.
@@ -150,10 +147,6 @@ public final class SessionWindowController: NSWindowController {
   /// The comparison the window showed before the one it shows now, which keeps the texts of its
   /// panes so that undo brings it back at once; those before it let go of theirs.
   var comparisonShownBefore: Session?
-
-  /// The filling of the panes once the comparison is ready, while the window waits for the
-  /// comparison of its files.
-  var comparisonFill: Task<Void, Never>?
 
   /// Whether a comparison of two files leaves out the text that the ignore rules of Settings
   /// match; every window starts with it, since whoever writes rules wants them.
@@ -351,7 +344,7 @@ public final class SessionWindowController: NSWindowController {
       ? presentation.result.map {
         ResultSaving(result: $0, session: session, url: context.resultURL)
       } : nil
-    self.unavailable = unavailable
+    phase = unavailable.map(SessionPhase.unavailable) ?? .ready
     self.binaryMerge = binaryMerge
     if let unavailable {
       layout.showInPlaceOfTheLines(
@@ -430,16 +423,18 @@ public final class SessionWindowController: NSWindowController {
   /// What the toolbar counts: the open conflicts of a merge, or the current change of a
   /// comparison, which has no conflicts.
   var toolbarCount: SessionToolbar.Count {
+    switch phase {
+    case .loading: return .waiting
+    case .unavailable, .placeholder: return .nothing
+    case .ready: break
+    }
     let changes = presentation.changes
-    guard !waitsForComparison else { return .waiting }
     switch changes.session.kind {
-    case .merge where unavailable != nil:
-      return .nothing
     case .merge:
       return .conflicts(
         open: presentation.navigation.openConflictCount,
         hadAny: changes.blocks.contains { $0.kind == .conflict })
-    case .diff where unavailable != nil || binaryMerge != nil || collectionPlaceholder != nil:
+    case .diff where binaryMerge != nil:
       return .nothing
     case .diff:
       return .changes(current: presentation.currentBlock, total: changes.blocks.count)
@@ -675,8 +670,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
   /// remaining files, the commands of the list, and in a window of several files the patch of
   /// all of them can.
   func canPerform(_ command: SessionCommand) -> Bool {
-    if unavailable != nil || collectionPlaceholder != nil || waitsForComparison
-      || comparisonReturn != nil,
+    let takesCommandsOfTheLines = if case .ready = phase { comparisonReturn == nil } else { false }
+    if !takesCommandsOfTheLines,
       ![
         .skipRemainingFiles, .toggleFooter, .nextFile, .previousFile, .filterFiles,
         .toggleIdenticalFiles, .copyPatch, .exportPatch,

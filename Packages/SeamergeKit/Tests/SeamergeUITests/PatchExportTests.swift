@@ -201,7 +201,7 @@ import Testing
     let image = try SampleCollections.file("logo.png", old: "\u{0}old", new: "\u{0}new", in: folder)
     let collection = FileCollection(files: [image])
     let controller = try await Windows.controller(for: collection)
-    try #require(controller.unavailable != nil)
+    try #require(controller.phase.unavailable != nil)
 
     #expect(controller.canPerform(.copyPatch))
     #expect(await controller.copyPatchToPasteboard())

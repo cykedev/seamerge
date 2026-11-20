@@ -70,7 +70,7 @@ import Testing
     #expect(controller.collectionLayout?.fileList.tableView.selectedRow == 0)
 
     waiting.finish()
-    await controller.comparisonFill?.value
+    await controller.phase.filling?.value
     #expect(!controller.waitsForComparison)
     #expect(controller.presentation.changes.blocks == opened.presentation.changes.blocks)
     #expect(controller.presentation.currentBlock == opened.presentation.currentBlock)
@@ -158,7 +158,7 @@ import Testing
     while !controller.waitsForComparison {
       await Task.yield()
     }
-    let waited = try #require(controller.comparisonFill)
+    let waited = try #require(controller.phase.filling)
     controller.showFile(at: 3)
     await controller.fileLoad?.value
     await waited.value
@@ -188,7 +188,7 @@ import Testing
     #expect(controller.presentation.changes.session.ignoreRules.isEmpty)
 
     waiting.finish()
-    await controller.comparisonFill?.value
+    await controller.phase.filling?.value
     let rules = settings.ignoreRules.filter(\.isEnabled)
     for _ in 0..<200
     where controller.isSwitchingComparison

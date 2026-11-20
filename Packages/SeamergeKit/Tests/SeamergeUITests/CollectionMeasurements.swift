@@ -48,7 +48,7 @@ struct CollectionMeasurements {
         collection: FileCollection(files: collected), undoManager: UndoManager(),
         settings: .private())
       controller = opened
-      await opened.comparisonFill?.value
+      await opened.phase.filling?.value
       await opened.fileLoad?.value
       openingTime = clock.now - start
     }

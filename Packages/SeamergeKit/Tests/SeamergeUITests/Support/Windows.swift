@@ -322,7 +322,7 @@ extension Windows {
       prompts: prompts, doneStyle: .standard, settings: settings, window: window,
       collection: collection, pendingFile: opening.comparison)
     if fillsFirstFile {
-      await controller.comparisonFill?.value
+      await controller.phase.filling?.value
     }
     controller.window?.contentView?.layoutSubtreeIfNeeded()
     return controller

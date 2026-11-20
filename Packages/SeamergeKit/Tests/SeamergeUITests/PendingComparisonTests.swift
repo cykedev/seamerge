@@ -18,7 +18,7 @@ import Testing
     /// Finishes the comparison with `outcome` and waits until the window has shown it.
     func fill(with outcome: Result<Session, SessionLoadingError>) async {
       finish(outcome)
-      await controller.comparisonFill?.value
+      await controller.phase.filling?.value
     }
   }
 
@@ -184,7 +184,7 @@ import Testing
 
     await waiting.fill(with: .failure(.filesTooLarge))
     #expect(!controller.waitsForComparison)
-    #expect(controller.unavailable?.reason == .filesTooLarge)
+    #expect(controller.phase.unavailable?.reason == .filesTooLarge)
     #expect(!controller.canPerform(.nextChange))
   }
 
@@ -276,7 +276,7 @@ import Testing
       settings: .private())
     defer { controller.window?.close() }
     // A comparison this small is ready before the window shows, unless the machine is busy.
-    await controller.comparisonFill?.value
+    await controller.phase.filling?.value
 
     #expect(!controller.waitsForComparison)
     #expect(controller.presentation.changes.blocks.count == 1)

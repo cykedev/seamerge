@@ -282,7 +282,7 @@ extension SessionWindowController {
 
   /// Whether the menu item of `choice` can act, with a checkmark at the format in effect.
   func validate(_ choice: ResultFormatChoice, item: NSMenuItem) -> Bool {
-    guard let format = saving?.format, unavailable == nil else {
+    guard let format = saving?.format, phase.unavailable == nil else {
       item.state = .off
       return false
     }

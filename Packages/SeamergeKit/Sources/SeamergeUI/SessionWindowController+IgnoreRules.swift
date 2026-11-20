@@ -69,7 +69,7 @@ extension SessionWindowController {
 
   /// Whether the window shows the lines of a comparison, not why it cannot.
   private var showsComparedLines: Bool {
-    unavailable == nil && binaryMerge == nil && collectionPlaceholder == nil
+    phase.showsLines && binaryMerge == nil
   }
 
   /// Compares the files anew with the rules of Settings, or none: if `usingIgnoreRules` is

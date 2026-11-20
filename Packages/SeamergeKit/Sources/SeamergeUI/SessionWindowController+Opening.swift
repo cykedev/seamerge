@@ -109,7 +109,7 @@ extension SessionWindowController {
       if case .failure(let reason) = outcome {
         throw reason
       }
-      await controller.comparisonFill?.value
+      await controller.phase.filling?.value
     }
     return controller
   }
@@ -170,7 +170,7 @@ extension SessionWindowController {
   /// Whether the window waits for the comparison of its files, with their headers and empty
   /// panes.
   var waitsForComparison: Bool {
-    comparisonFill != nil
+    phase.filling != nil
   }
 
   /// Waits for `comparison` with the headers of the files and empty panes, which say so to
@@ -198,12 +198,12 @@ extension SessionWindowController {
       header.format = nil
       layout.show(header)
     }
-    comparisonFill = filling
+    phase = .loading(filling)
     let progressTimer = Timer(timeInterval: Self.openingProgressDelay, repeats: false) {
       [weak self] _ in
       // Timers of the main run loop fire on the main thread.
       MainActor.assumeIsolated {
-        guard let self, self.comparisonFill == filling else { return }
+        guard let self, self.phase.filling == filling else { return }
         self.showsComparisonProgress = true
         self.stateDidChange()
       }
@@ -212,12 +212,13 @@ extension SessionWindowController {
     sessionDidChange()
   }
 
-  /// Ends the wait for the lines, which are there now or cannot be.
+  /// Ends the wait for the lines, which are there now or cannot be; the window shows the lines
+  /// until it says why it cannot.
   func endWaiting() {
     for pane in presentation.allPanes {
       pane.documentView.setAccessibilityPlaceholderValue(nil)
     }
-    comparisonFill = nil
+    phase = .ready
     showsComparisonProgress = false
   }
 
@@ -230,6 +231,7 @@ extension SessionWindowController {
     guard !hasFinished else { return }
     // What the window says once the files cannot be compared, which VoiceOver hears as well.
     var failure: String?
+    var unavailable: UnavailableComparison?
     switch outcome {
     case .success(let session):
       presentation.show(SideHeader.headers(of: session, context: context))
@@ -263,6 +265,9 @@ extension SessionWindowController {
       failure = title
     }
     endWaiting()
+    if let unavailable {
+      phase = .unavailable(unavailable)
+    }
     sessionDidChange()
     showResultFormat()
     watchFiles()

@@ -216,7 +216,7 @@ final class LargeFileRun {
       lines = headers
       // A window that came filled showed its lines in that first picture.
       guard waits else { return }
-      await controller.comparisonFill?.value
+      await controller.phase.filling?.value
       contentView.layoutSubtreeIfNeeded()
       contentView.cacheDisplay(in: contentView.bounds, to: picture)
       lines = clock.now - start

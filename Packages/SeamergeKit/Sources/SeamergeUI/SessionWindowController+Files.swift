@@ -226,7 +226,7 @@ extension SessionWindowController: DiskWatchDelegate {
   /// Whether the window can reload its files: none once it closed or while it shows why they
   /// cannot be compared, and none yet while it saves, compares or waits for their lines.
   func readinessToReload(for watch: DiskWatch) -> DiskWatch.Readiness {
-    if hasFinished || unavailable != nil {
+    if hasFinished || phase.unavailable != nil {
       return .nothingToReload
     }
     return isSwitchingComparison || isSaving || waitsForComparison ? .busy : .ready

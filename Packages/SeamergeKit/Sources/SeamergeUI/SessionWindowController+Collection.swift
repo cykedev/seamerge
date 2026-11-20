@@ -126,7 +126,7 @@ extension SessionWindowController {
     guard let comparison = opening.comparison, wait > 0,
       await Self.outcome(of: comparison, within: wait) != nil
     else { return }
-    await comparisonFill?.value
+    await phase.filling?.value
   }
 
   /// Shows the file after the one in view in the list.
@@ -308,7 +308,7 @@ extension SessionWindowController {
       // The headers of the file stand above empty panes; they say why they stay empty.
       let comparison = UnavailableComparison(
         old: file.old, new: file.new, reason: .comparisonFailed)
-      unavailable = comparison
+      phase = .unavailable(comparison)
       layout.showInPlaceOfTheLines(
         UnavailableComparisonView(
           title: comparison.title, message: comparison.message(in: SessionContext())))
@@ -324,7 +324,7 @@ extension SessionWindowController {
     diskWatch.lookAgainIfAsked()
     followIgnoreRules()
     guard window?.isVisible == true else { return }
-    presentation.announce(unavailable?.title ?? comparedAnnouncement)
+    presentation.announce(phase.unavailable?.title ?? comparedAnnouncement)
   }
 
   /// Sets up the list of the files and follows the collection as it receives more; the window
@@ -342,7 +342,7 @@ extension SessionWindowController {
         load(collection.files[index], comparing: comparison)
       } else {
         collectedComparisons[collection.files[index]] = CollectedComparison(
-          session: presentation.changes.session, unavailable: unavailable)
+          session: presentation.changes.session, unavailable: phase.unavailable)
       }
     } else {
       // Files only come; the one whose comparison the window opened with is among them.
@@ -473,8 +473,12 @@ extension SessionWindowController {
       } else {
         .noFile
       }
-    guard placeholder != collectionPlaceholder else { return }
-    collectionPlaceholder = placeholder
+    guard placeholder != phase.placeholder else { return }
+    if waitsForComparison {
+      // The file the window waited for went from the folders; there is nothing left to wait for.
+      endWaiting()
+    }
+    phase = .placeholder(placeholder)
     layout.showInPlaceOfTheLines(
       UnavailableComparisonView(title: placeholder.title, message: placeholder.message))
   }
@@ -519,9 +523,8 @@ extension SessionWindowController {
     difftool.filePosition = filePosition
     context = SessionContext(difftool: difftool, folders: collection?.namingFolders)
     let session = collected.session
-    unavailable = collected.unavailable
-    collectionPlaceholder = nil
-    if let unavailable {
+    phase = collected.unavailable.map(SessionPhase.unavailable) ?? .ready
+    if let unavailable = collected.unavailable {
       layout.showInPlaceOfTheLines(
         UnavailableComparisonView(
           title: unavailable.title, message: unavailable.message(in: SessionContext())))
@@ -542,7 +545,7 @@ extension SessionWindowController {
       restorePlace(of: file)
     }
     window?.representedURL = editableFileURL
-    if unavailable != nil, let window,
+    if collected.unavailable != nil, let window,
       layout.sourcePanes.contains(where: { window.firstResponder === $0.pane.documentView })
     {
       // The panes are hidden; the list is the closest place for the focus to stay.

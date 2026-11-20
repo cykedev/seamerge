@@ -84,7 +84,7 @@ extension SessionWindowController {
   /// Whether the comparison of two files in view has a patch, which compares the files byte for
   /// byte; `false` in a merge and in a window of several files.
   var shownComparisonHasPatch: Bool {
-    guard collection == nil, binaryMerge == nil, unavailable == nil,
+    guard collection == nil, binaryMerge == nil, phase.unavailable == nil,
       presentation.changes.session.kind == .diff
     else { return false }
     let file = sessionPatchFile

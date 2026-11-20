@@ -167,12 +167,12 @@ import Testing
 
     controller.showFile(at: 1)
     await controller.fileLoad?.value
-    #expect(controller.unavailable != nil)
+    #expect(controller.phase.unavailable != nil)
     #expect(controller.canPerform(.nextFile))
     controller.showFile(at: 2)
     await controller.fileLoad?.value
 
-    #expect(controller.unavailable == nil)
+    #expect(controller.phase.unavailable == nil)
     #expect(controller.layout.sourcePanes.allSatisfy { !$0.pane.isHidden })
   }
 }
