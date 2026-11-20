@@ -57,17 +57,18 @@ diagnostic_pattern+='|^==[0-9]+==ERROR: [A-Za-z]+Sanitizer: |: runtime error: |^
 noise_pattern='failed with a nonzero exit code|^error: Build failed|/Vendor/.*: warning:'
 
 # Runs one step, records its output in the log and prints its outcome. The
-# remaining arguments are the command; it runs from the repository root. With
-# --tests first, the step runs tests and passes only if every test run it
-# started ended with a summary that counts at least one test: a run that ends
-# early can still exit with 0.
+# remaining arguments are the command; it runs from the repository root. A step
+# whose log has a warning of the Swift compiler fails. With --tests first, the
+# step runs tests and passes only if every test run it started ended with a
+# summary that counts at least one test: a run that ends early can still exit
+# with 0.
 run_step() {
   local runs_tests=false
   if [ "$1" = --tests ]; then
     runs_tests=true
     shift
   fi
-  local name=$1 status=0 missing=""
+  local name=$1 status=0 missing="" warnings=""
   shift
   total=$((total + 1))
   "$@" > "$raw_log" 2>&1 || status=$?
@@ -78,6 +79,9 @@ run_step() {
     missing=$(missing_test_summary)
   fi
   if [ "$status" -eq 0 ] && [ -z "$missing" ]; then
+    warnings=$(compiler_warnings)
+  fi
+  if [ "$status" -eq 0 ] && [ -z "$missing" ] && [ -z "$warnings" ]; then
     printf '%-28s ok%s\n' "$name" "$(test_summary)"
     return 0
   fi
@@ -89,6 +93,16 @@ run_step() {
     print_errors
   fi
   return 1
+}
+
+# The warnings of the Swift compiler in the log of the step. Warnings in Swift
+# code fail the build, yet the compiler keeps a few of them as warnings: those
+# it lowers from errors itself, such as a closure that is not Sendable passed on
+# to a framework that expects one. It prints them only when it compiles the
+# file, so the run that compiles the file fails, and a later run with nothing to
+# compile does not.
+compiler_warnings() {
+  grep -E '^[^[:space:]].*\.swift:[0-9]+:[0-9]+: warning:' "$step_log"
 }
 
 # Removes the colour and hyperlink escapes the compiler writes even into files.
