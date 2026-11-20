@@ -79,8 +79,8 @@ final class SessionSyntax {
   /// until their new ones are known.
   func lexInputs(of session: Session) {
     guard let language else { return }
-    for role in session.roles {
-      let text = session.file(for: role)?.text ?? ""
+    for (role, file) in session.inputs {
+      let text = file.text ?? ""
       if let source = sources[role], source.text == text { continue }
       sources[role]?.lexing?.cancel()
       sources[role] = Source(
@@ -200,10 +200,10 @@ final class SessionSyntax {
   /// The language of the files of `session`, recognized by the name of the result or, for a
   /// comparison, of the newer file, and failing that by the first line of that file.
   static func language(of session: Session, resultURL: URL?) -> LanguageDescription {
-    let file = session.file(for: .b) ?? session.file(for: .a)
+    let file = session.inputs.b
     // A file of a single line of megabytes would take long to read to its end.
     let firstLine =
-      file?.text.map { String($0.prefix(firstLineLength).prefix { !$0.isNewline }) } ?? ""
+      file.text.map { String($0.prefix(firstLineLength).prefix { !$0.isNewline }) } ?? ""
     return LanguageDescription(
       fileName: path(of: session, resultURL: resultURL), firstLine: firstLine)
   }
@@ -215,7 +215,7 @@ final class SessionSyntax {
   /// The path of the file that names the language of `session`: the result, or for a comparison
   /// the newer file; its label if it has no path.
   static func path(of session: Session, resultURL: URL?) -> String {
-    let file = session.file(for: .b) ?? session.file(for: .a)
-    return resultURL?.path ?? file?.url?.path ?? file?.label ?? ""
+    let file = session.inputs.b
+    return resultURL?.path ?? file.url?.path ?? file.label
   }
 }

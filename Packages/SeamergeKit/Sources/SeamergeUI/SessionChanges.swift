@@ -32,7 +32,7 @@ struct SessionChanges {
   init(session: Session, origin: Role? = nil) {
     self.session = session
     self.origin = origin
-    hasBase = session.file(for: .base) != nil
+    hasBase = session.inputs.base != nil
     let unchangedKinds: Set<Block.Kind> = hasBase ? [.unchanged] : [.unchanged, .changedInBoth]
     blocks = session.blocks.filter { !unchangedKinds.contains($0.kind) }
     blockIndices = Dictionary(

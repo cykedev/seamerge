@@ -312,10 +312,7 @@ public final class SessionWindowController: NSWindowController {
   ) {
     let theme = displayOptions.theme(settings: settings, fontSize: settings.fontSize)
     let arrangement = PaneArrangement(session: session)
-    let headers = Dictionary(
-      uniqueKeysWithValues: arrangement.sourceRoles.map { role in
-        (role, SideHeader(role: role, session: session, context: context))
-      })
+    let headers = SideHeader.headers(of: session, context: context)
     let resultHeader =
       arrangement.showsResult ? ResultHeader(session: session, context: context) : nil
     let layout = SessionSplitViewController(

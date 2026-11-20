@@ -26,7 +26,7 @@ extension SessionWindowController {
         return
       }
       guard presentation.result != nil else {
-        show(await prepared(switched, result: nil), named: Self.switchName)
+        show(await prepared(.comparison(switched)), named: Self.switchName)
         return
       }
       // The user may decide or type while the new comparison is made ready; it then starts
@@ -40,7 +40,7 @@ extension SessionWindowController {
           // Asking took a moment; a decision made meanwhile goes into the switch as well.
           guard isShowing(result) else { continue }
         }
-        let prepared = await prepared(modeSwitch.session, result: modeSwitch.result)
+        let prepared = await prepared(.merge(modeSwitch.result))
         guard isShowing(result) else { continue }
         show(prepared, named: Self.switchName)
         return
@@ -49,17 +49,16 @@ extension SessionWindowController {
   }
 
   /// What switching `result` to `session`, the same files compared anew, makes of it: the
-  /// session and the result with each decision that keeps its block, and how many decisions it
+  /// result of the new merge with each decision that keeps its block, and how many decisions it
   /// discards; worked out away from the main actor.
   @concurrent
   private static func switching(
     _ result: ResultState, to session: Session
-  ) async -> (session: Session, result: ResultState, discardedDecisionCount: Int) {
+  ) async -> (result: ResultState, discardedDecisionCount: Int) {
     let modeSwitch = result.document.planSwitching(to: session, text: result.text)
     var document = result.document
     _ = document.apply(modeSwitch.plan, replacedTexts: [result.text])
     return (
-      document.session,
       ResultState(document: document, text: modeSwitch.plan.replacements.map(\.text).joined()),
       modeSwitch.discardedDecisionCount
     )
@@ -71,12 +70,12 @@ extension SessionWindowController {
     return current.text == result.text && current.document.segments == result.document.segments
   }
 
-  /// What the panes show for `session` with `result`, made away from the main actor for the
-  /// setup of the panes once it is ready; made anew while the user changes the setup
-  /// meanwhile, as by showing all lines in another arrangement.
-  func prepared(_ session: Session, result: ResultState?) async -> PreparedSession {
+  /// What the panes show for `shown`, made away from the main actor for the setup of the panes
+  /// once it is ready; made anew while the user changes the setup meanwhile, as by showing all
+  /// lines in another arrangement.
+  func prepared(_ shown: ShownSession) async -> PreparedSession {
     while true {
-      if let prepared = await presentation.prepare(session, result: result) {
+      if let prepared = await presentation.prepare(shown) {
         return prepared
       }
     }
@@ -189,12 +188,8 @@ extension SessionWindowController {
     {
       older.rowLayout.letGoOfDisplayTexts()
     }
-    comparisonShownBefore = previous.session
-    presentation.show(
-      Dictionary(
-        uniqueKeysWithValues: session.roles.map { role in
-          (role, SideHeader(role: role, session: session, context: context))
-        }))
+    comparisonShownBefore = previous.shown.session
+    presentation.show(SideHeader.headers(of: session, context: context))
     detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
     presentation.colorSyntax(as: syntaxLanguage)
     sessionDidChange()
@@ -208,9 +203,7 @@ extension SessionWindowController {
 
   /// The comparison that the window shows now, as undo and redo bring it back.
   private var shownComparison: ShownComparison {
-    ShownComparison(
-      session: presentation.changes.session, result: presentation.result,
-      usesIgnoreRules: usesIgnoreRules)
+    ShownComparison(shown: presentation.shown, usesIgnoreRules: usesIgnoreRules)
   }
 
   /// Registers the step that shows `comparison` again, named `name`: on the undo stack, or on
@@ -246,7 +239,7 @@ extension SessionWindowController {
     comparisonReturn = Task {
       var prepared: PreparedSession?
       while prepared == nil, !Task.isCancelled {
-        prepared = await presentation.prepare(comparison.session, result: comparison.result)
+        prepared = await presentation.prepare(comparison.shown)
       }
       if let prepared, !Task.isCancelled {
         show(prepared, named: nil)
@@ -296,11 +289,8 @@ extension SessionWindowController {
 
 /// A comparison that the window showed, with all that undo and redo bring back of it.
 private struct ShownComparison {
-  /// The comparison of the files.
-  var session: Session
-
-  /// The result of a merge, or `nil` for a comparison of two files.
-  var result: ResultState?
+  /// The comparison of the files, with the result of a merge.
+  var shown: ShownSession
 
   /// Whether the window used the ignore rules of Settings.
   var usesIgnoreRules: Bool

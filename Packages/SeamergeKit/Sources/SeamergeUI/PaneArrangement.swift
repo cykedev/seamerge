@@ -18,7 +18,7 @@ struct PaneArrangement: Equatable {
   init(session: Session) {
     switch session.kind {
     case .merge:
-      sourceRoles = [.a, .base, .b].filter(session.roles.contains)
+      sourceRoles = session.inputs.base == nil ? [.a, .b] : [.a, .base, .b]
       showsResult = true
     case .diff:
       sourceRoles = [.a, .b]

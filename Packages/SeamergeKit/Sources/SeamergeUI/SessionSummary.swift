@@ -39,15 +39,14 @@ struct SessionSummary: Equatable {
       .compactMap(\.self).joined(separator: Self.separator)
     let modeNotes = modeNote.isEmpty ? nil : modeNote
     if arrangement.showsResult {
-      let file = session.file(for: .b)
-      title =
-        context.resultURL?.lastPathComponent ?? file?.url?.lastPathComponent ?? file?.label ?? ""
+      let file = session.inputs.b
+      title = context.resultURL?.lastPathComponent ?? file.url?.lastPathComponent ?? file.label
       self.changes = [isComparing ? nil : Self.changeCounts(of: changes), modeNotes]
         .compactMap(\.self).joined(separator: Self.separator)
     } else {
       title =
         context.difftool?.path
-        ?? Self.title(of: arrangement.sourceRoles.compactMap(session.file(for:)))
+        ?? Self.title(of: arrangement.sourceRoles.compactMap { session.inputs[$0] })
       self.changes = modeNote
     }
     operation = context.git?.rebaseProgress.map { progress in

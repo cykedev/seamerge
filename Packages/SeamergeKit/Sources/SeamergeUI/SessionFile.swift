@@ -34,7 +34,7 @@ extension Session {
       return try await merge(
         base: baseFile, a: aFile, b: bFile, options: ComparisonOptions(mode: mode))
     } catch {
-      throw SessionLoadingError(error, files: [.base: base, .a: a, .b: b].compactMapValues(\.self))
+      throw SessionLoadingError(error, files: Inputs(base: base, a: a, b: b))
     }
   }
 
@@ -52,7 +52,7 @@ extension Session {
     do {
       return try await diff(old: oldFile, new: newFile, mode: mode, ignoring: rules)
     } catch {
-      throw SessionLoadingError(error, files: [.a: old, .b: new])
+      throw SessionLoadingError(error, files: Inputs(a: old, b: new))
     }
   }
 
@@ -60,17 +60,14 @@ extension Session {
   ///
   /// - Throws: ``SessionLoadingError`` with the first file that cannot be read or is not text.
   @concurrent
-  static func read(_ files: [Role: SessionFile]) async throws(SessionLoadingError) -> [Role:
-    SourceFile]
-  {
-    var read: [Role: SourceFile] = [:]
-    for role in Role.allCases {
-      guard let file = files[role] else { continue }
+  static func read(
+    _ files: Inputs<SessionFile>
+  ) async throws(SessionLoadingError) -> Inputs<SourceFile> {
+    try files.mapValues { file throws(SessionLoadingError) in
       let source = try Self.read(file)
       guard !source.isBinary else { throw .binaryFile(file.url) }
-      read[role] = source
+      return source
     }
-    return read
   }
 
   /// Reads `file`; `/dev/null`, the missing side of a new or a deleted file, is empty, since it

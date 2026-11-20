@@ -247,7 +247,7 @@ extension SessionWindowController {
   /// The file behind the pane of `role`, or behind the result for `nil`.
   private func fileURL(of role: Role?) -> URL? {
     guard let role else { return context.resultURL }
-    return presentation.changes.session.file(for: role)?.url
+    return presentation.changes.session.inputs[role]?.url
   }
 
   private func item(_ title: String, action: Selector, target: AnyObject) -> NSMenuItem {

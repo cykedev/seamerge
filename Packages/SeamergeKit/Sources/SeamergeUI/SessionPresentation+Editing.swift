@@ -7,14 +7,12 @@ import os
 /// never part.
 extension SessionPresentation {
   /// Carries out `plan`, a plan of the result document for a command, in the result pane and the
-  /// document, shows the outcome, and returns the step that takes it back.
+  /// document, shows the outcome, and returns the step that takes it back; `nil` for a
+  /// comparison, which has no result to carry it out in.
   ///
-  /// - Precondition: The window shows a merge, and `plan` was made for its result as it is.
-  @discardableResult
-  func carryOut(_ plan: EditPlan) -> UndoStep {
-    guard let result, let resultPane = layout.resultPane else {
-      preconditionFailure("Only a merge has a result")
-    }
+  /// - Precondition: `plan` was made for the result as it is.
+  func carryOut(_ plan: EditPlan) -> UndoStep? {
+    guard let result, let resultPane = layout.resultPane else { return nil }
     pendingTyping = nil
     var text = result.resultText
     var edits: [PaneEdit] = []
@@ -29,16 +27,8 @@ extension SessionPresentation {
     isCarryingOut = true
     resultPane.carryOut(edits)
     isCarryingOut = false
-    show(ResultState(document: document, resultText: text), after: edits)
+    show(ResultState(document: document, resultText: text), in: resultPane, after: edits)
     return step
-  }
-
-  /// The offset in the result pane's text of `offset` of the result text.
-  ///
-  /// - Precondition: The window shows a merge.
-  func paneOffset(ofResultOffset offset: Int) -> Int {
-    guard let result else { preconditionFailure("Only a merge has a result") }
-    return result.resultText.paneOffset(ofFileOffset: offset)
   }
 }
 
@@ -68,7 +58,7 @@ extension SessionPresentation: PaneEditingDelegate {
       // Only edits that the document planned should reach here.
       pendingTyping = nil
       Self.logger.error("The result pane carried out edits that were not planned")
-      show(edits.reduce(result) { Self.attributing($1, to: $0) }, anew: true)
+      show(edits.reduce(result) { Self.attributing($1, to: $0) }, in: pane, anew: true)
       delegate?.presentationDidTakeOverUnannouncedChange(self)
       return
     }
@@ -77,7 +67,7 @@ extension SessionPresentation: PaneEditingDelegate {
     let replaced = pending.plan.replacements.map { text.carryOut($0).replacedText }
     var document = result.document
     let step = document.apply(pending.plan, replacedTexts: replaced)
-    show(ResultState(document: document, resultText: text), after: edits)
+    show(ResultState(document: document, resultText: text), in: pane, after: edits)
     if let first = edits.first, let last = edits.last {
       delegate?.presentation(
         self, didType: step, at: first.range,
@@ -98,7 +88,7 @@ extension SessionPresentation: PaneEditingDelegate {
     guard let result else { return }
     Self.logger.error(
       "The result changed without an announcement at \(edit.range, privacy: .public)")
-    takeOverUnannounced(Self.attributing(edit, to: result))
+    takeOverUnannounced(Self.attributing(edit, to: result), in: pane)
   }
 
   /// `result` after `edit` of the pane's text, attributed to the segments as typing is.

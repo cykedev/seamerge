@@ -118,7 +118,7 @@ extension SessionWindowController {
   /// The side of `role` in a patch: missing where the window compares with `/dev/null`, as for a
   /// new or a deleted file.
   private func patchSide(of role: Role) -> UnifiedDiff.File.Side {
-    guard let file = presentation.changes.session.file(for: role) else { return .missing }
+    guard let file = presentation.changes.session.inputs[role] else { return .missing }
     if let url = file.url, FileOrigin(url: url) == .missing {
       return .missing
     }
@@ -127,7 +127,7 @@ extension SessionWindowController {
 
   /// The name of the side of `role` as its header shows it.
   private func sideName(of role: Role) -> String {
-    presentation.headers[role]?.name ?? presentation.changes.session.file(for: role)?.label ?? ""
+    presentation.headers[role]?.name ?? presentation.changes.session.inputs[role]?.label ?? ""
   }
 
   /// The name the choice of the place of the patch suggests: the names of two folders, a name

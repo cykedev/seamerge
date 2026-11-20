@@ -361,7 +361,7 @@ import Testing
     #expect(!column.content.ignoredDifferencePlaces.isEmpty)
 
     let other = try await SampleDiffs.diff(old: "one\ntwo\n", new: "one\nthree\n")
-    controller.presentation.show(other, result: nil)
+    controller.presentation.show(.comparison(other))
     #expect(column.content.text == SingleColumnLayout(session: other).displayText.string)
     #expect(controller.presentation.lineArrangement == .singleColumn)
   }

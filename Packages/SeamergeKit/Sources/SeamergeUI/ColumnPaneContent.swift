@@ -18,10 +18,10 @@ extension PaneContent {
   ///   - ignoredDifferences: The lines whose differences the comparison ignores, which get a ring
   ///     in the gutter.
   ///   - showsIgnoredPlaces: Whether the places where those lines differ are highlighted.
-  /// - Precondition: `column` lays out the session of `changes`, a comparison, and `lineEndings`
-  ///   has the endings of both its files.
+  /// - Precondition: `column` lays out the session of `changes`, a comparison.
   init(
-    column: SingleColumnLayout, of changes: SessionChanges, lineEndings: [Role: [LineEnding?]],
+    column: SingleColumnLayout, of changes: SessionChanges,
+    lineEndings: Session.Inputs<[LineEnding?]>,
     ignoredDifferences: IgnoredDifferences, showsIgnoredPlaces: Bool
   ) {
     let session = changes.session
@@ -31,10 +31,8 @@ extension PaneContent {
       self = .empty
       return
     }
-    guard let firstEndings = lineEndings[firstSide], let secondEndings = lineEndings[secondSide]
-    else {
-      preconditionFailure("The line endings of both files are needed")
-    }
+    let (firstEndings, secondEndings) =
+      firstSide == .a ? (lineEndings.a, lineEndings.b) : (lineEndings.b, lineEndings.a)
     var left: [Int32] = []
     var right: [Int32] = []
     var endings: [LineEnding?] = []

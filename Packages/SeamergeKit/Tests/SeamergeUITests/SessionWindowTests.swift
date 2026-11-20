@@ -37,7 +37,7 @@ import Testing
 
   @Test func ordinaryMergePutsTheRoleAfterTheName() async throws {
     let (session, context) = try await Scenario.merges[0].load()
-    let header = SideHeader(role: .a, session: session, context: context)
+    let header = try #require(SideHeader.headers(of: session, context: context)[.a])
     #expect(header.name == "feature")
     #expect(header.roleText == "incoming")
     #expect(header.rolePlacement == .afterName)
@@ -47,7 +47,7 @@ import Testing
   func otherOperationsPutTheRoleBeforeTheName(scenario name: String) async throws {
     let scenario = try #require(Scenario.merges.first { $0.name == name })
     let (session, context) = try await scenario.load()
-    let header = SideHeader(role: .a, session: session, context: context)
+    let header = try #require(SideHeader.headers(of: session, context: context)[.a])
     #expect(header.roleText != nil)
     #expect(header.rolePlacement == .beforeName)
     #expect(header.spokenName.hasPrefix("A, \(header.roleText ?? ""), "))
@@ -59,7 +59,7 @@ import Testing
       a: SourceFile(bytes: Data("one\n".utf8), label: "first\nline\u{2028}name"),
       b: SourceFile(bytes: Data("one\nTWO\n".utf8), label: "b"))
 
-    let header = SideHeader(role: .a, session: session, context: SessionContext())
+    let header = try #require(SideHeader.headers(of: session, context: SessionContext())[.a])
     #expect(header.name == "first line name")
     // The preview of the conflict names the side that removed the line, and the window opens.
     let controller = try Windows.controller(for: session)

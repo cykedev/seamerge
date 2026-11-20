@@ -15,11 +15,11 @@ public enum SessionLoadingError: LocalizedError, Equatable {
   /// The comparison failed for another reason.
   case comparisonFailed
 
-  /// Why the comparison of `files`, the files of each role, failed.
-  init(_ error: MergeModelError, files: [Role: SessionFile]) {
+  /// Why the comparison of `files` failed, if the files are known.
+  init(_ error: MergeModelError, files: Session.Inputs<SessionFile>?) {
     self =
       switch error {
-      case .binaryInput(let role): files[role].map { .binaryFile($0.url) } ?? .comparisonFailed
+      case .binaryInput(let role): files?[role].map { .binaryFile($0.url) } ?? .comparisonFailed
       case .inputTooLarge, .outOfMemory: .filesTooLarge
       case .comparisonFailed, .unrepresentableText, .writingFailed: .comparisonFailed
       }

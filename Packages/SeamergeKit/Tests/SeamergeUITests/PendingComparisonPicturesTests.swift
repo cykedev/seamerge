@@ -9,20 +9,18 @@ import Testing
 /// and at the least size.
 @MainActor
 @Suite(.serialized) struct PendingComparisonPicturesTests {
-  private static let files = [
-    Role.a: SessionFile(url: URL(filePath: "/tmp/old/Greeting.swift"), label: "Greeting.swift"),
-    .b: SessionFile(url: URL(filePath: "/tmp/new/Greeting.swift"), label: "Greeting.swift"),
-  ]
+  private static let files = Session.Inputs(
+    a: SessionFile(url: URL(filePath: "/tmp/old/Greeting.swift"), label: "Greeting.swift"),
+    b: SessionFile(url: URL(filePath: "/tmp/new/Greeting.swift"), label: "Greeting.swift"))
 
-  private static let mergeFiles = [
-    Role.base: SessionFile(url: URL(filePath: "/tmp/base/Settings.swift"), label: "Settings.swift"),
-    .a: SessionFile(url: URL(filePath: "/tmp/theirs/Settings.swift"), label: "Settings.swift"),
-    .b: SessionFile(url: URL(filePath: "/tmp/ours/Settings.swift"), label: "Settings.swift"),
-  ]
+  private static let mergeFiles = Session.Inputs(
+    base: SessionFile(url: URL(filePath: "/tmp/base/Settings.swift"), label: "Settings.swift"),
+    a: SessionFile(url: URL(filePath: "/tmp/theirs/Settings.swift"), label: "Settings.swift"),
+    b: SessionFile(url: URL(filePath: "/tmp/ours/Settings.swift"), label: "Settings.swift"))
 
   /// Draws the window that waits for the comparison of `files`, a comparison that never ends.
   private func picture(
-    _ files: [Role: SessionFile], kind: Session.Kind, look: Look,
+    _ files: Session.Inputs<SessionFile>, kind: Session.Kind, look: Look,
     options: DisplayOptions = DisplayOptions(), size: CGSize? = WindowMetrics.defaultContentSize,
     named name: String
   ) async throws {

@@ -77,7 +77,7 @@ import Testing
       labels(of: controller) == [
         "A, notes.txt, Earlier Version", "B, notes.txt, Later Version",
       ])
-    let header = SideHeader(role: .a, session: session, context: SessionContext())
+    let header = try #require(SideHeader.headers(of: session, context: SessionContext())[.a])
     #expect(header.details.location == "/private/var/folders/xy/T/git-blob-QQ1247/notes.txt")
   }
 

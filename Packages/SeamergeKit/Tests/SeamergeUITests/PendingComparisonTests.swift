@@ -22,19 +22,17 @@ import Testing
     }
   }
 
-  private static let files = [
-    Role.a: SessionFile(url: URL(filePath: "/tmp/old/Greeting.swift"), label: "Greeting.swift"),
-    .b: SessionFile(url: URL(filePath: "/tmp/new/Greeting.swift"), label: "Greeting.swift"),
-  ]
+  private static let files = Session.Inputs(
+    a: SessionFile(url: URL(filePath: "/tmp/old/Greeting.swift"), label: "Greeting.swift"),
+    b: SessionFile(url: URL(filePath: "/tmp/new/Greeting.swift"), label: "Greeting.swift"))
 
-  private static let mergeFiles = [
-    Role.base: SessionFile(url: URL(filePath: "/tmp/base/Settings.swift"), label: "Settings.swift"),
-    .a: SessionFile(url: URL(filePath: "/tmp/theirs/Settings.swift"), label: "Settings.swift"),
-    .b: SessionFile(url: URL(filePath: "/tmp/ours/Settings.swift"), label: "Settings.swift"),
-  ]
+  private static let mergeFiles = Session.Inputs(
+    base: SessionFile(url: URL(filePath: "/tmp/base/Settings.swift"), label: "Settings.swift"),
+    a: SessionFile(url: URL(filePath: "/tmp/theirs/Settings.swift"), label: "Settings.swift"),
+    b: SessionFile(url: URL(filePath: "/tmp/ours/Settings.swift"), label: "Settings.swift"))
 
   private func waiting(
-    for files: [Role: SessionFile] = files, kind: Session.Kind = .diff,
+    for files: Session.Inputs<SessionFile> = files, kind: Session.Kind = .diff,
     options: DisplayOptions = DisplayOptions(reducesMotion: true)
   ) async throws -> Waiting {
     let (outcomes, continuation) = AsyncStream.makeStream(
@@ -233,10 +231,9 @@ import Testing
     let opened = try Windows.controller(for: session)
     defer { opened.window?.close() }
     let controller = try await SessionWindowController.open(
-      [
-        .a: SessionFile(url: try files.file("old.txt"), label: "Greeting.swift"),
-        .b: SessionFile(url: try files.file("new.txt"), label: "Greeting.swift"),
-      ],
+      Session.Inputs(
+        a: SessionFile(url: try files.file("old.txt"), label: "Greeting.swift"),
+        b: SessionFile(url: try files.file("new.txt"), label: "Greeting.swift")),
       kind: .diff, mode: .windowDefault, context: SessionContext(), undoManager: UndoManager(),
       settings: .private(), waitingAtMost: 30
     ) { _ in session }
@@ -254,10 +251,9 @@ import Testing
     let (outcomes, continuation) = AsyncStream.makeStream(of: Session.self)
     defer { continuation.finish() }
     let controller = try await SessionWindowController.open(
-      [
-        .a: SessionFile(url: try files.file("old.txt"), label: "Greeting.swift"),
-        .b: SessionFile(url: try files.file("new.txt"), label: "Greeting.swift"),
-      ],
+      Session.Inputs(
+        a: SessionFile(url: try files.file("old.txt"), label: "Greeting.swift"),
+        b: SessionFile(url: try files.file("new.txt"), label: "Greeting.swift")),
       kind: .diff, mode: .windowDefault, context: SessionContext(), undoManager: UndoManager(),
       settings: .private(), waitingAtMost: 0
     ) { _ throws(SessionLoadingError) in

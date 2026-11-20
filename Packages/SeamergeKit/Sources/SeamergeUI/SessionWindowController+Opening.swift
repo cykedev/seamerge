@@ -21,19 +21,16 @@ extension SessionWindowController {
     base: SessionFile?, a: SessionFile, b: SessionFile, mode: ComparisonMode,
     context: SessionContext, undoManager: UndoManager, settings: UserSettings
   ) async throws(SessionLoadingError) -> SessionWindowController {
-    try await open(
-      [.base: base, .a: a, .b: b].compactMapValues(\.self), kind: .merge, mode: mode,
-      context: context, undoManager: undoManager, settings: settings
-    ) { files throws(SessionLoadingError) in
-      guard let aFile = files[.a], let bFile = files[.b] else {
-        preconditionFailure("A merge has the inputs A and B")
-      }
+    let files = Session.Inputs(base: base, a: a, b: b)
+    return try await open(
+      files, kind: .merge, mode: mode, context: context, undoManager: undoManager,
+      settings: settings
+    ) { read throws(SessionLoadingError) in
       do throws(MergeModelError) {
         return try await Session.merge(
-          base: files[.base], a: aFile, b: bFile, options: ComparisonOptions(mode: mode))
+          base: read.base, a: read.a, b: read.b, options: ComparisonOptions(mode: mode))
       } catch {
-        throw SessionLoadingError(
-          error, files: [.base: base, .a: a, .b: b].compactMapValues(\.self))
+        throw SessionLoadingError(error, files: files)
       }
     }
   }
@@ -52,17 +49,15 @@ extension SessionWindowController {
     old: SessionFile, new: SessionFile, mode: ComparisonMode, ignoring rules: [IgnoreRule] = [],
     context: SessionContext, undoManager: UndoManager, settings: UserSettings
   ) async throws(SessionLoadingError) -> SessionWindowController {
-    try await open(
-      [.a: old, .b: new], kind: .diff, mode: mode, context: context,
-      undoManager: undoManager, settings: settings
-    ) { files throws(SessionLoadingError) in
-      guard let a = files[.a], let b = files[.b] else {
-        preconditionFailure("A comparison has the inputs A and B")
-      }
+    let files = Session.Inputs(a: old, b: new)
+    return try await open(
+      files, kind: .diff, mode: mode, context: context, undoManager: undoManager,
+      settings: settings
+    ) { read throws(SessionLoadingError) in
       do throws(MergeModelError) {
-        return try await Session.diff(old: a, new: b, mode: mode, ignoring: rules)
+        return try await Session.diff(old: read.a, new: read.b, mode: mode, ignoring: rules)
       } catch {
-        throw SessionLoadingError(error, files: [.a: old, .b: new])
+        throw SessionLoadingError(error, files: files)
       }
     }
   }
@@ -75,10 +70,11 @@ extension SessionWindowController {
   /// fills the window before it returns, so that it shows filled; otherwise the window returns
   /// to show while it waits.
   static func open(
-    _ files: [Role: SessionFile], kind: Session.Kind, mode: ComparisonMode,
+    _ files: Session.Inputs<SessionFile>, kind: Session.Kind, mode: ComparisonMode,
     context: SessionContext, undoManager: UndoManager, settings: UserSettings,
     waitingAtMost wait: TimeInterval = comparisonWait,
-    compare: @escaping @Sendable ([Role: SourceFile]) async throws(SessionLoadingError) -> Session
+    compare:
+      @escaping @Sendable (Session.Inputs<SourceFile>) async throws(SessionLoadingError) -> Session
   ) async throws(SessionLoadingError) -> SessionWindowController {
     let start = ContinuousClock.now
     let read = try await Session.read(files)
@@ -155,21 +151,16 @@ extension SessionWindowController {
   ///
   /// - Throws: ``SessionLoadingError/comparisonFailed`` if even that fails.
   static func emptySession(
-    of files: [Role: SessionFile], kind: Session.Kind, mode: ComparisonMode
+    of files: Session.Inputs<SessionFile>, kind: Session.Kind, mode: ComparisonMode
   ) async throws(SessionLoadingError) -> Session {
-    let empty = { (role: Role) in
-      files[role].map { SourceFile(bytes: Data(), label: $0.label, url: $0.url) }
-    }
-    guard let a = empty(.a), let b = empty(.b) else {
-      preconditionFailure("Every session has the inputs A and B")
-    }
+    let empty = files.mapValues { SourceFile(bytes: Data(), label: $0.label, url: $0.url) }
     do {
       switch kind {
       case .merge:
         return try await Session.merge(
-          base: empty(.base), a: a, b: b, options: ComparisonOptions(mode: mode))
+          base: empty.base, a: empty.a, b: empty.b, options: ComparisonOptions(mode: mode))
       case .diff:
-        return try await Session.diff(old: a, new: b, mode: mode)
+        return try await Session.diff(old: empty.a, new: empty.b, mode: mode)
       }
     } catch {
       throw .comparisonFailed
@@ -241,11 +232,7 @@ extension SessionWindowController {
     var failure: String?
     switch outcome {
     case .success(let session):
-      let headers = Dictionary(
-        uniqueKeysWithValues: session.roles.map { role in
-          (role, SideHeader(role: role, session: session, context: context))
-        })
-      presentation.show(headers)
+      presentation.show(SideHeader.headers(of: session, context: context))
       let prepared = await presentation.prepareLoaded(session)
       guard !hasFinished else { return }
       fadeInTheLines()
@@ -258,7 +245,7 @@ extension SessionWindowController {
       presentation.colorSyntax(as: syntaxLanguage)
     case .failure(let reason):
       let session = presentation.changes.session
-      guard let old = file(of: .a, in: session), let new = file(of: .b, in: session) else {
+      guard let old = Self.file(session.inputs.a), let new = Self.file(session.inputs.b) else {
         return
       }
       let comparison = UnavailableComparison(old: old, new: new, reason: reason)
@@ -302,10 +289,9 @@ extension SessionWindowController {
     )
   }
 
-  /// The file of the window in `role`, as the session without lines names it.
-  private func file(of role: Role, in session: Session) -> SessionFile? {
-    guard let file = session.file(for: role), let url = file.url else { return nil }
-    return SessionFile(url: url, label: file.label)
+  /// The file of the window that `file` of the session without lines names, if it has a path.
+  private static func file(_ file: SourceFile) -> SessionFile? {
+    file.url.map { SessionFile(url: $0, label: file.label) }
   }
 
   /// Lets the lines fade in where the empty panes stood, unless movement is reduced or the

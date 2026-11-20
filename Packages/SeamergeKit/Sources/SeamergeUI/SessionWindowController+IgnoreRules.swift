@@ -94,7 +94,7 @@ extension SessionWindowController {
       }
       // The undo of the switch takes the window back to whether it used rules before.
       show(
-        await prepared(switched, result: nil),
+        await prepared(.comparison(switched)),
         named: usingIgnoreRules == nil ? nil : Self.switchName)
       usesIgnoreRules = uses
     }

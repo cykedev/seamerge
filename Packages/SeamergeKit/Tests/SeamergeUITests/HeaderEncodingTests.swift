@@ -10,7 +10,7 @@ import Testing
 @Suite struct HeaderEncodingTests {
   @Test func headerNamesTheEncodingOnlyWhereTheSidesDiffer() async throws {
     let same = try await SampleMerges.helloWorld()
-    let header = SideHeader(role: .a, session: same, context: SessionContext())
+    let header = try #require(SideHeader.headers(of: same, context: SessionContext())[.a])
     #expect(header.differingEncoding == nil)
     #expect(header.details.encoding == .utf8)
     #expect(ResultHeader(session: same, context: SessionContext()).format?.encoding == .utf8)
@@ -20,8 +20,8 @@ import Testing
       base: SourceFile(bytes: Data("caf\u{E9}\n".utf8), label: "base.txt"),
       a: SourceFile(bytes: Data("caf\u{E9}!\n".utf8), label: "a.txt"),
       b: SourceFile(bytes: windows, label: "b.txt"))
-    let a = SideHeader(role: .a, session: session, context: SessionContext())
-    let b = SideHeader(role: .b, session: session, context: SessionContext())
+    let headers = SideHeader.headers(of: session, context: SessionContext())
+    let (a, b) = (try #require(headers[.a]), try #require(headers[.b]))
     #expect(a.differingEncoding == .utf8)
     #expect(b.differingEncoding == .windows1252)
     #expect(b.differingEncoding?.name == "Windows 1252")

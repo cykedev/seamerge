@@ -27,7 +27,7 @@ struct InputLines: Sendable {
   /// since one comparison mode ends lines at more places than another or at the same.
   func carried(to session: Session) -> InputLines {
     var carried = InputLines(session: session)
-    for role in session.roles where keepsLines(of: role, in: session) {
+    for role in session.inputs.roles where keepsLines(of: role, in: session) {
       carried.texts[role] = texts[role]
       carried.endings[role] = endings[role]
     }
@@ -42,7 +42,7 @@ struct InputLines: Sendable {
 
   /// Whether the input of `role` has the same bytes and lines in `other` as in this session.
   private func keepsLines(of role: Role, in other: Session) -> Bool {
-    guard let file = session.file(for: role), let otherFile = other.file(for: role) else {
+    guard let file = session.inputs[role], let otherFile = other.inputs[role] else {
       return false
     }
     return session.rowLayout.lineCount(in: role) == other.rowLayout.lineCount(in: role)
@@ -70,7 +70,7 @@ struct InputLines: Sendable {
     if let endings = endings[role] {
       return endings
     }
-    guard let file = session.file(for: role) else {
+    guard let file = session.inputs[role] else {
       preconditionFailure("The session has no input \(role)")
     }
     let lineEndings = PaneContent.lineEndings(

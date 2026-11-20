@@ -46,7 +46,8 @@ struct SavedResult: Equatable {
     text = result.text
     segments = result.document.segments
     options = session.options
-    sources = Role.allCases.map { session.file(for: $0)?.bytes }
+    let files = session.inputs
+    sources = Role.allCases.map { files[$0]?.bytes }
     self.format = format
   }
 

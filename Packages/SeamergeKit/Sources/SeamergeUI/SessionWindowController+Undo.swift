@@ -31,7 +31,8 @@ extension SessionWindowController {
   func carryOut(_ plan: EditPlan, named name: String) {
     guard !plan.isEmpty else { return }
     typingRun = nil
-    registerUndo(of: presentation.carryOut(plan), named: name)
+    guard let step = presentation.carryOut(plan) else { return }
+    registerUndo(of: step, named: name)
   }
 
   /// Takes `step` of typing over into the run of typing it continues, or starts a run with it;
@@ -110,7 +111,8 @@ extension SessionWindowController {
   private func takeBack(_ step: UndoStep, named name: String) {
     typingRun = nil
     let isUndoing = sessionUndoManager.isUndoing
-    registerUndo(of: presentation.carryOut(step.undoPlan), named: name)
+    guard let undone = presentation.carryOut(step.undoPlan) else { return }
+    registerUndo(of: undone, named: name)
     announceOutcome(
       isUndoing
         ? sessionUndoManager.undoMenuTitle(forUndoActionName: name)

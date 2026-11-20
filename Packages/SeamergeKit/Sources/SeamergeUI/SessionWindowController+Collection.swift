@@ -115,7 +115,7 @@ extension SessionWindowController {
       number: 1, count: max(collection.expectedCount ?? 0, listed.count))
     return CollectionOpening(
       session: try await emptySession(
-        of: [.a: file.old, .b: file.new], kind: .diff, mode: mode),
+        of: Session.Inputs(a: file.old, b: file.new), kind: .diff, mode: mode),
       context: SessionContext(difftool: difftool, folders: collection.namingFolders),
       comparison: comparison)
   }
@@ -285,7 +285,7 @@ extension SessionWindowController {
   private func showWithoutLines(_ file: CollectedFile) async -> Bool {
     guard
       let empty = try? await Self.emptySession(
-        of: [.a: file.old, .b: file.new], kind: .diff, mode: comparisonOptions.mode)
+        of: Session.Inputs(a: file.old, b: file.new), kind: .diff, mode: comparisonOptions.mode)
     else { return false }
     let prepared = await presentation.prepareLoaded(empty)
     guard !Task.isCancelled, shownFile == file, !hasFinished else { return false }
@@ -530,11 +530,7 @@ extension SessionWindowController {
     }
     typingRun = nil
     presentation.showOtherFiles(prepared)
-    presentation.show(
-      Dictionary(
-        uniqueKeysWithValues: session.roles.map { role in
-          (role, SideHeader(role: role, session: session, context: context))
-        }))
+    presentation.show(SideHeader.headers(of: session, context: context))
     detectedLanguage = SessionSyntax.language(of: session, resultURL: nil)
     syntaxPath = SessionSyntax.path(of: session, resultURL: nil)
     presentation.colorSyntax(as: syntaxLanguage)

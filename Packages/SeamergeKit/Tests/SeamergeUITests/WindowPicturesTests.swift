@@ -205,7 +205,7 @@ import Testing
   func detailsOfASideArePictured(look: Look) async throws {
     let scenario = try #require(Scenario.merges.first { $0.name == "rebase" })
     let (session, context) = try await scenario.load()
-    let header = SideHeader(role: .a, session: session, context: context)
+    let header = try #require(SideHeader.headers(of: session, context: context)[.a])
     let view = NSHostingView(rootView: SideDetailsView(header: header, theme: .init()))
     let window = NSWindow(
       contentRect: CGRect(origin: .zero, size: view.fittingSize), styleMask: [.borderless],

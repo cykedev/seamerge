@@ -8,8 +8,7 @@ extension SessionWindowController {
   /// Watches the files of the session and the file of the result, each once; files watched
   /// already go on being watched.
   func watchFiles() {
-    let session = presentation.changes.session
-    var urls = session.roles.compactMap { session.file(for: $0)?.url }
+    var urls = presentation.changes.session.inputs.values.compactMap(\.url)
     if let url = saving?.url {
       urls.append(url)
     }
@@ -108,19 +107,14 @@ extension SessionWindowController {
   /// Compares the files of the session anew if one of them changed on disk.
   private func reloadChangedSources() async {
     let session = presentation.changes.session
-    var files: [Role: SourceFile] = [:]
     var changed: [Role] = []
-    for role in session.roles {
-      guard let file = session.file(for: role) else { continue }
+    let files = session.inputs.mapValuesWithRoles { role, file in
       guard let url = file.url,
         let bytes = FileManager.default.contents(atPath: url.path(percentEncoded: false)),
         bytes != file.bytes, seenOnDisk[url] != bytes
-      else {
-        files[role] = file
-        continue
-      }
-      files[role] = SourceFile(bytes: bytes, label: file.label, url: url)
+      else { return file }
       changed.append(role)
+      return SourceFile(bytes: bytes, label: file.label, url: url)
     }
     guard !changed.isEmpty, let reloaded = await compare(files, as: session) else { return }
     let name = changed.count == 1 ? presentation.headers[changed[0]]?.distinctName : nil
@@ -139,15 +133,17 @@ extension SessionWindowController {
   /// The comparison of `files` in the kind and with the options and ignore rules of `session`,
   /// or `nil` if they cannot be compared, such as after one became binary; the window then keeps
   /// what it shows.
-  private func compare(_ files: [Role: SourceFile], as session: Session) async -> Session? {
-    guard let a = files[.a], let b = files[.b] else { return nil }
+  private func compare(
+    _ files: Session.Inputs<SourceFile>, as session: Session
+  ) async -> Session? {
     do {
       switch session.kind {
       case .merge:
-        return try await Session.merge(base: files[.base], a: a, b: b, options: session.options)
+        return try await Session.merge(
+          base: files.base, a: files.a, b: files.b, options: session.options)
       case .diff:
         return try await Session.diff(
-          old: a, new: b, mode: session.options.mode, ignoring: session.ignoreRules)
+          old: files.a, new: files.b, mode: session.options.mode, ignoring: session.ignoreRules)
       }
     } catch {
       Self.logger.notice("The changed files cannot be compared: \(error, privacy: .public)")
@@ -166,7 +162,7 @@ extension SessionWindowController {
   ) async -> Bool {
     guard let window else { return false }
     guard presentation.result != nil else {
-      show(await prepared(session, result: nil), named: Self.reloadName)
+      show(await prepared(.comparison(session)), named: Self.reloadName)
       return true
     }
     // The user may decide or type while the new comparison is made ready; it then starts over
@@ -178,7 +174,7 @@ extension SessionWindowController {
         // Asking took a moment; a decision made meanwhile goes into the reload as well.
         guard isShowing(result) else { continue }
       }
-      let prepared = await prepared(reload.session, result: reload.result)
+      let prepared = await prepared(.merge(reload.result))
       guard isShowing(result) else { continue }
       show(prepared, named: Self.reloadName)
       return true
@@ -187,17 +183,16 @@ extension SessionWindowController {
   }
 
   /// What reloading `result` with `session`, a comparison of the files as they are now, makes
-  /// of it: the session and the result with each decision that belongs to the same block
+  /// of it: the result of the new merge with each decision that belongs to the same block
   /// without doubt, and how many decisions it discards; worked out away from the main actor.
   @concurrent
   private static func reloading(
     _ result: ResultState, to session: Session
-  ) async -> (session: Session, result: ResultState, discardedDecisionCount: Int) {
+  ) async -> (result: ResultState, discardedDecisionCount: Int) {
     let reload = result.document.planReloading(to: session, text: result.text)
     var document = result.document
     _ = document.apply(reload.plan, replacedTexts: [result.text])
     return (
-      document.session,
       ResultState(document: document, text: reload.plan.replacements.map(\.text).joined()),
       reload.discardedDecisionCount
     )
@@ -232,11 +227,9 @@ extension SessionWindowController {
 
   /// The files of the window in their roles, or `nil` if a file was not read from disk.
   var fileComparison: FileComparison? {
-    let session = presentation.changes.session
-    guard let left = session.file(for: .a)?.url, let right = session.file(for: .b)?.url else {
-      return nil
-    }
-    let base = session.file(for: .base)
+    let files = presentation.changes.session.inputs
+    guard let left = files.a.url, let right = files.b.url else { return nil }
+    let base = files.base
     guard base == nil || base?.url != nil else { return nil }
     return FileComparison(left: left, base: base?.url, right: right)
   }

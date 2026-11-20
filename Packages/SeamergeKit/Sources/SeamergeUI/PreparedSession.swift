@@ -73,8 +73,8 @@ struct PreparedSession: Sendable {
   /// The changed blocks of the session.
   let changes: SessionChanges
 
-  /// The result of a merge, or `nil` for a comparison.
-  let result: ResultState?
+  /// The session, with its result if it is a merge.
+  let shown: ShownSession
 
   /// The runs of unchanged rows, all collapsed that collapse in a new window.
   let collapsed: CollapsedRows
@@ -104,20 +104,16 @@ struct PreparedSession: Sendable {
   /// comparison mode ignores, if that was worked out beforehand.
   let hasPlacesOfIgnoredChanges: Bool?
 
-  /// Prepares what the panes show for `session`, with `result` as the result of a merge, as
-  /// `setup` says, with the runs of `collapsed`, or with every run collapsed that collapses in a
-  /// new window; `lines` are the lines worked out for a former comparison, of which those of
-  /// files that stayed the same are kept.
+  /// Prepares what the panes show for `shown`, as `setup` says, with the runs of `collapsed`, or
+  /// with every run collapsed that collapses in a new window; `lines` are the lines worked out
+  /// for a former comparison, of which those of files that stayed the same are kept.
   ///
-  /// - Precondition: A merge has a result and a comparison none; `collapsed` holds the runs of
-  ///   `session`.
+  /// - Precondition: `collapsed` holds the runs of the session.
   init(
-    session: Session, result: ResultState?, setup: PaneSetup, lines: InputLines,
-    collapsed: CollapsedRows? = nil
+    _ shown: ShownSession, setup: PaneSetup, lines: InputLines, collapsed: CollapsedRows? = nil
   ) {
     let basis = Basis(
-      session: session, result: result, setup: setup, lines: lines, collapsed: collapsed,
-      preparesPanes: false)
+      shown: shown, setup: setup, lines: lines, collapsed: collapsed, preparesPanes: false)
     var lines = basis.lines
     let sources = setup.arrangement.sourceRoles.map { basis.sourcePane(of: $0, lines: &lines) }
     let column = basis.column(lines: &lines)
@@ -126,16 +122,15 @@ struct PreparedSession: Sendable {
       column: column, resultPane: basis.resultPane(), hasPlacesOfIgnoredChanges: nil)
   }
 
-  /// Prepares what the panes show as ``init(session:result:setup:lines:collapsed:)`` does,
-  /// with every row collapsed that collapses in a new window, and makes the panes, the marks
-  /// and the result at the same time, each pane with what showing it takes worked out.
+  /// Prepares what the panes show as ``init(_:setup:lines:collapsed:)`` does, with every row
+  /// collapsed that collapses in a new window, and makes the panes, the marks and the result at
+  /// the same time, each pane with what showing it takes worked out.
   @concurrent
   static func concurrently(
-    session: Session, result: ResultState?, setup: PaneSetup, lines: InputLines
+    _ shown: ShownSession, setup: PaneSetup, lines: InputLines
   ) async -> PreparedSession {
     let basis = Basis(
-      session: session, result: result, setup: setup, lines: lines, collapsed: nil,
-      preparesPanes: true)
+      shown: shown, setup: setup, lines: lines, collapsed: nil, preparesPanes: true)
     let sources = await withTaskGroup(of: (SourcePane, InputLines).self) { group in
       for role in setup.arrangement.sourceRoles {
         group.addTask {
@@ -172,7 +167,7 @@ struct PreparedSession: Sendable {
   ) {
     setup = basis.setup
     changes = basis.changes
-    result = basis.result
+    shown = basis.shown
     collapsed = basis.collapsed
     ignoredDifferences = basis.ignoredDifferences
     self.lines = lines
@@ -190,10 +185,9 @@ struct PreparedSession: Sendable {
 
   /// What every pane of a prepared session is made from.
   private struct Basis: Sendable {
-    let session: Session
+    let shown: ShownSession
     let setup: PaneSetup
     let changes: SessionChanges
-    let result: ResultState?
     let collapsed: CollapsedRows
     let ignoredDifferences: IgnoredDifferences
     let lines: InputLines
@@ -201,16 +195,23 @@ struct PreparedSession: Sendable {
     /// Whether the contents of the panes come with what showing them takes worked out.
     let preparesPanes: Bool
 
+    var session: Session { shown.session }
+
+    var result: ResultState? { shown.result }
+
     init(
-      session: Session, result: ResultState?, setup: PaneSetup, lines: InputLines,
-      collapsed: CollapsedRows?, preparesPanes: Bool
+      shown: ShownSession, setup: PaneSetup, lines: InputLines, collapsed: CollapsedRows?,
+      preparesPanes: Bool
     ) {
-      precondition((result != nil) == setup.arrangement.showsResult, "Only a merge has a result")
-      self.session = session
+      precondition(
+        (shown.result != nil) == setup.arrangement.showsResult,
+        "A merge shows its result below the inputs, a comparison nothing")
+      let session = shown.session
+      self.shown = shown
       self.setup = setup
-      self.result = result
       changes = SessionChanges(session: session, origin: setup.arrangement.origin)
-      self.collapsed = collapsed ?? CollapsedRows(session: session, document: result?.document)
+      self.collapsed =
+        collapsed ?? CollapsedRows(session: session, document: shown.result?.document)
       ignoredDifferences = IgnoredDifferences(in: session)
       self.lines = lines.carried(to: session)
       self.preparesPanes = preparesPanes
@@ -293,7 +294,7 @@ struct PreparedSession: Sendable {
       layout: layout,
       content: PaneContent(
         column: layout, of: changes,
-        lineEndings: [.a: lines.endings(of: .a), .b: lines.endings(of: .b)],
+        lineEndings: Session.Inputs(a: lines.endings(of: .a), b: lines.endings(of: .b)),
         ignoredDifferences: ignoredDifferences, showsIgnoredPlaces: showsIgnoredPlaces),
       collapsedRuns: columnRuns(of: collapsed.runs, in: layout, collapsed: collapsed),
       marks: OverviewMarks.column(of: changes, column: layout))

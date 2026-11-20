@@ -24,7 +24,7 @@ extension SessionWindowController {
         + String(decoding: units[replacement.range.upperBound...], as: UTF16.self)
     }
     _ = document.apply(plan, replacedTexts: replaced)
-    presentation.show(document.session, result: ResultState(document: document, text: text))
+    presentation.show(.merge(ResultState(document: document, text: text)))
     stateDidChange()
   }
 }

@@ -11,7 +11,7 @@ import Testing
 @Suite struct SideNameTests {
   @Test func nameFromGitNamesTheSide() async throws {
     let (session, context) = try await Scenario.merges[0].load()
-    let a = SideHeader(role: .a, session: session, context: context)
+    let a = try #require(SideHeader.headers(of: session, context: context)[.a])
     #expect(a.distinctName == "feature")
     #expect(a.distinctName == a.name)
   }

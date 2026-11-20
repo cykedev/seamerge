@@ -63,19 +63,32 @@ struct SideHeader: Equatable {
   /// The facts for the popover.
   let details: Details
 
-  /// The header of the pane of `role`.
+  /// The headers of the panes of the inputs of `session` in `context`, by role.
+  static func headers(of session: Session, context: SessionContext) -> [Role: SideHeader] {
+    Dictionary(
+      uniqueKeysWithValues: session.inputs.map { role, file in
+        (role, SideHeader(role: role, file: file, session: session, context: context))
+      })
+  }
+
+  /// The header of the pane of `role` in `session` and `context`, or `nil` if the input does not
+  /// take part.
+  static func header(
+    of role: Role, in session: Session, context: SessionContext
+  ) -> SideHeader? {
+    session.inputs[role].map {
+      SideHeader(role: role, file: $0, session: session, context: context)
+    }
+  }
+
+  /// The header of the pane of `role`, whose file in `session` is `file`.
   ///
   /// The names come from Git where Git started the merge; otherwise, and for a side Git does not
   /// name, the label of the file stands in. A missing side of a comparison, `/dev/null` for a
   /// file that is new or deleted, is the new or the deleted file. Where both sides of a
   /// comparison have the same name, as the copies Git and Tower pass, the role tells them apart:
   /// the working copy, or else the earlier and the later version.
-  ///
-  /// - Precondition: `role` takes part in `session`.
-  init(role: Role, session: Session, context: SessionContext) {
-    guard let file = session.file(for: role) else {
-      preconditionFailure("The session has no input \(role)")
-    }
+  private init(role: Role, file: SourceFile, session: Session, context: SessionContext) {
     let side = context.git.map { git in
       switch role {
       case .a: git.remote
@@ -96,7 +109,7 @@ struct SideHeader: Equatable {
       case .rebase, .cherryPick, .revert, .stash: .beforeName
       }
     differingLineEndingStyle = session.lineEndingsDiffer ? file.lineEndingStyle : nil
-    let encodings = Set(session.roles.compactMap { session.file(for: $0)?.encoding })
+    let encodings = Set(session.inputs.values.compactMap(\.encoding))
     differingEncoding = encodings.count > 1 ? file.encoding : nil
     details = Details(
       commit: side?.commit,
@@ -133,7 +146,7 @@ struct SideHeader: Equatable {
     if let name = side?.name {
       return singleLine(text(of: name))
     }
-    let file = session.file(for: role)
+    let file = session.inputs[role]
     if session.kind == .diff, let url = file?.url, FileOrigin(url: url) == .missing {
       return role == .a
         ? String(
@@ -155,8 +168,7 @@ struct SideHeader: Equatable {
   ) -> String? {
     guard session.kind == .diff, role != .base else { return nil }
     let other: Role = role == .a ? .b : .a
-    guard session.file(for: other) != nil,
-      Self.name(of: other, session: session, context: context) == name
+    guard Self.name(of: other, session: session, context: context) == name
     else { return nil }
     if let folders = context.folders {
       let names = folders.distinctNames
@@ -171,14 +183,15 @@ struct SideHeader: Equatable {
   /// The label of the file of `role` on one line, if no other side that a sentence sets it
   /// against has a file of the same label: B for A, A for B, both for the base; else the letter.
   private static func distinctLabel(of role: Role, in session: Session) -> String {
-    let label = session.file(for: role)?.label ?? ""
+    let files = session.inputs
+    let label = files[role]?.label ?? ""
     let others: [Role] =
       switch role {
       case .a: [.b]
       case .b: [.a]
       case .base: [.a, .b]
       }
-    let isShared = others.contains { session.file(for: $0)?.label == label }
+    let isShared = others.contains { files[$0]?.label == label }
     return label.isEmpty || isShared ? role.letter : singleLine(label)
   }
 

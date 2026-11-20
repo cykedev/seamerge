@@ -24,8 +24,8 @@ struct ResultHeader: Equatable {
     path = context.resultURL.map(Self.path(of:))
     format = ResultFormat(resultOf: session)
     bWithMixedLineEndings =
-      session.file(for: .b)?.lineEndingStyle?.isMixed == true
-      ? SideHeader(role: .b, session: session, context: context).distinctName : nil
+      session.inputs.b.lineEndingStyle?.isMixed == true
+      ? SideHeader.header(of: .b, in: session, context: context)?.distinctName : nil
     callerIsGit = context.waitingCaller == .git
   }
 

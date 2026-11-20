@@ -230,7 +230,7 @@ extension SessionWindowController {
     guard let difftool = context.difftool else { return nil }
     let sides: [(Role, DiffSideRole)] = [(.b, difftool.rightRole), (.a, difftool.leftRole)]
     let role = sides.first { $0.1 == .workingCopy }?.0
-    return role.flatMap { presentation.changes.session.file(for: $0)?.url }
+    return role.flatMap { presentation.changes.session.inputs[$0]?.url }
   }
 
   /// Lets the window get no smaller than the panes in view need.

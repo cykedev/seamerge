@@ -204,10 +204,7 @@ import Testing
     let controller = try Windows.controller(for: try await SampleDiffs.greeting())
     defer { controller.window?.close() }
     let other = try await SampleDiffs.diff(old: "a\n", new: "b\n", label: "Notes.txt")
-    let renamed = Dictionary(
-      uniqueKeysWithValues: other.roles.map { role in
-        (role, SideHeader(role: role, session: other, context: SessionContext()))
-      })
+    let renamed = SideHeader.headers(of: other, context: SessionContext())
     let setup = controller.presentation.setup
     #expect(renamed.mapValues(\.name) != controller.presentation.headers.mapValues(\.name))
 

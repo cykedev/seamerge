@@ -11,7 +11,7 @@ enum PatchError: LocalizedError, Equatable {
 
   /// Why the comparison for a patch failed.
   init(_ error: MergeModelError) {
-    self = .comparisonFailed(SessionLoadingError(error, files: [:]))
+    self = .comparisonFailed(SessionLoadingError(error, files: nil))
   }
 
   /// What went wrong.

@@ -61,7 +61,7 @@ import Testing
     let text = modeSwitch.plan.replacements.map(\.text).joined()
 
     let start = ContinuousClock.now
-    presentation.show(document.session, result: ResultState(document: document, text: text))
+    presentation.show(.merge(ResultState(document: document, text: text)))
     let duration = ContinuousClock.now - start
     #expect(duration < .seconds(1), "rebuilding took \(duration)")
     #expect(presentation.changes.session.options.mode == .exact)
@@ -170,9 +170,9 @@ import Testing
       for controller in [prepared, direct] {
         controller.presentation.setAlignsLines(alignsLines)
       }
-      let contents = await prepared.prepared(exact, result: nil)
+      let contents = await prepared.prepared(.comparison(exact))
       prepared.presentation.showComparedAnew(contents)
-      direct.presentation.show(exact, result: nil)
+      direct.presentation.show(.comparison(exact))
       for (shown, expected) in zip(Windows.panes(of: prepared), Windows.panes(of: direct)) {
         #expect(shown.documentView.string == expected.documentView.string)
         #expect(shown.content.lineNumbers == expected.content.lineNumbers)

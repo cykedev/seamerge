@@ -63,7 +63,8 @@ extension SessionWindowController {
       announceState(ofBlock: current)
     }
     window.makeFirstResponder(resultPane.documentView)
-    let caret = presentation.paneOffset(ofResultOffset: resolution.cursorPosition)
+    guard let resolved = presentation.result else { return }
+    let caret = resolved.resultText.paneOffset(ofFileOffset: resolution.cursorPosition)
     resultPane.documentView.setSelectedRange(NSRange(location: caret, length: 0))
     resultPane.documentView.scrollRangeToVisible(resultPane.documentView.selectedRange())
   }

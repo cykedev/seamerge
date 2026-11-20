@@ -25,6 +25,14 @@ final class SessionPresentation {
   /// The result of a merge as it stands, or `nil` for a comparison.
   private(set) var result: ResultState?
 
+  /// The session, with the result of a merge as it stands.
+  ///
+  /// It is made anew on each access, which copies the session; code that reads it repeatedly
+  /// takes it into a constant first, and code that only needs the result reads ``result``.
+  var shown: ShownSession {
+    result.map(ShownSession.merge) ?? .comparison(changes.session)
+  }
+
   /// The index of the current block among the changed blocks, or `nil` if there is none.
   ///
   /// Every pane tints the current block more strongly and the overview bars point at it.
@@ -188,9 +196,8 @@ final class SessionPresentation {
     headers: [Role: SideHeader], resultHeader: ResultHeader?, displayOptions: DisplayOptions,
     language: LanguageDescription?, alignsLines: Bool, search: PaneSearch
   ) {
-    let result =
-      arrangement.showsResult
-      ? ResultState(session: session, removalNotes: Self.removalNotes(headers: headers)) : nil
+    let result = ShownSession(loading: session, removalNotes: Self.removalNotes(headers: headers))
+      .result
     self.arrangement = arrangement
     self.layout = layout
     self.headers = headers
@@ -380,10 +387,7 @@ final class SessionPresentation {
   /// collapsed runs, the marks of the overview bars and, in a merge, the signs of the decision
   /// column.
   private func showSession() {
-    show(
-      PreparedSession(
-        session: changes.session, result: result, setup: setup, lines: lines,
-        collapsed: collapsed))
+    show(PreparedSession(shown, setup: setup, lines: lines, collapsed: collapsed))
   }
 
   /// Puts `prepared` in place in every pane: the session and the result it was made for, the
@@ -393,7 +397,7 @@ final class SessionPresentation {
   /// - Precondition: `prepared` was made for the setup of the panes now.
   private func show(_ prepared: PreparedSession) {
     precondition(prepared.setup == setup, "Contents made for another setup of the panes")
-    result = prepared.result
+    result = prepared.shown.result
     changes = prepared.changes
     collapsed = prepared.collapsed
     ignoredDifferences = prepared.ignoredDifferences
@@ -560,12 +564,12 @@ final class SessionPresentation {
   /// The tokens of the result follow `edits`, the edits that led to it, in the offsets of the
   /// pane's text; without them, or with `anew`, the result is lexed anew in the background.
   ///
-  /// - Precondition: The window shows a merge, and the result pane shows the text of `result`
-  ///   unless `anew` is set.
-  func show(_ result: ResultState, after edits: [PaneEdit] = [], anew: Bool = false) {
-    guard let resultPane = layout.resultPane else {
-      preconditionFailure("Only a merge has a result")
-    }
+  /// - Precondition: `resultPane` is the result pane, and it shows the text of `result` unless
+  ///   `anew` is set.
+  func show(
+    _ result: ResultState, in resultPane: PaneView, after edits: [PaneEdit] = [],
+    anew: Bool = false
+  ) {
     let previousRows = self.result?.rows
     self.result = result
     let content = ResultPaneContent(result: result, changes: changes, headers: headers)
@@ -612,10 +616,10 @@ final class SessionPresentation {
     delegate?.presentationDidChangeResult(self)
   }
 
-  /// Takes `result`, the result after a change of the result pane's text that nobody announced,
-  /// without showing it while the pane processes the change, and shows it anew once the change
-  /// is over, after any further such changes.
-  func takeOverUnannounced(_ result: ResultState) {
+  /// Takes `result`, the result after a change of the text of `resultPane` that nobody
+  /// announced, without showing it while the pane processes the change, and shows it anew once
+  /// the change is over, after any further such changes.
+  func takeOverUnannounced(_ result: ResultState, in resultPane: PaneView) {
     self.result = result
     guard !showsResultAnewSoon else { return }
     showsResultAnewSoon = true
@@ -623,7 +627,7 @@ final class SessionPresentation {
     Task { @MainActor [weak self] in
       guard let self, let result = self.result else { return }
       showsResultAnewSoon = false
-      show(result, anew: true)
+      show(result, in: resultPane, anew: true)
       delegate?.presentationDidTakeOverUnannouncedChange(self)
     }
   }
@@ -690,24 +694,18 @@ final class SessionPresentation {
     layout.resultPane?.expandedRuns = resultExpandedRuns
   }
 
-  /// Shows `session`, the same files compared anew, with `result` as the result of a merge,
-  /// and keeps the line of B at the reading line where it is.
-  ///
-  /// - Precondition: A merge has a result and a comparison none.
-  func show(_ session: Session, result: ResultState?) {
-    showComparedAnew(
-      PreparedSession(session: session, result: result, setup: setup, lines: lines))
+  /// Shows `shown`, the same files compared anew, and keeps the line of B at the reading line
+  /// where it is.
+  func show(_ shown: ShownSession) {
+    showComparedAnew(PreparedSession(shown, setup: setup, lines: lines))
   }
 
-  /// What the panes show for `session`, the same files compared anew, with `result` as the
-  /// result of a merge, made away from the main actor for the setup of the panes now; `nil` if
-  /// the setup changed meanwhile, for which the contents are to be made anew.
-  ///
-  /// - Precondition: A merge has a result and a comparison none.
-  func prepare(_ session: Session, result: ResultState?) async -> PreparedSession? {
+  /// What the panes show for `shown`, the same files compared anew, made away from the main
+  /// actor for the setup of the panes now; `nil` if the setup changed meanwhile, for which the
+  /// contents are to be made anew.
+  func prepare(_ shown: ShownSession) async -> PreparedSession? {
     let setup = setup
-    let prepared = await PreparedSession.concurrently(
-      session: session, result: result, setup: setup, lines: lines)
+    let prepared = await PreparedSession.concurrently(shown, setup: setup, lines: lines)
     return prepared.setup == self.setup ? prepared : nil
   }
 
@@ -730,11 +728,9 @@ final class SessionPresentation {
   private static func prepareLoaded(
     _ session: Session, setup: PaneSetup, removalNotes: [Role: String]
   ) async -> PreparedSession {
-    let result =
-      setup.arrangement.showsResult
-      ? ResultState(session: session, removalNotes: removalNotes) : nil
-    return await PreparedSession.concurrently(
-      session: session, result: result, setup: setup, lines: InputLines(session: session))
+    await PreparedSession.concurrently(
+      ShownSession(loading: session, removalNotes: removalNotes), setup: setup,
+      lines: InputLines(session: session))
   }
 
   /// Shows `prepared`, the comparison that a window without lines waited for, as a new window
