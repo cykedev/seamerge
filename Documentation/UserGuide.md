@@ -111,6 +111,10 @@ In Tower, turn on **Perform directory diff** to compare folders.
 
 **View ▸ Show Ignored Changes** marks the places where the two files differ only in what the comparison ignores, such as the amount of whitespace. Each place gets a pale fill, and the whitespace in it is drawn with symbols, even when invisible characters are hidden. The menu item is enabled only when there are such places, and it changes to **Hide Ignored Changes** while they are shown. The result pane does not mark them.
 
+### Large files
+
+Files of up to about 100,000 lines open in about a third of a second. Jumping between changes then takes a few milliseconds, and switching the line arrangement or the comparison mode a fraction of a second. Files of around 500,000 lines, about 27 MB each, open in one to one and a half seconds; switching the comparison mode or the arrangement then takes up to a second, and Seamerge may use more than 1 GB of memory. Searching takes a fraction of a second in 100,000 lines and up to about a second in 500,000. Very long lines are the costlier case: from about 2,000 characters per line, scrolling and searching become noticeably slower. These times were measured on a Mac with an M2 Pro.
+
 ### Long lines
 
 A line longer than 20,000 characters is shown cut off at a character boundary, followed by an ellipsis in the color of the preview. The line is shown whole as soon as the insertion point or a selection lies in it, so you can work in it. The text, copying and saving always use the whole line.
