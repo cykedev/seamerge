@@ -221,9 +221,8 @@ import Testing
 
     controller.showFile(at: 1)
     await controller.fileLoad?.value
-    // A look that the window began as it showed the file runs before this task.
-    await Task {}.value
-    #expect(controller.diskWatch.isReloading, "Looks at the file as it shows it")
+    // Only the look the window takes as it shows the file can find the change; whether that
+    // look is still under way at this point depends on the machine, so only its end is tested.
     let shownText = { controller.presentation.changes.session.inputs.b.text }
     for _ in 0..<500 where shownText() != "struct Discount {}\n" {
       try await Task.sleep(for: .milliseconds(10))
