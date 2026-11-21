@@ -59,6 +59,28 @@ struct RoundTripTests {
     }
   }
 
+  @Test(arguments: TextEncoding.allCases)
+  func encodingDecodedTextKeepsMixedLineEndingsByteForByte(encoding: TextEncoding) throws {
+    let lines = encoding.sampleLines
+    let text = lines[0] + "\r\n" + lines[1] + "\r" + lines[0] + "\n" + lines[1]
+    let byteOrderMarks = encoding.supportsByteOrderMark ? [false, true] : [false]
+    for byteOrderMark in byteOrderMarks {
+      let bytes = try fileBytes(text, in: encoding, byteOrderMark: byteOrderMark)
+      let decoded = try #require(LoadedFile(bytes: bytes, encoding: encoding).decodedText)
+
+      #expect(
+        try encoding.encode(utf8: [UInt8](decoded.utf8), withByteOrderMark: byteOrderMark)
+          == bytes)
+    }
+  }
+
+  @Test func encodingACharacterTheEncodingLacksIsAnError() {
+    #expect(throws: TextIOError.unrepresentableText(.windows1252)) {
+      try TextEncoding.windows1252.encode(
+        utf8: Array("\u{2713}\r\n".utf8), withByteOrderMark: false)
+    }
+  }
+
   @Test func invalidUTF8InTheMiddleRoundTripsByteForByte() throws {
     let prefix = try fileBytes(String(repeating: "Grüße\n", count: 2000), in: .utf8)
     let bytes = prefix + Data([0xFF]) + Data("tail\n".utf8)

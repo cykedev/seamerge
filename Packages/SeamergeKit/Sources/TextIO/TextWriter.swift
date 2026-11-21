@@ -36,12 +36,8 @@ package struct TextWriter: Sendable {
   /// - Throws: ``TextIOError/unrepresentableText(_:)`` if ``encoding`` cannot represent every
   ///   character of `text`.
   package func encode(_ text: String) throws(TextIOError) -> Data {
-    guard let encoded = Transcoder.encode(utf8: unifyingLineEndings(of: text), to: encoding) else {
-      throw .unrepresentableText(encoding)
-    }
-    var bytes = Data(writesByteOrderMark ? encoding.byteOrderMark ?? [] : [])
-    bytes.append(contentsOf: encoded)
-    return bytes
+    try encoding.encode(
+      utf8: unifyingLineEndings(of: text), withByteOrderMark: writesByteOrderMark)
   }
 
   /// Writes `text` to the file at `url`, encoded as ``encode(_:)`` describes.

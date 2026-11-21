@@ -41,9 +41,27 @@ public struct SourceFile: Sendable {
     } catch {
       preconditionFailure("Recognizing the encoding of bytes never fails: \(error)")
     }
+    self.init(loaded, label: label, url: url)
+  }
+
+  /// Creates a file from bytes that are text in `encoding`, as written for it, without
+  /// recognizing the encoding anew.
+  ///
+  /// - Precondition: `bytes` are valid in `encoding`.
+  init(bytes: Data, label: String, url: URL?, encoding: FileEncoding) {
+    let loaded: LoadedFile
+    do {
+      loaded = try LoadedFile(bytes: bytes, encoding: encoding.textEncoding)
+    } catch {
+      preconditionFailure("Bytes written in \(encoding) are valid in it: \(error)")
+    }
+    self.init(loaded, label: label, url: url)
+  }
+
+  private init(_ loaded: LoadedFile, label: String, url: URL?) {
     self.label = label
     self.url = url
-    self.bytes = bytes
+    bytes = loaded.bytes
     switch loaded.content {
     case .text(let text):
       decodedText = text

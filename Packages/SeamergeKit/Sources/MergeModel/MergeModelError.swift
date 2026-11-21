@@ -12,7 +12,8 @@ public enum MergeModelError: Error, Sendable, Hashable {
   /// The comparison failed unexpectedly, which indicates a bug.
   case comparisonFailed
 
-  /// The result holds characters that the encoding cannot represent.
+  /// The text of a file, such as the result or a file that takes copied text, holds characters
+  /// that the encoding of the file cannot represent.
   case unrepresentableText(FileEncoding)
 
   /// The result could not be written to the file at `path`, for the reason the file system

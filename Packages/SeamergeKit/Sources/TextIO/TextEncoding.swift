@@ -1,4 +1,4 @@
-import Foundation
+package import Foundation
 
 /// A text encoding that files are read in and written in.
 package enum TextEncoding: Sendable, Hashable, CaseIterable {
@@ -42,6 +42,26 @@ package enum TextEncoding: Sendable, Hashable, CaseIterable {
     case .utf32BigEndian: [0x00, 0x00, 0xFE, 0xFF]
     case .windows1252, .isoLatin1, .macRoman: nil
     }
+  }
+
+  /// The bytes of a file holding `utf8`, valid UTF-8 text, in this encoding, after the byte
+  /// order mark if `withByteOrderMark`.
+  ///
+  /// Every character, line endings included, stays as it is, so text decoded from a file and
+  /// encoded again gives back the bytes of the file.
+  ///
+  /// - Precondition: `withByteOrderMark` is only `true` for an encoding that
+  ///   ``supportsByteOrderMark``.
+  /// - Throws: ``TextIOError/unrepresentableText(_:)`` if this encoding cannot represent every
+  ///   character of `utf8`.
+  package func encode(utf8: [UInt8], withByteOrderMark: Bool) throws(TextIOError) -> Data {
+    precondition(!withByteOrderMark || supportsByteOrderMark, "\(self) has no byte order mark")
+    guard let encoded = Transcoder.encode(utf8: utf8, to: self) else {
+      throw .unrepresentableText(self)
+    }
+    var bytes = Data(withByteOrderMark ? byteOrderMark ?? [] : [])
+    bytes.append(contentsOf: encoded)
+    return bytes
   }
 
   /// The Foundation encoding for the single-byte encodings, which Foundation converts.
