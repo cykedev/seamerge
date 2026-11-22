@@ -107,7 +107,7 @@ final class FileListCell: NSTableCellView {
 }
 
 /// The heading of a folder in the file list: the folder relative to the top, quiet and
-/// semibold, shortened at its start, whose help tag shows it whole.
+/// semibold, shortened in its middle, whose help tag shows it whole.
 @MainActor
 final class FolderHeadingCell: NSTableCellView {
   static let identifier = NSUserInterfaceItemIdentifier("FolderHeadingCell")
@@ -119,8 +119,9 @@ final class FolderHeadingCell: NSTableCellView {
     identifier = Self.identifier
     label.font = .systemFont(
       ofSize: NSFont.preferredFont(forTextStyle: .subheadline).pointSize, weight: .semibold)
-    // The start of the folders of a project is much the same; their ends tell them apart.
-    label.lineBreakMode = .byTruncatingHead
+    // Folders of a project often differ near the start (src/main against src/test) and are named
+    // by their end; the middle is what they share.
+    label.lineBreakMode = .byTruncatingMiddle
     label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     label.setAccessibilityElement(false)
     label.translatesAutoresizingMaskIntoConstraints = false

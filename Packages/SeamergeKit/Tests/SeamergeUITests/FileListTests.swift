@@ -64,6 +64,18 @@ import Testing
     #expect(controller.window?.subtitle.contains("File 1 of 5") == true)
   }
 
+  @Test func headingTooLongForTheListKeepsTheStartAndTheEndOfTheFolder() async throws {
+    let collection = FileCollection(
+      files: try SampleCollections.commit(in: try SampleCollections.folder()))
+    let controller = try await Windows.controller(for: collection)
+    defer { controller.window?.close() }
+    let table = try #require(controller.collectionLayout?.fileList.tableView)
+    let heading = try #require(
+      table.view(atColumn: 0, row: 5, makeIfNecessary: true) as? FolderHeadingCell)
+
+    #expect(heading.textField?.lineBreakMode == .byTruncatingMiddle)
+  }
+
   @Test func headingsCannotBeSelectedAndTheArrowKeysGoOverThem() async throws {
     let collection = FileCollection(
       files: try SampleCollections.commit(in: try SampleCollections.folder()))
