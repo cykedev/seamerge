@@ -61,6 +61,7 @@ extension SessionCommand {
       [
         [.compareExactly, .ignoreLineEndings, .ignoreWhitespaceChanges, .ignoreAllWhitespace],
         [.toggleIgnoreRules], [.swapSides],
+        [.copyToRight, .copyToLeft, .copyAllChangesToRight, .copyAllChangesToLeft],
       ]
     case .merge:
       [

@@ -51,6 +51,11 @@ import Testing
     #expect(try Self.keys(of: item(.filterFiles)) == "⇧⌘F")
     #expect(try Self.keys(of: item(.showSingleColumn)) == "⌥⌘U")
     #expect(try Self.keys(of: item(.showConnectedSides)) == "⌥⇧⌘A")
+    #expect(try Self.keys(of: item(.copyToRight)) == "⌥⌘→")
+    #expect(try Self.keys(of: item(.copyToLeft)) == "⌥⌘←")
+    #expect(try Self.keys(of: item(.copyAllChangesToRight)) == "")
+    #expect(try Self.keys(of: item(.nextFile)) == "⌘}")
+    #expect(try Self.keys(of: item(.previousFile)) == "⌘{")
     #expect(mainMenu.leaveUnresolvedItem.title == "Skip Remaining Files")
     #expect(mainMenu.leaveUnresolvedItem.action == SessionCommand.skipRemainingFiles.action)
     #expect(Self.keys(of: mainMenu.leaveUnresolvedItem) == "⌘.")
@@ -59,6 +64,9 @@ import Testing
 
     #expect(try Self.keys(of: item(.nextChange)) == "⌥⇧⌘↓")
     #expect(try Self.keys(of: item(.nextConflict)) == "⌥⌘↓")
+    #expect(try Self.keys(of: item(.copyToRight)) == "")
+    #expect(try Self.keys(of: item(.useA)) == "⌘1")
+    #expect(try Self.keys(of: item(.useB)) == "⌘3")
     #expect(mainMenu.leaveUnresolvedItem.title == "Leave Unresolved")
     #expect(mainMenu.leaveUnresolvedItem.action == SessionCommand.leaveUnresolved.action)
     #expect(Self.keys(of: mainMenu.leaveUnresolvedItem) == "⌘.")
@@ -117,7 +125,8 @@ import Testing
       (.control, "⌃"), (.option, "⌥"), (.shift, "⇧"), (.command, "⌘"),
     ]
     let glyphs = [
-      "\u{F700}": "↑", "\u{F701}": "↓", "\t": "⇥", "\r": "↩", "\u{8}": "⌫",
+      "\u{F700}": "↑", "\u{F701}": "↓", "\u{F702}": "←", "\u{F703}": "→", "\t": "⇥", "\r": "↩",
+      "\u{8}": "⌫",
     ]
     let key = glyphs[item.keyEquivalent] ?? item.keyEquivalent.uppercased()
     return names.filter { modifiers.contains($0.0) }.map(\.1).joined() + key
@@ -288,6 +297,11 @@ import Testing
       Use Ignore Rules
       ---
       Swap Sides ⌥⌘S
+      ---
+      Copy to Right
+      Copy to Left
+      Copy All Changes to Right
+      Copy All Changes to Left
     Merge ▸
       Use A ⌘1
       Use Base ⌘2

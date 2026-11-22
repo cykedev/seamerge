@@ -68,6 +68,20 @@ import Testing
     #expect(nextChange?.shortcut == "⌥⌘↓")
   }
 
+  @Test func comparisonListsTheCopiesAndTheirKeysAndAMergeDoesNot() {
+    let entries = ShortcutOverview(kind: .diff).groups.flatMap(\.entries)
+    let entry = { (command: SessionCommand) in entries.first { $0.command == command } }
+    #expect(entry(.copyToRight)?.shortcut == "⌥⌘→")
+    #expect(entry(.copyToRight)?.singleKeys == "→")
+    #expect(entry(.copyToLeft)?.shortcut == "⌥⌘←")
+    #expect(entry(.copyToLeft)?.singleKeys == "←")
+    #expect(entry(.nextFile)?.shortcut == "⇧⌘]")
+    #expect(entry(.previousFile)?.shortcut == "⇧⌘[")
+    #expect(entry(.useA) == nil)
+    let merge = Set(ShortcutOverview(kind: .merge).groups.flatMap(\.entries).map(\.command))
+    #expect(merge.isDisjoint(with: [.copyToRight, .copyToLeft]))
+  }
+
   @Test func arrangementsStandInTheViewGroupWithTheirShortcuts() throws {
     func view(_ kind: Session.Kind) -> [ShortcutOverview.Entry] {
       ShortcutOverview(kind: kind).groups.first { $0.menu == .view }?.entries ?? []
