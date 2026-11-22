@@ -24,8 +24,8 @@ package final class PaneView: NSView {
   /// Has the seams beside the pane drawn again, after its rows, blocks or scroll position
   /// changed.
   private func invalidateSeams() {
-    leadingSeam?.needsDisplay = true
-    trailingSeam?.needsDisplay = true
+    leadingSeam?.panesDidChange()
+    trailingSeam?.panesDidChange()
   }
 
   /// What the pane shows.

@@ -61,6 +61,12 @@ package struct Theme {
       ofSize: max(font.pointSize - 2, Self.smallestFontSize), weight: .regular)
   }
 
+  /// The size of the symbols of the buttons at a seam: that of the line numbers, so that they
+  /// fit a row.
+  var copySymbolSize: CGFloat {
+    lineNumberFont.pointSize
+  }
+
   /// The font of the line numbers on the cells of the current block while the pane has no focus,
   /// where the cell has the color of its side: as large as the other numbers, semibold.
   package var currentLineNumberFont: NSFont {
@@ -159,6 +165,22 @@ package struct Theme {
   /// The width of the seam between two panes that connect their changes with bands: room for a
   /// band to turn, and a target for dragging the divider below it.
   package static let seamWidth: CGFloat = 28
+
+  /// The width of a seam with a button in each half, one to copy a change to either side.
+  package static let wideSeamWidth: CGFloat = 44
+
+  /// The width and height of the area that takes the clicks of a button at a seam.
+  static let copyButtonSize: CGFloat = 20
+
+  /// The free room between a symbol at the seam and any line or other symbol.
+  static let copySymbolMargin: CGFloat = 1
+
+  /// The width of the flat piece at the end of a band where a button at the seam stands.
+  static let bandStubWidth: CGFloat = 16
+
+  /// How much wider a seam with bands is with buttons, so that the bands keep room to turn
+  /// beside the flat pieces the buttons stand on.
+  static let bandRoomBesideButtons: CGFloat = 12
 
   /// The width of the outline of a match of the search in the text.
   static let searchMatchOutlineWidth: CGFloat = 1.5

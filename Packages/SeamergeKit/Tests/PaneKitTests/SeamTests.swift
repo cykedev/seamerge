@@ -376,11 +376,13 @@ final class ConnectedLayout: NSView {
 
   override func layout() {
     super.layout()
-    let width = ((bounds.width - Theme.seamWidth) / 2).rounded(.down)
+    // The seam takes the width it asks for, which its buttons make wider.
+    let seamWidth = seam.width
+    let width = ((bounds.width - seamWidth) / 2).rounded(.down)
     left.frame = CGRect(x: 0, y: 0, width: width, height: bounds.height)
-    seam.frame = CGRect(x: width, y: 0, width: Theme.seamWidth, height: bounds.height)
+    seam.frame = CGRect(x: width, y: 0, width: seamWidth, height: bounds.height)
     right.frame = CGRect(
-      x: width + Theme.seamWidth, y: 0, width: bounds.width - width - Theme.seamWidth,
+      x: width + seamWidth, y: 0, width: bounds.width - width - seamWidth,
       height: bounds.height)
   }
 

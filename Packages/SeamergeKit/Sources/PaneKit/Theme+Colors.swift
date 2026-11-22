@@ -17,6 +17,9 @@ extension Theme {
   /// and the mark of a resolved conflict.
   package static var secondaryMarkColor: NSColor { .secondaryLabelColor }
 
+  /// The color of a mark of a control that takes no presses for now.
+  static var disabledMarkColor: NSColor { .tertiaryLabelColor }
+
   /// The color of the line numbers: quieter than the code, yet as legible as any text.
   package var lineNumberColor: NSColor {
     color { appearance, nsAppearance in

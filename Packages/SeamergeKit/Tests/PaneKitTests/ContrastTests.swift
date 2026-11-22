@@ -59,6 +59,19 @@ import Testing
     try Rendering.writeText(lines.joined(separator: "\n"), named: "overview-contrast")
   }
 
+  @Test func contrastOfTheSeamIsWrittenDown() throws {
+    let lines = Look.all.map { look in
+      let theme = Theme(increasesContrast: look.increasesContrast)
+      let resolve = { (color: NSColor?) in Contrast.resolve(color, in: look.appearance) }
+      let ground = Contrast.over(resolve(.textBackgroundColor), .white)
+      let pairs = seamPairs(theme: theme, ground: ground, resolve: resolve).map {
+        "\($0.description) \(String(format: "%.2f", Contrast.ratio($0.foreground, $0.surface)))"
+      }
+      return "\(look.name): \(pairs.joined(separator: "; "))"
+    }
+    try Rendering.writeText(lines.joined(separator: "\n"), named: "seam-contrast")
+  }
+
   /// The cells of the current block without focus stand apart from the stronger tint of the
   /// rows beside them by at least 1.4:1, so that the cell reads as a step of its own.
   ///
@@ -229,6 +242,37 @@ import Testing
     return pairs + overviewPairs(theme: theme, ground: ground, resolve: resolve)
       + collapsedRunPairs(theme: theme, ground: ground, resolve: resolve)
       + decisionPairs(theme: theme, ground: ground, resolve: resolve)
+      + seamPairs(theme: theme, ground: ground, resolve: resolve)
+  }
+
+  /// The pairs at a seam: the arrow and the bin of the buttons that copy a change, quiet beside
+  /// other blocks and in the color of text beside the current one, on the plain seam, where a
+  /// bin stands on the line of a side without rows, while pressed, and on the band of the block
+  /// that connects its sides, current or not.
+  private func seamPairs(
+    theme: Theme, ground: NSColor, resolve: (NSColor?) -> NSColor?
+  ) -> [Pair] {
+    var pairs: [Pair] = []
+    for isCurrent in [false, true] {
+      let symbol = isCurrent ? Theme.textColor : Theme.secondaryMarkColor
+      var surfaces = [
+        ("seam", ground),
+        ("pressed button", Contrast.over(resolve(theme.pressedDecisionControlFill), ground)),
+      ]
+      for style in [BlockStyle.tinted(.a), .tinted(.b), .unchanged] {
+        let fill = resolve(theme.rowFill(for: style, isFiller: false, isCurrent: isCurrent))
+        surfaces.append(("band of \(style)", Contrast.over(fill, ground)))
+      }
+      for (name, surface) in surfaces {
+        pairs.append(
+          Pair(
+            description:
+              "arrow or bin\(isCurrent ? " of the current block" : "") on \(name)",
+            foreground: Contrast.over(resolve(symbol), surface), surface: surface,
+            minimum: Self.sign))
+      }
+    }
+    return pairs
   }
 
   /// The pairs in the decision column: the signs of the toggles, off, taken by the merge and
