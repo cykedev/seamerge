@@ -25,7 +25,7 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
     <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-whitespace-dark.png">
     <img src="Documentation/Images/screenshot-whitespace-light.png" alt="A comparison with Ignore Whitespace Changes chosen in the footer, the sides joined by bands.">
   </picture>
-- **Several files in one window.** When Git or Tower compares several files of one run, Seamerge shows them in one window with a sidebar. `git difftool --dir-diff` compares two folders the same way.
+- **Several files in one window.** When Git or Tower compares several files of one run, Seamerge shows them in one window with a sidebar that groups them by folder. `git difftool --dir-diff` compares two folders the same way.
 
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-collection-dark.png">
@@ -222,7 +222,7 @@ Each window opens where the last window of its kind was closed, with the size it
 | Next or previous pane | ⌃Tab, ⇧⌃Tab |
 | Undo, redo | ⌘Z, ⇧⌘Z |
 | Copy to Right, Copy to Left (comparison; in a pane above the result →, ←) | ⌥⌘→, ⌥⌘← |
-| Next or previous file in a collection | ⌥⌘→, ⌥⌘← |
+| Next or previous file in a collection | ⇧⌘], ⇧⌘[ |
 | Filter the list of files | ⇧⌘F |
 | Show or hide the sidebar | ⌃⌘S |
 | Go to a line | ⌘L |

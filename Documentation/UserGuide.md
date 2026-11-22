@@ -71,7 +71,7 @@ Seamerge compares two files with `git difftool`, from Tower, or from the welcome
   - **Ignore Whitespace Changes** ignores differences in the amount of whitespace.
   - **Ignore All Whitespace** ignores all differences in whitespace.
 - **Swap Sides** exchanges the left and the right file.
-- **Next File** (`⌥⌘→`) and **Previous File** (`⌥⌘←`) move through the files of a collection.
+- **Next File** (`⇧⌘]`) and **Previous File** (`⇧⌘[`) move through the files of a collection.
 - **Show Sidebar** (`⌃⌘S`) shows or hides the list of files.
 
 ### The welcome window
@@ -92,7 +92,7 @@ If the files cannot be opened, the sheet says why and keeps them.
 
 ![Several files in one window, with the sidebar](Images/hero-collection-light.png)
 
-When Git or Tower compares several files in one run, Seamerge puts them into one window, and the sidebar lists the files. Each file shows whether it was modified, added or deleted. The window receives the files as Git hands them over, and the sidebar says when it is still receiving. Seamerge collects the files only when Git numbers them, which `git difftool` and Tower do. Otherwise each file opens its own window. The window opens at once; a large file shows "Comparing…" until its lines are ready, and you can choose another file in the meantime.
+When Git or Tower compares several files in one run, Seamerge puts them into one window, and the sidebar lists the files, grouped by folder. The files of the top folder come first, then one group for each folder. Folders follow the order of Git, where each folder stands at its first file. A file that is new, deleted, identical or cannot be read has a sign and its word; a modified file has no sign. A file with copied changes that are not saved has a dot at the end of its row. The window receives the files as Git hands them over, and the sidebar says when it is still receiving. Seamerge collects the files only when Git numbers them, which `git difftool` and Tower do. Otherwise each file opens its own window. The window opens at once; a large file shows "Comparing…" until its lines are ready, and you can choose another file in the meantime.
 
 Renames are not detected: a renamed file shows as a deleted file and a new file.
 
@@ -106,7 +106,7 @@ In Tower, turn on **Perform directory diff** to compare folders.
 
 **File ▸ Compare Folders…** compares two folders in one window, without Git or Tower. Choose **Compare Folders…** in the welcome window or in the File menu, or drop two folders on the welcome window. The list shows the files that are new, deleted, modified, identical, or cannot be read. A file that cannot be read stays in the list with the reason. The progress of the comparison is shown above the filter. **View ▸ Show Identical Files** adds the identical files to the list. Links are not followed; their targets are compared as text.
 
-**Filter Files** (`⇧⌘F`) narrows the list. Type in the field at the foot of the sidebar, and the list keeps the files whose name or folder contains the text, ignoring case and accents. Escape clears the field. **Next File** and **Previous File** follow the filtered list.
+The list groups the files by folder, as in a window of several files. **Filter Files** (`⇧⌘F`) narrows the list. Type in the field at the foot of the sidebar, and the list keeps the files whose name or folder contains the text, ignoring case and accents. Escape clears the field. **Next File** and **Previous File** follow the filtered list.
 
 ### Ignored changes
 
@@ -222,7 +222,7 @@ The rules are kept in **Seamerge ▸ Settings…**, on the page **Ignored Text**
 
 ## Export as patch
 
-**File ▸ Export as Patch…** saves the changes of a comparison as a unified diff in a `.patch` file. **Edit ▸ Copy as Patch** copies the same text. In a window of several files, the patch holds every changed file in the order of the list, whatever the filter shows. Swap Sides turns the patch around.
+**File ▸ Export as Patch…** saves the changes of a comparison as a unified diff in a `.patch` file. **Edit ▸ Copy as Patch** copies the same text. In a window of several files, the patch holds every changed file in the order Git gives them, whatever the list shows or the filter hides. Swap Sides turns the patch around.
 
 The patch records every byte of the files, whatever the comparison mode. A patch of a window that ignores whitespace still produces the new file exactly. The commands are valid only where the two files differ in their bytes.
 
@@ -301,7 +301,7 @@ Commands with a Command or Option key work in any window. The keys without them,
 | Next or previous conflict | `⌥⌘↓`, `⌥⌘↑`; in a pane above the result `N`, `⇧N` |
 | Next or previous change | `⌥⇧⌘↓`, `⌥⇧⌘↑` in a merge, `⌥⌘↓`, `⌥⌘↑` in a comparison; in a pane above the result `↓`, `↑` |
 | First or last change | `Home`, `End` in a pane above the result |
-| Next or previous file (collection) | `⌥⌘→`, `⌥⌘←` |
+| Next or previous file (collection) | `⇧⌘]`, `⇧⌘[` |
 | Filter the list of files | `⇧⌘F` |
 | Show or hide the sidebar | `⌃⌘S` |
 | Use A, Use Base, Use B | `⌘1`, `⌘2`, `⌘3`; in a pane above the result `1`, `2`, `3` |
