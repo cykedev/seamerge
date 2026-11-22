@@ -29,13 +29,13 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
 
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-collection-dark.png">
-    <img src="Documentation/Images/screenshot-collection-light.png" alt="Several files in one window, with the sidebar listing a new, two changed and a deleted file.">
+    <img src="Documentation/Images/screenshot-collection-light.png" alt="Several files of one commit in one window: the sidebar groups them by folder, with the files of the top folder first and the new and the deleted file marked; the selected file is shown side by side with bands between the sides.">
   </picture>
 - **Compare folders.** File ▸ Compare Folders… compares two folders in one window and lists the files that differ. A filter narrows the list by file name or folder.
 
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-folders-dark.png">
-    <img src="Documentation/Images/screenshot-folders-light.png" alt="Two folders compared in one window: the sidebar lists the files that differ, says 7 of 12 files differ and has a field to filter by file name; the selected file is shown side by side with bands between the sides.">
+    <img src="Documentation/Images/screenshot-folders-light.png" alt="Two folders compared in one window: the sidebar groups the files that differ by folder, says 8 of 12 files differ and has a field to filter by file name; the selected file is shown side by side with bands between the sides and arrows to copy a change to the other side.">
   </picture>
 - **Welcome window.** Start a comparison, a comparison of folders or a merge, or open one of the recent comparisons again, grouped into today and earlier. Two files or folders dropped on the window open at once.
 
