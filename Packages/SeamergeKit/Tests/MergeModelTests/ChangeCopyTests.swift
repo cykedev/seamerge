@@ -92,23 +92,112 @@ struct ChangeCopyTests {
   }
 
   @Test(arguments: [
-    ("\r\n", "one\r\nTWO\r\nthree\r\nnew\r\n"),
+    ("\r\n", "one\nTWO\nthree\nnew\n"),
     ("\r", "one\rTWO\rthree\rnew\r"),
   ])
-  func copyAllChangesToATargetWithOtherLineEndingsDiffersOnlyInLineEndings(
+  func copyAllChangesInExactModeLeavesNoChangeWhateverTheLineEndings(
     lineEnding: String, expected: String
   ) async throws {
     let old = "one\nTWO\nthree\nnew\n"
     let new = ["one", "two", "three"].map { $0 + lineEnding }.joined()
     let session = try await diff(old, new)
 
-    let copied = try session.file(after: ChangeCopy(allChangesFrom: .a))
+    let copied = try await session.copying(ChangeCopy(allChangesFrom: .a))
 
-    #expect(copied.bytes == Self.bytes(expected))
-    #expect(copied.lineEndingStyle == session.inputs.b.lineEndingStyle)
+    #expect(copied.inputs.b.bytes == Self.bytes(expected))
+    #expect(copied.blocks.map(\.kind) == [.unchanged])
   }
 
-  @Test(arguments: ComparisonMode.allCases)
+  @Test func copiedLinesKeepTheirLineEndingsInExactMode() async throws {
+    let session = try await diff("a\nb\nc\nd\n", "a\nB\r\nc\nD\r\n")
+    try #require(session.blocks.map(\.kind) == [.unchanged, .changed, .unchanged, .changed])
+
+    let right = try await session.copying(
+      ChangeCopy(block: try Self.changed(0, of: session), from: .a))
+    let left = try await session.copying(
+      ChangeCopy(block: try Self.changed(1, of: session), from: .b))
+
+    #expect(right.inputs.b.bytes == Self.bytes("a\nb\nc\nD\r\n"))
+    #expect(right.blocks.filter { $0.kind == .changed }.count == 1)
+    #expect(left.inputs.a.bytes == Self.bytes("a\nb\nc\nD\r\n"))
+    #expect(left.blocks.filter { $0.kind == .changed }.count == 1)
+  }
+
+  @Test(arguments: [("a\r\nb\r\n", "a\nB\n"), ("a\rb\r", "a\r\nB\r\n")])
+  func copyInExactModeBetweenOtherLineEndingsLeavesTheFilesEqual(
+    old: String, new: String
+  ) async throws {
+    let session = try await diff(old, new)
+
+    let right = try await session.copying(
+      ChangeCopy(block: try Self.changed(0, of: session), from: .a))
+    let left = try await session.copying(
+      ChangeCopy(block: try Self.changed(0, of: session), from: .b))
+
+    #expect(right.inputs.b.bytes == Self.bytes(old))
+    #expect(right.blocks.map(\.kind) == [.unchanged])
+    #expect(left.inputs.a.bytes == Self.bytes(new))
+    #expect(left.blocks.map(\.kind) == [.unchanged])
+  }
+
+  @Test func linesOfAFileWithOnlyCRTakeLFInExactModeIntoAFileWithLF() async throws {
+    // The exact mode reads the CRs of the left as LFs, so only "B" and "b" differ.
+    let session = try await diff("a\rB\rc\r", "a\nb\nc\n")
+    try #require(session.blocks.map(\.kind) == [.unchanged, .changed, .unchanged])
+
+    let right = try await session.copying(ChangeCopy(allChangesFrom: .a))
+    let left = try await session.copying(ChangeCopy(allChangesFrom: .b))
+
+    #expect(right.inputs.b.bytes == Self.bytes("a\nB\nc\n"))
+    #expect(right.blocks.map(\.kind) == [.unchanged])
+    #expect(left.inputs.a.bytes == Self.bytes("a\rb\rc\r"))
+    #expect(left.blocks.map(\.kind) == [.unchanged])
+  }
+
+  @Test func loneCRWithinALineOfTheExactModeIsCopiedAsItIs() async throws {
+    let session = try await diff("a\nx\ry\nc\n", "a\nb\nc\n")
+
+    let copied = try await session.copying(ChangeCopy(allChangesFrom: .a))
+
+    #expect(copied.inputs.b.bytes == Self.bytes("a\nx\ry\nc\n"))
+    #expect(copied.blocks.map(\.kind) == [.unchanged])
+  }
+
+  @Test func copiedLinesTakeCRInExactModeIntoAFileWithOnlyCR() async throws {
+    // An LF in the left would keep its CRs from ending lines; the copied line takes CR, and
+    // stays a change, since the exact mode reads it as "b" and LF.
+    let session = try await diff("a\rB\rc\r", "a\nb\r\nc\n")
+
+    let text = try Self.copiedText(session, ChangeCopy(allChangesFrom: .b))
+
+    #expect(text == "a\rb\rc\r")
+  }
+
+  @Test func lastCopiedLineWithoutLineEndingTakesTheOneOfTheTargetInExactMode() async throws {
+    // The rule leaves the last line of the right out of the block, so text of the right follows
+    // the copied last line of the left, which has no line ending.
+    let rule = IgnoreRule(name: "Comment", pattern: "^#.*")
+    let session = try await diff("a\nb", "a\nc\n# end\n", mode: .exact, ignoring: [rule])
+    try #require(session.blocks.map(\.kind) == [.unchanged, .changed, .unchanged])
+
+    let text = try Self.copiedText(session, ChangeCopy(allChangesFrom: .a))
+
+    #expect(text == "a\nb\n# end\n")
+  }
+
+  @Test func lastLineWithoutLineEndingOfAFileWithOnlyCRStaysSoInExactMode() async throws {
+    // The left has only CR line breaks; the right has none, so the copied lines keep theirs,
+    // and the CR that ends the copied line ends it in the text put together as well.
+    let session = try await diff("x\ra", "a", mode: .exact)
+    try #require(session.blocks.map(\.kind) == [.changed, .unchanged])
+
+    let copied = try await session.copying(ChangeCopy(allChangesFrom: .a))
+
+    #expect(copied.inputs.b.bytes == Self.bytes("x\ra"))
+    #expect(copied.blocks.map(\.kind) == [.unchanged])
+  }
+
+  @Test(arguments: ComparisonMode.allCases.filter { $0 != .exact })
   func copiedLinesTakeTheLineEndingOfACRLFTarget(mode: ComparisonMode) async throws {
     let session = try await diff("a\nb\nc\nd\n", "a\r\nB\r\nX\r\nd\r\n", mode: mode)
 
@@ -241,7 +330,8 @@ struct ChangeCopyTests {
     let target =
       Data([0xFF, 0xFE])
       + Data("a\r\nb\r\nc\r\n".utf16.flatMap { [UInt8($0 & 0xFF), UInt8($0 >> 8)] })
-    let session = try await Self.comparison(Self.bytes("a\n\u{DF}\u{20AC}\u{1F600}\nc\n"), target)
+    let session = try await Self.comparison(
+      Self.bytes("a\n\u{DF}\u{20AC}\u{1F600}\nc\n"), target, mode: .ignoreLineEndings)
     try #require(session.inputs.b.encoding == .utf16LittleEndian)
 
     let file = try session.file(after: ChangeCopy(allChangesFrom: .a))

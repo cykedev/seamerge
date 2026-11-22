@@ -143,15 +143,15 @@ struct ChangeCopyFuzzTests {
   /// copying the text before back: in a comparison of the file before with the file after, in
   /// exact mode, copying every change from the file before gives back its bytes.
   ///
-  /// Copied lines take the predominant line ending, so this holds where the file before ends
-  /// its lines alike, or has no line break.
+  /// Copied lines keep their line endings in the exact mode, so this holds unless just one of
+  /// the files has only CR line breaks, which the mode reads as LF.
   static func checkCopyingBack(
     to previous: Session, from current: Session, in target: Role, _ coverage: inout Coverage,
     _ context: Comment
   ) async throws {
     let before = try #require(previous.inputs[target], context)
     let after = try #require(current.inputs[target], context)
-    guard before.lineEndingStyle?.uniformLineEnding != nil || before.lineEndingStyle == nil
+    guard (before.lineEndingStyle == .uniform(.cr)) == (after.lineEndingStyle == .uniform(.cr))
     else { return }
     let back = try await Session.diff(old: before, new: after, mode: .exact)
 
@@ -200,8 +200,16 @@ struct ChangeCopyFuzzTests {
       middle.removeFirst(ending)
     }
     #expect(contents(of: middle) == contents(of: copiedText), context)
-    if let lineEnding = session.inputs[target]?.predominantLineEnding {
+    if let lineEnding = unifiedLineEnding(
+      copyingFrom: source, in: session, replacing: [replaced], context)
+    {
       #expect(endings(of: middle).allSatisfy { $0 == lineEnding.bytes }, context)
+    } else {
+      // The copied lines keep their bytes; only a last line without a line ending may get one.
+      #expect(Array(middle.prefix(copiedText.count)) == copiedText, context)
+      let added = Array(middle.dropFirst(copiedText.count))
+      #expect(
+        added.isEmpty || added == session.inputs[target]?.predominantLineEnding?.bytes, context)
     }
     if !lines.isEmpty, lines.upperBound == sourceLines.count - 1, suffixLength == 0 {
       #expect(
@@ -217,15 +225,14 @@ struct ChangeCopyFuzzTests {
     try checkCovering(copied, context)
     #expect(copied.inputs[source]?.bytes == session.inputs[source]?.bytes, context)
     let sourceFile = session.inputs[source]
-    let targetStyle = session.inputs[target]?.lineEndingStyle
-    // The exact mode tells line endings apart, except that it reads a file whose line breaks
-    // are all CR as if they were LF; only alike line endings come out equal.
-    let keepsLineEndings =
-      sourceFile?.lineEndingStyle == nil || targetStyle == nil
-      || (sourceFile?.lineEndingStyle == targetStyle && targetStyle?.uniformLineEnding != nil)
-    guard session.options.mode != .exact || keepsLineEndings else { return }
+    let sourceIsCR = sourceFile?.lineEndingStyle == .uniform(.cr)
+    let targetIsCR = session.inputs[target]?.lineEndingStyle == .uniform(.cr)
+    // The exact mode reads a file whose line breaks are all CR as if they were LF. Copied into
+    // such a file, a line takes CR; one that ends in CRLF or holds a lone CR stays a change.
+    let sourceHasOtherCR = !sourceIsCR && (sourceFile.map(utf8) ?? []).contains(UInt8(ascii: "\r"))
+    guard session.options.mode != .exact || !targetIsCR || !sourceHasOtherCR else { return }
     #expect(!copied.blocks.contains { $0.kind == .changed }, context)
-    if session.options.mode == .exact, session.ignoreRules.isEmpty {
+    if session.options.mode == .exact, session.ignoreRules.isEmpty, !sourceIsCR, !targetIsCR {
       #expect(copied.inputs[target]?.text == sourceFile?.text, context)
     }
   }
@@ -233,6 +240,30 @@ struct ChangeCopyFuzzTests {
   /// The UTF-8 of the text of `file`.
   static func utf8(of file: SourceFile) -> [UInt8] {
     Array((file.text ?? "").utf8)
+  }
+
+  /// The line ending that every line break of lines copied from `source` in `session` takes,
+  /// with the bytes `replaced` of the target giving way, or `nil` where they keep their own.
+  ///
+  /// In the exact mode, a file whose line breaks are all CR keeps them so where it keeps a CR,
+  /// and lines from such a file take LF in a file that keeps an LF. In every other mode, the
+  /// lines take the predominant line ending of the target.
+  static func unifiedLineEnding(
+    copyingFrom source: Role, in session: Session, replacing replaced: [Range<Int>],
+    _ context: Comment
+  ) -> LineEnding? {
+    let target: Role = source == .a ? .b : .a
+    let targetFile = session.inputs[target]
+    guard session.options.mode == .exact else { return targetFile?.predominantLineEnding }
+    var kept = targetFile.map(utf8) ?? []
+    for range in replaced.reversed() {
+      kept.removeSubrange(range)
+    }
+    let sourceIsCR = session.inputs[source]?.lineEndingStyle == .uniform(.cr)
+    let targetIsCR = targetFile?.lineEndingStyle == .uniform(.cr)
+    if targetIsCR, kept.contains(UInt8(ascii: "\r")) { return .cr }
+    if sourceIsCR, !targetIsCR, kept.contains(UInt8(ascii: "\n")) { return .lf }
+    return nil
   }
 
   /// Checks that the blocks of `session` cover the lines of both files in order.

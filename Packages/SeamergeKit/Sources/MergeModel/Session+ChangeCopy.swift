@@ -7,13 +7,21 @@ extension Session {
   ///
   /// The lines of each block that the copy takes, as the comparison mode splits them, give way to
   /// the lines of the source as its file holds them: its own text, never the text the comparison
-  /// saw without whitespace or without what the ignore rules match. Every line break of the
-  /// copied lines becomes the predominant line ending of the target, a lone CR within a line of
-  /// the exact mode too; where the target has no line break, the copied lines keep their own.
-  /// Where the copy ends with the last line of the source and no text of the target follows, the
-  /// target ends with a line break exactly when the source does. Every other byte of the target
-  /// stays as it is, and the file keeps the location, label, encoding and byte order mark of the
-  /// target.
+  /// saw without whitespace or without what the ignore rules match.
+  ///
+  /// In the exact mode, which tells line endings apart, the copied lines keep the line endings
+  /// of the source, so that the block is gone once the files are compared anew. The mode reads
+  /// a file whose line breaks are all CR as if they were LF, so the lines take LF where they
+  /// come from such a file into one that keeps an LF, and CR where they go into such a file that
+  /// keeps a CR. In every other mode, every line break of the copied lines becomes the
+  /// predominant line ending of the target; where the target has no line break, the copied
+  /// lines keep their own.
+  ///
+  /// A last copied line without a line ending gets the predominant one of the target where text
+  /// of the target follows. Where the copy ends with the last line of the source and no text of
+  /// the target follows, the target ends with a line break exactly when the source does. Every
+  /// other byte of the target stays as it is, and the file keeps the location, label, encoding
+  /// and byte order mark of the target.
   ///
   /// The comparison of the files does not change; ``copying(_:)`` compares them anew.
   ///
@@ -35,7 +43,9 @@ extension Session {
     case .allChanges:
       copiedBlocks = blocks.filter { $0.kind == .changed }
     }
-    var text = CopiedText(source: source, target: target)
+    let replaced = copiedBlocks.map { target.byteRange(ofLines: $0.lines(in: copy.target)) }
+    var text = CopiedText(
+      source: source, target: target, mode: options.mode, replacing: replaced)
     for block in copiedBlocks {
       text.copy(lines: block.lines(in: copy.source), over: block.lines(in: copy.target))
     }
@@ -75,6 +85,15 @@ extension Session {
 /// The UTF-8 text of the target of a copy, put together in order from the bytes of the target
 /// it keeps and the lines of the source it copies.
 private struct CopiedText {
+  /// What becomes of the line breaks of the copied lines.
+  private enum LineBreaks: Equatable {
+    /// They stay as the source has them.
+    case own
+
+    /// Each becomes this line ending.
+    case unified([UInt8])
+  }
+
   /// The file whose lines are copied.
   private let source: ComparedFile
 
@@ -87,8 +106,12 @@ private struct CopiedText {
   /// The UTF-8 text of the target as its file holds it.
   private let targetText: Data
 
-  /// The line ending of every copied line that has one, or `nil` to keep the line's own.
-  private let lineEnding: [UInt8]?
+  /// What becomes of the line breaks of the copied lines.
+  private let lineBreaks: LineBreaks
+
+  /// Whether a CR that no LF follows ends a line of the text put together, as it does in every
+  /// mode but the exact one, and there in a text whose line breaks are all CR.
+  private let breaksAtLoneCR: Bool
 
   /// The line ending that ends a line without one when text comes after it.
   private let addedLineEnding: [UInt8]
@@ -101,7 +124,12 @@ private struct CopiedText {
   /// Whether ``text`` ends in a line that has no line ending.
   private var endsWithinLine = false
 
-  init(source: ComparedFile, target: ComparedFile) {
+  /// Prepares the text of `target` with the bytes `replaced`, in order, giving way to lines of
+  /// `source`, compared in `mode`.
+  init(
+    source: ComparedFile, target: ComparedFile, mode: ComparisonMode,
+    replacing replaced: [Range<Int>]
+  ) {
     guard let sourceText = source.file.utf8, let targetText = target.file.utf8 else {
       preconditionFailure("A session never compares a binary file")
     }
@@ -110,9 +138,27 @@ private struct CopiedText {
     self.sourceText = sourceText
     self.targetText = targetText
     let ownLineEnding = target.file.predominantLineEnding
-    lineEnding = ownLineEnding.map { Self.utf8(of: $0) }
     addedLineEnding = Self.utf8(
       of: ownLineEnding ?? source.file.predominantLineEnding ?? .lf)
+    if mode == .exact {
+      let sourceIsCR = source.file.lineEndingStyle == .uniform(.cr)
+      let targetIsCR = target.file.lineEndingStyle == .uniform(.cr)
+      if targetIsCR, Self.contains(UInt8(ascii: "\r"), in: targetText, outside: replaced) {
+        lineBreaks = .unified(Self.utf8(of: .cr))
+        breaksAtLoneCR = true
+      } else if sourceIsCR, !targetIsCR,
+        Self.contains(UInt8(ascii: "\n"), in: targetText, outside: replaced)
+      {
+        lineBreaks = .unified(Self.utf8(of: .lf))
+        breaksAtLoneCR = false
+      } else {
+        lineBreaks = .own
+        breaksAtLoneCR = sourceIsCR
+      }
+    } else {
+      lineBreaks = ownLineEnding.map { .unified(Self.utf8(of: $0)) } ?? .own
+      breaksAtLoneCR = true
+    }
     text.reserveCapacity(targetText.count)
   }
 
@@ -140,14 +186,14 @@ private struct CopiedText {
     guard !bytes.isEmpty else { return }
     endLine()
     text.append(contentsOf: targetText[bytes])
-    endsWithinLine = !Self.isLineEnding(targetText[bytes.upperBound - 1])
+    endsWithinLine = !endsWithLineBreak
   }
 
   private mutating func append(_ line: Int) {
     endLine()
     let bytes = source.byteRange(ofLines: line..<(line + 1))
-    endsWithinLine = !Self.isLineEnding(sourceText[bytes.upperBound - 1])
-    guard let lineEnding else {
+    defer { endsWithinLine = !endsWithLineBreak }
+    guard case .unified(let lineEnding) = lineBreaks else {
       text.append(contentsOf: sourceText[bytes])
       return
     }
@@ -179,6 +225,27 @@ private struct CopiedText {
       text.append(contentsOf: addedLineEnding)
       endsWithinLine = false
     }
+  }
+
+  /// Whether ``text`` ends with a line break.
+  private var endsWithLineBreak: Bool {
+    guard let last = text.last else { return false }
+    return last == UInt8(ascii: "\n") || (last == UInt8(ascii: "\r") && breaksAtLoneCR)
+  }
+
+  /// Whether `text` holds `byte` outside the ranges `excluded`, which are in order and do not
+  /// overlap.
+  private static func contains(
+    _ byte: UInt8, in text: Data, outside excluded: [Range<Int>]
+  ) -> Bool {
+    var start = 0
+    for range in excluded + [text.count..<text.count] {
+      if start < range.lowerBound, text[start..<range.lowerBound].contains(byte) {
+        return true
+      }
+      start = max(start, range.upperBound)
+    }
+    return false
   }
 
   private static func isLineEnding(_ byte: UInt8) -> Bool {
