@@ -68,22 +68,22 @@ import Testing
     let collection = await FileCollection.compared(folders)
     let controller = try await Windows.controller(
       for: collection, settings: UserSettings(defaults: defaults))
-    let table = try #require(controller.collectionLayout?.fileList.tableView)
+    let fileList = try #require(controller.collectionLayout?.fileList)
     let item = NSMenuItem(
       title: "", action: SessionCommand.toggleIdenticalFiles.action, keyEquivalent: "")
-    #expect(table.numberOfRows == 6)
+    #expect(fileList.listedFiles.count == 6)
     #expect(controller.validateUserInterfaceItem(item))
     #expect(item.state == .off)
 
     #expect(
       controller.window?.tryToPerform(item.action ?? #selector(NSObject.copy), with: item) == true)
 
-    #expect(table.numberOfRows == 9)
+    #expect(fileList.listedFiles.count == 9)
     #expect(controller.validateUserInterfaceItem(item))
     #expect(item.state == .on)
     let next = try await Windows.controller(
       for: await FileCollection.compared(folders), settings: UserSettings(defaults: defaults))
-    #expect(next.collectionLayout?.fileList.tableView.numberOfRows == 9)
+    #expect(next.collectionLayout?.fileList.listedFiles.count == 9)
   }
 
   @Test func foldersCommandsAreValidOnlyWhereTheyWork() async throws {
@@ -132,13 +132,12 @@ import Testing
         && !$0.files.contains { $0.path == "prices.txt" }
     }
 
-    let listed = (0..<table.numberOfRows).compactMap {
-      controller.collectionLayout?.fileList.files[$0].path
-    }
+    let listed = controller.collectionLayout?.fileList.listedFiles.map(\.path) ?? []
     #expect(listed.contains("Sources/Orders/Invoice.swift"))
     #expect(!listed.contains("VERSION"))
     #expect(controller.collectionNavigator?.shownFile?.path == "README.md")
-    #expect(listed.indices.contains(table.selectedRow) && listed[table.selectedRow] == "README.md")
+    let selected = table.view(atColumn: 0, row: table.selectedRow, makeIfNecessary: true)
+    #expect(selected?.accessibilityLabel()?.hasPrefix("README.md, ") == true)
   }
 
   @Test func fileThatWentFromBothFoldersGivesWayToTheNextOne() async throws {
@@ -156,10 +155,8 @@ import Testing
     await Self.wait(for: collection) { !$0.files.contains { $0.path == "README.md" } }
     await controller.fileLoad?.value
 
-    #expect(
-      controller.collectionNavigator?.shownFile?.path
-        == "Resources/Configuration/Environments/Production/prices-and-discounts-for-every-region.json"
-    )
+    // The next file of the list, among the files at the top.
+    #expect(controller.collectionNavigator?.shownFile?.path == "VERSION")
   }
 
   /// Thousands of changes at once, as a checkout makes them, are compared away from the main
@@ -180,7 +177,7 @@ import Testing
       $0.files.count { $0.path.hasPrefix("Generated/") } == count
     }
 
-    #expect(controller.collectionLayout?.fileList.tableView.numberOfRows == 6 + count)
+    #expect(controller.collectionLayout?.fileList.listedFiles.count == 6 + count)
   }
 
   /// The change on disk comes in as the comparison reports it, handed over by the test, so that
@@ -344,7 +341,7 @@ import Testing
     editor.doCommand(by: #selector(NSResponder.cancelOperation(_:)))
 
     #expect(fileList.filterField.stringValue.isEmpty)
-    #expect(fileList.tableView.numberOfRows == 6)
+    #expect(fileList.listedFiles.count == 6)
     #expect(fileList.emptyLabel.isHidden)
   }
 
@@ -378,6 +375,10 @@ import Testing
     #expect(
       try listed(after: "orders", in: controller)
         == ["Sources/Orders/OrderService.swift", "Sources/Orders/Discount.swift"])
+    #expect(
+      controller.collectionNavigator?.shownFile?.path == "README.md", "The file in view stays")
+    controller.showNextFile(nil)
+    await controller.fileLoad?.value
     #expect(controller.collectionNavigator?.shownFile?.path == "Sources/Orders/OrderService.swift")
     controller.showNextFile(nil)
     await controller.fileLoad?.value
@@ -409,6 +410,6 @@ import Testing
     let fileList = try #require(controller.collectionLayout?.fileList)
     fileList.filterField.stringValue = text
     controller.fileList(fileList, didChangeFilter: text)
-    return fileList.files.map(\.path)
+    return fileList.listedFiles.map(\.path)
   }
 }

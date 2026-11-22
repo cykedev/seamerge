@@ -20,6 +20,20 @@ struct CollectionNavigatorTests {
       difftool: DifftoolContext(path: path), change: change)
   }
 
+  /// A file at `path`, number `number` in a run of Git of four files.
+  private static func numbered(_ path: String, _ number: Int) -> CollectedFile {
+    var file = file(path)
+    file.difftool = DifftoolContext(
+      path: path, filePosition: FilePosition(number: number, count: 4))
+    return file
+  }
+
+  /// Four files of a commit in the order of Git.
+  private static let commit = [
+    numbered("Sources/Orders/OrderService.swift", 1), numbered("README.md", 2),
+    numbered("Sources/Orders/Discount.swift", 3), numbered("Tests/OrderTests.swift", 4),
+  ]
+
   private static let files = [
     file("a.txt"), file("b.txt", change: .identical), file("c.txt"), file("d.txt"),
   ]
@@ -87,6 +101,79 @@ struct CollectionNavigatorTests {
 
     navigator.collection.take(.replaced([Self.files[0], moved, Self.files[3]]))
     #expect(navigator.followShownFile() == .readsAnew(moved))
+  }
+
+  @Test func listGroupsTheFilesOfGitByFolderAndNextFileAndPositionFollowIt() {
+    let navigator = CollectionNavigator(
+      collection: FileCollection(files: Self.commit), showsIdenticalFiles: false)
+    navigator.listFiles()
+
+    #expect(
+      navigator.listedFiles.map(\.path) == [
+        "README.md", "Sources/Orders/OrderService.swift", "Sources/Orders/Discount.swift",
+        "Tests/OrderTests.swift",
+      ])
+    #expect(navigator.listedGroups.groups.map(\.folder) == ["", "Sources/Orders", "Tests"])
+    _ = navigator.go(toFileAt: 1)
+    #expect(navigator.neighborIndex(forward: false) == nil)
+    #expect(navigator.neighborIndex(forward: true) == 0)
+    _ = navigator.go(toFileAt: 2)
+    #expect(navigator.neighborIndex(forward: false) == 0)
+    #expect(navigator.neighborIndex(forward: true) == 3)
+    #expect(navigator.filePosition == FilePosition(number: 3, count: 4))
+  }
+
+  @Test func filterMatchesTheFolderForAllItsFilesAndTheNameForOneAndDropsEmptyFolders() {
+    let navigator = CollectionNavigator(
+      collection: FileCollection(files: Self.commit), showsIdenticalFiles: false)
+    navigator.listFiles()
+
+    navigator.changeFilter { $0.text = "orders" }
+    #expect(
+      navigator.listedFiles.map(\.path) == [
+        "Sources/Orders/OrderService.swift", "Sources/Orders/Discount.swift",
+      ])
+    #expect(navigator.listedGroups.groups.map(\.folder) == ["Sources/Orders"])
+
+    navigator.changeFilter { $0.text = "discount" }
+    #expect(navigator.listedFiles.map(\.path) == ["Sources/Orders/Discount.swift"])
+
+    navigator.changeFilter { $0.text = "" }
+    #expect(navigator.listedFiles.count == 4)
+  }
+
+  @Test func neighborsOfAFileTheFilterLeavesOutAreTheListedOnesBesideItInTheGroups() {
+    let navigator = CollectionNavigator(
+      collection: FileCollection(files: Self.commit), showsIdenticalFiles: false)
+    navigator.listFiles()
+    _ = navigator.go(toFileAt: 2)
+
+    navigator.changeFilter { $0.text = "readme" }
+    #expect(navigator.shownRow == nil)
+    #expect(navigator.neighborIndex(forward: false) == 1)
+    #expect(navigator.neighborIndex(forward: true) == nil)
+
+    navigator.changeFilter { $0.text = "tests" }
+    #expect(navigator.neighborIndex(forward: false) == nil)
+    #expect(navigator.neighborIndex(forward: true) == 3)
+  }
+
+  @Test func fileInViewThatWentGivesWayToTheFileAfterItInTheGroups() {
+    let navigator = CollectionNavigator(
+      collection: FileCollection(files: Self.commit), showsIdenticalFiles: false)
+    navigator.listFiles()
+    _ = navigator.go(toFileAt: 1)
+
+    navigator.collection.take(.replaced([Self.commit[0], Self.commit[2], Self.commit[3]]))
+    guard case .went(let next) = navigator.followShownFile() else {
+      Issue.record("The file in view went")
+      return
+    }
+    navigator.listFiles()
+
+    #expect(
+      navigator.listedIndex(from: next).map { navigator.collection.files[$0].path }
+        == "Sources/Orders/OrderService.swift")
   }
 
   @Test func placeInAFileIsKeptByItsPath() {

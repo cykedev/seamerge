@@ -99,6 +99,17 @@ enum WindowMetrics {
   /// The distance of the filter field from the edges of the sidebar.
   static let sidebarFilterInset: CGFloat = 8
 
+  /// The distance of the sign of a file, and of the heading of a folder, from the start of their
+  /// row in the list of the sidebar.
+  static let fileRowInset: CGFloat = 2
+
+  /// The width of the sign of what happened to a file in the list of the sidebar, which a file
+  /// without a sign keeps free, so that the names line up.
+  static let fileSignWidth: CGFloat = 16
+
+  /// The room between the sign, the name and the dot of a file in the list of the sidebar.
+  static let fileRowSpacing: CGFloat = 6
+
   /// The size of the dot of a file with unsaved changes in the list of the sidebar, in points.
   static let changedFileDotSize: CGFloat = 8
 

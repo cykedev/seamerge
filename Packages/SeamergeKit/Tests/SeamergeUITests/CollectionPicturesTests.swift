@@ -65,26 +65,26 @@ import Testing
       collection, look: .light, size: nil, named: "collection-smallest-light")
   }
 
-  /// The signs of the list reach 3 : 1 and the folders 4.5 : 1, on the window background and on
-  /// the selection; the glass of the sidebar lets the window background through.
+  /// The signs of the list reach 3 : 1 on the window background and on the selection, the
+  /// headings of the folders 4.5 : 1 on the window background, on which they stand also while
+  /// they stay at the top; the glass of the sidebar lets the window background through.
   @Test(arguments: Look.all)
-  func signsAndFoldersAreLegibleInTheList(look: Look) throws {
+  func signsAndHeadingsAreLegibleInTheList(look: Look) throws {
     let options = DisplayOptions(increasesContrast: look.increasesContrast)
     let theme = options.theme(settings: .private(), fontSize: 13)
     let window = try #require(Contrast.resolve(.windowBackgroundColor, in: look.appearance))
     let selection = Contrast.over(
       Contrast.resolve(.unemphasizedSelectedContentBackgroundColor, in: look.appearance), window)
-    let folder = Contrast.resolve(CompareFilesColors(options).quietText, in: look.appearance)
-    let signs = [
-      CollectedFile.Change.modified, .added, .deleted, .identical, .unreadable(reason: ""),
-    ].map {
-      Contrast.resolve($0.presentation.color(in: theme), in: look.appearance)
-    }
+    let heading = Contrast.resolve(CompareFilesColors(options).quietText, in: look.appearance)
+    let changes: [CollectedFile.Change] = [.added, .deleted, .identical, .unreadable(reason: "")]
+    #expect(CollectedFile.Change.modified.presentation.symbolName == nil)
+    #expect(changes.allSatisfy { $0.presentation.symbolName != nil })
 
+    let headingRatio = Contrast.ratio(Contrast.over(heading, window), window)
+    #expect(headingRatio >= 4.5, "heading \(headingRatio)")
     for background in [window, selection] {
-      let folderRatio = Contrast.ratio(Contrast.over(folder, background), background)
-      #expect(folderRatio >= 4.5, "folder \(folderRatio)")
-      for sign in signs {
+      for change in changes {
+        let sign = Contrast.resolve(change.presentation.color(in: theme), in: look.appearance)
         let ratio = Contrast.ratio(Contrast.over(sign, background), background)
         #expect(ratio >= 3, "sign \(ratio)")
       }

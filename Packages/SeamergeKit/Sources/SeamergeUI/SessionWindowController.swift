@@ -265,19 +265,20 @@ public final class SessionWindowController: NSWindowController {
   /// shows their headers and empty panes until the comparison is ready, then the session it
   /// makes.
   ///
-  /// For a `collection`, the window shows `session`, one of its files, beside the list of the
-  /// files; with a `pendingFile`, `session` names that file without its lines, and the window
-  /// waits for its comparison as for a `pendingComparison`.
+  /// With a `collectionNavigator`, the window shows `session`, one of the files of its
+  /// collection, beside the list of the files; with a `pendingFile`, `session` names that file
+  /// without its lines, and the window waits for its comparison as for a `pendingComparison`.
   init(
     session: Session, context: SessionContext, undoManager: UndoManager,
     displayOptions: DisplayOptions, pasteboard: NSPasteboard, workspace: any Workspace,
     prompts: any SessionPrompts, doneStyle: SessionToolbar.DoneStyle, settings: UserSettings,
     syntaxChoices: SyntaxChoices = SyntaxChoices(),
     window: SessionWindow, unavailable: UnavailableComparison? = nil,
-    binaryMerge: BinaryMerge? = nil, collection: FileCollection? = nil,
+    binaryMerge: BinaryMerge? = nil, collectionNavigator: CollectionNavigator? = nil,
     pendingComparison: PendingComparison? = nil, pendingFile: PendingFile? = nil,
     now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
   ) {
+    let collection = collectionNavigator?.collection
     let theme = displayOptions.theme(settings: settings, fontSize: settings.fontSize)
     let arrangement = PaneArrangement(session: session)
     let headers = SideHeader.headers(of: session, context: context)
@@ -310,9 +311,7 @@ public final class SessionWindowController: NSWindowController {
     self.prompts = prompts
     toolbar = SessionToolbar(
       kind: session.kind, doneStyle: doneStyle, hasSidebar: collection != nil)
-    collectionNavigator = collection.map {
-      CollectionNavigator(collection: $0, showsIdenticalFiles: settings.showsIdenticalFiles)
-    }
+    self.collectionNavigator = collectionNavigator
     collectionLayout = collection.map { _ in
       CollectionSplitViewController(
         fileList: FileListViewController(

@@ -143,7 +143,7 @@ import Testing
     #expect(SessionCommand.groups(in: .edit).contains([.copyBlock, .copyPatch]))
   }
 
-  @Test func patchOfACollectionHoldsEveryChangedFileInTheOrderOfTheListWhateverTheFilter()
+  @Test func patchOfACollectionHoldsEveryChangedFileInTheOrderOfGitWhateverTheListShows()
     async throws
   {
     let folder = try SampleCollections.folder()
@@ -155,7 +155,7 @@ import Testing
     let fileList = try #require(controller.collectionLayout?.fileList)
     fileList.filterField.stringValue = "README"
     controller.fileList(fileList, didChangeFilter: "README")
-    try #require(fileList.files.map(\.path) == ["README.md"])
+    try #require(fileList.listedFiles.map(\.path) == ["README.md"])
 
     #expect(controller.canPerform(.exportPatch))
     #expect(await controller.exportPatchChoosingPlace())
@@ -164,6 +164,7 @@ import Testing
     let headers = String(decoding: patch, as: UTF8.self).split(separator: "\n")
       .filter { $0.hasPrefix("diff --git a/") }
       .map { $0.dropFirst("diff --git a/".count).split(separator: " ").first.map(String.init) }
+    // The list groups the files by folder; the patch keeps them as Git numbered them.
     #expect(headers == files.map(\.path))
     let old = try Self.sides(of: files, new: false)
     let new = try Self.sides(of: files, new: true)

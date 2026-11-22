@@ -871,6 +871,9 @@
     "Folder Comparison" : {
       "comment" : "Welcome window: the kind of a recent comparison of two folders."
     },
+    "Folder, %@" : {
+      "comment" : "VoiceOver: the heading of a folder in the list of files, such as Folder, Sources/Orders."
+    },
     "Font" : {
       "comment" : "Settings: the font of the code."
     },

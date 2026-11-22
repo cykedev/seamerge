@@ -150,16 +150,30 @@ enum Rendering {
       let parts = inside.filter(isPart).filter { part in
         !inside.contains { $0 !== part && isPart($0) && part.isDescendant(of: $0) }
       }
-      for part in buttons + parts where !part.isHiddenOrHasHiddenAncestor {
-        let visible = part.visibleRect
-        guard !visible.isEmpty,
-          let partBitmap = part.bitmapImageRepForCachingDisplay(in: visible)
-        else { continue }
-        part.cacheDisplay(in: visible, to: partBitmap)
-        partBitmap.draw(
-          in: part.convert(visible, to: frameView), from: .zero, operation: .sourceOver,
-          fraction: 1, respectFlipped: true, hints: nil)
+      // A heading that stays at the top of a list lies over the rows that scroll beneath it, on
+      // the window background it draws beneath itself.
+      let floating = inside.compactMap { $0 as? NSTableRowView }.filter(\.isFloating)
+      let isFloating = { (part: NSView) in floating.contains { part.isDescendant(of: $0) } }
+      draw(buttons + parts.filter { !isFloating($0) }, of: frameView)
+      for row in floating where !row.isHiddenOrHasHiddenAncestor {
+        context.cgContext.setFillColor(background)
+        context.cgContext.fill(row.convert(row.bounds, to: frameView))
+        draw(parts.filter { $0.isDescendant(of: row) }, of: frameView)
       }
+    }
+  }
+
+  /// Draws each of `parts` of `frameView`, with whatever lies inside it, where it stands.
+  private static func draw(_ parts: [NSView], of frameView: NSView) {
+    for part in parts where !part.isHiddenOrHasHiddenAncestor {
+      let visible = part.visibleRect
+      guard !visible.isEmpty,
+        let partBitmap = part.bitmapImageRepForCachingDisplay(in: visible)
+      else { continue }
+      part.cacheDisplay(in: visible, to: partBitmap)
+      partBitmap.draw(
+        in: part.convert(visible, to: frameView), from: .zero, operation: .sourceOver,
+        fraction: 1, respectFlipped: true, hints: nil)
     }
   }
 

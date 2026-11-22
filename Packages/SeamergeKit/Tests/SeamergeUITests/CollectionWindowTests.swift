@@ -25,7 +25,13 @@ import Testing
       titles.append(window.title)
     }
 
-    #expect(titles == collection.files.map(\.path))
+    // The files at the top come first, then each folder with its files.
+    #expect(
+      titles == [
+        "README.md", "prices.txt", "Sources/Orders/OrderService.swift",
+        "Sources/Orders/Discount.swift",
+        "Resources/Configuration/Environments/Production/prices-and-discounts-for-every-region.json",
+      ])
     #expect(window.subtitle.contains("File 5 of 5"))
     #expect(controller.canPerform(.previousFile))
     #expect(!controller.canPerform(.skipRemainingFiles))
@@ -74,6 +80,8 @@ import Testing
     let folder = try SampleCollections.folder()
     let collection = FileCollection(files: try SampleCollections.commit(in: folder))
     let controller = try await Windows.controller(for: collection)
+    controller.showFile(at: 0)
+    await controller.fileLoad?.value
     #expect(controller.presentation.changes.blocks.count > 1)
     controller.presentation.jump(to: 1)
 
@@ -117,13 +125,14 @@ import Testing
 
     #expect(!layout.sidebarItem.isCollapsed)
     #expect(layout.validateUserInterfaceItem(toggle))
-    #expect(layout.fileList.tableView.numberOfRows == 2)
+    #expect(layout.fileList.listedFiles.count == 2)
     #expect(controller.window?.subtitle.contains("File 1 of 3") == true)
 
     collection.add(files[2])
 
     #expect(layout.fileList.statusLine.isHidden)
-    #expect(layout.fileList.tableView.selectedRow == 0)
+    // The heading of the folder stands above the first file.
+    #expect(layout.fileList.tableView.selectedRow == 1)
   }
 
   @Test func hiddenSidebarStaysHiddenInTheNextWindow() async throws {
@@ -214,6 +223,7 @@ import Testing
       files: try SampleCollections.commit(in: try SampleCollections.folder()))
     let controller = try await Windows.controller(for: collection)
     defer { controller.window?.close() }
+    controller.showFile(at: 0)
     await controller.fileLoad?.value
     let next = collection.files[1]
     #expect(controller.collectionNavigator?.readFiles[next] != nil, "Read ahead")
@@ -238,6 +248,7 @@ import Testing
       files: try SampleCollections.commit(in: try SampleCollections.folder()))
     let controller = try await Windows.controller(for: collection)
     defer { controller.window?.close() }
+    controller.showFile(at: 0)
     await controller.fileLoad?.value
     let first = collection.files[0]
     #expect(controller.collectionNavigator?.readFiles[first] != nil, "Read")

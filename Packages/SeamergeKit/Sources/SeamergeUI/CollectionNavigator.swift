@@ -92,7 +92,7 @@ final class CollectionNavigator {
     case readsAnew(CollectedFile)
 
     /// It went from the collection; the window shows none for now. `next` is the index of the
-    /// first file that follows it in the order, if there is one.
+    /// file that follows where it stood in the order of the groups, if there is one.
     case went(next: Int?)
   }
 
@@ -109,8 +109,22 @@ final class CollectionNavigator {
   /// first file of two folders is known.
   private(set) var shownFile: CollectedFile?
 
-  /// The indices of the files of the collection that the list shows, in order.
+  /// The files of the collection that the list shows, grouped by folder, by their index in the
+  /// collection.
+  private(set) var listedGroups = FileGroups(paths: [], folderOrder: .firstFile)
+
+  /// The indices of the files of the collection that the list shows, in the order it shows them.
   private(set) var listedIndices: [Int] = []
+
+  /// Every file of the collection grouped by folder, whether the list shows it or not.
+  private var groups = FileGroups(paths: [], folderOrder: .firstFile)
+
+  /// Where each file of the collection stands among all of them in the order of the groups, by
+  /// its index in the collection.
+  private var ranks: [Int] = []
+
+  /// The files of the collection as they were grouped last.
+  private var groupedFiles: [CollectedFile]?
 
   /// The place in each file that the window showed, by path.
   private var places: [String: FilePlace] = [:]
@@ -140,13 +154,17 @@ final class CollectionNavigator {
   /// Changes which files the list shows with `change`, and lists them anew.
   func changeFilter(_ change: (inout FileFilter) -> Void) {
     change(&filter)
-    listFiles()
+    applyFilter()
   }
 
-  /// Lists the files of the collection that the filter lets through.
+  /// Groups the files of the collection anew if they changed since they were grouped last, and
+  /// lists those that the filter lets through.
   func listFiles() {
-    let (files, filter) = (collection.files, filter)
-    listedIndices = files.indices.filter { filter.includes(files[$0]) }
+    // Arrays that share their storage compare at once; the files grouped last usually do.
+    if collection.files != groupedFiles {
+      group()
+    }
+    applyFilter()
   }
 
   /// The files that the list shows, in order.
@@ -154,9 +172,11 @@ final class CollectionNavigator {
     listedIndices.map { collection.files[$0] }
   }
 
-  /// The row of the list that shows the file at `index` of the collection, if the list shows it.
+  /// The row of the list that shows the file at `index` of the collection, counting files only,
+  /// if the list shows it.
   func listedRow(of index: Int) -> Int? {
-    let row = listedIndices.partitioningIndex { $0 >= index }
+    guard let rank = rank(of: index) else { return nil }
+    let row = listedIndices.partitioningIndex { ranks[$0] >= rank }
     return listedIndices.indices.contains(row) && listedIndices[row] == index ? row : nil
   }
 
@@ -167,10 +187,10 @@ final class CollectionNavigator {
 
   /// The index in the collection of the file that Next File, or Previous File if not `forward`,
   /// shows: the next one the list shows after the file in view, wherever that file stands in
-  /// the order, even if the list leaves it out.
+  /// the order of the groups, even if the list leaves it out.
   func neighborIndex(forward: Bool) -> Int? {
-    guard shownFile != nil else { return nil }
-    let row = listedIndices.partitioningIndex { $0 >= fileIndex }
+    guard shownFile != nil, let rank = rank(of: fileIndex) else { return nil }
+    let row = listedIndices.partitioningIndex { ranks[$0] >= rank }
     if forward {
       let next =
         listedIndices.indices.contains(row) && listedIndices[row] == fileIndex ? row + 1 : row
@@ -179,10 +199,41 @@ final class CollectionNavigator {
     return row > 0 ? listedIndices[row - 1] : nil
   }
 
-  /// The index of the file the list shows at or after `next` in the order of the collection, or
-  /// of its last file if there is none; `nil` while the list is empty.
+  /// The index of the file the list shows at or after the file at `next` in the order of the
+  /// groups, or of its last file if there is none; `nil` while the list is empty.
   func listedIndex(from next: Int?) -> Int? {
-    next.flatMap { next in listedIndices.first { $0 >= next } } ?? listedIndices.last
+    guard let rank = next.flatMap(rank(of:)) else { return listedIndices.last }
+    return listedIndices.first { ranks[$0] >= rank } ?? listedIndices.last
+  }
+
+  /// How the folders of the collection follow each other: in the order of Git where Git
+  /// numbered the files, else by path, as the files are sorted then.
+  private var folderOrder: FileGroups.FolderOrder {
+    collection.files.contains { $0.difftool.filePosition != nil } ? .firstFile : .path
+  }
+
+  /// Groups every file of the collection by folder and notes where each stands in their order.
+  private func group() {
+    let files = collection.files
+    groupedFiles = files
+    groups = FileGroups(paths: files.lazy.map(\.path), folderOrder: folderOrder)
+    ranks = Array(repeating: 0, count: files.count)
+    for (rank, index) in groups.order.enumerated() {
+      ranks[index] = rank
+    }
+  }
+
+  /// Lists the files that the filter lets through, in the order of the groups.
+  private func applyFilter() {
+    let (files, filter) = (collection.files, filter)
+    listedGroups = groups.filter { filter.includes(files[$0]) }
+    listedIndices = listedGroups.order
+  }
+
+  /// Where the file at `index` of the collection stands in the order of the groups, if it is
+  /// among the files grouped last.
+  private func rank(of index: Int) -> Int? {
+    ranks.indices.contains(index) ? ranks[index] : nil
   }
 
   /// Where the file in view stands in the list: among as many files as Git announced or the list
@@ -253,7 +304,8 @@ final class CollectionNavigator {
   func followShownFile() -> Following {
     guard let shown = shownFile else { return .stays }
     guard let index = collection.files.firstIndex(where: { $0.path == shown.path }) else {
-      let next = collection.files.firstIndex { !$0.precedes(shown) }
+      group()
+      let next = successor(of: shown)
       shownFile = nil
       fileIndex = 0
       return .went(next: next)
@@ -269,6 +321,19 @@ final class CollectionNavigator {
         || isUnreadable(file) != isUnreadable(shown)
     else { return .stays }
     return .readsAnew(file)
+  }
+
+  /// The index of the file of the collection that `gone`, which went from it, would be followed
+  /// by in the order of the groups, if any.
+  private func successor(of gone: CollectedFile) -> Int? {
+    let files = collection.files
+    let position = files.firstIndex { !$0.precedes(gone) } ?? files.endIndex
+    var paths = files.map(\.path)
+    paths.insert(gone.path, at: position)
+    let order = FileGroups(paths: paths, folderOrder: folderOrder).order
+    guard let place = order.firstIndex(of: position), place + 1 < order.count else { return nil }
+    let next = order[place + 1]
+    return next > position ? next - 1 : next
   }
 
   /// Keeps `place` as the place in the file in view, which the window shows again when the user

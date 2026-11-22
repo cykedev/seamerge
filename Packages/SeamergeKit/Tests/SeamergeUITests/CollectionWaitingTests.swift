@@ -37,7 +37,8 @@ import Testing
       session: opening.session, context: opening.context, undoManager: UndoManager(),
       displayOptions: DisplayOptions(reducesMotion: true), pasteboard: .withUniqueName(),
       workspace: WorkspaceRecorder(), prompts: PromptRecorder(), doneStyle: .standard,
-      settings: settings, window: SessionWindow(), collection: collection, pendingFile: held)
+      settings: settings, window: SessionWindow(), collectionNavigator: opening.navigator,
+      pendingFile: held)
     return Waiting(controller: controller) {
       continuation.yield()
       continuation.finish()
@@ -48,8 +49,16 @@ import Testing
     FileCollection(files: try SampleCollections.commit(in: try SampleCollections.folder()))
   }
 
+  /// The files of the commit in folders, of which the first has more than one change.
+  private static func commitInFolders() throws -> FileCollection {
+    FileCollection(
+      files: try SampleCollections.commit(in: try SampleCollections.folder()).filter {
+        $0.path.contains("/")
+      })
+  }
+
   @Test func slowFirstFileShowsTheWindowWithItsHeadersBeforeItsLines() async throws {
-    let collection = try Self.commit()
+    let collection = try Self.commitInFolders()
     let waiting = try await waiting(for: collection)
     let controller = waiting.controller
     defer { controller.window?.close() }
@@ -58,7 +67,7 @@ import Testing
     #expect(controller.waitsForComparison)
     #expect(controller.toolbarCount == .waiting)
     #expect(controller.window?.title == first.path)
-    let opened = try await Windows.controller(for: try Self.commit())
+    let opened = try await Windows.controller(for: try Self.commitInFolders())
     defer { opened.window?.close() }
     #expect(
       controller.presentation.headers.mapValues(\.name)
@@ -69,7 +78,8 @@ import Testing
     }
     #expect(!controller.canPerform(.nextChange))
     #expect(controller.canPerform(.nextFile))
-    #expect(controller.collectionLayout?.fileList.tableView.selectedRow == 0)
+    // The heading of the folder stands above the first file.
+    #expect(controller.collectionLayout?.fileList.tableView.selectedRow == 1)
 
     waiting.finish()
     await controller.phase.filling?.value
@@ -89,7 +99,8 @@ import Testing
     let controller = waiting.controller
     defer { controller.window?.close() }
 
-    controller.showFile(at: 2)
+    // README.md, at the top of the list, shows first; this is another file.
+    controller.showFile(at: 0)
     await controller.fileLoad?.value
     waiting.finish()
     // Gives the comparison of the first file the time to arrive, which then shows nowhere.
@@ -98,7 +109,7 @@ import Testing
     }
     try await Task.sleep(for: .milliseconds(50))
 
-    let file = collection.files[2]
+    let file = collection.files[0]
     #expect(controller.collectionNavigator?.shownFile == file)
     #expect(controller.window?.title == file.path)
     #expect(controller.presentation.changes.session.inputs.b.label == file.new.label)
@@ -133,13 +144,14 @@ import Testing
     var announcements: [String] = []
     controller.presentation.announce = { announcements.append($0) }
 
-    controller.showFile(at: 2)
+    controller.showFile(at: 3)
     // The window shows the headers of the file before its lines are there.
     while !controller.waitsForComparison {
       await Task.yield()
     }
-    #expect(controller.window?.title == collection.files[2].path)
-    #expect(controller.presentation.headers[.b]?.name == "README.md")
+    #expect(controller.window?.title == collection.files[3].path)
+    #expect(
+      controller.presentation.headers[.b]?.name == collection.files[3].path)
     for pane in Windows.panes(of: controller) {
       #expect(pane.documentView.string.isEmpty)
     }
@@ -156,7 +168,7 @@ import Testing
     defer { controller.window?.close() }
     controller.fileWait = 0
 
-    controller.showFile(at: 2)
+    controller.showFile(at: 0)
     while !controller.waitsForComparison {
       await Task.yield()
     }
@@ -264,7 +276,7 @@ import Testing
       try await Task.sleep(for: .milliseconds(10))
     }
     #expect(controller.presentation.changes.session.ignoreRules == rules)
-    #expect(controller.collectionNavigator?.shownFile == collection.files[0])
+    #expect(controller.collectionNavigator?.shownFile?.path == "README.md")
   }
 
   @Test func panesOfAComparisonAreMadeAlikeWhateverItsFilesAreCalled() async throws {

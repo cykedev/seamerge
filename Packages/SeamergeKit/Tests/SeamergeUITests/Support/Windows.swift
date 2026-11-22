@@ -334,7 +334,7 @@ extension Windows {
       session: opening.session, context: opening.context, undoManager: UndoManager(),
       displayOptions: options, pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(),
       prompts: prompts, doneStyle: .standard, settings: settings, window: window,
-      collection: collection, pendingFile: opening.comparison)
+      collectionNavigator: opening.navigator, pendingFile: opening.comparison)
     if fillsFirstFile {
       await controller.phase.filling?.value
     }

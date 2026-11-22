@@ -20,6 +20,10 @@ struct CollectionOpening {
 
   /// The comparison of the first file, or `nil` while there is none.
   var comparison: PendingFile?
+
+  /// Which file of the collection the window shows, and which files its list shows, listed
+  /// already.
+  var navigator: CollectionNavigator
 }
 
 /// A file of a collection ready to show: as the window read it, and what its panes show.
@@ -53,7 +57,7 @@ extension SessionWindowController {
       displayOptions: .current(in: .shared), pasteboard: .general,
       workspace: NSWorkspace.shared, prompts: SessionSheets(), doneStyle: .standard,
       settings: settings, syntaxChoices: .shared, window: SessionWindow(),
-      collection: collection, pendingFile: opening.comparison)
+      collectionNavigator: opening.navigator, pendingFile: opening.comparison)
     observeDisplayOptions()
     await fillIfReady(
       opening, within: Self.comparisonWait - (ContinuousClock.now - start) / .seconds(1))
@@ -68,14 +72,16 @@ extension SessionWindowController {
   static func opening(
     _ collection: FileCollection, settings: UserSettings
   ) async throws(SessionLoadingError) -> CollectionOpening {
-    let filter = FileFilter(showsIdenticalFiles: settings.showsIdenticalFiles)
-    let listed = collection.files.filter(filter.includes)
-    guard let file = listed.first else {
+    let navigator = CollectionNavigator(
+      collection: collection, showsIdenticalFiles: settings.showsIdenticalFiles)
+    navigator.listFiles()
+    guard let file = navigator.listedIndices.first.map({ collection.files[$0] }) else {
       guard let folders = collection.folders else {
         preconditionFailure("A window of a collection needs a file to show")
       }
       return CollectionOpening(
-        session: try await emptySession(of: folders), context: SessionContext(folders: folders))
+        session: try await emptySession(of: folders), context: SessionContext(folders: folders),
+        navigator: navigator)
     }
     let (mode, rules) = (settings.comparisonMode, settings.ignoreRules)
     // The comparison runs while the window is made, as that of a window of one comparison does.
@@ -91,12 +97,12 @@ extension SessionWindowController {
     }
     var difftool = file.difftool
     difftool.filePosition = FilePosition(
-      number: 1, count: max(collection.expectedCount ?? 0, listed.count))
+      number: 1, count: max(collection.expectedCount ?? 0, navigator.listedIndices.count))
     return CollectionOpening(
       session: try await emptySession(
         of: Session.Inputs(a: file.old, b: file.new), kind: .diff, mode: mode),
       context: SessionContext(difftool: difftool, folders: collection.namingFolders),
-      comparison: comparison)
+      comparison: comparison, navigator: navigator)
   }
 
   /// Fills the window, which waits for the comparison of the first file of `opening`, before it
@@ -148,7 +154,7 @@ extension SessionWindowController {
     keepShownFile()
     let file = collectionNavigator.go(toFileAt: index)
     markChangedFilesInTheList()
-    collectionLayout?.fileList.select(collectionNavigator.listedRow(of: index))
+    collectionLayout?.fileList.select(index)
     load(file)
   }
 
@@ -388,7 +394,8 @@ extension SessionWindowController {
     guard let collectionNavigator, let collectionLayout else { return }
     let collection = collectionNavigator.collection
     collectionLayout.fileList.show(
-      collectionNavigator.listedFiles, selecting: collectionNavigator.shownRow,
+      collectionNavigator.listedGroups, of: collection.files,
+      selecting: collectionNavigator.shownFile.map { _ in collectionNavigator.fileIndex },
       scrolling: scrolling)
     let hasList = collection.folders != nil || collection.files.count > 1
     collectionLayout.hasList = hasList
@@ -597,11 +604,8 @@ extension SessionWindowController {
 }
 
 extension SessionWindowController: FileListDelegate {
-  func fileList(_ fileList: FileListViewController, didSelectRow row: Int) {
-    guard let listed = collectionNavigator?.listedIndices, listed.indices.contains(row) else {
-      return
-    }
-    showFile(at: listed[row])
+  func fileList(_ fileList: FileListViewController, didSelectFileAt index: Int) {
+    showFile(at: index)
   }
 
   func fileList(_ fileList: FileListViewController, didChangeFilter text: String) {

@@ -6,16 +6,21 @@ import PaneKit
 /// what the user typed to filter it.
 @MainActor
 protocol FileListDelegate: AnyObject {
-  /// The user selected the file in row `row` of the list.
-  func fileList(_ fileList: FileListViewController, didSelectRow row: Int)
+  /// The user selected the file at `index` of the files the list was given.
+  func fileList(_ fileList: FileListViewController, didSelectFileAt index: Int)
 
   /// The user changed the text that the list is filtered by.
   func fileList(_ fileList: FileListViewController, didChangeFilter text: String)
 }
 
-/// The list of the files of a window that compares several, in its sidebar: one row for each
-/// file with the sign of what happened to it, its name and its folder, and a dot while it has
-/// copied changes that are not saved.
+/// The list of the files of a window that compares several, in its sidebar, grouped by folder.
+///
+/// The files at the top come first, then each folder as a heading above its files. A row shows
+/// the sign of what happened to the file, its name, and a dot while it has copied changes that
+/// are not saved.
+///
+/// The list knows the files by their index among the files it was given, never by their row,
+/// so that the selection stays with its file as files come, go or are filtered out.
 ///
 /// Below the rows stands a quiet line while files come or folders are compared, and what a
 /// comparison of folders found once it is done; below it the field that filters the list by
@@ -25,36 +30,41 @@ final class FileListViewController: NSViewController {
   /// Learns which file the user chose; the list does not retain it.
   weak var delegate: (any FileListDelegate)?
 
-  /// The files the list shows.
+  /// The files the list was given, which its groups refer to by index.
   private(set) var files: [CollectedFile] = []
+
+  /// The files the list shows, grouped by folder.
+  private(set) var groups = FileGroups(paths: [], folderOrder: .firstFile)
 
   /// The paths of the files with copied changes that are not saved, which show a dot.
   var changedPaths: Set<String> = [] {
     didSet {
       guard changedPaths != oldValue else { return }
-      let rows = IndexSet(
-        files.indices.filter {
-          changedPaths.contains(files[$0].path) != oldValue.contains(files[$0].path)
+      let changed = IndexSet(
+        rows.indices.filter { row in
+          guard case .file(let index) = rows[row] else { return false }
+          let path = files[index].path
+          return changedPaths.contains(path) != oldValue.contains(path)
         })
-      tableView.reloadData(forRowIndexes: rows, columnIndexes: IndexSet(integer: 0))
+      tableView.reloadData(forRowIndexes: changed, columnIndexes: IndexSet(integer: 0))
     }
   }
 
   /// The theme whose colors the signs take.
   var theme: Theme {
-    didSet { tableView.reloadData() }
+    didSet { reloadRows() }
   }
 
   /// The color of the folders, quieter than the names yet readable.
   var folderColor: NSColor {
     didSet {
-      tableView.reloadData()
+      reloadRows()
       statusLabel.textColor = folderColor
       emptyLabel.textColor = folderColor
     }
   }
 
-  /// The table of the files.
+  /// The table of the files: the files at the top, then each folder as a heading over its files.
   let tableView = NSTableView()
 
   /// The line below the rows that says how many files have come, how far the comparison of
@@ -69,6 +79,21 @@ final class FileListViewController: NSViewController {
     labelWithString: String(
       localized: "No Files Match", bundle: .module,
       comment: "Sidebar: no file of the list matches what was typed in the filter field."))
+
+  /// A row of the list.
+  private enum Row {
+    /// The heading of a folder, relative to the top, above its files.
+    case heading(String)
+
+    /// The file at an index of the files the list was given.
+    case file(Int)
+  }
+
+  /// The rows in order: the files at the top, then each folder followed by its files.
+  private var rows: [Row] = []
+
+  /// The row of each file the list shows, by its index among the files.
+  private var rowOfFile: [Int?] = []
 
   private let statusLabel = NSTextField(labelWithString: "")
   private let statusIndicator = NSProgressIndicator()
@@ -93,6 +118,7 @@ final class FileListViewController: NSViewController {
     tableView.headerView = nil
     tableView.style = .sourceList
     tableView.rowSizeStyle = .default
+    tableView.floatsGroupRows = true
     tableView.allowsEmptySelection = true
     tableView.allowsMultipleSelection = false
     tableView.dataSource = self
@@ -163,29 +189,41 @@ final class FileListViewController: NSViewController {
     view = container
   }
 
-  /// Shows `files` with the row `selection` selected, or none; with `scrolling`, the selected
-  /// row comes into view.
-  func show(_ files: [CollectedFile], selecting selection: Int?, scrolling: Bool) {
+  /// Shows `groups` of `files` with the file at `selection` of them selected, or none.
+  ///
+  /// With `scrolling`, the selected row comes into view. Without it, the list keeps the selected
+  /// row where it stands, or else the first file in view, so that files that come above it do
+  /// not move what the user looks at.
+  func show(
+    _ groups: FileGroups, of files: [CollectedFile], selecting selection: Int?, scrolling: Bool
+  ) {
     loadViewIfNeeded()
+    let anchor = scrolling ? nil : rowInView()
     self.files = files
-    isSelectingFromCode = true
-    tableView.reloadData()
-    isSelectingFromCode = false
-    emptyLabel.isHidden = !(files.isEmpty && !filterField.stringValue.isEmpty)
+    self.groups = groups
+    reloadRows()
+    emptyLabel.isHidden = !(groups.fileCount == 0 && !filterField.stringValue.isEmpty)
     select(selection, scrolling: scrolling)
+    // The files may stand at other indices now; their paths stay.
+    if let anchor, let index = files.firstIndex(where: { $0.path == anchor.path }),
+      let row = rowOfFile[index]
+    {
+      tableView.scroll(CGPoint(x: 0, y: tableView.rect(ofRow: row).minY - anchor.offset))
+    }
   }
 
-  /// Selects row `row`, or none, without telling the delegate; with `scrolling`, the row comes
-  /// into view.
-  func select(_ row: Int?, scrolling: Bool = true) {
+  /// Selects the file at `index` of the files the list was given, or none, without telling the
+  /// delegate; with `scrolling`, its row comes into view.
+  func select(_ index: Int?, scrolling: Bool = true) {
     isSelectingFromCode = true
     defer { isSelectingFromCode = false }
-    guard let row, files.indices.contains(row) else {
+    guard let index, rowOfFile.indices.contains(index), let row = rowOfFile[index] else {
       tableView.deselectAll(nil)
       return
     }
     tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
     if scrolling {
+      // The table leaves room for the heading of the folder that stays at the top.
       tableView.scrollRowToVisible(row)
     }
   }
@@ -207,6 +245,50 @@ final class FileListViewController: NSViewController {
     // The sidebar may be too narrow for the whole line.
     statusLine.toolTip = text
     statusLine.setAccessibilityLabel(text)
+  }
+
+  /// Makes the rows for the groups, shows them, and notes the row of each file; the delegate
+  /// learns nothing of the rows that go meanwhile.
+  private func reloadRows() {
+    isSelectingFromCode = true
+    defer { isSelectingFromCode = false }
+    var rows: [Row] = []
+    rows.reserveCapacity(groups.fileCount + groups.groups.count)
+    var rowOfFile = [Int?](repeating: nil, count: files.count)
+    for group in groups.groups {
+      if !group.folder.isEmpty {
+        rows.append(.heading(group.folder))
+      }
+      for index in group.members {
+        rowOfFile[index] = rows.count
+        rows.append(.file(index))
+      }
+    }
+    self.rows = rows
+    self.rowOfFile = rowOfFile
+    tableView.reloadData()
+  }
+
+  /// The file whose row the list keeps in place as it shows other files, and how far the top of
+  /// that row stands below the top of what is in view: the selected file if it is in view, else
+  /// the first file in view.
+  private func rowInView() -> (path: String, offset: CGFloat)? {
+    guard let clipView = tableView.enclosingScrollView?.contentView, !rows.isEmpty else {
+      return nil
+    }
+    let visible = clipView.bounds
+    let inView = tableView.rows(in: visible)
+    let selected = tableView.selectedRow
+    let row =
+      inView.contains(selected) && selected >= 0
+      ? selected
+      : (inView.lowerBound..<inView.upperBound).first { row in
+        if case .file = rows[row] { true } else { false }
+      }
+    guard let row, rows.indices.contains(row), case .file(let index) = rows[row] else {
+      return nil
+    }
+    return (files[index].path, tableView.rect(ofRow: row).minY - visible.minY)
   }
 
   @objc private func filterDidChange(_ sender: NSSearchField) {
@@ -276,106 +358,48 @@ final class FileListViewController: NSViewController {
 
 extension FileListViewController: NSTableViewDataSource, NSTableViewDelegate {
   func numberOfRows(in tableView: NSTableView) -> Int {
-    files.count
+    rows.count
+  }
+
+  func tableView(_ tableView: NSTableView, isGroupRow row: Int) -> Bool {
+    if case .heading = rows[row] { true } else { false }
+  }
+
+  func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool {
+    if case .file = rows[row] { true } else { false }
   }
 
   func tableView(
     _ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int
   ) -> NSView? {
-    let cell =
-      tableView.makeView(withIdentifier: FileListCell.identifier, owner: self) as? FileListCell
-      ?? FileListCell()
-    cell.show(
-      files[row], isChanged: changedPaths.contains(files[row].path), theme: theme,
-      folderColor: folderColor)
-    return cell
+    switch rows[row] {
+    case .heading(let folder):
+      let cell =
+        tableView.makeView(withIdentifier: FolderHeadingCell.identifier, owner: self)
+        as? FolderHeadingCell ?? FolderHeadingCell()
+      cell.show(folder, color: folderColor)
+      return cell
+    case .file(let index):
+      let file = files[index]
+      let cell =
+        tableView.makeView(withIdentifier: FileListCell.identifier, owner: self) as? FileListCell
+        ?? FileListCell()
+      cell.show(file, isChanged: changedPaths.contains(file.path), theme: theme)
+      return cell
+    }
+  }
+
+  func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+    guard case .heading = rows[row] else { return nil }
+    return tableView.makeView(withIdentifier: FolderHeadingRowView.identifier, owner: self)
+      as? FolderHeadingRowView ?? FolderHeadingRowView()
   }
 
   func tableViewSelectionDidChange(_ notification: Notification) {
-    guard !isSelectingFromCode, tableView.selectedRow >= 0 else { return }
-    delegate?.fileList(self, didSelectRow: tableView.selectedRow)
-  }
-}
-
-/// A row of the file list: the sign of what happened to the file, its name, its folder, and a
-/// dot while it has copied changes that are not saved.
-@MainActor
-final class FileListCell: NSTableCellView {
-  static let identifier = NSUserInterfaceItemIdentifier("FileListCell")
-
-  private let sign = NSImageView()
-  private let name = NSTextField(labelWithString: "")
-  private let folder = NSTextField(labelWithString: "")
-  private let changedDot = NSImageView()
-
-  init() {
-    super.init(frame: .zero)
-    identifier = Self.identifier
-    sign.setAccessibilityElement(false)
-    name.lineBreakMode = .byTruncatingTail
-    name.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
-    name.setContentHuggingPriority(.required, for: .horizontal)
-    folder.lineBreakMode = .byTruncatingMiddle
-    folder.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-    folder.setContentHuggingPriority(.defaultLow, for: .horizontal)
-    for label in [name, folder] {
-      label.font = .preferredFont(forTextStyle: .body)
-      label.setAccessibilityElement(false)
-    }
-    // The dot of a document with unsaved changes, as in the close button: a template image that
-    // takes the color of the text, also in a selected row.
-    changedDot.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: nil)?
-      .withSymbolConfiguration(
-        NSImage.SymbolConfiguration(pointSize: WindowMetrics.changedFileDotSize, weight: .regular))
-    changedDot.setAccessibilityElement(false)
-    changedDot.setContentCompressionResistancePriority(.required, for: .horizontal)
-    let spacer = NSView()
-    spacer.setContentHuggingPriority(.init(1), for: .horizontal)
-    spacer.setContentCompressionResistancePriority(.init(1), for: .horizontal)
-    let stack = NSStackView(views: [sign, name, folder, spacer, changedDot])
-    stack.spacing = WindowMetrics.footerToggleSpacing + 2
-    stack.translatesAutoresizingMaskIntoConstraints = false
-    addSubview(stack)
-    imageView = sign
-    textField = name
-    NSLayoutConstraint.activate([
-      stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
-      stack.trailingAnchor.constraint(
-        equalTo: trailingAnchor, constant: -WindowMetrics.changedFileDotInset),
-      stack.centerYAnchor.constraint(equalTo: centerYAnchor),
-      sign.widthAnchor.constraint(equalToConstant: 16),
-    ])
-    setAccessibilityElement(true)
-    setAccessibilityRole(.cell)
-  }
-
-  required init?(coder: NSCoder) {
-    nil
-  }
-
-  /// Shows `file` with the sign of what happened to it in the colors of `theme`, its folder in
-  /// `folderColor`, and a dot if it `isChanged`, which VoiceOver reads as Edited.
-  func show(_ file: CollectedFile, isChanged: Bool, theme: Theme, folderColor: NSColor) {
-    let path = file.path as NSString
-    let folderPath = path.deletingLastPathComponent
-    name.stringValue = path.lastPathComponent
-    name.textColor = .labelColor
-    folder.stringValue = folderPath
-    folder.textColor = folderColor
-    folder.isHidden = folderPath.isEmpty
-    changedDot.isHidden = !isChanged
-    let presentation = file.change.presentation
-    sign.image = NSImage(
-      systemSymbolName: presentation.symbolName, accessibilityDescription: nil)?
-      .withSymbolConfiguration(
-        NSImage.SymbolConfiguration(scale: presentation.isSmall ? .small : .medium))
-    sign.contentTintColor = presentation.color(in: theme)
-    toolTip = presentation.toolTip(for: file.path)
-    setAccessibilityLabel(
-      [
-        path.lastPathComponent, folderPath, presentation.word,
-        isChanged ? SideHeader.editedText : "",
-      ]
-      .filter { !$0.isEmpty }.joined(separator: ", "))
+    let selected = tableView.selectedRow
+    guard !isSelectingFromCode, rows.indices.contains(selected),
+      case .file(let index) = rows[selected]
+    else { return }
+    delegate?.fileList(self, didSelectFileAt: index)
   }
 }

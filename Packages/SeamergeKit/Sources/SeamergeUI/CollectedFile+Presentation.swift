@@ -6,8 +6,9 @@ extension CollectedFile.Change {
   /// How the list shows what happened to a file: a sign, its color, and a word for VoiceOver and
   /// the help tag.
   struct Presentation {
-    /// The name of the symbol of the sign.
-    let symbolName: String
+    /// The name of the symbol of the sign, or `nil` for a file that only changed, which most files
+    /// of a list are; the signs stand out for the others.
+    let symbolName: String?
 
     /// The word for what happened.
     let word: String
@@ -16,16 +17,13 @@ extension CollectedFile.Change {
 
     /// The color of the sign: that of the side that has the file alone, the color of the earlier
     /// side for a deleted file and of the later side for a new one, as in the panes; a quiet
-    /// gray for a file that changed.
+    /// gray for the others.
     func color(in theme: Theme) -> NSColor {
       colorRole.map(theme.symbolColor(for:)) ?? .secondaryLabelColor
     }
 
     /// Why a side cannot be read, for a file whose sides cannot be compared.
     let reason: String?
-
-    /// Whether the sign is the small dot of an ordinary change rather than a whole symbol.
-    let isSmall: Bool
 
     /// The help tag of a row: the whole path and what happened, and why where a side cannot be
     /// read.
@@ -45,14 +43,12 @@ extension CollectedFile.Change {
     }
 
     fileprivate init(
-      symbolName: String, word: String, colorRole: ColorRole?, reason: String? = nil,
-      isSmall: Bool = false
+      symbolName: String?, word: String, colorRole: ColorRole?, reason: String? = nil
     ) {
       self.symbolName = symbolName
       self.word = word
       self.colorRole = colorRole
       self.reason = reason
-      self.isSmall = isSmall
     }
   }
 
@@ -61,11 +57,11 @@ extension CollectedFile.Change {
     switch self {
     case .modified:
       Presentation(
-        symbolName: "circle.fill",
+        symbolName: nil,
         word: String(
           localized: "Modified", bundle: .module,
           comment: "A file in the sidebar whose two sides differ."),
-        colorRole: nil, isSmall: true)
+        colorRole: nil)
     case .added:
       Presentation(
         symbolName: "plus.circle",
