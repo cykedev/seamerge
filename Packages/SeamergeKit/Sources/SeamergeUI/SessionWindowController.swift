@@ -144,6 +144,17 @@ public final class SessionWindowController: NSWindowController {
   /// The locations of the files that ``writableSides`` was decided for.
   var writableFileURLs: [URL?] = []
 
+  /// The bytes of the files of the comparisons on disk, as far as the window knows them, which
+  /// tell the files whose copied changes are not saved.
+  var filesOnDisk = FilesOnDisk()
+
+  /// The roles of the files of the comparison shown whose copied changes are not saved.
+  var editedRoles: Set<Role> = []
+
+  /// Whether the panes stand empty below the headers of a file of the collection, which the
+  /// window shows while it waits for the lines of the file; its files count as unchanged then.
+  var showsHeadersOnly = false
+
   /// The last copy of changes that a command or a button began, which ends once the window
   /// shows its outcome.
   var copying: Task<Void, Never>?
@@ -407,7 +418,7 @@ public final class SessionWindowController: NSWindowController {
     toolbar.update(
       count: toolbarCount, isComparing: showsComparisonProgress,
       lineArrangement: presentation.lineArrangement, canShow: canShow, isValid: canPerform)
-    window?.isDocumentEdited = isResultEdited
+    window?.isDocumentEdited = hasUnsavedChanges
     updateFooter()
     updateSubtitle()
   }
@@ -482,6 +493,7 @@ public final class SessionWindowController: NSWindowController {
 
   /// Titles the window after the session it shows now.
   func sessionDidChange() {
+    updateEditedFiles()
     comparisonHasPatch = shownComparisonHasPatch
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: presentation.arrangement,
@@ -527,10 +539,10 @@ extension SessionWindowController: NSWindowDelegate {
     updateSubtitle()
   }
 
-  /// Asks whether to save first while the result of a merge has unsaved changes, and closes
-  /// once the answer allows it.
+  /// Asks whether to save first while the result of a merge or a file of a comparison has
+  /// unsaved changes, and closes once the answer allows it.
   public func windowShouldClose(_ sender: NSWindow) -> Bool {
-    guard isResultEdited, !hasFinished else { return true }
+    guard hasUnsavedChanges, !hasFinished else { return true }
     Task { await closeAskingFirst() }
     return false
   }
@@ -558,10 +570,24 @@ extension SessionWindowController: NSWindowDelegate {
 }
 
 extension SessionWindowController {
-  /// Closes a comparison that `git difftool` started and tells Git to compare no further files.
+  /// Closes a comparison that `git difftool` started and tells Git to compare no further files,
+  /// after asking whether to save the files with copied changes first.
   @objc func skipRemainingFiles(_ sender: Any?) {
     guard canPerform(.skipRemainingFiles) else { return }
+    guard hasChangedFiles else {
+      cancel()
+      return
+    }
+    Task { await skipRemainingFilesAskingFirst() }
+  }
+
+  /// Closes the window and tells Git to compare no further files, once files with copied
+  /// changes are saved or the user lets them go; tells whether it closed.
+  @discardableResult
+  func skipRemainingFilesAskingFirst() async -> Bool {
+    guard await saveChangedFilesAskingFirst() else { return false }
     cancel()
+    return true
   }
 
   /// Closes the window as the app quits, without asking: a merge reports whether what it shows
@@ -575,9 +601,10 @@ extension SessionWindowController {
     }
   }
 
-  /// Whether the result of a merge has changes that are not saved, which closing asks about.
+  /// Whether the result of a merge, or a file of a comparison, has changes that are not saved,
+  /// which closing asks about.
   public var hasUnsavedChanges: Bool {
-    isResultEdited
+    isResultEdited || hasChangedFiles
   }
 
   /// Closes the window and reports that the session was cancelled: Git leaves a merge unresolved
@@ -745,6 +772,9 @@ extension SessionWindowController: NSUserInterfaceValidations {
       (presentation.result?.document.openConflictCount ?? 0) > 0
     case .result:
       saving != nil && !comparisonSwitcher.isComparing && !isAskingToClose
+    case .changes:
+      (saving != nil || hasChangedFiles) && !comparisonSwitcher.isComparing && !isAskingToClose
+        && !diskWatch.isReloading
     case .waitingCaller:
       saving != nil && context.waitingCaller != nil && !isAskingToClose
     case .ownFiles:

@@ -81,12 +81,15 @@ final class SessionCoordinator {
     }
   }
 
-  /// Asks for each session window whose merge has unsaved changes whether to save it, as
-  /// closing it does, and closes it; tells whether every one closed, which stops at the first
-  /// that the user keeps open.
+  /// Asks for each session window with unsaved changes, of a merge or of files a comparison
+  /// copied changes to, whether to save them, as closing it does, and closes it; tells whether
+  /// every one closed, which stops at the first that the user keeps open.
+  ///
+  /// A comparison closed so reports that it was cancelled, as every other one does as the app
+  /// quits, so that Git compares no further files.
   func closeUnsavedWindowsAskingFirst() async -> Bool {
     for controller in windowControllers where controller.hasUnsavedChanges {
-      guard await controller.closeAskingFirst() else { return false }
+      guard await controller.closeAskingFirst(asTheAppQuits: true) else { return false }
     }
     return true
   }

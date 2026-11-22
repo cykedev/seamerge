@@ -37,7 +37,7 @@ protocol SoftwareUpdater: AnyObject {
 /// Every window of Sparkle that the app does not ask for, the question whether to check
 /// automatically and a version that the daily check found, waits until a window other than a
 /// session window is in front, such as the welcome window. Installing goes through the usual
-/// quitting of the app, which asks about unsaved merges and tells every waiting helper how its
+/// quitting of the app, which asks about unsaved changes and tells every waiting helper how its
 /// session ended. While a helper waits, the app does not relaunch: the update installs when the
 /// app quits.
 @MainActor

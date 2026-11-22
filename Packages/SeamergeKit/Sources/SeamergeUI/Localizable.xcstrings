@@ -112,7 +112,7 @@
       }
     },
     "%@, %@" : {
-      "comment" : "VoiceOver, Keyboard Shortcuts: a command and its shortcut or single keys.\nVoiceOver: a pane, such as A, feature/login."
+      "comment" : "VoiceOver, Keyboard Shortcuts: a command and its shortcut or single keys.\nVoiceOver: a pane whose file has unsaved changes, such as B, main.swift, Edited.\nVoiceOver: a pane, such as A, feature/login."
     },
     "%@, %@, %@" : {
       "comment" : "VoiceOver: a pane with its name and role in the order the header shows them, such as A, feature/login, incoming or A, your commit, 1a2b3c4 Fix typo."
@@ -322,6 +322,9 @@
           }
         }
       }
+    },
+    "%lld other files" : {
+      "comment" : "The end of a list of files with unsaved changes, such as 4 other files."
     },
     "%lld pt" : {
       "comment" : "Settings: the size of the code, such as 13 pt."
@@ -709,9 +712,6 @@
     "Couldn’t Copy the Patch" : {
       "comment" : "Sheet after copying a patch failed."
     },
-    "Couldn’t Copy to “%@”" : {
-      "comment" : "Sheet after copying a change failed, such as to main.swift."
-    },
     "Couldn’t Export “%@”" : {
       "comment" : "Sheet after exporting a patch to a file failed."
     },
@@ -747,6 +747,12 @@
     },
     "Differs from the line endings of the other files" : {
       "comment" : "Help tag of the line endings in a header, shown only where they differ."
+    },
+    "Do you want to save the changes made to “%@”?" : {
+      "comment" : "Sheet before copied changes of a file would be lost, such as to “main.swift”."
+    },
+    "Do you want to save the changes made to %lld files?" : {
+      "comment" : "Sheet before copied changes of several files would be lost, such as to 2 files."
     },
     "Do you want to save the changes made to the document “%@”?" : {
       "comment" : "Sheet before closing a merge of files with unsaved changes."
@@ -801,6 +807,9 @@
     },
     "Edit" : {
       "comment" : "Menu bar."
+    },
+    "Edited" : {
+      "comment" : "Header of a file whose copied changes are not saved yet."
     },
     "Edited by hand" : {
       "comment" : "VoiceOver: a part of the result that the user typed."
@@ -1326,11 +1335,17 @@
     "Save As…" : {
       "comment" : "File menu command."
     },
+    "Save to write the copied changes to the file" : {
+      "comment" : "Help tag of Edited in the header of a file with unsaved changes."
+    },
     "Save with Markers" : {
       "comment" : "Button of the sheet before saving with open conflicts: save anyway."
     },
     "Saved %@" : {
       "comment" : "VoiceOver after saving, such as Saved story.txt."
+    },
+    "Saved %lld files" : {
+      "comment" : "VoiceOver after saving the files of a comparison, such as Saved 2 files."
     },
     "Scroll the panes together" : {
       "comment" : "Help tag of the footer toggle of synchronized scrolling while it is off."
@@ -1457,9 +1472,6 @@
     },
     "Some of its characters don’t exist in %@. UTF-8 holds them all." : {
       "comment" : "Sheet: the result holds characters the encoding lacks."
-    },
-    "Some of the copied characters don’t exist in %@, the encoding of “%@”. Nothing was copied." : {
-      "comment" : "Sheet after copying a change failed: the encoding of the file lacks characters."
     },
     "Spacious" : {
       "comment" : "Settings: lines far apart."
@@ -1724,6 +1736,9 @@
     },
     "Wrap long lines at the width of the panes" : {
       "comment" : "Help tag of the footer toggle of line wrapping while lines run on."
+    },
+    "Your changes to %@ will be lost if you don’t save them." : {
+      "comment" : "Sheet before copied changes of several files would be lost: what follows, such as to main.swift and README.md."
     },
     "Your changes will be lost if you don’t save them." : {
       "comment" : "Sheet before closing a merge of files with unsaved changes: what follows."

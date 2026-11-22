@@ -1,3 +1,4 @@
+import FolderCompare
 import Foundation
 import GitSupport
 import MergeModel
@@ -9,7 +10,9 @@ import os
 /// A comparison that Git or Tower started offers only the working copy: the other sides are
 /// copies of a commit or of the index in a temporary folder, which the next run replaces, so
 /// that what is copied there would look like work and be lost. Any other comparison compares
-/// files the user chose, and each of them may be written, wherever it lies. Either way, a file
+/// files the user chose, and each of them may be written, wherever it lies; only in a comparison
+/// of two folders does a file have to lie in its folder, since a symbolic link there is shown by
+/// its target, as a text the app writes elsewhere, which no one would read. Either way, a file
 /// is written only if it is an ordinary file once symbolic links are resolved, the user may
 /// write it, and its volume is not read-only; the missing side of a new or deleted file,
 /// `/dev/null`, never is.
@@ -30,13 +33,24 @@ struct WritableSides: Sendable, Hashable {
     // A comparison of folders that the user chose describes its files as Git would, but names
     // its sides after the folders.
     let git = context.folders == nil ? context.difftool : nil
-    let sides: [(role: Role, file: SessionFile, gitRole: DiffSideRole?)] = [
-      (.a, old, git?.leftRole), (.b, new, git?.rightRole),
+    let sides: [(role: Role, file: SessionFile, gitRole: DiffSideRole?, folder: URL?)] = [
+      (.a, old, git?.leftRole, context.folders?.left),
+      (.b, new, git?.rightRole, context.folders?.right),
     ]
     roles = Set(
       sides.filter { side in
-        (git == nil || side.gitRole == .workingCopy) && Self.canWrite(side.file.url)
+        (git == nil || side.gitRole == .workingCopy)
+          && side.folder.map { Self.folder($0, holds: side.file.url) } ?? true
+          && Self.canWrite(side.file.url)
       }.map(\.role))
+  }
+
+  /// Whether the file at `url` lies in `folder` or a folder within it, links in both paths
+  /// resolved.
+  private static func folder(_ folder: URL, holds url: URL) -> Bool {
+    let top = folder.standardizedFileURL.resolvingSymlinksInPath().path(percentEncoded: false)
+    let path = url.standardizedFileURL.resolvingSymlinksInPath().path(percentEncoded: false)
+    return path.hasPrefix(top.hasSuffix("/") ? top : top + "/")
   }
 
   /// Whether the file of `role` may be written.

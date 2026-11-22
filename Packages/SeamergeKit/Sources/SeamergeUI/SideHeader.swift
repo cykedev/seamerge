@@ -64,6 +64,9 @@ struct SideHeader: Equatable {
   /// The facts for the popover.
   let details: Details
 
+  /// Whether the file has copied changes that are not saved, which the header says quietly.
+  var isEdited = false
+
   /// The headers of the panes of the inputs of `session` in `context`, by role.
   static func headers(of session: Session, context: SessionContext) -> [Role: SideHeader] {
     Dictionary(
@@ -121,6 +124,14 @@ struct SideHeader: Equatable {
   /// The name of the side as a whole, for VoiceOver and the help tag: letter, role and name in
   /// the order the header shows them.
   var spokenName: String {
+    guard isEdited else { return spokenSide }
+    return String(
+      localized: "\(spokenSide), \(Self.editedText)", bundle: .module,
+      comment: "VoiceOver: a pane whose file has unsaved changes, such as B, main.swift, Edited.")
+  }
+
+  /// The letter, the role and the name of the side in the order the header shows them.
+  private var spokenSide: String {
     guard let roleText else {
       return String(
         localized: "\(role.letter), \(name)", bundle: .module,
@@ -132,6 +143,13 @@ struct SideHeader: Equatable {
       comment:
         "VoiceOver: a pane with its name and role in the order the header shows them, such as A, feature/login, incoming or A, your commit, 1a2b3c4 Fix typo."
     )
+  }
+
+  /// What the header of a file with unsaved changes says, as the title of a document does.
+  static var editedText: String {
+    String(
+      localized: "Edited", bundle: .module,
+      comment: "Header of a file whose copied changes are not saved yet.")
   }
 
   /// The name in the header of `role`: the name Git gives the side, the new or the deleted file

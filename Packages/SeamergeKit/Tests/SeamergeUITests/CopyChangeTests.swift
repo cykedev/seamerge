@@ -386,18 +386,4 @@ import Testing
     await untilCopied(controller)
     #expect(a.rowAtReadingLine.row == before)
   }
-
-  @Test func charactersTheTargetCannotHoldAreReportedAndNothingIsCopied() async throws {
-    let target = try #require("\u{201C}a\u{201D}\nold\n".data(using: .windowsCP1252))
-    let prompts = PromptRecorder()
-    let controller = try Windows.controller(
-      for: try await WritableComparisons.diff(
-        old: Data("\u{201C}a\u{201D}\n\u{2713} done\n".utf8), new: target),
-      prompts: prompts)
-    controller.presentation.jump(to: 0)
-    controller.copyToRight(nil)
-    await untilCopied(controller)
-    #expect(text(of: .b, in: controller) == target)
-    #expect(prompts.unrepresentableCopies.map(\.name) == ["Greeting.swift"])
-  }
 }

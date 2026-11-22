@@ -25,7 +25,7 @@ extension SessionWindowController {
     else { return }
     saving.diskBytes = bytes
     self.saving = saving
-    guard await prompts.confirmReloadingChangedResult(url.lastPathComponent, in: window) else {
+    guard await prompts.confirmReloadingChangedFile(url.lastPathComponent, in: window) else {
       // The file no longer holds what the window shows.
       if var saving = self.saving {
         saving.saved = nil
@@ -62,30 +62,63 @@ extension SessionWindowController {
   }
 
   /// Compares the files of the session anew if one of them changed on disk.
+  ///
+  /// A file of a comparison with copied changes is not reloaded without asking: a sheet offers
+  /// to keep the window's version, which Save writes over the file later, or to reload it. A
+  /// file without such changes reloads at once.
   private func reloadChangedSources() async {
     let session = presentation.changes.session
-    var changed: [Role] = []
-    let files = session.inputs.mapValuesWithRoles { role, file in
+    var changed: [Role: SourceFile] = [:]
+    for (role, file) in session.inputs {
       guard let url = file.url,
         let bytes = FileManager.default.contents(atPath: url.path(percentEncoded: false)),
-        bytes != file.bytes, !diskWatch.hasSeen(bytes, at: url)
-      else { return file }
-      changed.append(role)
-      return SourceFile(bytes: bytes, label: file.label, url: url)
+        bytes != filesOnDisk[url] ?? file.bytes, !diskWatch.hasSeen(bytes, at: url)
+      else { continue }
+      changed[role] = SourceFile(bytes: bytes, label: file.label, url: url)
     }
     guard !changed.isEmpty else { return }
     collectionNavigator?.shownFileChangedOnDisk()
-    guard let reloaded = await compare(files, as: session) else { return }
-    let name = changed.count == 1 ? presentation.headers[changed[0]]?.distinctName : nil
-    await replaceSession(with: reloaded) { count, window in
-      await self.prompts.confirmReloading(name, discarding: count, in: window)
-    }
     // Reloaded or not, the window has seen these bytes: it asks no more about them, and an undo
     // that brings back the files before stays.
-    for role in changed {
-      if let file = files[role], let url = file.url {
+    for file in changed.values {
+      if let url = file.url {
         diskWatch.remember(file.bytes, at: url)
       }
+    }
+    var reloaded = changed
+    if let window {
+      for (role, file) in changed where editedRoles.contains(role) {
+        guard let url = file.url else { continue }
+        let name = url.lastPathComponent
+        if !(await prompts.confirmReloadingChangedFile(name, in: window)) {
+          // The file no longer holds what the window knew of it; the window's version stays
+          // unsaved.
+          filesOnDisk.note(file.bytes, at: url)
+          reloaded[role] = nil
+        }
+      }
+    }
+    guard !reloaded.isEmpty else {
+      updateEditedFiles()
+      stateDidChange()
+      return
+    }
+    await reloadFiles(reloaded)
+  }
+
+  /// Compares the files of the session anew with `files` in their roles, as they are on disk
+  /// now, as one step of undo; asks first if decisions of a merge would be lost.
+  func reloadFiles(_ files: [Role: SourceFile]) async {
+    let session = presentation.changes.session
+    let inputs = session.inputs.mapValuesWithRoles { role, file in files[role] ?? file }
+    guard let reloaded = await compare(inputs, as: session) else { return }
+    if session.kind == .diff {
+      filesOnDisk.noteRead(files.values)
+    }
+    let name =
+      files.count == 1 ? files.keys.first.flatMap { presentation.headers[$0]?.distinctName } : nil
+    await replaceSession(with: reloaded) { count, window in
+      await self.prompts.confirmReloading(name, discarding: count, in: window)
     }
   }
 
@@ -212,6 +245,10 @@ extension SessionWindowController {
       }
     if let window, let sheetWindow = changeFilesSheet?.window {
       window.endSheet(sheetWindow)
+    }
+    guard await saveChangedFilesAskingFirst() else { return }
+    if session.kind == .diff {
+      filesOnDisk.noteRead(session.inputs.values)
     }
     let isReplaced = await replaceSession(with: session) { count, window in
       await self.prompts.confirmChangingFiles(discarding: count, in: window)

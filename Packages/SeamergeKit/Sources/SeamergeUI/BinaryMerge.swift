@@ -1,7 +1,6 @@
 import AppKit
 public import Foundation
 public import MergeModel
-import os
 
 /// A merge of a file that is not text, such as an image, which Seamerge cannot merge line by
 /// line: its window offers to take one side as a whole, or to leave the file unresolved.
@@ -49,34 +48,7 @@ public struct BinaryMerge: Sendable {
   ///   written.
   func take(_ role: Role) throws {
     let source = role == .a ? a.url : b.url
-    let fileManager = FileManager.default
-    let destination = output.resolvingSymlinksInPath()
-    let scratch = try fileManager.url(
-      for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: destination,
-      create: true)
-    defer { removeScratch(scratch) }
-    let copy = scratch.appending(path: destination.lastPathComponent)
-    try fileManager.copyItem(at: source, to: copy)
-    if fileManager.fileExists(atPath: destination.path(percentEncoded: false)) {
-      let permissions = try fileManager.attributesOfItem(
-        atPath: destination.path(percentEncoded: false))[.posixPermissions]
-      if let permissions {
-        try fileManager.setAttributes(
-          [.posixPermissions: permissions], ofItemAtPath: copy.path(percentEncoded: false))
-      }
-      _ = try fileManager.replaceItemAt(destination, withItemAt: copy)
-    } else {
-      try fileManager.moveItem(at: copy, to: destination)
-    }
-  }
-
-  private func removeScratch(_ scratch: URL) {
-    do {
-      try FileManager.default.removeItem(at: scratch)
-    } catch {
-      Logger(subsystem: "app.eiden.seamerge", category: "SeamergeUI").error(
-        "Could not remove \(scratch.path, privacy: .public): \(error, privacy: .public)")
-    }
+    try FileReplacement.replace(output) { try FileManager.default.copyItem(at: source, to: $0) }
   }
 }
 

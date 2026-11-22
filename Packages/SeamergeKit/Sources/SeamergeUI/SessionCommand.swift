@@ -168,19 +168,21 @@ public enum SessionCommand: CaseIterable, Sendable {
   /// user chooses.
   case exportPatch
 
-  /// Closes a comparison that `git difftool` started and tells Git to compare no further files.
+  /// Closes a comparison that `git difftool` started and tells Git to compare no further files,
+  /// after asking about files with copied changes.
   case skipRemainingFiles
 
   /// Asks for other files in the roles of the window and compares those in its place.
   case changeFiles
 
-  /// Writes the result to its file, after asking where the first time if it has none.
+  /// Writes the result to its file, after asking where the first time if it has none; in a
+  /// comparison, writes every file with copied changes.
   case save
 
   /// Writes the result to a file that the user chooses.
   case saveAs
 
-  /// Writes the result to its file and closes the window.
+  /// Writes the result, or the files with copied changes, and closes the window.
   case saveAndClose
 
   /// Closes a merge that someone waits for without saving, which reports it as not done.
@@ -706,7 +708,7 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .exportPatch: #selector(SessionWindowController.exportPatch(_:))
     case .skipRemainingFiles: #selector(SessionWindowController.skipRemainingFiles(_:))
     case .changeFiles: #selector(SessionWindowController.changeFiles(_:))
-    case .save: #selector(SessionWindowController.saveResult(_:))
+    case .save: #selector(SessionWindowController.saveChanges(_:))
     case .saveAs: #selector(SessionWindowController.saveResultAs(_:))
     case .saveAndClose: #selector(SessionWindowController.saveAndClose(_:))
     case .leaveUnresolved: #selector(SessionWindowController.leaveUnresolved(_:))

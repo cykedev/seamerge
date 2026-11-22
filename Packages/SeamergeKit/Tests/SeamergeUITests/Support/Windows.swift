@@ -151,15 +151,6 @@ final class PromptRecorder: SessionPrompts {
     failureCount += 1
   }
 
-  /// The files that took no copied text, with the encoding that lacked characters, in order.
-  private(set) var unrepresentableCopies: [(name: String, encoding: FileEncoding)] = []
-
-  func reportUnrepresentableCopy(to name: String, in encoding: FileEncoding, in window: NSWindow)
-    async
-  {
-    unrepresentableCopies.append((name, encoding))
-  }
-
   /// The answer to the sheet before saving with open conflicts.
   var openConflictsChoice = OpenConflictsChoice.cancel
 
@@ -239,9 +230,22 @@ final class PromptRecorder: SessionPrompts {
     return destination
   }
 
-  func confirmReloadingChangedResult(_ name: String, in window: NSWindow) async -> Bool {
+  /// What happens while the window asks whether to reload a file that another app changed.
+  var whileAskingToReloadChangedFile: @MainActor () async -> Void = {}
+
+  func confirmReloadingChangedFile(_ name: String, in window: NSWindow) async -> Bool {
     questions.append("reload changed \(name)")
+    await whileAskingToReloadChangedFile()
     return reloadsChangedResult
+  }
+
+  /// What happens while the window asks whether to save copied changes.
+  var whileAskingToSaveChanges: @MainActor () async -> Void = {}
+
+  func confirmSavingChanges(to names: [String], in window: NSWindow) async -> UnsavedChangesChoice {
+    questions.append("save changes to \(names.joined(separator: ", "))")
+    await whileAskingToSaveChanges()
+    return unsavedChangesChoice
   }
 
   /// What happens while the window asks whether to reload although decisions would be lost.

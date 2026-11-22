@@ -111,8 +111,12 @@ extension SessionCommand {
     /// Resolving the open conflicts needs one.
     case openConflicts
 
-    /// Saving needs the result of a merge whose files the window shows.
+    /// Saving as needs the result of a merge whose files the window shows.
     case result
+
+    /// Saving needs the result of a merge whose files the window shows, or a file of a
+    /// comparison with copied changes that are not saved.
+    case changes
 
     /// Leaving a merge unresolved needs someone who waits for it.
     case waitingCaller
@@ -167,7 +171,8 @@ extension SessionCommand {
     case .swapSides: .swappableSides
     case .goToOtherEndOfMove: .moveEnd
     case .skipRemainingFiles: .remainingFiles
-    case .save, .saveAs, .saveAndClose: .result
+    case .save, .saveAndClose: .changes
+    case .saveAs: .result
     case .leaveUnresolved: .waitingCaller
     case .changeFiles: .ownFiles
     case .toggleIgnoredChanges: .ignoredChanges

@@ -279,7 +279,7 @@ extension AppDelegate: NSApplicationDelegate {
     false
   }
 
-  /// Asks for each merge with unsaved changes whether to save it, then closes every session
+  /// Asks for each window with unsaved changes whether to save them, then closes every session
   /// window, which tells each waiting helper how its session ended, before the app quits; a
   /// window the user keeps open keeps the app running.
   ///

@@ -65,18 +65,7 @@ extension SessionWindowController {
   /// Decides once which files of the session may be written, as the window shows files it did
   /// not show before, and gives the seams their buttons.
   func updateCopyControls() {
-    let inputs = presentation.changes.session.inputs
-    let urls = [inputs.a.url, inputs.b.url]
-    if urls != writableFileURLs || writableSides == nil {
-      writableFileURLs = urls
-      writableSides = inputs.a.url.flatMap { old in
-        inputs.b.url.map { new in
-          WritableSides(
-            old: SessionFile(url: old, label: inputs.a.label),
-            new: SessionFile(url: new, label: inputs.b.label), context: context)
-        }
-      }
-    }
+    updateWritableSides()
     // The single column has no seam; its menu, keys and context menu copy all the same.
     let directions = presentation.lineArrangement == .singleColumn ? [] : copyDirections
     if layout.copyDirections != directions {
@@ -170,6 +159,9 @@ extension SessionWindowController {
   /// compared anew away from the main actor while the window keeps showing the old comparison,
   /// and the copy becomes one step of undo named after the command.
   ///
+  /// The target counts as changed until it is saved; if its encoding cannot hold the copied
+  /// text, it holds it in UTF-8 from then on, which saving offers first.
+  ///
   /// Afterwards the line of the side copied from stays at the reading line, the runs expanded
   /// stay so, and so does the one where the copy was, and the next change becomes current as
   /// Go to Next Change After Choosing says. VoiceOver hears where the text went and how many
@@ -208,12 +200,13 @@ extension SessionWindowController {
     }
     let collapsesUnchangedRows = presentation.collapsed.collapsesUnchangedRows
     let goesToNextChange = settings.goesToNextChange
+    noteFileBeforeCopying(to: copy.target)
     await comparisonSwitcher.whileComparingAnew {
       let session: Session
       do throws(MergeModelError) {
-        session = try await changes.session.copying(copy)
+        session = try await Self.copying(copy, in: changes.session)
       } catch {
-        await copyFailed(error, to: targetName)
+        await comparisonFailed(error)
         return
       }
       let collapsed = await Self.collapsed(
@@ -279,14 +272,27 @@ extension SessionWindowController {
     return collapsed
   }
 
-  /// Tells that the copy to `name` failed, and keeps the comparison shown now.
-  private func copyFailed(_ error: MergeModelError, to name: String) async {
-    guard let window else { return }
-    guard case .unrepresentableText(let encoding) = error else {
-      await comparisonFailed(error)
-      return
+  /// The comparison of `session` after `copy`; where the encoding of the target cannot hold the
+  /// copied text, the target takes it in UTF-8 without a byte order mark, its text and line
+  /// endings otherwise as they are.
+  @concurrent
+  private static func copying(
+    _ copy: ChangeCopy, in session: Session
+  ) async throws(MergeModelError) -> Session {
+    do {
+      return try await session.copying(copy)
+    } catch .unrepresentableText(_) {
+      guard let target = session.inputs[copy.target], let text = target.text else {
+        preconditionFailure("A comparison compares two files of text")
+      }
+      let inUTF8 = SourceFile(bytes: Data(text.utf8), label: target.label, url: target.url)
+      let inputs = session.inputs
+      // The text is the same, so the comparison has the same blocks as before.
+      let converted = try await Session.diff(
+        old: copy.target == .a ? inUTF8 : inputs.a, new: copy.target == .b ? inUTF8 : inputs.b,
+        mode: session.options.mode, ignoring: session.ignoreRules)
+      return try await converted.copying(copy)
     }
-    await prompts.reportUnrepresentableCopy(to: name, in: encoding, in: window)
   }
 
   /// What VoiceOver hears after a copy to `name`, which leaves `count` changes.

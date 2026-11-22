@@ -59,8 +59,13 @@ protocol SessionPrompts: AnyObject {
   /// Asks where to save the result, suggesting `name`, and returns the place or `nil`.
   func chooseDestination(suggesting name: String, in window: NSWindow) async -> URL?
 
-  /// Tells that another app changed the result file `name` and asks whether to reload it.
-  func confirmReloadingChangedResult(_ name: String, in window: NSWindow) async -> Bool
+  /// Tells that another app changed the file `name`, which has changes of the window that are
+  /// not saved, and asks whether to reload it rather than keep the window's version.
+  func confirmReloadingChangedFile(_ name: String, in window: NSWindow) async -> Bool
+
+  /// Asks whether to save the copied changes of the files `names` before they are lost, as by
+  /// closing the window.
+  func confirmSavingChanges(to names: [String], in window: NSWindow) async -> UnsavedChangesChoice
 
   /// Asks whether to reload the files that changed on disk although `count` decisions would be
   /// lost; `name` names the one that changed, or is `nil` if more than one did.
@@ -80,11 +85,6 @@ protocol SessionPrompts: AnyObject {
   /// Asks whether to reset every decision although it discards the text typed by hand in
   /// `count` blocks, and tells whether to.
   func confirmResettingAll(discardingHandwritingIn count: Int, in window: NSWindow) async -> Bool
-
-  /// Tells that the file `name` took no copied text, as its encoding lacks some of the
-  /// characters.
-  func reportUnrepresentableCopy(to name: String, in encoding: FileEncoding, in window: NSWindow)
-    async
 
   /// Tells that the files could not be compared anew.
   func reportFailedComparison(in window: NSWindow) async
@@ -195,19 +195,74 @@ final class SessionSheets: SessionPrompts {
         localized: "Your changes will be lost if you don’t save them.", bundle: .module,
         comment: "Sheet before closing a merge of files with unsaved changes: what follows.")
     }
-    alert.addButton(
-      withTitle: SessionCommand.save.title)
-    let discard = alert.addButton(
-      withTitle: String(
-        localized: "Don’t Save", bundle: .module, comment: "Button: close without saving."))
-    discard.keyEquivalent = "d"
-    discard.keyEquivalentModifierMask = .command
-    alert.addButton(withTitle: Self.cancelTitle)
+    Self.addSavingButtons(to: alert)
     return switch await Self.present(alert, in: window) {
     case .alertFirstButtonReturn: .save
     case .alertSecondButtonReturn: .discard
     default: .cancel
     }
+  }
+
+  func confirmSavingChanges(to names: [String], in window: NSWindow) async -> UnsavedChangesChoice {
+    switch await Self.present(Self.savingChangesAlert(to: names), in: window) {
+    case .alertFirstButtonReturn: .save
+    case .alertSecondButtonReturn: .discard
+    default: .cancel
+    }
+  }
+
+  /// The sheet that asks whether to save the copied changes of the files `names`, as a
+  /// document asks: Save, Don’t Save and Cancel.
+  static func savingChangesAlert(to names: [String]) -> NSAlert {
+    let alert = NSAlert()
+    if names.count == 1 {
+      alert.messageText = String(
+        localized: "Do you want to save the changes made to “\(names[0])”?", bundle: .module,
+        comment: "Sheet before copied changes of a file would be lost, such as to “main.swift”.")
+      alert.informativeText = String(
+        localized: "Your changes will be lost if you don’t save them.", bundle: .module,
+        comment: "Sheet before closing a merge of files with unsaved changes: what follows.")
+    } else {
+      alert.messageText = String(
+        localized: "Do you want to save the changes made to \(names.count) files?",
+        bundle: .module,
+        comment: "Sheet before copied changes of several files would be lost, such as to 2 files.")
+      alert.informativeText = String(
+        localized:
+          "Your changes to \(fileList(names)) will be lost if you don’t save them.",
+        bundle: .module,
+        comment:
+          "Sheet before copied changes of several files would be lost: what follows, such as to main.swift and README.md."
+      )
+    }
+    addSavingButtons(to: alert)
+    return alert
+  }
+
+  /// The names of `names` as a list in the language of the sheets: three of them, or two and
+  /// how many more.
+  private static func fileList(_ names: [String]) -> String {
+    let shownCount = names.count > 3 ? 2 : names.count
+    var items = Array(names.prefix(shownCount))
+    if names.count > shownCount {
+      items.append(
+        String(
+          localized: "\(names.count - shownCount) other files", bundle: .module,
+          comment: "The end of a list of files with unsaved changes, such as 4 other files."))
+    }
+    let language = Bundle.module.preferredLocalizations.first ?? "en"
+    return items.formatted(.list(type: .and).locale(Locale(identifier: language)))
+  }
+
+  /// Adds Save, Don’t Save with Command-D, and Cancel, as a document asks before it closes.
+  private static func addSavingButtons(to alert: NSAlert) {
+    alert.addButton(withTitle: SessionCommand.save.title)
+    let discard = alert.addButton(
+      withTitle: String(
+        localized: "Don’t Save", bundle: .module, comment: "Button: close without saving."))
+    discard.keyEquivalent = "d"
+    discard.keyEquivalentModifierMask = .command
+    alert.addButton(withTitle: cancelTitle)
   }
 
   func confirmLeavingUnresolved(
@@ -270,7 +325,7 @@ final class SessionSheets: SessionPrompts {
     return panel.url
   }
 
-  func confirmReloadingChangedResult(_ name: String, in window: NSWindow) async -> Bool {
+  func confirmReloadingChangedFile(_ name: String, in window: NSWindow) async -> Bool {
     let alert = NSAlert()
     alert.messageText = String(
       localized: "“\(name)” was changed by another app.", bundle: .module,
@@ -396,21 +451,6 @@ final class SessionSheets: SessionPrompts {
 
   private static var reloadTitle: String {
     SessionWindowController.reloadName
-  }
-
-  func reportUnrepresentableCopy(to name: String, in encoding: FileEncoding, in window: NSWindow)
-    async
-  {
-    let alert = NSAlert()
-    alert.messageText = String(
-      localized: "Couldn’t Copy to “\(name)”", bundle: .module,
-      comment: "Sheet after copying a change failed, such as to main.swift.")
-    alert.informativeText = String(
-      localized:
-        "Some of the copied characters don’t exist in \(encoding.name), the encoding of “\(name)”. Nothing was copied.",
-      bundle: .module,
-      comment: "Sheet after copying a change failed: the encoding of the file lacks characters.")
-    _ = await Self.present(alert, in: window)
   }
 
   func reportFailedComparison(in window: NSWindow) async {

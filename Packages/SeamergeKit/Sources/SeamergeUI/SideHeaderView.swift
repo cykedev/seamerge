@@ -33,8 +33,8 @@ struct SideHeaderView: View {
   }
 }
 
-/// What a header says about a side: its badge, its real name and role, and its line endings and
-/// encoding where they differ from the other sides.
+/// What a header says about a side: its badge, its real name and role, whether its file has
+/// unsaved changes, and its line endings and encoding where they differ from the other sides.
 struct SideNamesView: View {
   let header: SideHeader
   let theme: Theme
@@ -53,6 +53,16 @@ struct SideNamesView: View {
       Text(roleText)
         .font(.subheadline)
         .foregroundStyle(.secondary)
+    }
+    if header.isEdited {
+      Text(SideHeader.editedText)
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .layoutPriority(1)
+        .help(
+          Text(
+            "Save to write the copied changes to the file", bundle: .module,
+            comment: "Help tag of Edited in the header of a file with unsaved changes."))
     }
     if let lineEndingStyle = header.differingLineEndingStyle {
       Text(lineEndingStyle.name)

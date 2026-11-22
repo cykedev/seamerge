@@ -245,6 +245,50 @@ import Testing
     #expect(Self.roles(writable) == [.a, .b])
   }
 
+  /// A comparison of folders shows a link by its target, as a text in a folder of the app that
+  /// no one reads; writing it would look like work and be lost.
+  @Test func linkInFoldersTheUserChoseIsNotWritten() async throws {
+    let folders = try SampleFolders()
+    try folders.write("notes.txt", left: "one\n", right: "two\n")
+    for (folder, target) in [(folders.left, "/etc/hosts"), (folders.right, "/etc/services")] {
+      try FileManager.default.createSymbolicLink(
+        atPath: folder.appending(path: "hosts").path, withDestinationPath: target)
+    }
+    let collection = await FileCollection.compared(folders)
+    let link = try #require(collection.files.first { $0.path == "hosts" })
+    let file = try #require(collection.files.first { $0.path == "notes.txt" })
+    let context = { (file: CollectedFile) in
+      SessionContext(difftool: file.difftool, folders: collection.namingFolders)
+    }
+    try #require(FileManager.default.isWritableFile(atPath: link.new.url.path))
+
+    #expect(WritableSides(old: link.old, new: link.new, context: context(link)).isEmpty)
+    #expect(
+      Self.roles(WritableSides(old: file.old, new: file.new, context: context(file))) == [.a, .b])
+  }
+
+  @Test func windowOffersNoCopyToALinkOfFoldersTheUserChose() async throws {
+    let folders = try SampleFolders()
+    for (folder, target) in [(folders.left, "/etc/hosts"), (folders.right, "/etc/services")] {
+      try FileManager.default.createSymbolicLink(
+        atPath: folder.appending(path: "hosts").path, withDestinationPath: target)
+    }
+    let collection = await FileCollection.compared(folders)
+    let controller = try await Windows.controller(for: collection)
+    // The texts of the links are written anew as the folders are compared once more.
+    while controller.waitsForComparison {
+      await controller.phase.filling?.value
+      await controller.fileLoad?.value
+    }
+    try #require(controller.collectionNavigator?.shownFile?.path == "hosts")
+    try #require(controller.presentation.changes.blocks.count == 1)
+    controller.presentation.jump(to: 0)
+
+    #expect(!controller.canPerform(.copyToRight))
+    #expect(!controller.canPerform(.copyAllChangesToLeft))
+    #expect(controller.layout.copyDirections.isEmpty)
+  }
+
   @Test func swappingTheSidesOfTheWindowTakesTheWritableFileAlong() async throws {
     let folders = try SampleFolders()
     let files = try Self.gitFiles(in: folders)

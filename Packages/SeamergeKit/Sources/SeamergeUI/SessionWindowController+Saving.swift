@@ -4,10 +4,17 @@ import TextBasics
 
 /// Saving the result of a merge and closing its window, each way out reported exactly once.
 extension SessionWindowController {
-  /// Writes the result to its file, after asking where the first time if it has none.
-  @objc func saveResult(_ sender: Any?) {
+  /// Writes the result to its file, after asking where the first time if it has none; in a
+  /// comparison, writes every file with copied changes.
+  @objc func saveChanges(_ sender: Any?) {
     guard canPerform(.save) else { return }
-    Task { await save() }
+    Task {
+      if saving == nil {
+        await saveChangedFiles()
+      } else {
+        await save()
+      }
+    }
   }
 
   /// Writes the result to a file that the user chooses.
@@ -19,17 +26,20 @@ extension SessionWindowController {
     Task { await save(choosingPlace: true) }
   }
 
-  /// Writes the result to its file and closes the window, which reports the session as saved.
+  /// Writes the result to its file, or the files with copied changes, and closes the window,
+  /// which reports the session as saved.
   @objc func saveAndClose(_ sender: Any?) {
     guard canPerform(.saveAndClose) else { return }
     Task { await saveAndCloseWindow() }
   }
 
-  /// Writes the result to its file, then closes the window and reports the session as saved,
-  /// and tells whether it did; if saving does not happen, the window stays open.
+  /// Writes the result to its file, or the files with copied changes, then closes the window
+  /// and reports the session as saved, and tells whether it did; if saving does not happen, the
+  /// window stays open.
   @discardableResult
   func saveAndCloseWindow() async -> Bool {
-    guard await save() else { return false }
+    let isSaved = saving == nil ? await saveChangedFiles() : await save()
+    guard isSaved else { return false }
     finish(.saved)
     close()
     return true
@@ -79,14 +89,24 @@ extension SessionWindowController {
     saving?.url?.lastPathComponent ?? window?.title ?? ""
   }
 
-  /// Closes the window, after asking whether to save first while the result has unsaved
-  /// changes, and tells whether it closed.
+  /// Closes the window, after asking whether to save first while the result or a file of a
+  /// comparison has unsaved changes, and tells whether it closed.
   ///
-  /// Saving that fails or is cancelled keeps the window open; closing without saving reports
-  /// the session as cancelled.
+  /// Saving that fails or is cancelled keeps the window open. Closing a merge without saving
+  /// reports the session as cancelled; a comparison counts as seen either way, so that Git goes
+  /// on to the next file, unless the app quits, which ends the run of Git.
   @discardableResult
-  public func closeAskingFirst() async -> Bool {
+  public func closeAskingFirst(asTheAppQuits quits: Bool = false) async -> Bool {
     guard !hasFinished else { return true }
+    guard saving != nil else {
+      guard await saveChangedFilesAskingFirst() else { return false }
+      if quits {
+        cancel()
+      } else {
+        close()
+      }
+      return true
+    }
     guard isResultEdited, let window, let result = presentation.result else {
       close()
       return true
@@ -207,7 +227,7 @@ extension SessionWindowController {
     else { return false }
     saving.diskBytes = bytes
     self.saving = saving
-    guard await prompts.confirmReloadingChangedResult(url.lastPathComponent, in: window),
+    guard await prompts.confirmReloadingChangedFile(url.lastPathComponent, in: window),
       let text = SourceFile(bytes: bytes, label: url.lastPathComponent).text
     else { return false }
     takeOverResult(text)

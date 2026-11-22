@@ -145,7 +145,7 @@ extension SessionWindowController {
   /// at its first change; the focus stays where it is.
   func showFile(at index: Int) {
     guard let collectionNavigator, collectionNavigator.canGo(toFileAt: index) else { return }
-    if collectionNavigator.shownFile != nil, !waitsForComparison {
+    if collectionNavigator.shownFile != nil, !waitsForComparison, !showsHeadersOnly {
       collectionNavigator.keepPlace(currentPlace)
     }
     let file = collectionNavigator.go(toFileAt: index)
@@ -257,6 +257,7 @@ extension SessionWindowController {
     guard !Task.isCancelled, collectionNavigator?.shows(file) == true, !hasFinished else {
       return false
     }
+    showsHeadersOnly = true
     show(
       CollectedComparison(session: empty, unavailable: nil), prepared: prepared, of: file,
       placing: false)
@@ -287,6 +288,7 @@ extension SessionWindowController {
     if waited {
       fadeInTheLines()
     }
+    showsHeadersOnly = false
     show(ready.collected, prepared: ready.prepared, of: file)
     guard waited else { return }
     diskWatch.lookAgainIfAsked()
@@ -357,7 +359,7 @@ extension SessionWindowController {
       return
     case .readsAnew(let file):
       // A window that waits for the file has no place in it yet.
-      if !waitsForComparison {
+      if !waitsForComparison, !showsHeadersOnly {
         collectionNavigator.keepPlace(currentPlace)
       }
       load(file)
