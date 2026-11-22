@@ -61,7 +61,7 @@ Open conflicts show their preview of A and B until you decide. You cannot type i
 
 ## Comparing files
 
-Seamerge compares two files with `git difftool`, from Tower, or from the welcome window in the app.
+Seamerge compares two files with `git difftool`, from Git-Tower, or from the welcome window in the app.
 
 - **File ▸ Compare Files…** (`⌘O`) shows the sheet Compare Files; see [The welcome window](#the-welcome-window).
 - **File ▸ Compare Folders…** compares two folders in one window; see [Comparing folders in the app](#comparing-folders-in-the-app).
@@ -92,7 +92,7 @@ If the files cannot be opened, the sheet says why and keeps them.
 
 ![Several files in one window, with the sidebar](Images/hero-collection-light.png)
 
-When Git or Tower compares several files in one run, Seamerge puts them into one window, and the sidebar lists the files, grouped by folder. The files of the top folder come first, then one group for each folder. Folders follow the order of Git, where each folder stands at its first file. A file that is new, deleted, identical or cannot be read has a sign and its word; a modified file has no sign. A file with copied changes that are not saved has a dot at the end of its row. The window receives the files as Git hands them over, and the sidebar says when it is still receiving. Seamerge collects the files only when Git numbers them, which `git difftool` and Tower do. Otherwise each file opens its own window. The window opens at once; a large file shows "Comparing…" until its lines are ready, and you can choose another file in the meantime.
+When Git or Git-Tower compares several files in one run, Seamerge puts them into one window, and the sidebar lists the files, grouped by folder. The files of the top folder come first, then one group for each folder. Folders follow the order of Git, where each folder stands at its first file. A file that is new, deleted, identical or cannot be read has a sign and its word; a modified file has no sign. A file with copied changes that are not saved has a dot at the end of its row. The window receives the files as Git hands them over, and the sidebar says when it is still receiving. Seamerge collects the files only when Git numbers them, which `git difftool` and Git-Tower do. Otherwise each file opens its own window. The window opens at once; a large file shows "Comparing…" until its lines are ready, and you can choose another file in the meantime.
 
 Renames are not detected: a renamed file shows as a deleted file and a new file.
 
@@ -100,11 +100,11 @@ Renames are not detected: a renamed file shows as a deleted file and a new file.
 
 `git difftool --dir-diff` compares two folders in one window. Seamerge pairs the files of the two folders by their path. A file only on one side is new or deleted. Links to files of the working tree are followed, so that the working copy is shown. Other links are compared by their target. If no file differs, no window opens.
 
-In Tower, turn on **Perform directory diff** to compare folders.
+In Git-Tower, turn on **Perform directory diff** to compare folders.
 
 ### Comparing folders in the app
 
-**File ▸ Compare Folders…** compares two folders in one window, without Git or Tower. Choose **Compare Folders…** in the welcome window or in the File menu, or drop two folders on the welcome window. The list shows the files that are new, deleted, modified, identical, or cannot be read. A file that cannot be read stays in the list with the reason. The progress of the comparison is shown above the filter. **View ▸ Show Identical Files** adds the identical files to the list. Links are not followed; their targets are compared as text.
+**File ▸ Compare Folders…** compares two folders in one window, without Git or Git-Tower. Choose **Compare Folders…** in the welcome window or in the File menu, or drop two folders on the welcome window. The list shows the files that are new, deleted, modified, identical, or cannot be read. A file that cannot be read stays in the list with the reason. The progress of the comparison is shown above the filter. **View ▸ Show Identical Files** adds the identical files to the list. Links are not followed; their targets are compared as text.
 
 The list groups the files by folder, as in a window of several files. **Filter Files** (`⇧⌘F`) narrows the list. Type in the field at the foot of the sidebar, and the list keeps the files whose name or folder contains the text, ignoring case and accents. Escape clears the field. **Next File** and **Previous File** follow the filtered list.
 
@@ -129,7 +129,7 @@ In a comparison, a changed block can be copied from one file to the other. In a 
 
 The seam between two panes shows a button for each change that can be copied toward a file that may be written: an arrow toward that file, or a bin where the source has no lines and the copy removes the lines of the file. The button names its change, for example "Copy Change 3 to Right". Copy to Right and Copy to Left are also in the context menu of a pane, and in a pane above the result the arrow keys `→` and `←` copy the current change. In Single Column there are no buttons, but the commands work.
 
-**Which file can change.** A comparison that Git or Tower starts writes only the side that is the working copy, if it has one. The other sides are copies of a commit or of the index, which the next run replaces, so Seamerge does not copy into them. In a comparison of two files that you chose, each file may be written if it is an ordinary file, you may write it, and its volume is not read-only. Symbolic links are followed. In a comparison of two folders, a file must lie inside its folder. A file that cannot be written has no button, and its commands are not offered.
+**Which file can change.** A comparison that Git or Git-Tower starts writes only the side that is the working copy, if it has one. The other sides are copies of a commit or of the index, which the next run replaces, so Seamerge does not copy into them. In a comparison of two files that you chose, each file may be written if it is an ordinary file, you may write it, and its volume is not read-only. Symbolic links are followed. In a comparison of two folders, a file must lie inside its folder. A file that cannot be written has no button, and its commands are not offered.
 
 **What is copied.** The lines of the change in the target are replaced by the lines of the source, as its file holds them. That includes text the comparison ignores, such as whitespace or text that an ignore rule matches. The other bytes of the target stay as they are, and so do its encoding and byte order mark.
 
@@ -341,8 +341,8 @@ The window was closed without saving, or with **Leave Unresolved**. Open it agai
 **Can I use Seamerge without changing my Git configuration?**
 Yes. The commands in `Examples/make-git-conflict.sh` pass their settings for one run only. The **Set Up Git Integration…** sheet changes the global configuration, and **Remove** restores it.
 
-**Does Seamerge work with Tower?**
-Yes. Set up the integration in Seamerge with **Set Up Git Integration…**, and tick **Add Seamerge to Tower** in the sheet. Restart Tower. In Tower's settings, under Git Config, choose Seamerge as the diff tool and as the merge tool. Tower then opens its diffs and merges in Seamerge, and with **Perform directory diff** turned on, it compares folders.
+**Does Seamerge work with Git-Tower?**
+Yes. Set up the integration in Seamerge with **Set Up Git Integration…**, and tick **Add Seamerge to Tower** in the sheet. Restart Git-Tower. In Git-Tower's settings, under Git Config, choose Seamerge as the diff tool and as the merge tool. Git-Tower then opens its diffs and merges in Seamerge, and with **Perform directory diff** turned on, it compares folders.
 
 **Does Seamerge connect to the internet?**
 Only to check for updates and to download an update that you install. The check starts only with your consent; see [Updates](#updates).

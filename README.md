@@ -18,14 +18,14 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
     <img src="Documentation/Images/screenshot-git-setup-light.png" width="480" alt="The sheet that sets up Git to use Seamerge, with the box Add Seamerge to Tower.">
   </picture>
 
-- **Tower integration.** When Tower is installed, the same set-up adds Seamerge to Tower's diff and merge tools. In Tower, Seamerge also opens directory diffs.
+- **Git-Tower integration.** When Git-Tower is installed, the same set-up adds Seamerge to Git-Tower's diff and merge tools. In Git-Tower, Seamerge also opens directory diffs.
 - **Whitespace modes.** Compare exactly, ignore line endings, ignore changes in the amount of whitespace, or ignore all whitespace, chosen in the footer.
 
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-whitespace-dark.png">
     <img src="Documentation/Images/screenshot-whitespace-light.png" alt="A comparison with Ignore Whitespace Changes chosen in the footer, the sides joined by bands.">
   </picture>
-- **Several files in one window.** When Git or Tower compares several files of one run, Seamerge shows them in one window with a sidebar that groups them by folder. `git difftool --dir-diff` compares two folders the same way.
+- **Several files in one window.** When Git or Git-Tower compares several files of one run, Seamerge shows them in one window with a sidebar that groups them by folder. `git difftool --dir-diff` compares two folders the same way.
 
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-collection-dark.png">
@@ -139,7 +139,7 @@ Seamerge then writes the entries for `merge.tool` and `diff.tool` to your global
   <img src="Documentation/Images/screenshot-git-setup-light.png" width="560" alt="The Git integration sheet in its offer state.">
 </picture>
 
-If Tower is installed, the sheet also has **Add Seamerge to Tower**. Tick it before you click **Set Up**. Then restart Tower, and in Tower's settings, under Git Config, choose Seamerge as the diff tool and as the merge tool. To compare folders in Tower, turn on **Perform directory diff**.
+If Git-Tower is installed, the sheet also has **Add Seamerge to Tower**. Tick it before you click **Set Up**. Then restart Git-Tower, and in Git-Tower's settings, under Git Config, choose Seamerge as the diff tool and as the merge tool. To compare folders in Git-Tower, turn on **Perform directory diff**.
 
 ## Terminal and Finder
 
