@@ -6,6 +6,7 @@ This guide is for people who use Seamerge to compare files and to resolve Git me
 - [Reading the window](#reading-the-window)
 - [The decision bar](#the-decision-bar)
 - [Comparing files](#comparing-files)
+- [Copying changes between the sides](#copying-changes-between-the-sides)
 - [Resolving a conflict](#resolving-a-conflict)
 - [Moved blocks](#moved-blocks)
 - [Collapsing unchanged lines](#collapsing-unchanged-lines)
@@ -119,6 +120,33 @@ Files of up to about 100,000 lines open in about a third of a second. Jumping be
 
 A line longer than 20,000 characters is shown cut off at a character boundary, followed by an ellipsis in the color of the preview. The line is shown whole as soon as the insertion point or a selection lies in it, so you can work in it. The text, copying and saving always use the whole line.
 
+## Copying changes between the sides
+
+In a comparison, a changed block can be copied from one file to the other. In a merge, the decision bar chooses the text of each block instead, and nothing is copied between the sides.
+
+- **Copy to Right** (`⌥⌘→`) takes the text of the left file at the current change into the right file. **Copy to Left** (`⌥⌘←`) does the reverse.
+- **Copy All Changes to Right** and **Copy All Changes to Left** copy every change of the comparison in one step. They are in the Compare menu and have no shortcut.
+
+The seam between two panes shows a button for each change that can be copied toward a file that may be written: an arrow toward that file, or a bin where the source has no lines and the copy removes the lines of the file. The button names its change, for example "Copy Change 3 to Right". Copy to Right and Copy to Left are also in the context menu of a pane, and in a pane above the result the arrow keys `→` and `←` copy the current change. In Single Column there are no buttons, but the commands work.
+
+**Which file can change.** A comparison that Git or Tower starts writes only the side that is the working copy, if it has one. The other sides are copies of a commit or of the index, which the next run replaces, so Seamerge does not copy into them. In a comparison of two files that you chose, each file may be written if it is an ordinary file, you may write it, and its volume is not read-only. Symbolic links are followed. In a comparison of two folders, a file must lie inside its folder. A file that cannot be written has no button, and its commands are not offered.
+
+**What is copied.** The lines of the change in the target are replaced by the lines of the source, as its file holds them. That includes text the comparison ignores, such as whitespace or text that an ignore rule matches. The other bytes of the target stay as they are, and so do its encoding and byte order mark.
+
+**Line endings.** In Exact mode, copied lines keep the line endings of the source, so the change is gone after the copy. In the other modes, each copied line break takes the line ending that the target uses most, unless the target has no line break. Exact mode reads a file whose line breaks are all CR as if they were LF. Lines copied from such a file take LF where the target keeps LF, and lines copied into such a file take CR where the target keeps CR.
+
+**Characters the target cannot hold.** If the encoding of the target cannot represent a character of the copied text, the target takes the copy in UTF-8 without a byte order mark, and Save offers UTF-8 first.
+
+**Undo.** `⌘Z` undoes a copy and names it, for example "Undo Copy to Right". It brings back the text, the current change and the collapsed runs of the window. Copy All Changes is one step.
+
+**Saving.** A file with copied changes counts as edited until it is saved. The window header says "Edited", the file's row in the list ends with a dot, and the close button shows a dot. Undoing back past the saved state makes the file edited again. Save (`⌘S`) writes every changed file of the window, and Save and Close (`⌘↩`) writes them and closes the window. Seamerge writes the new content beside the file and then takes its place, so a failure leaves the old file as it was. Permissions stay. A symbolic link is followed, and the file it points to is written. Replacing a file breaks its hard links and makes the saving user its owner.
+
+**Closing with changes.** Closing the window, choosing **Change Files…** or quitting with changes that are not saved asks first: Save, Don’t Save or Cancel. Quitting asks for each window that has changes.
+
+**Changes by another program.** If another program changes a file that has copied changes, Seamerge asks first: **Keep My Version** keeps the copies, and **Reload** takes the file from disk, which is one undo step. Seamerge asks in the same way before it writes a file that another program has changed since the copy.
+
+**What Git is told.** Git reads the outcome of each window. Closing the window after saving, or after Don’t Save, reports success, and Git goes on with the next file. **Skip Remaining Files** (`⌘.`) and quitting report failure, and Git compares no further files of the run.
+
 ## Resolving a conflict
 
 ![A conflict after a choice](Images/pill-after-choosing-light.png)
@@ -230,7 +258,7 @@ Choose **Seamerge ▸ Settings…** (`⌘,`). Changes to the text apply at once 
 
 - **Text:** the font of the code (SF Mono by default, or another monospaced font installed on the Mac), its size from 9 to 24 pt, the line spacing and the tab width. A window keeps the zoom you chose until the size in Settings changes.
 - **New Windows:** how each new window starts: the comparison mode, and whether it highlights syntax, wraps lines, shows invisible characters and shows the base, and which arrangement of the lines it uses. Switches in a window's footer change only that window.
-- **Merging:** **Go to Next Conflict After Choosing**: whether a choice on an open conflict moves on to the next open conflict.
+- **Merging:** **Go to Next Change After Choosing**: whether a choice on an open conflict, or a copy with Copy to Right or Copy to Left, moves on to the next open conflict or change.
 - **Ignored Text:** the rules that a comparison leaves out, see [Ignore rules](#ignore-rules).
 - **Updates:** **Check for Updates Automatically**, see [Updates](#updates).
 
@@ -255,14 +283,14 @@ Users of version 0.2.0 have no update check, so they download version 0.3.0 once
 
 ## Saving and closing
 
-- **Save** (`⌘S`) writes the result and keeps the window open.
+- **Save** (`⌘S`) writes the result and keeps the window open. In a comparison, it writes the files with copied changes.
 - **Save and Close** (`⌘↩`) writes the result and closes the window. In a merge, Git then takes the result as resolved.
 - **Leave Unresolved** (`⌘.`) closes the window without saving, and Git keeps the conflict. Use it when you want to resolve the file later.
-- If the result is not saved and you close the window, Seamerge asks first.
+- If changes are not saved and you close the window, Seamerge asks first. For copied changes, see [Copying changes between the sides](#copying-changes-between-the-sides).
 
 The result keeps the encoding and line endings of the file, unless you choose others in the window.
 
-If a file changes on disk while the window is open, Seamerge reloads it and keeps your decisions.
+If a file changes on disk while the window is open, Seamerge reloads it and keeps your decisions. If the file holds copied changes that are not saved, Seamerge asks first; see [Copying changes between the sides](#copying-changes-between-the-sides).
 
 ## Keyboard shortcuts
 
@@ -279,6 +307,7 @@ Commands with a Command or Option key work in any window. The keys without them,
 | Use A, Use Base, Use B | `⌘1`, `⌘2`, `⌘3`; in a pane above the result `1`, `2`, `3` |
 | Use A Then B, Use B Then A | `⌘4`, `⌘5`; in a pane above the result `4`, `5` |
 | Use None | `⌘6`; in a pane above the result `6` |
+| Copy to Right, Copy to Left (comparison) | `⌥⌘→`, `⌥⌘←`; in a pane above the result `→`, `←` |
 | Toggle source A, Base, B of the current block | `⌥⌘1`, `⌥⌘2`, `⌥⌘3` |
 | Resolve Manually | `Return` in a pane above the result |
 | Reset This Change, Reset All Decisions | `⌥⌘⌫`, `⌥⇧⌘⌫` |

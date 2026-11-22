@@ -44,6 +44,7 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
     <img src="Documentation/Images/screenshot-welcome-light.png" alt="The welcome window: on the left the icon, name and version of Seamerge on deep blue, the buttons Compare Files, Compare Folders and Merge Files and a place to drop two files or folders; on the right the recent comparisons under Today and Earlier, each with its kind, folder and time.">
   </picture>
 - **Moved blocks.** A block of lines that moved to another place gets an arrow at both ends that points to the other end; a click on the arrow, or Go ▸ Go to Other End of Move, jumps there.
+- **Copying between the sides.** In a comparison, Copy to Right and Copy to Left take a change from one file into the other, and Save writes the files that changed. See [Copying changes between the sides](Documentation/UserGuide.md#copying-changes-between-the-sides).
 - **Updates.** Seamerge checks for new versions with your consent and installs one only when you choose to. See [Updates](#updates).
 - **Decisions per block.** The decision bar takes the text of A, the base, B, or both, or nothing, per block, with the mouse or single keys. A conflict stays open until you decide.
 
@@ -187,7 +188,7 @@ Choose **Seamerge ▸ Settings…** (`⌘,`) to change how the code looks and ho
 
 - **Text:** the font of the code (SF Mono, or another monospaced font installed on the Mac), its size from 9 to 24 pt, the line spacing (compact, standard or spacious) and the tab width from 2 to 8 spaces. A window keeps the zoom you chose until the size in Settings changes.
 - **New Windows:** how each new window starts: the comparison mode, and whether it highlights syntax, wraps lines, aligns the sides, shows invisible characters and shows the base. The switches in a window's footer change only that window.
-- **Merging:** **Go to Next Conflict After Choosing**: whether a choice on an open conflict moves on to the next open conflict.
+- **Merging:** **Go to Next Change After Choosing**: whether a choice on an open conflict, or a copy with Copy to Right or Copy to Left, moves on to the next open conflict or change.
 - **Ignored Text:** the rules for text that a comparison leaves out, with a field to try a rule on sample text. Three rules come with the app; each can be switched on or off.
 - **Updates:** **Check for Updates Automatically**, see [Updates](#updates).
 
@@ -220,6 +221,7 @@ Each window opens where the last window of its kind was closed, with the size it
 | First or last change | Home, End in a pane above the result |
 | Next or previous pane | ⌃Tab, ⇧⌃Tab |
 | Undo, redo | ⌘Z, ⇧⌘Z |
+| Copy to Right, Copy to Left (comparison; in a pane above the result →, ←) | ⌥⌘→, ⌥⌘← |
 | Next or previous file in a collection | ⌥⌘→, ⌥⌘← |
 | Filter the list of files | ⇧⌘F |
 | Show or hide the sidebar | ⌃⌘S |

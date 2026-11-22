@@ -15,6 +15,7 @@ The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, a min
 
 - [ ] Clone the repository into a new folder, check out the release commit, and run `Scripts/install.sh --to <an empty folder>`. The app must start from that folder.
 - [ ] Run `git mergetool` and `git difftool` with the scenarios that `Scripts/make-test-repo.sh` creates. A merge must save the result, and leaving it unresolved must keep the conflict.
+- [ ] In a throwaway repository, `Scripts/make-test-repo.sh <an empty folder> diff` creates three changed files. Open them with `git difftool`, with Seamerge as the diff tool, set up as in the next item. In each file, copy the change to the right with Copy to Right (`⌥⌘→`), then save all with `⌘S` and close the window. `git -C <the folder> diff` must then print nothing.
 - [ ] Set up the Git integration from the app and remove it again. Removing must leave the global configuration as it was before the set-up.
 
 ## Visual check
