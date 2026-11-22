@@ -100,4 +100,28 @@ struct CollectionNavigatorTests {
     #expect(navigator.place(of: Self.file("a.txt", folder: "moved")) == place)
     #expect(navigator.place(of: Self.files[2]) == nil)
   }
+
+  @Test func changesOfAFileWhoseSidesAreOtherFilesNowAreForgotten() async throws {
+    let files = [Self.file("a.txt"), Self.file("c.txt"), Self.file("d.txt")]
+    let navigator = CollectionNavigator(
+      collection: FileCollection(files: files), showsIdenticalFiles: false)
+    navigator.listFiles()
+    let changes = { (file: CollectedFile, folder: String) async throws -> ChangedComparison in
+      let side = { (url: URL) in SourceFile(bytes: Data("x\n".utf8), label: file.path, url: url) }
+      let session = try await Session.diff(
+        old: side(file.old.url), new: side(URL(filePath: "/tmp/\(folder)/\(file.path)")))
+      return ChangedComparison(session: session, roles: [.b])
+    }
+    for (index, folder) in [(0, "new"), (1, "elsewhere")] {
+      _ = navigator.go(toFileAt: index)
+      navigator.keepChanges(try await changes(files[index], folder))
+    }
+    _ = navigator.go(toFileAt: 2)
+    try #require(navigator.changedFiles.count == 2)
+
+    #expect(navigator.forgetChangesOfFilesNoLongerCompared())
+
+    #expect(Array(navigator.changedFiles.keys) == ["a.txt"])
+    #expect(!navigator.forgetChangesOfFilesNoLongerCompared())
+  }
 }

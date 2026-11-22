@@ -689,14 +689,14 @@ extension SessionWindowController: NSUserInterfaceValidations {
   /// Whether `command` can have an effect now; while the window cannot show the lines of its
   /// files, or makes ready the comparison that undo or redo brings back, only skipping the
   /// remaining files, the commands of the list, and in a window of several files the patch of
-  /// all of them can.
+  /// all of them and saving the changes of the others can.
   func canPerform(_ command: SessionCommand) -> Bool {
     let takesCommandsOfTheLines =
       if case .ready = phase { comparisonSwitcher.bringingBack == nil } else { false }
     if !takesCommandsOfTheLines,
       ![
         .skipRemainingFiles, .toggleFooter, .nextFile, .previousFile, .filterFiles,
-        .toggleIdenticalFiles, .copyPatch, .exportPatch,
+        .toggleIdenticalFiles, .copyPatch, .exportPatch, .save, .saveAndClose,
       ].contains(command)
     {
       return false

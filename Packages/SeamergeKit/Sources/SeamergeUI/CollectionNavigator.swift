@@ -56,6 +56,20 @@ struct CollectedComparison {
   }
 }
 
+/// A file of a collection whose copied changes are not saved, as the window showed it last.
+struct ChangedComparison {
+  /// The comparison of the file, whose changed sides hold the copied text.
+  var session: Session
+
+  /// The sides of the file with copied changes.
+  var roles: Set<Role>
+
+  /// The files of the changed sides, as the window holds them.
+  var changedFiles: [SourceFile] {
+    session.inputs.filter { roles.contains($0.role) }.map(\.value)
+  }
+}
+
 /// Which file of a collection a window shows, which files its list shows, and what the window
 /// has read of them.
 ///
@@ -64,6 +78,9 @@ struct CollectedComparison {
 /// read: the one in view and those beside it, which it reads ahead, so that Next File and
 /// Previous File show at once. A reading that began before the files changed on disk is not
 /// kept.
+///
+/// It also keeps the files with copied changes that the window does not show, so that their
+/// changes survive going to another file; going back shows them as the window left them.
 @MainActor
 final class CollectionNavigator {
   /// What became of the file in view after the files of the collection changed.
@@ -102,6 +119,10 @@ final class CollectionNavigator {
   ///
   /// A file whose sides or change differ since is another file, which is read anew.
   private(set) var readFiles: [CollectedFile: CollectedComparison] = [:]
+
+  /// The files with copied changes that are not saved, by path, but the one in view, whose
+  /// changes the window holds itself.
+  private(set) var changedFiles: [String: ChangedComparison] = [:]
 
   /// How often the files of the folders changed on disk since the window opened; a reading that
   /// started before the last change is out of date when it ends.
@@ -262,11 +283,62 @@ final class CollectionNavigator {
     places[file.path]
   }
 
-  /// The comparison of `file` in `mode` without the text that `rules` match, from the files read
-  /// already or read now; `nil` if it cannot even be shown as a file that cannot be compared.
+  /// Keeps `changed`, the comparison of the file in view with its copied changes, as the window
+  /// goes to another file; `nil` keeps nothing, for a file without such changes.
+  func keepChanges(_ changed: ChangedComparison?) {
+    guard let shownFile else { return }
+    changedFiles[shownFile.path] = changed
+  }
+
+  /// Hands the window the changes of the file in view, which it holds itself from now on.
+  func takeChangesOfShownFile() {
+    guard let shownFile else { return }
+    changedFiles[shownFile.path] = nil
+  }
+
+  /// Forgets the changes of the file at `path` and what the window read of it, as after they
+  /// were saved or the file was reloaded; going back to it reads it anew.
+  func forgetChanges(at path: String) {
+    changedFiles[path] = nil
+    readFiles = readFiles.filter { $0.key.path != path }
+  }
+
+  /// Forgets the changes kept of the files that went from the collection or whose sides are
+  /// other files now, as after the files of the folders changed on disk, and tells whether it
+  /// forgot any.
+  ///
+  /// Their copies were made into files that nothing compares any more; writing them would put
+  /// text where no one looks for it, so they go, as the file went.
+  func forgetChangesOfFilesNoLongerCompared() -> Bool {
+    let files = Dictionary(collection.files.map { ($0.path, $0) }) { first, _ in first }
+    let gone = changedFiles.filter { path, changed in
+      guard let file = files[path] else { return true }
+      let inputs = changed.session.inputs
+      return inputs.a.url != file.old.url || inputs.b.url != file.new.url
+    }
+    for path in gone.keys {
+      Self.logger.notice("Forgetting the copied changes of \(path, privacy: .public), which went")
+      changedFiles[path] = nil
+    }
+    return !gone.isEmpty
+  }
+
+  /// Forgets what the window read of the file at `path`, which holds other bytes on disk since,
+  /// as after the window saved it.
+  func forgetReading(at path: String) {
+    readFiles = readFiles.filter { $0.key.path != path }
+  }
+
+  /// The comparison of `file` in `mode` without the text that `rules` match: the one with copied
+  /// changes if the file has them, compared anew in `mode` with `rules` if the window compared it
+  /// otherwise, else from the files read already or read now; `nil` if it cannot even be shown
+  /// as a file that cannot be compared.
   func comparison(
     of file: CollectedFile, mode: ComparisonMode, ignoring rules: [IgnoreRule]
   ) async -> CollectedComparison? {
+    if let changed = changedFiles[file.path] {
+      return await comparison(of: changed, at: file.path, mode: mode, ignoring: rules)
+    }
     if let collected = readFiles[file], collected.session.options.mode == mode,
       collected.unavailable != nil
         || collected.session.ignoreRules.hasTheSameEffect(as: rules)
@@ -280,6 +352,30 @@ final class CollectionNavigator {
       return collected
     } catch {
       Self.logger.error("Cannot show \(file.path, privacy: .public): \(error, privacy: .public)")
+      return nil
+    }
+  }
+
+  /// The comparison of `changed`, the file at `path` with copied changes, in `mode` without the
+  /// text that `rules` match; `nil` if its files cannot be compared so.
+  private func comparison(
+    of changed: ChangedComparison, at path: String, mode: ComparisonMode,
+    ignoring rules: [IgnoreRule]
+  ) async -> CollectedComparison? {
+    let session = changed.session
+    guard session.options.mode != mode || !session.ignoreRules.hasTheSameEffect(as: rules) else {
+      return CollectedComparison(session: session, unavailable: nil)
+    }
+    do {
+      let compared = try await Session.diff(
+        old: session.inputs.a, new: session.inputs.b, mode: mode, ignoring: rules)
+      // The window may have saved or reloaded the file meanwhile.
+      if changedFiles[path] != nil {
+        changedFiles[path] = ChangedComparison(session: compared, roles: changed.roles)
+      }
+      return CollectedComparison(session: compared, unavailable: nil)
+    } catch {
+      Self.logger.error("Cannot compare \(path, privacy: .public) anew: \(error, privacy: .public)")
       return nil
     }
   }

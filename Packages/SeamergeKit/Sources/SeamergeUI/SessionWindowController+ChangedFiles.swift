@@ -1,4 +1,5 @@
 import AppKit
+import FolderCompare
 import MergeModel
 import os
 
@@ -54,28 +55,72 @@ extension SessionWindowController {
       headers[role]?.isEdited = edited.contains(role)
     }
     presentation.show(headers)
+    markChangedFilesInTheList()
   }
 
-  /// Whether a file of the comparison shown has copied changes that are not saved.
+  /// The comparison shown with its copied changes, if it has any.
+  var shownChanges: ChangedComparison? {
+    editedRoles.isEmpty
+      ? nil : ChangedComparison(session: presentation.changes.session, roles: editedRoles)
+  }
+
+  /// Whether a file of the window has copied changes that are not saved: one of the comparison
+  /// shown, or of another file of its collection.
   var hasChangedFiles: Bool {
-    !editedRoles.isEmpty
+    !editedRoles.isEmpty || !(collectionNavigator?.changedFiles.isEmpty ?? true)
   }
 
-  /// The files of the comparison shown with copied changes that are not saved; the window
-  /// decided them writable as it showed them.
-  private var changedFiles: [SourceFile] {
-    let inputs = presentation.changes.session.inputs
-    return inputs.filter { editedRoles.contains($0.role) }.map(\.value)
+  /// The files with copied changes that are not saved: those of the comparison shown, then
+  /// those that the navigator keeps for the files of the collection, in the order of the list,
+  /// each with the path of its file in the collection; `keptAt` is `nil` for a file of the
+  /// comparison shown.
+  ///
+  /// Either kind was decided writable as the window showed it. A file that the window is about
+  /// to show again still counts as kept until its lines are there, while the panes stand empty.
+  /// Each file comes once: as the window goes to another file, it keeps the changes of the file
+  /// it still shows for a moment, which are the same.
+  private var changedFiles: [(file: SourceFile, keptAt: String?)] {
+    var files: [(SourceFile, String?)] = (shownChanges?.changedFiles ?? []).map { ($0, nil) }
+    if let collectionNavigator {
+      let kept = collectionNavigator.changedFiles
+      var listedURLs = Set(files.compactMap(\.0.url))
+      for file in collectionNavigator.collection.files {
+        guard let changed = kept[file.path] else { continue }
+        for changedFile in changed.changedFiles {
+          if let url = changedFile.url, !listedURLs.insert(url).inserted {
+            continue
+          }
+          files.append((changedFile, file.path))
+        }
+      }
+    }
+    return files
   }
 
   /// The names of the files with copied changes, as the sheets say them.
   var changedFileNames: [String] {
-    changedFiles.map(Self.name(of:))
+    changedFiles.map { Self.name(of: $0.file) }
   }
 
   /// The name of `file` in a sheet: that of its file on disk.
   private static func name(of file: SourceFile) -> String {
     file.url?.lastPathComponent ?? file.label
+  }
+
+  /// Shows a dot at each file of the list with copied changes that are not saved.
+  ///
+  /// The comparison shown counts for the file in view only while it is that file's: as the
+  /// window goes to another file, it shows the one it leaves for a moment.
+  func markChangedFilesInTheList() {
+    guard let collectionNavigator, let fileList = collectionLayout?.fileList else { return }
+    var paths = Set(collectionNavigator.changedFiles.keys)
+    let inputs = presentation.changes.session.inputs
+    if !editedRoles.isEmpty, let shown = collectionNavigator.shownFile,
+      shown.old.url == inputs.a.url, shown.new.url == inputs.b.url
+    {
+      paths.insert(shown.path)
+    }
+    fileList.changedPaths = paths
   }
 
   /// Asks whether to save the files with copied changes, if there are any, and saves them if so;
@@ -116,7 +161,7 @@ extension SessionWindowController {
     }
     var savedNames: [String] = []
     defer { didSave(savedNames) }
-    for file in changedFiles {
+    for (file, keptAt) in changedFiles {
       let name = Self.name(of: file)
       guard let url = file.url else {
         Self.logger.fault("A changed file has no location: \(name, privacy: .public)")
@@ -128,7 +173,7 @@ extension SessionWindowController {
         filesOnDisk.note(changed, at: url)
         diskWatch.remember(changed, at: url)
         guard !(await prompts.confirmReloadingChangedFile(name, in: window)) else {
-          await reload(file, from: changed)
+          await reload(file, from: changed, keptAt: keptAt)
           return false
         }
       }
@@ -147,14 +192,23 @@ extension SessionWindowController {
       filesOnDisk.note(file.bytes, at: url)
       diskWatch.remember(file.bytes, at: url)
       savedNames.append(name)
+      if let path = keptAt ?? collectionNavigator?.shownFile?.path {
+        collectionNavigator?.forgetReading(at: path)
+      }
     }
     return true
   }
 
-  /// Takes the saved files as they are on disk now, marks the files anew, and tells VoiceOver
-  /// which it saved.
+  /// Takes the saved files as they are on disk now: forgets the changes kept of the files that
+  /// the window does not show, marks the files anew, and tells VoiceOver which it saved.
   private func didSave(_ names: [String]) {
     guard !names.isEmpty else { return }
+    if let collectionNavigator {
+      for (path, changed) in collectionNavigator.changedFiles
+      where !changed.changedFiles.contains(where: filesOnDisk.hasChanges) {
+        collectionNavigator.forgetChanges(at: path)
+      }
+    }
     updateEditedFiles()
     stateDidChange()
     presentation.announce(
@@ -168,12 +222,24 @@ extension SessionWindowController {
   }
 
   /// Takes `bytes`, which another app wrote into the file of `file` while it had copied changes,
-  /// in place of those changes, as a step of undo.
-  private func reload(_ file: SourceFile, from bytes: Data) async {
-    let session = presentation.changes.session
-    guard let role = session.inputs.first(where: { $0.value.url == file.url })?.role else {
+  /// in place of those changes: of the comparison shown, as a step of undo, or of a file that
+  /// the navigator keeps at `keptAt`, which the window reads anew when it shows it again.
+  private func reload(_ file: SourceFile, from bytes: Data, keptAt path: String?) async {
+    guard let path else {
+      let session = presentation.changes.session
+      guard let role = session.inputs.first(where: { $0.value.url == file.url })?.role else {
+        return
+      }
+      await reloadFiles([role: SourceFile(bytes: bytes, label: file.label, url: file.url)])
       return
     }
-    await reloadFiles([role: SourceFile(bytes: bytes, label: file.label, url: file.url)])
+    collectionNavigator?.forgetChanges(at: path)
+    if path == collectionNavigator?.shownFile?.path {
+      // The window waits to show the copies it kept; once it shows them, it takes the file as
+      // it is on disk instead, as for any change of a file without copies.
+      diskWatch.filesMayHaveChanged()
+    }
+    markChangedFilesInTheList()
+    stateDidChange()
   }
 }

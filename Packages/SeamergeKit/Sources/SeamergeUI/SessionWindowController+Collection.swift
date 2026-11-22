@@ -145,10 +145,9 @@ extension SessionWindowController {
   /// at its first change; the focus stays where it is.
   func showFile(at index: Int) {
     guard let collectionNavigator, collectionNavigator.canGo(toFileAt: index) else { return }
-    if collectionNavigator.shownFile != nil, !waitsForComparison, !showsHeadersOnly {
-      collectionNavigator.keepPlace(currentPlace)
-    }
+    keepShownFile()
     let file = collectionNavigator.go(toFileAt: index)
+    markChangedFilesInTheList()
     collectionLayout?.fileList.select(collectionNavigator.listedRow(of: index))
     load(file)
   }
@@ -345,6 +344,9 @@ extension SessionWindowController {
         presentation.announce(FileListViewController.receivedText(collection.files.count))
       }
     }
+    if collectionNavigator.forgetChangesOfFilesNoLongerCompared() {
+      markChangedFilesInTheList()
+    }
     listFiles(scrolling: false)
     showStatus()
   }
@@ -358,10 +360,9 @@ extension SessionWindowController {
     case .stays:
       return
     case .readsAnew(let file):
-      // A window that waits for the file has no place in it yet.
-      if !waitsForComparison, !showsHeadersOnly {
-        collectionNavigator.keepPlace(currentPlace)
-      }
+      // Changes kept of sides that are other files now go as the window looks at the changes
+      // of the folders next.
+      keepShownFile()
       load(file)
     case .went(let next):
       // The next file in the order takes its place. The list in view follows after it, as for
@@ -468,6 +469,9 @@ extension SessionWindowController {
       difftool: difftool, folders: collectionNavigator.collection.namingFolders)
     let session = collected.session
     phase = collected.unavailable.map(SessionPhase.unavailable) ?? .ready
+    if placing {
+      takeFiles(of: collected)
+    }
     if let unavailable = collected.unavailable {
       layout.showInPlaceOfTheLines(
         UnavailableComparisonView(
@@ -499,6 +503,33 @@ extension SessionWindowController {
       window.makeFirstResponder(collectionLayout?.fileList.tableView)
     }
     stateDidChange()
+  }
+
+  /// Keeps the place in the file in view and its copied changes, as the window is about to show
+  /// another file or to read it anew; a window that waits for the file has neither yet, and the
+  /// navigator still keeps the changes it waits to show.
+  private func keepShownFile() {
+    guard let collectionNavigator, collectionNavigator.shownFile != nil, !waitsForComparison,
+      !showsHeadersOnly
+    else { return }
+    collectionNavigator.keepPlace(currentPlace)
+    if case .ready = phase {
+      collectionNavigator.keepChanges(shownChanges)
+    }
+  }
+
+  /// Takes the files of `collected`, the file in view about to show: its copied changes, which
+  /// the window holds itself from now on; else the files as read, whose bytes on disk the window
+  /// need not keep until a copy changes them, nor of the files it showed before.
+  private func takeFiles(of collected: CollectedComparison) {
+    guard let collectionNavigator, let shown = collectionNavigator.shownFile else { return }
+    if collectionNavigator.changedFiles[shown.path] != nil {
+      collectionNavigator.takeChangesOfShownFile()
+      // Another app may have written the files meanwhile, which the window did not watch.
+      diskWatch.filesMayHaveChanged()
+    } else {
+      filesOnDisk.forget(collected.session.inputs.values)
+    }
   }
 
   /// The place the window shows now: the current block and the row at the reading line.

@@ -14,7 +14,8 @@ protocol FileListDelegate: AnyObject {
 }
 
 /// The list of the files of a window that compares several, in its sidebar: one row for each
-/// file with the sign of what happened to it, its name and its folder.
+/// file with the sign of what happened to it, its name and its folder, and a dot while it has
+/// copied changes that are not saved.
 ///
 /// Below the rows stands a quiet line while files come or folders are compared, and what a
 /// comparison of folders found once it is done; below it the field that filters the list by
@@ -26,6 +27,18 @@ final class FileListViewController: NSViewController {
 
   /// The files the list shows.
   private(set) var files: [CollectedFile] = []
+
+  /// The paths of the files with copied changes that are not saved, which show a dot.
+  var changedPaths: Set<String> = [] {
+    didSet {
+      guard changedPaths != oldValue else { return }
+      let rows = IndexSet(
+        files.indices.filter {
+          changedPaths.contains(files[$0].path) != oldValue.contains(files[$0].path)
+        })
+      tableView.reloadData(forRowIndexes: rows, columnIndexes: IndexSet(integer: 0))
+    }
+  }
 
   /// The theme whose colors the signs take.
   var theme: Theme {
@@ -272,7 +285,9 @@ extension FileListViewController: NSTableViewDataSource, NSTableViewDelegate {
     let cell =
       tableView.makeView(withIdentifier: FileListCell.identifier, owner: self) as? FileListCell
       ?? FileListCell()
-    cell.show(files[row], theme: theme, folderColor: folderColor)
+    cell.show(
+      files[row], isChanged: changedPaths.contains(files[row].path), theme: theme,
+      folderColor: folderColor)
     return cell
   }
 
@@ -282,7 +297,8 @@ extension FileListViewController: NSTableViewDataSource, NSTableViewDelegate {
   }
 }
 
-/// A row of the file list: the sign of what happened to the file, its name, and its folder.
+/// A row of the file list: the sign of what happened to the file, its name, its folder, and a
+/// dot while it has copied changes that are not saved.
 @MainActor
 final class FileListCell: NSTableCellView {
   static let identifier = NSUserInterfaceItemIdentifier("FileListCell")
@@ -290,6 +306,7 @@ final class FileListCell: NSTableCellView {
   private let sign = NSImageView()
   private let name = NSTextField(labelWithString: "")
   private let folder = NSTextField(labelWithString: "")
+  private let changedDot = NSImageView()
 
   init() {
     super.init(frame: .zero)
@@ -305,7 +322,17 @@ final class FileListCell: NSTableCellView {
       label.font = .preferredFont(forTextStyle: .body)
       label.setAccessibilityElement(false)
     }
-    let stack = NSStackView(views: [sign, name, folder])
+    // The dot of a document with unsaved changes, as in the close button: a template image that
+    // takes the color of the text, also in a selected row.
+    changedDot.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: nil)?
+      .withSymbolConfiguration(
+        NSImage.SymbolConfiguration(pointSize: WindowMetrics.changedFileDotSize, weight: .regular))
+    changedDot.setAccessibilityElement(false)
+    changedDot.setContentCompressionResistancePriority(.required, for: .horizontal)
+    let spacer = NSView()
+    spacer.setContentHuggingPriority(.init(1), for: .horizontal)
+    spacer.setContentCompressionResistancePriority(.init(1), for: .horizontal)
+    let stack = NSStackView(views: [sign, name, folder, spacer, changedDot])
     stack.spacing = WindowMetrics.footerToggleSpacing + 2
     stack.translatesAutoresizingMaskIntoConstraints = false
     addSubview(stack)
@@ -313,7 +340,8 @@ final class FileListCell: NSTableCellView {
     textField = name
     NSLayoutConstraint.activate([
       stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
-      stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -2),
+      stack.trailingAnchor.constraint(
+        equalTo: trailingAnchor, constant: -WindowMetrics.changedFileDotInset),
       stack.centerYAnchor.constraint(equalTo: centerYAnchor),
       sign.widthAnchor.constraint(equalToConstant: 16),
     ])
@@ -325,8 +353,9 @@ final class FileListCell: NSTableCellView {
     nil
   }
 
-  /// Shows `file` with the colors of `theme`, its folder in `folderColor`.
-  func show(_ file: CollectedFile, theme: Theme, folderColor: NSColor) {
+  /// Shows `file` with the sign of what happened to it in the colors of `theme`, its folder in
+  /// `folderColor`, and a dot if it `isChanged`, which VoiceOver reads as Edited.
+  func show(_ file: CollectedFile, isChanged: Bool, theme: Theme, folderColor: NSColor) {
     let path = file.path as NSString
     let folderPath = path.deletingLastPathComponent
     name.stringValue = path.lastPathComponent
@@ -334,6 +363,7 @@ final class FileListCell: NSTableCellView {
     folder.stringValue = folderPath
     folder.textColor = folderColor
     folder.isHidden = folderPath.isEmpty
+    changedDot.isHidden = !isChanged
     let presentation = file.change.presentation
     sign.image = NSImage(
       systemSymbolName: presentation.symbolName, accessibilityDescription: nil)?
@@ -342,7 +372,10 @@ final class FileListCell: NSTableCellView {
     sign.contentTintColor = presentation.color(in: theme)
     toolTip = presentation.toolTip(for: file.path)
     setAccessibilityLabel(
-      [path.lastPathComponent, folderPath, presentation.word].filter { !$0.isEmpty }
-        .joined(separator: ", "))
+      [
+        path.lastPathComponent, folderPath, presentation.word,
+        isChanged ? SideHeader.editedText : "",
+      ]
+      .filter { !$0.isEmpty }.joined(separator: ", "))
   }
 }

@@ -99,6 +99,12 @@ enum WindowMetrics {
   /// The distance of the filter field from the edges of the sidebar.
   static let sidebarFilterInset: CGFloat = 8
 
+  /// The size of the dot of a file with unsaved changes in the list of the sidebar, in points.
+  static let changedFileDotSize: CGFloat = 8
+
+  /// The distance of that dot from the end of its row.
+  static let changedFileDotInset: CGFloat = 8
+
   /// The narrowest the list of files gets before it collapses.
   static let minimumSidebarWidth: CGFloat = 160
 
