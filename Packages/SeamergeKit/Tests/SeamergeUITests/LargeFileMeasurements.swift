@@ -2,9 +2,10 @@ import Foundation
 import Testing
 
 /// Measures how a large comparison or merge behaves, phase by phase, until the window is laid
-/// out and drawn again: opening, coloring, scrolling, jumping, showing all lines, switching the
-/// arrangement and the comparison mode, undoing and redoing that switch, searching, also right
-/// after the switch, deciding and typing, and the memory after each phase.
+/// out and drawn again: opening, coloring, copying a change and undoing the copy, scrolling,
+/// jumping, showing all lines, switching the arrangement and the comparison mode, undoing and
+/// redoing that switch, searching, also right after the switch, deciding and typing, and the
+/// memory after each phase.
 ///
 /// The measurements run only on demand, never in the check of the repository: the environment
 /// variable `SEAMERGE_MEASURE_CASE` names the case of ``LargeFileCase``, and
@@ -42,6 +43,7 @@ struct LargeFileMeasurements {
     let opened = run.clock.now
     try await run.phase("syntax") { try await run.measureColoring(since: opened) }
     try await run.phase("wordmarks") { try run.measureWordMarks() }
+    try await run.phase("copy") { try await run.measureCopying() }
     try await run.phase("scroll") {
       try run.scroll("40pt", step: { _ in 40 }, count: 60)
       try run.scroll("page", step: { $0 }, count: 30)

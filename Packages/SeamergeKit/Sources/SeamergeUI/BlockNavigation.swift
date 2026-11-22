@@ -10,27 +10,40 @@ struct BlockNavigation: Equatable {
   /// The index of the current block, if there is one.
   let current: Int?
 
+  /// Where the window stands while no block is current, if it stands between blocks, as after a
+  /// copy: the index of the first block after the place, which may be past the last.
+  var blockAfterPlace: Int? = nil
+
+  /// The first block that a jump forward may land on.
+  private var firstAhead: Int {
+    current.map { $0 + 1 } ?? blockAfterPlace ?? 0
+  }
+
+  /// The block after the last one that a jump back may land on, or `nil` if none.
+  private var endBehind: Int? {
+    current ?? blockAfterPlace
+  }
+
   /// The first open conflict after the current block, or the first one if no block is current.
   var nextOpenConflict: Int? {
-    isOpenConflict.indices.first { $0 > (current ?? -1) && isOpenConflict[$0] }
+    isOpenConflict.indices.first { $0 >= firstAhead && isOpenConflict[$0] }
   }
 
   /// The last open conflict before the current block, or `nil` if no block is current.
   var previousOpenConflict: Int? {
-    guard let current else { return nil }
-    return isOpenConflict.indices.last { $0 < current && isOpenConflict[$0] }
+    guard let endBehind else { return nil }
+    return isOpenConflict.indices.last { $0 < endBehind && isOpenConflict[$0] }
   }
 
   /// The change after the current block, or the first one if no block is current.
   var nextChange: Int? {
-    let next = (current ?? -1) + 1
-    return isOpenConflict.indices.contains(next) ? next : nil
+    isOpenConflict.indices.contains(firstAhead) ? firstAhead : nil
   }
 
   /// The change before the current block, or `nil` if no block is current.
   var previousChange: Int? {
-    guard let current, current > 0 else { return nil }
-    return current - 1
+    guard let endBehind, endBehind > 0, endBehind <= isOpenConflict.count else { return nil }
+    return endBehind - 1
   }
 
   /// The first change, unless it is current.

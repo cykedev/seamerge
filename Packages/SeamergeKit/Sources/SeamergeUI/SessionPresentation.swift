@@ -38,6 +38,10 @@ final class SessionPresentation {
   /// Every pane tints the current block more strongly and the overview bars point at it.
   private(set) var currentBlock: Int?
 
+  /// While no block is current after a copy, the index of the first block after the place
+  /// where the copied block was, from which the jumps go on; `nil` otherwise.
+  private(set) var blockAfterPlace: Int?
+
   /// The bar beside the panes side by side, which is their scroller.
   let sourcesOverviewBar = OverviewBar()
 
@@ -327,7 +331,7 @@ final class SessionPresentation {
   var navigation: BlockNavigation {
     BlockNavigation(
       isOpenConflict: changes.blocks.map { result?.document.segment(for: $0).state == .open },
-      current: currentBlock)
+      current: currentBlock, blockAfterPlace: blockAfterPlace)
   }
 
   /// The block at the other end of the move that the current block is an end of, if it is one.
@@ -337,6 +341,7 @@ final class SessionPresentation {
 
   /// Makes `block` the current block in every pane and both overview bars.
   func setCurrentBlock(_ block: Int?) {
+    blockAfterPlace = nil
     guard block != currentBlock else { return }
     currentBlock = block
     for pane in allPanes {
@@ -703,9 +708,17 @@ final class SessionPresentation {
   /// What the panes show for `shown`, the same files compared anew, made away from the main
   /// actor for the setup of the panes now; `nil` if the setup changed meanwhile, for which the
   /// contents are to be made anew.
-  func prepare(_ shown: ShownSession) async -> PreparedSession? {
+  ///
+  /// With `collapsed`, the panes collapse its runs, else every run that collapses in a new
+  /// window.
+  ///
+  /// - Precondition: `collapsed` holds the runs of the session of `shown`.
+  func prepare(
+    _ shown: ShownSession, collapsed: CollapsedRows? = nil
+  ) async -> PreparedSession? {
     let setup = setup
-    let prepared = await PreparedSession.concurrently(shown, setup: setup, lines: lines)
+    let prepared = await PreparedSession.concurrently(
+      shown, setup: setup, lines: lines, collapsed: collapsed)
     return prepared.setup == self.setup ? prepared : nil
   }
 
@@ -766,6 +779,26 @@ final class SessionPresentation {
         let row = lineCount > 0 ? rowLayout.row(ofLine: min(line, lineCount - 1), in: .b) : 0
         return changes.blocks.firstIndex { rowLayout.rows(of: $0).upperBound > row }
       })
+  }
+
+  /// Shows `prepared`, the comparison after a copy of a change or after its undo or redo, with
+  /// the line of the input of `role` that was at the reading line where it was, and `block` as
+  /// the current block; with none, the jumps go on from before `nextBlock`.
+  ///
+  /// The input that the text was copied from keeps its lines, so its line keeps the place of
+  /// the text the user looked at.
+  ///
+  /// - Precondition: `prepared` was made for the setup of the panes now.
+  func showCopied(
+    _ prepared: PreparedSession, keepingTheLineOf role: Role, current block: Int?,
+    before nextBlock: Int?
+  ) {
+    keepingTheLine(of: role) {
+      show(prepared)
+    }
+    currentBlock = nil
+    setCurrentBlock(block)
+    blockAfterPlace = block == nil ? nextBlock : nil
   }
 
   /// Shows `prepared`, the comparison of other files, from its top with no current block, as a
@@ -930,35 +963,41 @@ final class SessionPresentation {
   /// Runs `body`, which changes how the panes lay out their rows, and scrolls the line of B that
   /// was at the reading line back to it.
   func keepingTheLineOfBInPlace(_ body: () -> Void) {
-    let place = placeAtReadingLine
+    keepingTheLine(of: .b, body)
+  }
+
+  /// Runs `body`, which changes how the panes lay out their rows, and scrolls the line of the
+  /// input of `role` that was at the reading line back to it.
+  func keepingTheLine(of role: Role, _ body: () -> Void) {
+    let place = place(atReadingLineOf: role)
     body()
     guard let place else { return }
     let rowLayout = changes.session.rowLayout
-    if let pane = linesPaneOfB {
-      let line = min(place.lineOfB, max(rowLayout.lineCount(in: .b) - 1, 0))
+    if let pane = linesPane(of: role) {
+      let line = min(place.line, max(rowLayout.lineCount(in: role) - 1, 0))
       pane.scroll(toPlaceRowAtReadingLine: line, fraction: place.fraction, motion: .cut)
       return
     }
-    guard let pane = leadingPane, place.lineOfB < rowLayout.lineCount(in: .b) else { return }
-    let row = rowLayout.row(ofLine: place.lineOfB, in: .b)
+    guard let pane = leadingPane, place.line < rowLayout.lineCount(in: role) else { return }
+    let row = rowLayout.row(ofLine: place.line, in: role)
     pane.scroll(
       toPlaceRowAtReadingLine: self.row(ofGridRow: row, in: pane), fraction: place.fraction,
       motion: .cut)
   }
 
-  /// The pane of B while it shows the lines of its file without filler rows and is in view, in
-  /// which a line of B is a row of its own.
-  private var linesPaneOfB: PaneView? {
-    guard !alignsLines, let pane = layout.sourcePane(.b), pane.isShown else { return nil }
+  /// The pane of the input of `role` while it shows the lines of its file without filler rows
+  /// and is in view, in which a line of the input is a row of its own.
+  private func linesPane(of role: Role) -> PaneView? {
+    guard !alignsLines, let pane = layout.sourcePane(role), pane.isShown else { return nil }
     return pane
   }
 
-  /// The line of B at the reading line of the panes, or the first line after it if a filler row
-  /// is there, with how far down its row the reading line passes; `nil` if B has no line from
-  /// there on.
-  private var placeAtReadingLine: (lineOfB: Int, fraction: CGFloat)? {
-    if let pane = linesPaneOfB {
-      guard changes.session.rowLayout.lineCount(in: .b) > 0 else { return nil }
+  /// The line of the input of `role` at the reading line of the panes, or the first line after
+  /// it if a filler row is there, with how far down its row the reading line passes; `nil` if
+  /// the input has no line from there on.
+  private func place(atReadingLineOf role: Role) -> (line: Int, fraction: CGFloat)? {
+    if let pane = linesPane(of: role) {
+      guard changes.session.rowLayout.lineCount(in: role) > 0 else { return nil }
       let (row, fraction) = pane.rowAtReadingLine
       return (row, fraction)
     }
@@ -967,10 +1006,10 @@ final class SessionPresentation {
     let rowLayout = changes.session.rowLayout
     let row = gridRow(ofRow: hitRow, in: pane)
     guard
-      let line = (row..<rowLayout.rowCount).lazy.compactMap({ rowLayout.line(atRow: $0, in: .b) })
+      let line = (row..<rowLayout.rowCount).lazy.compactMap({ rowLayout.line(atRow: $0, in: role) })
         .first
     else { return nil }
-    return (line, rowLayout.line(atRow: row, in: .b) == line ? fraction : 0)
+    return (line, rowLayout.line(atRow: row, in: role) == line ? fraction : 0)
   }
 
   /// Makes `block` current and scrolls it to the reading line of every pane, as far as the text

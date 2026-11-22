@@ -1,4 +1,5 @@
 import AppKit
+import MergeModel
 import PaneKit
 
 /// Block mode and text mode, which follow the focus: in block mode the focus is in a pane above
@@ -31,7 +32,9 @@ extension SessionWindowController: SessionKeyHandling {
       return true
     }
     guard isInBlockMode, modifiers.isDisjoint(with: [.command, .control]) else { return false }
-    if let command = SessionCommand(blockModeKey: Keystroke(key, modifiers)) {
+    if let command = SessionCommand(
+      blockModeKey: Keystroke(key, modifiers), in: presentation.changes.session.kind)
+    {
       if comparisonSwitcher.bringingBack != nil {
         // No command acts until the comparison that undo or redo brings back shows; the key
         // sounds as an invalid command does, rather than getting lost unheard.

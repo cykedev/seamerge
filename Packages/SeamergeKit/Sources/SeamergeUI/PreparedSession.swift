@@ -122,15 +122,15 @@ struct PreparedSession: Sendable {
       column: column, resultPane: basis.resultPane(), hasPlacesOfIgnoredChanges: nil)
   }
 
-  /// Prepares what the panes show as ``init(_:setup:lines:collapsed:)`` does, with every row
-  /// collapsed that collapses in a new window, and makes the panes, the marks and the result at
-  /// the same time, each pane with what showing it takes worked out.
+  /// Prepares what the panes show as ``init(_:setup:lines:collapsed:)`` does, and makes the
+  /// panes, the marks and the result at the same time, each pane with what showing it takes
+  /// worked out.
   @concurrent
   static func concurrently(
-    _ shown: ShownSession, setup: PaneSetup, lines: InputLines
+    _ shown: ShownSession, setup: PaneSetup, lines: InputLines, collapsed: CollapsedRows? = nil
   ) async -> PreparedSession {
     let basis = Basis(
-      shown: shown, setup: setup, lines: lines, collapsed: nil, preparesPanes: true)
+      shown: shown, setup: setup, lines: lines, collapsed: collapsed, preparesPanes: true)
     let sources = await withTaskGroup(of: (SourcePane, InputLines).self) { group in
       for role in setup.arrangement.sourceRoles {
         group.addTask {

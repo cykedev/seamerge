@@ -22,7 +22,7 @@ import Testing
     let editCommands = Set(SessionCommand.groups(in: .edit).joined())
     let withKeys = SessionCommand.allCases.filter {
       !editCommands.contains($0)
-        && ($0.keyEquivalent(in: .merge) != nil || !$0.blockModeKeys.isEmpty)
+        && ($0.keyEquivalent(in: .merge) != nil || !$0.blockModeKeys(in: .merge).isEmpty)
     }
     #expect(Set(withKeys).subtracting(listed).isEmpty)
     #expect(listed.isDisjoint(with: editCommands))

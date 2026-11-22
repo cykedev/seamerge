@@ -373,8 +373,8 @@
     "Add to Tower" : {
       "comment" : "Set Up Git Integration: the button that adds the app to Tower's tools."
     },
-    "After Use A, Use B and the like on an open conflict." : {
-      "comment" : "Settings: when the window goes on to the next conflict."
+    "After Use A, Use B and the like on an open conflict, and after Copy to Right or Copy to Left." : {
+      "comment" : "Settings: when the window goes on to the next change."
     },
     "Aligned Lines" : {
       "comment" : "View menu, toolbar and Settings: matching lines of the files side by side."
@@ -438,6 +438,9 @@
     },
     "Change Line Endings" : {
       "comment" : "Undo menu: the line endings of the result were changed."
+    },
+    "Change restored" : {
+      "comment" : "VoiceOver after undo took back the copy of a change."
     },
     "Change Rule" : {
       "comment" : "Undo menu: an ignore rule was renamed, got another pattern, or was switched."
@@ -652,14 +655,29 @@
         }
       }
     },
+    "Copied to %@. %@" : {
+      "comment" : "VoiceOver after copying a change, such as Copied to main.swift. 11 Changes."
+    },
     "Copy" : {
       "comment" : "Context menu: copy the selected text, or the block if nothing is selected.\nInstall the seamerge Command: the button that copies the command.\nSet Up Git Integration: the button that copies the commands."
+    },
+    "Copy All Changes to Left" : {
+      "comment" : "Compare menu: the left file takes the text of the right at every change."
+    },
+    "Copy All Changes to Right" : {
+      "comment" : "Compare menu: the right file takes the text of the left at every change."
     },
     "Copy as Patch" : {
       "comment" : "Edit menu command: copy the changes as a unified diff."
     },
     "Copy Block" : {
       "comment" : "Edit menu command: copy the lines of the current block."
+    },
+    "Copy Change %lld to Left" : {
+      "comment" : "VoiceOver: the arrow at the seam that copies a change to the left file, such as Copy Change 3 to Left."
+    },
+    "Copy Change %lld to Right" : {
+      "comment" : "VoiceOver: the arrow at the seam that copies a change to the right file, such as Copy Change 3 to Right."
     },
     "Copy Path" : {
       "comment" : "Context menu of a header."
@@ -670,11 +688,29 @@
     "Copy the commands to paste them into Terminal" : {
       "comment" : "Tooltip of the button Copy in Set Up Git Integration."
     },
+    "Copy to %@" : {
+      "comment" : "Context menu of a changed block of a comparison: copy it to the named file, such as Copy to main.swift."
+    },
+    "Copy to Left" : {
+      "comment" : "Compare menu: the left file takes the text of the right at the current change."
+    },
+    "Copy to Right" : {
+      "comment" : "Compare menu: the right file takes the text of the left at the current change."
+    },
+    "Copy to the left (⌥⌘←)" : {
+      "comment" : "Help tag of the arrow at the seam that copies a change to the left file."
+    },
+    "Copy to the right (⌥⌘→)" : {
+      "comment" : "Help tag of the arrow at the seam that copies a change to the right file."
+    },
     "Couldn’t Compare the Files Anew" : {
       "comment" : "Sheet after switching the comparison failed."
     },
     "Couldn’t Copy the Patch" : {
       "comment" : "Sheet after copying a patch failed."
+    },
+    "Couldn’t Copy to “%@”" : {
+      "comment" : "Sheet after copying a change failed, such as to main.swift."
     },
     "Couldn’t Export “%@”" : {
       "comment" : "Sheet after exporting a patch to a file failed."
@@ -891,11 +927,11 @@
     "Go to Line…" : {
       "comment" : "Go menu command."
     },
+    "Go to Next Change After Choosing" : {
+      "comment" : "Settings: whether Use A and the like go on to the next open conflict, and Copy to Right and the like to the next change."
+    },
     "Go to Next Conflict" : {
       "comment" : "Button of the sheet before saving with open conflicts: do not save, go on."
-    },
-    "Go to Next Conflict After Choosing" : {
-      "comment" : "Settings: whether Use A and the like go on to the next open conflict."
     },
     "Go to Other End of Move" : {
       "comment" : "Go menu command: jump from lines that moved to where they came from or went."
@@ -1188,6 +1224,12 @@
     "Remove" : {
       "comment" : "Install the seamerge Command: the button that deletes the link.\nSet Up Git Integration: the button that takes the setup back."
     },
+    "Remove Change %lld from Left" : {
+      "comment" : "VoiceOver: the bin at the seam that removes the lines of a change from the left file, such as Remove Change 3 from Left."
+    },
+    "Remove Change %lld from Right" : {
+      "comment" : "VoiceOver: the bin at the seam that removes the lines of a change from the right file, such as Remove Change 3 from Right."
+    },
     "Remove File" : {
       "comment" : "Compare Files: the button that empties a field."
     },
@@ -1197,17 +1239,29 @@
     "Remove the selected rule" : {
       "comment" : "Help tag of the − below the ignore rules."
     },
+    "Remove these lines on the left (⌥⌘←)" : {
+      "comment" : "Help tag of the bin at the seam that removes the lines of a change on the left."
+    },
+    "Remove these lines on the right (⌥⌘→)" : {
+      "comment" : "Help tag of the bin at the seam that removes the lines of a change on the right."
+    },
     "Remove these lines, as %@ did." : {
       "comment" : "Help tag of a toggle that removes the lines, such as Remove these lines, as main did."
     },
     "Remove this file from the field" : {
       "comment" : "Help tag of the button that empties a field of Compare Files."
     },
+    "Removes these lines from %@." : {
+      "comment" : "VoiceOver hint of the bin at the seam, where the other side has no lines, such as from main.swift."
+    },
     "Reopen All Conflicts" : {
       "comment" : "Merge menu command."
     },
     "Replace All" : {
       "comment" : "Edit > Find: replace every match of the search in the result."
+    },
+    "Replaces the lines of %@ with those of the other side." : {
+      "comment" : "VoiceOver hint of the button at the seam that copies a change, such as to main.swift."
     },
     "Reset" : {
       "comment" : "Resetting decisions: the button of the sheet before resetting every one, and the submenu of a context menu with the ways to reset."
@@ -1403,6 +1457,9 @@
     },
     "Some of its characters don’t exist in %@. UTF-8 holds them all." : {
       "comment" : "Sheet: the result holds characters the encoding lacks."
+    },
+    "Some of the copied characters don’t exist in %@, the encoding of “%@”. Nothing was copied." : {
+      "comment" : "Sheet after copying a change failed: the encoding of the file lacks characters."
     },
     "Spacious" : {
       "comment" : "Settings: lines far apart."

@@ -1,5 +1,6 @@
 public import AppKit
 import MergeModel
+import PaneKit
 
 /// A command of a session window: its name, the action it sends along the responder chain, its
 /// key equivalent and single key, the menu and group it stands in, and what it needs to have an
@@ -62,6 +63,18 @@ public enum SessionCommand: CaseIterable, Sendable {
 
   /// Puts the two files of a comparison the other way round.
   case swapSides
+
+  /// Has the file on the right take the text of the left at the current block.
+  case copyToRight
+
+  /// Has the file on the left take the text of the right at the current block.
+  case copyToLeft
+
+  /// Has the file on the right take the text of the left at every changed block, in one step.
+  case copyAllChangesToRight
+
+  /// Has the file on the left take the text of the right at every changed block, in one step.
+  case copyAllChangesToLeft
 
   /// Hides the pane of the base, or shows it again; A and B share its width meanwhile.
   case toggleBase
@@ -263,6 +276,22 @@ public enum SessionCommand: CaseIterable, Sendable {
       String(
         localized: "Swap Sides", bundle: .module,
         comment: "Compare menu: swap the left and the right file.")
+    case .copyToRight:
+      String(
+        localized: "Copy to Right", bundle: .module,
+        comment: "Compare menu: the right file takes the text of the left at the current change.")
+    case .copyToLeft:
+      String(
+        localized: "Copy to Left", bundle: .module,
+        comment: "Compare menu: the left file takes the text of the right at the current change.")
+    case .copyAllChangesToRight:
+      String(
+        localized: "Copy All Changes to Right", bundle: .module,
+        comment: "Compare menu: the right file takes the text of the left at every change.")
+    case .copyAllChangesToLeft:
+      String(
+        localized: "Copy All Changes to Left", bundle: .module,
+        comment: "Compare menu: the left file takes the text of the right at every change.")
     case .toggleBase:
       String(localized: "Hide Base", bundle: .module, comment: "View menu command.")
     case .toggleResultMaximized:
@@ -396,7 +425,8 @@ public enum SessionCommand: CaseIterable, Sendable {
   var undoName: String? {
     switch self {
     case .useA, .useBase, .useB, .useAThenB, .useBThenA, .useNone, .resolveManually,
-      .resetChange, .reopenAllConflicts, .resolveAllWithA, .resolveAllWithB:
+      .resetChange, .reopenAllConflicts, .resolveAllWithA, .resolveAllWithB, .copyToRight,
+      .copyToLeft, .copyAllChangesToRight, .copyAllChangesToLeft:
       title
     case .toggleSourceA:
       String(
@@ -444,6 +474,23 @@ public enum SessionCommand: CaseIterable, Sendable {
   static let choicesBySimplicity: [SessionCommand] = [
     .useA, .useB, .useBase, .useNone, .useAThenB, .useBThenA,
   ]
+
+  /// The side that the command copies changes to, and whether it copies every change rather
+  /// than the current one, if it is one of the commands that copy.
+  var copy: (direction: PaneSeam.CopyDirection, allChanges: Bool)? {
+    switch self {
+    case .copyToRight: (.toRight, false)
+    case .copyToLeft: (.toLeft, false)
+    case .copyAllChangesToRight: (.toRight, true)
+    case .copyAllChangesToLeft: (.toLeft, true)
+    default: nil
+    }
+  }
+
+  /// The command that copies the current change in `direction`.
+  static func copy(_ direction: PaneSeam.CopyDirection) -> SessionCommand {
+    direction == .toRight ? .copyToRight : .copyToLeft
+  }
 
   /// The role whose toggle the command switches, if it switches one.
   var toggledRole: Role? {
@@ -622,6 +669,10 @@ public enum SessionCommand: CaseIterable, Sendable {
     case .ignoreAllWhitespace: #selector(SessionWindowController.ignoreAllWhitespace(_:))
     case .toggleIgnoreRules: #selector(SessionWindowController.toggleIgnoreRules(_:))
     case .swapSides: #selector(SessionWindowController.swapSides(_:))
+    case .copyToRight: #selector(SessionWindowController.copyToRight(_:))
+    case .copyToLeft: #selector(SessionWindowController.copyToLeft(_:))
+    case .copyAllChangesToRight: #selector(SessionWindowController.copyAllChangesToRight(_:))
+    case .copyAllChangesToLeft: #selector(SessionWindowController.copyAllChangesToLeft(_:))
     case .toggleBase: #selector(SessionWindowController.toggleBase(_:))
     case .toggleResultMaximized: #selector(SessionWindowController.toggleResultMaximized(_:))
     case .toggleScrollSynchronization:

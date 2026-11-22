@@ -73,9 +73,12 @@ extension SessionWindowController {
   /// What the panes show for `shown`, made away from the main actor for the setup of the panes
   /// once it is ready; made anew while the user changes the setup meanwhile, as by showing all
   /// lines in another arrangement.
-  func prepared(_ shown: ShownSession) async -> PreparedSession {
+  ///
+  /// With `collapsed`, the panes collapse its runs, else every run that collapses in a new
+  /// window.
+  func prepared(_ shown: ShownSession, collapsed: CollapsedRows? = nil) async -> PreparedSession {
     while true {
-      if let prepared = await presentation.prepare(shown) {
+      if let prepared = await presentation.prepare(shown, collapsed: collapsed) {
         return prepared
       }
     }
@@ -133,17 +136,30 @@ extension SessionWindowController {
   ///
   /// - Precondition: `prepared` was made for the setup of the panes now.
   func show(_ prepared: PreparedSession, named name: String?) {
+    show(prepared, named: name) {
+      presentation.showComparedAnew(prepared)
+    }
+  }
+
+  /// Shows `prepared` as ``show(_:named:)`` does, with `placing` putting it in the panes; the
+  /// step of undo takes back `copy` or carries it out again, if it is one.
+  ///
+  /// - Precondition: `prepared` was made for the setup of the panes now.
+  func show(
+    _ prepared: PreparedSession, named name: String?, copy: CopyReturn? = nil,
+    placing: () -> Void
+  ) {
     let previous = shownComparison
     let session = prepared.changes.session
     resultUndo.endTypingRun()
-    presentation.showComparedAnew(prepared)
+    placing()
     comparisonSwitcher.keepShownBefore(previous.shown.session, showing: session)
     presentation.show(SideHeader.headers(of: session, context: context))
     detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
     presentation.colorSyntax(as: syntaxLanguage)
     sessionDidChange()
     if let name {
-      comparisonSwitcher.registerReturn(to: previous, named: name)
+      comparisonSwitcher.registerReturn(to: previous, named: name, copy: copy)
     }
     showResultFormat()
     watchFiles()
@@ -152,7 +168,10 @@ extension SessionWindowController {
 
   /// The comparison that the window shows now, as undo and redo bring it back.
   private var shownComparison: ShownComparison {
-    ShownComparison(shown: presentation.shown, usesIgnoreRules: usesIgnoreRules)
+    ShownComparison(
+      shown: presentation.shown, usesIgnoreRules: usesIgnoreRules,
+      currentBlock: presentation.currentBlock, blockAfterPlace: presentation.blockAfterPlace,
+      collapsed: presentation.collapsed)
   }
 
   /// Whether undo or redo of a group of steps can act now, which `bringsBack` tells whether it
@@ -189,10 +208,27 @@ extension SessionWindowController: ComparisonSwitcherDelegate {
 
   func comparisonSwitcher(
     _ switcher: ComparisonSwitcher, bringsBack comparison: ShownComparison,
-    as prepared: PreparedSession
+    as prepared: PreparedSession, copy: CopyReturn?
   ) {
-    show(prepared, named: nil)
+    if let copy {
+      show(prepared, named: nil) {
+        presentation.showCopied(
+          prepared, keepingTheLineOf: copy.source, current: comparison.currentBlock,
+          before: comparison.blockAfterPlace)
+      }
+      presentation.announce(
+        copy.copiesAgain
+          ? Self.copiedAnnouncement(to: copy.targetName, leaving: presentation.changes.blocks.count)
+          : Self.restoredAnnouncement)
+    } else {
+      show(prepared, named: nil)
+    }
     usesIgnoreRules = comparison.usesIgnoreRules
+  }
+
+  /// Takes the presses from the buttons at the seams while the files are compared anew.
+  func comparisonSwitcherDidBegin(_ switcher: ComparisonSwitcher) {
+    updateCopyControls()
   }
 
   func comparisonSwitcherDidBeginBringingBack(_ switcher: ComparisonSwitcher) {

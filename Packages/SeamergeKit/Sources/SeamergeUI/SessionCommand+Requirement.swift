@@ -1,5 +1,6 @@
 import AppKit
 import MergeModel
+import PaneKit
 
 extension SessionCommand {
   /// What must hold for a command to have an effect, which the window checks to validate it.
@@ -120,6 +121,11 @@ extension SessionCommand {
     /// started, whose files the window shows.
     case ownFiles
 
+    /// Copying needs a comparison in which the side `direction` points to may be written and
+    /// the text of the other side shows, no comparison under way, and a changed block: the
+    /// current one, or for `allChanges` any.
+    case copy(PaneSeam.CopyDirection, allChanges: Bool)
+
     /// The command always has an effect.
     case nothing
   }
@@ -177,6 +183,8 @@ extension SessionCommand {
     case .reopenAllConflicts: .resettableConflicts
     case .resetAllDecisions: .resettableBlocks
     case .resolveAllWithA, .resolveAllWithB: .openConflicts
+    case .copyToRight, .copyToLeft, .copyAllChangesToRight, .copyAllChangesToLeft:
+      copy.map { .copy($0.direction, allChanges: $0.allChanges) } ?? .nothing
     }
   }
 }

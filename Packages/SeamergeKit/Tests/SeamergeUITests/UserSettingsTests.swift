@@ -22,7 +22,7 @@ struct UserSettingsTests {
     settings.highlightsSyntax = false
     settings.wrapsLines = true
     settings.showsInvisibles = true
-    settings.goesToNextConflict = false
+    settings.goesToNextChange = false
 
     let relaunched = UserSettings(defaults: defaults)
     #expect(relaunched.fontFamily == family)
@@ -34,7 +34,7 @@ struct UserSettingsTests {
     #expect(!relaunched.highlightsSyntax)
     #expect(relaunched.wrapsLines)
     #expect(relaunched.showsInvisibles)
-    #expect(!relaunched.goesToNextConflict)
+    #expect(!relaunched.goesToNextChange)
   }
 
   @Test func freshSettingsAreTheStandard() {
@@ -45,7 +45,7 @@ struct UserSettingsTests {
     #expect(settings.lineSpacing == .standard)
     #expect(settings.tabWidth == 4)
     #expect(settings.comparisonMode == .windowDefault)
-    #expect(settings.showsBase && settings.highlightsSyntax && settings.goesToNextConflict)
+    #expect(settings.showsBase && settings.highlightsSyntax && settings.goesToNextChange)
     #expect(!settings.wrapsLines && !settings.showsInvisibles)
     #expect(settings.showsFooter && settings.showsFileList)
     #expect(settings.sourcesFraction == nil)

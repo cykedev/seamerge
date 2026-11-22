@@ -123,9 +123,10 @@ public final class UserSettings {
     didSet { defaults.set(showsInvisibles, forKey: Key.showsInvisibles) }
   }
 
-  /// Whether choosing the text of an open conflict goes on to the next open conflict.
-  public var goesToNextConflict: Bool {
-    didSet { defaults.set(!goesToNextConflict, forKey: Key.staysOnDecidedConflict) }
+  /// Whether choosing the text of an open conflict goes on to the next open conflict, and
+  /// copying a change of a comparison to the next change.
+  public var goesToNextChange: Bool {
+    didSet { defaults.set(!goesToNextChange, forKey: Key.staysOnDecidedConflict) }
   }
 
   /// The rules that come with the app and are switched on.
@@ -230,7 +231,7 @@ public final class UserSettings {
     showsSingleColumn = defaults.bool(forKey: Key.showsSingleColumn)
     toolbarsWithArrangement = Set(defaults.stringArray(forKey: Key.toolbarsWithArrangement) ?? [])
     showsInvisibles = defaults.bool(forKey: Key.showsInvisibles)
-    goesToNextConflict = !defaults.bool(forKey: Key.staysOnDecidedConflict)
+    goesToNextChange = !defaults.bool(forKey: Key.staysOnDecidedConflict)
     showsFooter = !defaults.bool(forKey: Key.hidesFooter)
     showsFileList = !defaults.bool(forKey: Key.hidesFileList)
     showsIdenticalFiles = defaults.bool(forKey: Key.showsIdenticalFiles)

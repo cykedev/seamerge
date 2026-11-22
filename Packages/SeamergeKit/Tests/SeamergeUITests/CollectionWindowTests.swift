@@ -29,9 +29,9 @@ import Testing
     #expect(window.subtitle.contains("File 5 of 5"))
     #expect(controller.canPerform(.previousFile))
     #expect(!controller.canPerform(.skipRemainingFiles))
-    #expect(Keys.of(.nextFile, in: .diff) == Keys(SessionCommand.rightArrow, [.option, .command]))
+    #expect(Keys.of(.nextFile, in: .diff) == Keys("}", [.command]))
     #expect(
-      Keys.of(.previousFile, in: .diff) == Keys(SessionCommand.leftArrow, [.option, .command]))
+      Keys.of(.previousFile, in: .diff) == Keys("{", [.command]))
   }
 
   @Test func fileShownWhileUndoBringsBackAComparisonShowsUnderItsOwnName() async throws {

@@ -72,17 +72,30 @@ import Testing
   }
 
   @Test func singleKeysOfBlockModeComeFromTheCommands() {
-    #expect(SessionCommand(blockModeKey: Keystroke("n")) == .nextConflict)
-    #expect(SessionCommand(blockModeKey: Keystroke("N", .shift)) == .previousConflict)
-    #expect(SessionCommand(blockModeKey: Keystroke("\u{19}", .shift)) == .previousPane)
-    #expect(SessionCommand(blockModeKey: Keystroke("j")) == nil)
-    #expect(SessionCommand(blockModeKey: Keystroke("1")) == .useA)
-    #expect(SessionCommand(blockModeKey: Keystroke("1", .option)) == .toggleSourceA)
-    #expect(SessionCommand(blockModeKey: Keystroke("7")) == nil)
-    let keys = SessionCommand.allCases.flatMap(\.blockModeKeys)
-    for (index, key) in keys.enumerated() {
-      #expect(!keys[(index + 1)...].contains(key), "\(key.key) belongs to one command")
+    #expect(SessionCommand(blockModeKey: Keystroke("n"), in: .merge) == .nextConflict)
+    #expect(SessionCommand(blockModeKey: Keystroke("N", .shift), in: .merge) == .previousConflict)
+    #expect(SessionCommand(blockModeKey: Keystroke("\u{19}", .shift), in: .merge) == .previousPane)
+    #expect(SessionCommand(blockModeKey: Keystroke("j"), in: .merge) == nil)
+    #expect(SessionCommand(blockModeKey: Keystroke("1"), in: .merge) == .useA)
+    #expect(SessionCommand(blockModeKey: Keystroke("1", .option), in: .merge) == .toggleSourceA)
+    #expect(SessionCommand(blockModeKey: Keystroke("7"), in: .merge) == nil)
+    for kind in [Session.Kind.merge, .diff] {
+      let keys = SessionCommand.allCases.flatMap { $0.blockModeKeys(in: kind) }
+      for (index, key) in keys.enumerated() {
+        #expect(!keys[(index + 1)...].contains(key), "\(key.key) belongs to one command")
+      }
     }
+  }
+
+  @Test func sideArrowsCopyInAComparisonAndChooseASideInAMerge() {
+    let left = Keystroke(SessionCommand.leftArrow)
+    let right = Keystroke(SessionCommand.rightArrow)
+    #expect(SessionCommand(blockModeKey: left, in: .merge) == .useA)
+    #expect(SessionCommand(blockModeKey: right, in: .merge) == .useB)
+    #expect(SessionCommand(blockModeKey: left, in: .diff) == .copyToLeft)
+    #expect(SessionCommand(blockModeKey: right, in: .diff) == .copyToRight)
+    #expect(SessionCommand(blockModeKey: Keystroke("1"), in: .merge) == .useA)
+    #expect(SessionCommand(blockModeKey: Keystroke("3"), in: .merge) == .useB)
   }
 
   @Test func returnEntersTheResultAtTheCurrentBlockAndEscapeGoesBack() async throws {

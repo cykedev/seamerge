@@ -81,6 +81,11 @@ protocol SessionPrompts: AnyObject {
   /// `count` blocks, and tells whether to.
   func confirmResettingAll(discardingHandwritingIn count: Int, in window: NSWindow) async -> Bool
 
+  /// Tells that the file `name` took no copied text, as its encoding lacks some of the
+  /// characters.
+  func reportUnrepresentableCopy(to name: String, in encoding: FileEncoding, in window: NSWindow)
+    async
+
   /// Tells that the files could not be compared anew.
   func reportFailedComparison(in window: NSWindow) async
 
@@ -391,6 +396,21 @@ final class SessionSheets: SessionPrompts {
 
   private static var reloadTitle: String {
     SessionWindowController.reloadName
+  }
+
+  func reportUnrepresentableCopy(to name: String, in encoding: FileEncoding, in window: NSWindow)
+    async
+  {
+    let alert = NSAlert()
+    alert.messageText = String(
+      localized: "Couldn’t Copy to “\(name)”", bundle: .module,
+      comment: "Sheet after copying a change failed, such as to main.swift.")
+    alert.informativeText = String(
+      localized:
+        "Some of the copied characters don’t exist in \(encoding.name), the encoding of “\(name)”. Nothing was copied.",
+      bundle: .module,
+      comment: "Sheet after copying a change failed: the encoding of the file lacks characters.")
+    _ = await Self.present(alert, in: window)
   }
 
   func reportFailedComparison(in window: NSWindow) async {

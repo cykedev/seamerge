@@ -67,12 +67,26 @@ extension SessionPresentation {
   }
 
   /// Gives each seam the blocks without band that `blocks` tells for the inputs on its sides.
+  ///
+  /// A seam with buttons also learns which blocks they copy: every changed block, which removes
+  /// the lines of the side copied to where the other side has none.
   private func showSeamBands(_ blocks: (PaneSetup.Seam) -> IndexSet) {
     for seam in layout.seams {
       guard let left = seam.leftPane.flatMap(role(of:)),
         let right = seam.rightPane.flatMap(role(of:))
       else { continue }
       seam.blocksWithoutBand = blocks(PaneSetup.Seam(left: left, right: right))
+      guard !seam.copyDirections.isEmpty else {
+        seam.copiedBlocks = []
+        seam.removingBlocks = [:]
+        continue
+      }
+      let indices = changes.blocks.indices
+      seam.copiedBlocks = IndexSet(indices.filter { changes.blocks[$0].kind == .changed })
+      seam.removingBlocks = [
+        .toRight: IndexSet(indices.filter { changes.blocks[$0].lines(in: left).isEmpty }),
+        .toLeft: IndexSet(indices.filter { changes.blocks[$0].lines(in: right).isEmpty }),
+      ]
     }
   }
 

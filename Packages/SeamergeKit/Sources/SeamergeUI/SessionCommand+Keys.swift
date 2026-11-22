@@ -22,6 +22,9 @@ extension SessionCommand {
       .toggleIgnoredChanges, .toggleIgnoreRules, .copyBlock, .copyPatch, .exportPatch, .replaceAll:
       return nil
     case .swapSides: return ("s", [.option, .command])
+    case .copyToRight: return kind == .diff ? (Self.rightArrow, jumps) : nil
+    case .copyToLeft: return kind == .diff ? (Self.leftArrow, jumps) : nil
+    case .copyAllChangesToRight, .copyAllChangesToLeft: return nil
     case .skipRemainingFiles: return kind == .diff ? (".", [.command]) : nil
     case .leaveUnresolved: return kind == .merge ? (".", [.command]) : nil
     case .save: return ("s", [.command])
@@ -42,7 +45,8 @@ extension SessionCommand {
     case .actualSize: return ("0", [.command])
     case .goToLine: return ("l", [.command])
     case .openInEditor: return ("o", [.option, .command])
-    case .nextFile: return kind == .diff ? (Self.rightArrow, jumps) : nil
+    // Shift-Command-] arrives as Command-}, which the menu matches.
+    case .nextFile: return kind == .diff ? ("}", [.command]) : nil
     case .find: return ("f", [.command])
     case .findAndReplace: return ("f", [.option, .command])
     case .findNext: return ("g", [.command])
@@ -50,7 +54,7 @@ extension SessionCommand {
     case .useSelectionForFind: return ("e", [.command])
     case .filterFiles: return kind == .diff ? ("f", [.shift, .command]) : nil
     case .toggleIdenticalFiles: return nil
-    case .previousFile: return kind == .diff ? (Self.leftArrow, jumps) : nil
+    case .previousFile: return kind == .diff ? ("{", [.command]) : nil
     case .nextPane: return (Self.tab, [.control])
     case .previousPane: return (Self.tab, [.shift, .control])
     case .useA: return ("1", [.command])
@@ -68,9 +72,24 @@ extension SessionCommand {
     }
   }
 
-  /// The keys without Command or Control that carry out the command in block mode, while the
-  /// focus is in a pane above the result.
-  var blockModeKeys: [Keystroke] {
+  /// The keys without Command or Control that carry out the command in block mode in a window
+  /// of `kind`, while the focus is in a pane above the result.
+  ///
+  /// The side arrow keys point the way the text goes: in a merge they choose the side whose text
+  /// the result takes, in a comparison they copy toward the side they point to.
+  func blockModeKeys(in kind: Session.Kind) -> [Keystroke] {
+    switch (self, kind) {
+    case (.useA, .merge): [Keystroke("1"), Keystroke(Self.leftArrow)]
+    case (.useB, .merge): [Keystroke("3"), Keystroke(Self.rightArrow)]
+    case (.copyToRight, .diff): [Keystroke(Self.rightArrow)]
+    case (.copyToLeft, .diff): [Keystroke(Self.leftArrow)]
+    case (.useA, .diff), (.useB, .diff), (.copyToRight, .merge), (.copyToLeft, .merge): []
+    default: blockModeKeys
+    }
+  }
+
+  /// The keys of block mode that are the same in either kind of window.
+  private var blockModeKeys: [Keystroke] {
     switch self {
     case .nextConflict: [Keystroke("n")]
     case .previousConflict: [Keystroke("n", .shift)]
@@ -80,9 +99,7 @@ extension SessionCommand {
     case .lastChange: [Keystroke(Self.end)]
     case .nextPane: [Keystroke(Self.tab)]
     case .previousPane: [Keystroke(Self.tab, .shift), Keystroke(Self.backTab, .shift)]
-    case .useA: [Keystroke("1"), Keystroke(Self.leftArrow)]
     case .useBase: [Keystroke("2")]
-    case .useB: [Keystroke("3"), Keystroke(Self.rightArrow)]
     case .useAThenB: [Keystroke("4")]
     case .useBThenA: [Keystroke("5")]
     case .useNone: [Keystroke("6")]
@@ -94,9 +111,12 @@ extension SessionCommand {
     }
   }
 
-  /// The command that `keystroke` carries out in block mode, if any.
-  init?(blockModeKey keystroke: Keystroke) {
-    guard let command = Self.allCases.first(where: { $0.blockModeKeys.contains(keystroke) })
+  /// The command that `keystroke` carries out in block mode in a window of `kind`, if any.
+  init?(blockModeKey keystroke: Keystroke, in kind: Session.Kind) {
+    guard
+      let command = Self.allCases.first(where: {
+        $0.blockModeKeys(in: kind).contains(keystroke)
+      })
     else { return nil }
     self = command
   }

@@ -57,13 +57,15 @@ struct SettingsView: View {
           bundle: .module, comment: "Settings: note below the group of how a new window starts.")
       }
       Section {
-        Toggle(isOn: $settings.goesToNextConflict) {
+        Toggle(isOn: $settings.goesToNextChange) {
           Text(
-            "Go to Next Conflict After Choosing", bundle: .module,
-            comment: "Settings: whether Use A and the like go on to the next open conflict.")
+            "Go to Next Change After Choosing", bundle: .module,
+            comment:
+              "Settings: whether Use A and the like go on to the next open conflict, and Copy to Right and the like to the next change."
+          )
           Text(
-            "After Use A, Use B and the like on an open conflict.", bundle: .module,
-            comment: "Settings: when the window goes on to the next conflict.")
+            "After Use A, Use B and the like on an open conflict, and after Copy to Right or Copy to Left.",
+            bundle: .module, comment: "Settings: when the window goes on to the next change.")
         }
       } header: {
         Text("Merging", bundle: .module, comment: "Settings: heading of the merge group.")

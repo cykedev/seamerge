@@ -8,6 +8,34 @@ struct ShownComparison {
 
   /// Whether the window used the ignore rules of Settings.
   var usesIgnoreRules: Bool
+
+  /// The current block, which the undo or redo of a copy brings back.
+  var currentBlock: Int?
+
+  /// Where the window stood between blocks while none was current, which the undo or redo of a
+  /// copy brings back.
+  var blockAfterPlace: Int?
+
+  /// The runs of unchanged rows as they were collapsed, which the undo or redo of a copy brings
+  /// back.
+  var collapsed: CollapsedRows
+}
+
+/// A step of undo or redo that takes back a copy of changes or carries it out again.
+struct CopyReturn: Sendable {
+  /// The side the text was copied from, which keeps its lines either way.
+  var source: Role
+
+  /// The name of the side the text was copied to, as the announcement of the copy says it.
+  var targetName: String
+
+  /// Whether the step carries out the copy again rather than taking it back.
+  var copiesAgain: Bool
+
+  /// The step that does the opposite.
+  var reversed: CopyReturn {
+    CopyReturn(source: source, targetName: targetName, copiesAgain: !copiesAgain)
+  }
 }
 
 /// Compares the files of a session window anew, one comparison at a time, and brings back an
@@ -78,6 +106,7 @@ final class ComparisonSwitcher {
   private func beginComparing() {
     precondition(!isComparing, "One comparison runs at a time")
     isComparing = true
+    delegate?.comparisonSwitcherDidBegin(self)
     progress = Task { [weak self] in
       do {
         try await Task.sleep(for: Self.progressDelay)
@@ -116,39 +145,45 @@ final class ComparisonSwitcher {
   }
 
   /// Registers the step that shows `comparison` again, named `name`: on the undo stack, or on
-  /// the redo stack while undoing.
-  func registerReturn(to comparison: ShownComparison, named name: String) {
+  /// the redo stack while undoing; for a step that takes back a copy or carries it out again,
+  /// `copy` tells which.
+  func registerReturn(
+    to comparison: ShownComparison, named name: String, copy: CopyReturn? = nil
+  ) {
     undoManager.registerUndo(withTarget: self) { switcher in
-      switcher.bringBack(comparison, named: name)
+      switcher.bringBack(comparison, named: name, copy: copy)
     }
     undoManager.setActionName(name)
     // The mark stays with the group of the step, whatever names a later step in it gives it.
     undoManager.setActionUserInfoValue(true, forKey: Self.bringsBackComparison)
   }
 
-  /// Shows `comparison` again, as undo or redo of a switch or a reload: registers the step that
-  /// comes back to what the window shows now at once, as the undo manager asks, and becomes the
-  /// comparison under way at once, then makes the panes ready away from the main actor and has
-  /// the delegate show them.
+  /// Shows `comparison` again, as undo or redo of a switch, a reload or a copy: registers the
+  /// step that comes back to what the window shows now at once, as the undo manager asks, and
+  /// becomes the comparison under way at once, then makes the panes ready away from the main
+  /// actor and has the delegate show them.
   ///
   /// Until then the window takes no edit and no command of the lines, nor another undo or redo:
   /// each would change what the step registered for this comparison, which it brings back as it
   /// was. Once the window shows another file or closes meanwhile, it shows nothing.
   ///
+  /// The return of a copy brings back the runs collapsed as they were as well.
+  ///
   /// - Precondition: No other comparison is under way.
-  private func bringBack(_ comparison: ShownComparison, named name: String) {
+  private func bringBack(_ comparison: ShownComparison, named name: String, copy: CopyReturn?) {
     guard let delegate else { return }
     resultUndo.endTypingRun()
-    registerReturn(to: delegate.shownComparison(for: self), named: name)
+    registerReturn(to: delegate.shownComparison(for: self), named: name, copy: copy?.reversed)
     presentation.acceptsEdits = false
     beginComparing()
     bringingBack = Task {
       var prepared: PreparedSession?
       while prepared == nil, !Task.isCancelled {
-        prepared = await presentation.prepare(comparison.shown)
+        prepared = await presentation.prepare(
+          comparison.shown, collapsed: copy == nil ? nil : comparison.collapsed)
       }
       if let prepared, !Task.isCancelled {
-        self.delegate?.comparisonSwitcher(self, bringsBack: comparison, as: prepared)
+        self.delegate?.comparisonSwitcher(self, bringsBack: comparison, as: prepared, copy: copy)
       }
       bringingBack = nil
       presentation.acceptsEdits = true

@@ -3,8 +3,8 @@ import MergeModel
 import PaneKit
 
 extension SessionWindowController {
-  /// The context menu for `hit` in `pane`, in up to three groups: deciding the block under the
-  /// pointer, resetting and jumping, and the text commands.
+  /// The context menu for `hit` in `pane`, in up to three groups: deciding or copying the block
+  /// under the pointer, resetting and jumping, and the text commands.
   ///
   /// Each entry stands only where it has an effect, except that Cut, Copy and Paste stay and are
   /// disabled where they have none. The menu holds no key equivalents, and none of the text
@@ -20,8 +20,10 @@ extension SessionWindowController {
     if hit.block != nil {
       if isResult {
         groups.append(resultDecisionItems())
-      } else if let role = layout.sourcePanes.first(where: { $0.pane === pane })?.role {
-        groups.append(sourceDecisionItems(for: role))
+      } else {
+        // The single column offers the copies as well, without decisions of its own.
+        let role = layout.sourcePanes.first { $0.pane === pane }?.role
+        groups.append((role.map(sourceDecisionItems(for:)) ?? []) + copyItems())
       }
     }
     // On a changed block, resetting it comes first; on unchanged text, the jump to the next
@@ -72,6 +74,20 @@ extension SessionWindowController {
         item(SessionCommand.useNone.title, action: SessionCommand.useNone.action, target: self))
     }
     return items
+  }
+
+  /// The copies of the current block of a comparison that have an effect, each named after the
+  /// file it copies to, such as Copy to main.swift.
+  private func copyItems() -> [NSMenuItem] {
+    [PaneSeam.CopyDirection.toRight, .toLeft].filter { canPerform(.copy($0)) }.map { direction in
+      item(
+        String(
+          localized: "Copy to \(copyTargetName(direction))", bundle: .module,
+          comment:
+            "Context menu of a changed block of a comparison: copy it to the named file, such as Copy to main.swift."
+        ),
+        action: SessionCommand.copy(direction).action, target: self)
+    }
   }
 
   /// The decisions that the result offers for the current block: the commands of the Merge menu

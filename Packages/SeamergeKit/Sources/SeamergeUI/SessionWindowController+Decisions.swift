@@ -162,7 +162,7 @@ extension SessionWindowController {
     let wasOpen = presentation.navigation.isOpenConflict[block]
     resultUndo.carryOut(plan, named: command.undoName ?? command.title)
     announceState(ofBlock: block)
-    if wasOpen, settings.goesToNextConflict,
+    if wasOpen, settings.goesToNextChange,
       let next = presentation.navigation.target(of: .nextOpenConflict)
     {
       presentation.jump(to: next)

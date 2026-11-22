@@ -189,20 +189,51 @@ final class SessionSplitViewController: NSSplitViewController {
     }
   }
 
-  /// Gives the panes in view a seam between each two neighbors while they show seams, and takes
-  /// the seams away otherwise; seams that stay between the same panes stay as they are.
+  /// The sides of a comparison that changes may be copied to, which put a seam with buttons
+  /// between the panes also while they line up their rows; none at first.
+  var copyDirections: Set<PaneSeam.CopyDirection> = [] {
+    didSet {
+      if copyDirections != oldValue {
+        placeSeamsBetweenShownPanes()
+      }
+    }
+  }
+
+  /// Gives the panes in view a seam between each two neighbors while they show seams or changes
+  /// may be copied, and takes the seams away otherwise; seams that stay between the same panes
+  /// stay as they are, and take how they show now.
   private func placeSeamsBetweenShownPanes() {
     let shown = zip(sourcesController.splitViewItems, sourcePanes)
       .filter { !$0.0.isCollapsed }.map(\.1.pane)
-    let pairs = showsSeams ? Array(zip(shown, shown.dropFirst())) : []
+    let pairs =
+      showsSeams || !copyDirections.isEmpty ? Array(zip(shown, shown.dropFirst())) : []
     let current = seamSplitView.seams
-    guard
-      pairs.count != current.count
-        || zip(pairs, current).contains(where: { $0.0 !== $1.leftPane || $0.1 !== $1.rightPane })
-    else { return }
-    seamSplitView.seams = pairs.map(PaneSeam.init)
+    if pairs.count != current.count
+      || zip(pairs, current).contains(where: { $0.0 !== $1.leftPane || $0.1 !== $1.rightPane })
+    {
+      let seams = pairs.map(PaneSeam.init)
+      for seam in seams {
+        seam.theme = shown.first?.theme ?? Theme()
+      }
+      seamSplitView.seams = seams
+    }
+    let widths = seamSplitView.seams.map(\.width)
     for seam in seamSplitView.seams {
-      seam.theme = shown.first?.theme ?? Theme()
+      seam.showsBands = showsSeams
+      seam.copyDirections = copyDirections
+      seam.delegate = seamDelegate
+    }
+    if seamSplitView.seams.map(\.width) != widths {
+      seamSplitView.seamsDidChangeWidth()
+    }
+  }
+
+  /// Learns which buttons the user presses at the seams; the layout does not retain it.
+  weak var seamDelegate: (any PaneSeamDelegate)? {
+    didSet {
+      for seam in seamSplitView.seams {
+        seam.delegate = seamDelegate
+      }
     }
   }
 
@@ -483,17 +514,23 @@ private final class SeamSplitView: NSSplitView {
       for seam in seams where seam.superview !== self {
         addSubview(seam)
       }
-      // The split view takes the thickness of its dividers anew only when their style changes.
-      dividerStyle = .thick
-      dividerStyle = .thin
-      adjustSubviews()
-      // The panes give up the room for the seams in proportion, which may fall between points.
-      for index in arrangedSubviews.indices.dropLast()
-      where !isSubviewCollapsed(arrangedSubviews[index]) {
-        setPosition(arrangedSubviews[index].frame.maxX.rounded(), ofDividerAt: index)
-      }
-      needsLayout = true
+      seamsDidChangeWidth()
     }
+  }
+
+  /// Gives the dividers the thickness of the seams anew, after a seam came, went or changed its
+  /// width.
+  func seamsDidChangeWidth() {
+    // The split view takes the thickness of its dividers anew only when their style changes.
+    dividerStyle = .thick
+    dividerStyle = .thin
+    adjustSubviews()
+    // The panes give up the room for the seams in proportion, which may fall between points.
+    for index in arrangedSubviews.indices.dropLast()
+    where !isSubviewCollapsed(arrangedSubviews[index]) {
+      setPosition(arrangedSubviews[index].frame.maxX.rounded(), ofDividerAt: index)
+    }
+    needsLayout = true
   }
 
   /// The seams share the room of the dividers: where the pane between two others is
@@ -502,7 +539,7 @@ private final class SeamSplitView: NSSplitView {
   override var dividerThickness: CGFloat {
     let dividerCount = max(arrangedSubviews.count - 1, 1)
     return seams.isEmpty
-      ? super.dividerThickness : Theme.seamWidth * CGFloat(seams.count) / CGFloat(dividerCount)
+      ? super.dividerThickness : seams.map(\.width).reduce(0, +) / CGFloat(dividerCount)
   }
 
   override func drawDivider(in rect: NSRect) {

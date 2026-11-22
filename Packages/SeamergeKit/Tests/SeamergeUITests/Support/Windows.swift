@@ -151,6 +151,15 @@ final class PromptRecorder: SessionPrompts {
     failureCount += 1
   }
 
+  /// The files that took no copied text, with the encoding that lacked characters, in order.
+  private(set) var unrepresentableCopies: [(name: String, encoding: FileEncoding)] = []
+
+  func reportUnrepresentableCopy(to name: String, in encoding: FileEncoding, in window: NSWindow)
+    async
+  {
+    unrepresentableCopies.append((name, encoding))
+  }
+
   /// The answer to the sheet before saving with open conflicts.
   var openConflictsChoice = OpenConflictsChoice.cancel
 

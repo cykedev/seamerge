@@ -137,6 +137,17 @@ public final class SessionWindowController: NSWindowController {
   /// The toolbar of the window.
   let toolbar: SessionToolbar
 
+  /// Which files of the comparison shown may be written by copying changes, decided as the
+  /// window first shows them; `nil` before, and where a file was not read from disk.
+  var writableSides: WritableSides?
+
+  /// The locations of the files that ``writableSides`` was decided for.
+  var writableFileURLs: [URL?] = []
+
+  /// The last copy of changes that a command or a button began, which ends once the window
+  /// shows its outcome.
+  var copying: Task<Void, Never>?
+
   /// The pane above the result that had the focus last, which gets it back when text mode ends.
   private(set) weak var lastSourcePane: PaneView?
 
@@ -371,6 +382,7 @@ public final class SessionWindowController: NSWindowController {
     presentation.showCurrentBlock()
     presentation.delegate = self
     layout.delegate = self
+    layout.seamDelegate = self
     layout.chooseResultFormat = { [weak self] choice in self?.choose(choice) }
     window.keyHandler = self
     if unavailable == nil, binaryMerge == nil, let first = presentation.leadingPane?.documentView {
@@ -391,6 +403,7 @@ public final class SessionWindowController: NSWindowController {
   /// Shows in the toolbar what changed: the open conflicts or the current change, the arrows
   /// that lead anywhere, a comparison under way, and whether the window can save and close.
   func stateDidChange() {
+    updateCopyControls()
     toolbar.update(
       count: toolbarCount, isComparing: showsComparisonProgress,
       lineArrangement: presentation.lineArrangement, canShow: canShow, isValid: canPerform)
@@ -736,6 +749,8 @@ extension SessionWindowController: NSUserInterfaceValidations {
       saving != nil && context.waitingCaller != nil && !isAskingToClose
     case .ownFiles:
       context.waitingCaller == nil && context.difftool == nil && !comparisonSwitcher.isComparing
+    case .copy(let direction, let allChanges):
+      canCopy(direction, allChanges: allChanges)
     case .nothing:
       true
     }

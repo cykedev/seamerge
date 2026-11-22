@@ -127,7 +127,7 @@ import Testing
 
   @Test func choosingStaysOnTheConflictWhenTheSettingsSaySo() async throws {
     let settings = UserSettings.private()
-    settings.goesToNextConflict = false
+    settings.goesToNextChange = false
     let controller = try Windows.controller(
       for: try await EditingFixture.nineBlocks(), settings: settings)
     controller.presentation.setCurrentBlock(1)
