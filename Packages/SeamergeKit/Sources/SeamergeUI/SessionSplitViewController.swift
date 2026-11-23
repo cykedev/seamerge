@@ -547,6 +547,18 @@ private final class SeamSplitView: NSSplitView {
     super.drawDivider(in: rect)
   }
 
+  /// A click on a button of a seam goes to the button; the split view keeps the other clicks on
+  /// its dividers, so that they stay draggable.
+  override func hitTest(_ point: NSPoint) -> NSView? {
+    let local = convert(point, from: superview)
+    for seam in seams {
+      if let button = seam.hitTest(local) {
+        return button
+      }
+    }
+    return super.hitTest(point)
+  }
+
   override func layout() {
     super.layout()
     placeSeams()

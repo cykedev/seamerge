@@ -51,6 +51,24 @@ import Testing
     return try #require(seam.copyButtons.first { $0.block == block && $0.direction == direction })
   }
 
+  /// A click finds its view from the top of the window down, past the split view whose divider
+  /// the seam lies over; beside the buttons, the divider keeps the click, to be dragged.
+  @Test func clickOnAnArrowReachesItThroughTheWindow() async throws {
+    let controller = try await greetingWindow()
+    defer { controller.window?.close() }
+    controller.presentation.setCurrentBlock(nil)
+    let window = try #require(controller.window)
+    let seam = try #require(controller.layout.seams.first)
+    let splitView = try #require(seam.superview as? NSSplitView)
+    let arrow = try button(ofBlock: 1, .toRight, in: controller)
+    let top = try #require(window.contentView?.superview)
+    let center = seam.convert(CGPoint(x: arrow.frame.midX, y: arrow.frame.midY), to: splitView)
+    #expect(top.hitTest(splitView.convert(center, to: nil)) === arrow)
+    let beside = CGPoint(x: center.x, y: center.y + 30)
+    #expect(seam.hitTest(beside) == nil)
+    #expect(top.hitTest(splitView.convert(beside, to: nil)) === splitView)
+  }
+
   @Test func clickKeyMenuAndContextMenuCopyTheSameWay() async throws {
     let expected = try await Self.greetingCopiedToRight()
 
