@@ -492,7 +492,7 @@ private final class PanesSplitViewController: NSSplitViewController {
 /// A seam lies over its divider, as wide as ``Theme/seamWidth``, and lets clicks through, so that
 /// the divider stays draggable.
 @MainActor
-private final class SeamSplitView: NSSplitView {
+final class SeamSplitView: NSSplitView {
   override init(frame frameRect: NSRect) {
     super.init(frame: frameRect)
     dividerStyle = .thin
@@ -557,6 +557,47 @@ private final class SeamSplitView: NSSplitView {
       }
     }
     return super.hitTest(point)
+  }
+
+  /// The cursor rects of a divider leave out the buttons of its seam, which show the arrow, as
+  /// any button does; around them, the divider keeps its own cursor.
+  override func addCursorRect(_ rect: NSRect, cursor: NSCursor) {
+    let parts = cursorRects(splitting: rect)
+    for part in parts.divider {
+      super.addCursorRect(part, cursor: cursor)
+    }
+    for button in parts.buttons {
+      super.addCursorRect(button, cursor: .arrow)
+    }
+  }
+
+  /// `rect`, a cursor rect of a divider, split into the parts that keep the cursor of the
+  /// divider and the parts under the buttons of the seams, none of the first overlapping one of
+  /// the second.
+  func cursorRects(splitting rect: CGRect) -> (divider: [CGRect], buttons: [CGRect]) {
+    let buttons = seams.flatMap { seam in
+      seam.copyButtons.map { seam.convert($0.frame, to: self).intersection(rect) }
+    }.filter { !$0.isEmpty }
+    guard !buttons.isEmpty else { return ([rect], []) }
+    // Bands across the divider, cut at the top and the bottom of every button; in each band,
+    // the divider keeps what lies beside the buttons that span it.
+    let edges = Set([rect.minY, rect.maxY] + buttons.flatMap { [$0.minY, $0.maxY] }).sorted()
+    var divider: [CGRect] = []
+    for (bottom, top) in zip(edges, edges.dropFirst()) {
+      let spans = buttons.filter { $0.minY <= bottom && $0.maxY >= top }
+        .sorted { $0.minX < $1.minX }
+      var x = rect.minX
+      for span in spans {
+        if span.minX > x {
+          divider.append(CGRect(x: x, y: bottom, width: span.minX - x, height: top - bottom))
+        }
+        x = max(x, span.maxX)
+      }
+      if rect.maxX > x {
+        divider.append(CGRect(x: x, y: bottom, width: rect.maxX - x, height: top - bottom))
+      }
+    }
+    return (divider, buttons)
   }
 
   override func layout() {

@@ -268,6 +268,9 @@ package final class PaneSeam: NSView {
   /// The buttons of the blocks in view, by their block and direction.
   private var buttons: [ButtonKey: CopyChangeButton] = [:]
 
+  /// The frames of the buttons when they were last placed, to tell when they moved.
+  private var buttonFrames: [ButtonKey: CGRect] = [:]
+
   /// The symbols of the buttons, made once.
   private let symbols = SymbolImages()
 
@@ -404,6 +407,15 @@ package final class PaneSeam: NSView {
     for (key, button) in buttons where !placed.contains(key) {
       button.removeFromSuperview()
       buttons[key] = nil
+    }
+    // The view the seam lies over gives its divider the cursor around the buttons, which show
+    // the arrow; it reads them anew once they moved.
+    let frames = buttons.mapValues(\.frame)
+    if frames != buttonFrames {
+      buttonFrames = frames
+      if let superview {
+        window?.invalidateCursorRects(for: superview)
+      }
     }
   }
 

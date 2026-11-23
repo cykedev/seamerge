@@ -69,6 +69,41 @@ import Testing
     #expect(top.hitTest(splitView.convert(beside, to: nil)) === splitView)
   }
 
+  /// Over a button at the seam the cursor is the arrow, as over any button; around the buttons,
+  /// the divider keeps its own cursor, and the two never overlap.
+  @Test func buttonsAtTheSeamShowTheArrowAndTheDividerKeepsItsCursorAround() async throws {
+    let controller = try await greetingWindow()
+    defer { controller.window?.close() }
+    let seam = try #require(controller.layout.seams.first)
+    let splitView = try #require(seam.superview as? SeamSplitView)
+    _ = try button(ofBlock: 1, .toRight, in: controller)
+    let frames = seam.copyButtons.map { seam.convert($0.frame, to: splitView) }
+    #expect(!frames.isEmpty)
+    // The split view gives its divider a cursor rect a little wider than the divider.
+    let divider = seam.frame.insetBy(dx: -2, dy: 0)
+    let parts = splitView.cursorRects(splitting: divider)
+
+    #expect(parts.buttons.count == frames.count)
+    #expect(frames.allSatisfy(parts.buttons.contains))
+    func area(_ rect: CGRect) -> CGFloat {
+      let part = rect.intersection(divider)
+      return part.isNull ? 0 : part.width * part.height
+    }
+    func overlap(_ first: CGRect, _ second: CGRect) -> CGFloat {
+      area(first.intersection(second))
+    }
+    for (index, frame) in frames.enumerated() {
+      #expect(frames.dropFirst(index + 1).allSatisfy { overlap(frame, $0) == 0 })
+    }
+    #expect(!parts.divider.contains { part in parts.buttons.contains { overlap(part, $0) > 0 } })
+    let covered = (parts.divider + parts.buttons).map(area).reduce(0, +)
+    #expect(abs(covered - area(divider)) < 0.001)
+
+    let aside = CGRect(x: divider.minX, y: divider.maxY + 10, width: divider.width, height: 5)
+    #expect(splitView.cursorRects(splitting: aside).divider == [aside])
+    #expect(splitView.cursorRects(splitting: aside).buttons.isEmpty)
+  }
+
   @Test func clickKeyMenuAndContextMenuCopyTheSameWay() async throws {
     let expected = try await Self.greetingCopiedToRight()
 
