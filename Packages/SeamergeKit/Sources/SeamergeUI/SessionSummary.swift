@@ -39,17 +39,21 @@ struct SessionSummary: Equatable {
     let modeNote = [Self.modeNote(for: session.options.mode, startMode: startMode), rulesNote]
       .compactMap(\.self).joined(separator: Self.separator)
     let modeNotes = modeNote.isEmpty ? nil : modeNote
+    let name: String
     if arrangement.showsResult {
       let file = session.inputs.b
-      title = context.resultURL?.lastPathComponent ?? file.url?.lastPathComponent ?? file.label
+      name = context.resultURL?.lastPathComponent ?? file.url?.lastPathComponent ?? file.label
       self.changes = [isComparing ? nil : Self.changeCounts(of: changes), modeNotes]
         .compactMap(\.self).joined(separator: Self.separator)
     } else {
-      title =
+      name =
         context.difftool?.path
         ?? Self.title(of: arrangement.sourceRoles.compactMap { session.inputs[$0] })
       self.changes = modeNote
     }
+    // A label from the command line may hold a tab or a line break; the title stands on one
+    // line, as the headers do.
+    title = SideHeader.singleLine(name)
     operation = context.git?.rebaseProgress.map { progress in
       String(
         localized:

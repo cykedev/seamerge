@@ -66,6 +66,25 @@ import Testing
     #expect(try controller.mergeResult.content.text.contains("first line name removed these lines"))
   }
 
+  @Test func titleShowsATabAndALineBreakInTheNamesAsSpacesAsTheHeadersDo() async throws {
+    let comparison = try await Session.diff(
+      old: SourceFile(bytes: Data("one\n".utf8), label: "old\tname.txt"),
+      new: SourceFile(bytes: Data("two\n".utf8), label: "new\nname.txt"), mode: .windowDefault)
+    let comparisonHeaders = SideHeader.headers(of: comparison, context: SessionContext())
+    #expect(comparisonHeaders[.a]?.name == "old name.txt")
+    #expect(comparisonHeaders[.b]?.name == "new name.txt")
+    let comparisonWindow = try #require(Windows.controller(for: comparison).window)
+    #expect(comparisonWindow.title == "old name.txt ↔ new name.txt")
+
+    let merge = try await Session.merge(
+      base: SourceFile(bytes: Data("one\n".utf8), label: "base"),
+      a: SourceFile(bytes: Data("one\nA\n".utf8), label: "a"),
+      b: SourceFile(bytes: Data("one\nB\n".utf8), label: "own\tside\nfile.txt"))
+    let mergeHeaders = SideHeader.headers(of: merge, context: SessionContext())
+    #expect(mergeHeaders[.b]?.name == "own side file.txt")
+    #expect(try #require(Windows.controller(for: merge).window).title == "own side file.txt")
+  }
+
   @Test func disconnectedCallerAddsALineBelowTheResultHeader() async throws {
     let session = try await SampleMerges.helloWorld()
     let controller = makeController(session)
