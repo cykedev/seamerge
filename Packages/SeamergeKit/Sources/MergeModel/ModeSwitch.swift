@@ -84,14 +84,38 @@ extension ResultDocument {
   private func plan(
     carrying matches: [Int: Int], decidedCount: Int, to session: Session, text: String
   ) -> ModeSwitch {
+    let oldTexts = split(text)
+    var decisions: [Int: CarriedDecision] = [:]
+    for (id, index) in matches {
+      let segment = segments[index]
+      decisions[id] = CarriedDecision(
+        segment: segment, editedText: segment.state == .edited ? String(oldTexts[index]) : nil)
+    }
+    return ModeSwitch(
+      plan: planCarrying(decisions, to: session),
+      discardedDecisionCount: decidedCount - matches.count)
+  }
+
+  /// The plan that replaces the result with that of `session`, in which each block that
+  /// `decisions` names takes its decision and every other block its loaded state.
+  ///
+  /// A decision that takes the sources the block is loaded with leaves it untouched or automatic.
+  /// The plan replaces the whole text and the whole document in a single step.
+  ///
+  /// - Parameters:
+  ///   - decisions: The decision for each block of `session` that takes one, by its position.
+  ///   - session: A merge of the files of this document's session.
+  func planCarrying(_ decisions: [Int: CarriedDecision], to session: Session) -> EditPlan {
     let fresh = ResultDocument(session: session, removalNotes: texts.removalNotes)
     var segments = fresh.segments
     var editedTexts: [Int: String] = [:]
-    let oldTexts = split(text)
-    for (id, index) in matches {
-      segments[id] = Self.decision(self.segments[index], comparedWith: segments[id])
-      if self.segments[index].state == .edited {
-        editedTexts[id] = String(oldTexts[index])
+    for (id, decision) in decisions {
+      segments[id] = Self.decision(decision.segment, comparedWith: segments[id])
+      if decision.segment.state == .edited {
+        guard let text = decision.editedText else {
+          preconditionFailure("Edited decision for block \(id) has no text")
+        }
+        editedTexts[id] = text
       }
     }
     let newTexts = fresh.texts.texts(of: segments, in: session.blocks, editedTexts: editedTexts)
@@ -102,11 +126,21 @@ extension ResultDocument {
     let switched = ResultDocument(
       session: session, segments: segments, initialSegments: fresh.initialSegments,
       texts: fresh.texts)
-    let plan = EditPlan(
-      replacements: [TextReplacement(range: 0..<text.utf16.count, text: newTexts.joined())],
+    let length = self.segments.reduce(0) { $0 + $1.length }
+    return EditPlan(
+      replacements: [TextReplacement(range: 0..<length, text: newTexts.joined())],
       tableChanges: [.document(before: self, after: switched)], isTyping: false)
-    return ModeSwitch(plan: plan, discardedDecisionCount: decidedCount - matches.count)
   }
+}
+
+/// A decision that moves from a block of one result to a block of another: the segment of the
+/// block and, if the segment was edited by hand, its text.
+struct CarriedDecision {
+  /// The segment, whose length does not count.
+  let segment: Segment
+
+  /// The text of an edited segment; `nil` for any other.
+  let editedText: String?
 }
 
 /// Where the lines of an input went after it changed on disk: the runs of lines that stayed, as
@@ -184,7 +218,7 @@ extension Session {
   ///
   /// Bytes rather than line numbers identify the same lines across comparison modes, which split
   /// a file at different line endings.
-  fileprivate func byteRanges(of block: Block) -> [Range<Int>] {
+  func byteRanges(of block: Block) -> [Range<Int>] {
     Role.allCases.map { files[$0]?.byteRange(ofLines: block.lines(in: $0)) ?? 0..<0 }
   }
 }
