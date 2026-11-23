@@ -153,13 +153,15 @@ import Testing
     #expect(controller.window?.subtitle.contains("File 46 of 60") == true)
   }
 
-  @Test func headingThatStaysAtTheTopHasTheWindowBackgroundAndOneInItsPlaceNone() async throws {
+  @Test(arguments: [Look.light, .dark])
+  func headingThatStaysAtTheTopHasTheWindowBackgroundAndOneInItsPlaceNone(look: Look) async throws {
     let collection = FileCollection(
       files: try SampleCollections.many(80, in: try SampleCollections.folder()))
     let controller = try await Windows.controller(for: collection)
     defer { controller.window?.close() }
     let table = try #require(controller.collectionLayout?.fileList.tableView)
     let window = try #require(controller.window)
+    window.appearance = look.appearance
 
     table.scroll(CGPoint(x: 0, y: table.rect(ofRow: 16).minY))
     window.contentView?.layoutSubtreeIfNeeded()
@@ -171,8 +173,7 @@ import Testing
     .compactMap { table.rowView(atRow: $0, makeIfNecessary: false) }
     let standing = try #require(headings.first { $0.isFloating })
     let inPlace = try #require(headings.first { !$0.isFloating })
-    let background = try #require(
-      Contrast.resolve(.windowBackgroundColor, in: window.effectiveAppearance))
+    let background = try Contrast.drawn(.windowBackgroundColor, in: standing.effectiveAppearance)
     // A point at the end of the row, where the heading has no text.
     let color = { (row: NSTableRowView) throws -> NSColor in
       let bitmap = try #require(row.bitmapImageRepForCachingDisplay(in: row.bounds))

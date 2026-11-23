@@ -159,8 +159,7 @@ import Testing
     for (row, role) in [(2, ColorRole.a), (12, .b)] {
       let slot = gutter.convert(
         gutter.markerSlot(0, in: gutter.rect(ofRow: row)), to: gutter.superview)
-      let expected = try #require(
-        pane.theme.symbolColor(for: role).usingColorSpace(.sRGB))
+      let expected = pane.theme.symbolColor(for: role).resolved(in: pane.effectiveAppearance)
       var found = false
       for y in stride(from: slot.minY, to: slot.maxY, by: 0.5) {
         for x in stride(from: slot.minX, to: slot.maxX, by: 0.5) {
