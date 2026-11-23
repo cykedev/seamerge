@@ -4,6 +4,24 @@ All notable changes to Seamerge are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-22
+
+Users of 0.7.0 get this version through Seamerge ▸ Check for Updates… or the automatic check. This release lets a comparison change its files: copy a change from one side to the other, and save.
+
+### Added
+
+- Copy to Right (⌥⌘→) and Copy to Left (⌥⌘←) take the text of the current change into the other file; Copy All Changes to Right and Copy All Changes to Left in the Compare menu copy every change in one step. The seam between the panes shows a button for each change that can be copied, and in a pane above the result the arrow keys copy the current change. Undo names the copy and brings back the text and the current change.
+- Only files that may be written take a copy: in a comparison from Git or Git-Tower the working copy, never a copy of a commit or of the index; in a comparison you chose, an ordinary file you may write. Copied lines keep the bytes of the source, including text the comparison ignores; in Exact mode they keep its line endings, in the other modes they take those of the target.
+- Save (⌘S) writes every file of the window with copied changes, and Save and Close (⌘↩) writes them and closes the window. The header says "Edited", the close button shows a dot, and closing, Change Files… or quitting asks first. Seamerge writes beside the file and then replaces it, so a failure leaves the old file as it was. If another program changes the file, Seamerge asks whether to keep the copies or reload.
+- A window of several files keeps the copied changes of each file while you go to another, and marks a file with unsaved changes by a dot at the end of its row.
+
+### Changed
+
+- The sidebar of a window of several files and of a folder comparison groups the files by folder: the files of the top folder first, then each folder once as a heading that stays in view while its files scroll. A long folder name is shortened in the middle, and its full path shows in the tooltip. The filter keeps a heading while a file below it matches.
+- A modified file no longer shows a sign in the list; new, deleted, identical and unreadable files keep theirs.
+- Next File and Previous File move to ⇧⌘] and ⇧⌘[, so that ⌥⌘→ and ⌥⌘← copy changes.
+- Go to Next Change After Choosing in Settings also applies to Copy to Right and Copy to Left.
+
 ## [0.7.0] - 2026-11-20
 
 Users of 0.6.0 get this version through Seamerge ▸ Check for Updates… or the automatic check. This release adds no features: it makes Seamerge steadier, leaner with memory and faster in large files.
