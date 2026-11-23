@@ -41,8 +41,10 @@ extension SessionWindowController {
   /// Makes `text`, that of the result file, the result, as one step of undo: every open
   /// conflict is resolved, and the text replaces the whole result as if typed.
   ///
-  /// The window then shows what the file holds, so it counts as saved, as a document reverted
-  /// to its file does; undo takes it back to unsaved.
+  /// The window then shows what the file holds. A merge that no one waits for counts as saved,
+  /// as a document reverted to its file does, and undo takes it back to unsaved. A merge that a
+  /// command waits for counts as unsaved until the user saves, even if it was saved before: the
+  /// file holds what another app wrote, and only saving tells the command that the merge is done.
   func takeOverResult(_ text: String) {
     guard let result = presentation.result else { return }
     let name = Self.reloadName
@@ -54,8 +56,10 @@ extension SessionWindowController {
     }
     sessionUndoManager.endUndoGrouping()
     if var saving, let result = presentation.result {
-      saving.saved = SavedResult(
-        result, session: presentation.changes.session, format: saving.format)
+      saving.saved =
+        context.waitingCaller == nil
+        ? SavedResult(result, session: presentation.changes.session, format: saving.format)
+        : nil
       self.saving = saving
     }
     stateDidChange()

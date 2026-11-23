@@ -275,7 +275,9 @@ struct SavingTests {
     #expect(!controller.hasFinished)
     #expect(controller.presentation.result?.text == markers)
     #expect(try fixture.written == Data(markers.utf8))
-    #expect(controller.window?.isDocumentEdited == false)
+    // Git waits for this merge, and the file holds what another app wrote: only saving again
+    // tells Git that the merge is done.
+    #expect(controller.window?.isDocumentEdited == true)
   }
 
   @Test func otherAppThatWritesTheResultWhileUTF8IsOfferedIsAskedAbout() async throws {
