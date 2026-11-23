@@ -4,6 +4,14 @@ All notable changes to Seamerge are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-23
+
+Users of 0.8.0 and earlier get this version through Seamerge ▸ Check for Updates… or the automatic check.
+
+### Fixed
+
+- A click on an arrow or a bin at the seam between the panes now copies the change. In 0.8.0 the click did nothing; Copy to Right, Copy to Left and their keys worked.
+
 ## [0.8.0] - 2026-11-22
 
 Users of 0.7.0 get this version through Seamerge ▸ Check for Updates… or the automatic check. This release lets a comparison change its files: copy a change from one side to the other, and save.
