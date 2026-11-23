@@ -4,6 +4,14 @@ All notable changes to Seamerge are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-11-23
+
+Users of 0.8.1 and earlier get this version through Seamerge ▸ Check for Updates… or the automatic check.
+
+### Fixed
+
+- The pointer over an arrow or a bin at the seam between the panes is the arrow, as over any button. In 0.8.1 it showed the pointer for resizing the panes.
+
 ## [0.8.1] - 2026-11-23
 
 Users of 0.8.0 and earlier get this version through Seamerge ▸ Check for Updates… or the automatic check.
