@@ -539,7 +539,7 @@ public final class SessionWindowController: NSWindowController {
       startMode: settings.comparisonMode, ignoredDifferences: presentation.ignoredDifferences,
       isComparing: waitsForComparison, restoredWorkNote: restoredWorkNote)
     window?.title = summary.title
-    window?.setAccessibilityTitle([summary.title, summary.fullSubtitle].joined(separator: ", "))
+    window?.setAccessibilityTitle(summary.accessibilityTitle)
     updateSubtitle()
   }
 

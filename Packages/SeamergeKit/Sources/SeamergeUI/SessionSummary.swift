@@ -97,6 +97,12 @@ struct SessionSummary: Equatable {
     Self.joined([changes, operation, fileProgress, folders])
   }
 
+  /// The title and the whole subtitle, as VoiceOver reads the window; the title alone while the
+  /// subtitle is empty, as it is while the files of a comparison are compared.
+  var accessibilityTitle: String {
+    [title, fullSubtitle].filter { !$0.isEmpty }.joined(separator: ", ")
+  }
+
   /// The parts that are there, with the separator between them.
   private static func joined(_ parts: [String?]) -> String {
     parts.compactMap(\.self).filter { !$0.isEmpty }.joined(separator: separator)

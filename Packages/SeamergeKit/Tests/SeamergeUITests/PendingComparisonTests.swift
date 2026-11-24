@@ -168,6 +168,8 @@ import Testing
       let controller = try await waiting(for: files, kind: kind).controller
       defer { controller.window?.close() }
       #expect(controller.toolbarCount == .waiting)
+      // Without a count the subtitle is empty, and VoiceOver reads the title alone.
+      #expect(controller.window?.accessibilityTitle() == files.b.label)
       if kind == .merge {
         #expect(controller.layout.resultHeader?.format == nil)
       }
