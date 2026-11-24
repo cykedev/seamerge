@@ -1,6 +1,6 @@
 public import Foundation
 
-/// A request from the command-line tool to the app to open a merge or a comparison.
+/// A request from the command-line tool to the app to open a merge, a comparison or a patch.
 ///
 /// The tool finds out what Git is doing and sends it along, so that the app shows it without
 /// asking Git itself. File URLs in a request are absolute; a request with a relative path cannot
@@ -14,6 +14,9 @@ public enum SessionRequest: Sendable, Hashable {
 
   /// A comparison of the files in two folders, as `git difftool --dir-diff` hands them over.
   case folders(Folders)
+
+  /// A unified diff, shown in a window that nothing can change.
+  case patch(Patch)
 
   /// The files of a merge and what Git is doing while it asks for the merge.
   public struct Merge: Sendable, Hashable {
@@ -103,7 +106,7 @@ public enum SessionRequest: Sendable, Hashable {
 
 extension SessionRequest: Codable {
   private enum CodingKeys: String, CodingKey {
-    case version, merge, diff, folders
+    case version, merge, diff, folders, patch
   }
 
   /// Decodes a request, refusing one of another protocol version before reading anything else.
@@ -113,16 +116,17 @@ extension SessionRequest: Codable {
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     try MessageCoding.checkVersion(in: container, forKey: .version)
-    switch (container.contains(.merge), container.contains(.diff), container.contains(.folders)) {
-    case (true, false, false): self = .merge(try container.decode(Merge.self, forKey: .merge))
-    case (false, true, false): self = .diff(try container.decode(Diff.self, forKey: .diff))
-    case (false, false, true):
-      self = .folders(try container.decode(Folders.self, forKey: .folders))
+    let kinds = [CodingKeys.merge, .diff, .folders, .patch].filter(container.contains)
+    switch kinds.count == 1 ? kinds[0] : nil {
+    case .merge: self = .merge(try container.decode(Merge.self, forKey: .merge))
+    case .diff: self = .diff(try container.decode(Diff.self, forKey: .diff))
+    case .folders: self = .folders(try container.decode(Folders.self, forKey: .folders))
+    case .patch: self = .patch(try container.decode(Patch.self, forKey: .patch))
     default:
       throw DecodingError.dataCorrupted(
         .init(
           codingPath: container.codingPath,
-          debugDescription: "A request names exactly one of merge, diff and folders."))
+          debugDescription: "A request names exactly one of merge, diff, folders and patch."))
     }
   }
 
@@ -134,6 +138,7 @@ extension SessionRequest: Codable {
     case .merge(let merge): try container.encode(merge, forKey: .merge)
     case .diff(let diff): try container.encode(diff, forKey: .diff)
     case .folders(let folders): try container.encode(folders, forKey: .folders)
+    case .patch(let patch): try container.encode(patch, forKey: .patch)
     }
   }
 }

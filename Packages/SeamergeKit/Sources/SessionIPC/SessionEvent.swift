@@ -35,7 +35,8 @@ public enum SessionOutcome: String, Sendable, Hashable, Codable {
 /// How a session ended for the command-line tool: the app took over the files, or the user closed
 /// the window.
 public enum SessionReply: Sendable, Hashable {
-  /// The app took over the files of a comparison that does not keep anyone waiting.
+  /// The app took over the files of a comparison, or showed a patch, without keeping anyone
+  /// waiting for the window.
   case accepted
 
   /// The user closed the window.
@@ -64,6 +65,12 @@ public enum SessionRejection: String, Sendable, Hashable, Codable {
 
   /// The app is quitting and opens no more windows; once it has quit, a new copy can.
   case quitting
+
+  /// The app cannot read the patch of the request as a unified diff.
+  case unreadablePatch
+
+  /// The app read the patch but could not open its window, for a reason that it shows itself.
+  case windowNotOpened
 }
 
 extension SessionEvent: Codable {

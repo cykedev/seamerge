@@ -221,6 +221,9 @@ final class SessionCoordinator {
     case .folders(let folders):
       await serveFolders(folders, on: connection)
       return
+    case .patch:
+      await send(.rejected(.unsupportedRequest), on: connection)
+      return
     case .merge, .diff:
       break
     }
@@ -494,6 +497,8 @@ final class SessionCoordinator {
       }
     case .folders:
       preconditionFailure("The folders of a directory diff are served as a collection")
+    case .patch:
+      preconditionFailure("This version of the app shows no patch")
     }
   }
 }
@@ -503,7 +508,7 @@ extension SessionRequest {
   fileprivate var kind: Session.Kind {
     switch self {
     case .merge: .merge
-    case .diff, .folders: .diff
+    case .diff, .folders, .patch: .diff
     }
   }
 }

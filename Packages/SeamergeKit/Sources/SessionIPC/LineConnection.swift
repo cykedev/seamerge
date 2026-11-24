@@ -78,11 +78,15 @@ final class LineConnection: Sendable {
 
 /// Splits the bytes arriving on a connection into lines.
 struct LineReader {
-  /// The longest line a reader accepts, line feed excluded.
+  /// The longest line a reader accepts unless told otherwise, line feed excluded.
   static let maximumLineLength = 1 << 20
 
   private var chunks: AsyncStream<Data>.Iterator
   private var buffer = Data()
+
+  /// How many bytes at the start of the buffer are known to hold no line feed, so that a long
+  /// line arriving in many chunks is searched once rather than once per chunk.
+  private var searchedCount = 0
 
   fileprivate init(chunks: AsyncStream<Data>.Iterator) {
     self.chunks = chunks
@@ -93,18 +97,23 @@ struct LineReader {
   /// Bytes after the last line feed are discarded when the connection ends: they are an incomplete
   /// message. The end also comes when the waiting task is cancelled.
   ///
-  /// - Throws: ``SessionError/messageTooLong`` if a line grows beyond
-  ///   ``maximumLineLength``.
-  mutating func nextLine() async throws(SessionError) -> Data? {
+  /// - Parameter maximumLength: The longest line accepted, line feed excluded.
+  /// - Throws: ``SessionError/messageTooLong`` if a line grows beyond `maximumLength`.
+  mutating func nextLine(
+    maximumLength: Int = Self.maximumLineLength
+  ) async throws(SessionError) -> Data? {
     while true {
-      let lineFeed = buffer.firstIndex(of: MessageCoding.lineFeed)
+      let lineFeed = buffer[(buffer.startIndex + searchedCount)...]
+        .firstIndex(of: MessageCoding.lineFeed)
       let lineLength = buffer.distance(from: buffer.startIndex, to: lineFeed ?? buffer.endIndex)
-      guard lineLength <= Self.maximumLineLength else { throw .messageTooLong }
+      guard lineLength <= maximumLength else { throw .messageTooLong }
       if let lineFeed {
         let line = Data(buffer[..<lineFeed])
         buffer = Data(buffer[buffer.index(after: lineFeed)...])
+        searchedCount = 0
         return line
       }
+      searchedCount = buffer.count
       guard let chunk = await chunks.next() else {
         if !buffer.isEmpty {
           Logger.sessionIPC.notice("A session connection ended in the middle of a message")

@@ -47,7 +47,8 @@ public final class SessionServer: Sendable {
     var reader = connection.makeLineReader()
     let request: SessionRequest
     do {
-      guard let line = try await reader.nextLine() else {
+      guard let line = try await reader.nextLine(maximumLength: MessageCoding.maximumRequestLength)
+      else {
         Logger.sessionIPC.notice("A session connection ended before its request")
         return
       }

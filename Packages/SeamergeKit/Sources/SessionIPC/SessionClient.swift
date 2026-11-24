@@ -23,8 +23,9 @@ public struct SessionClient: Sendable {
   /// Sends `request` to the app and returns how the session ended.
   ///
   /// The client connects, retrying until ``connectionTimeout`` has passed while there is no
-  /// socket or nothing listens on it, sends the request, and waits for the window to close, or
-  /// only until the app has taken over the files of a comparison with an origin.
+  /// socket or nothing listens on it, sends the request, and waits for the window to close; only
+  /// until the app has taken over the files of a comparison with an origin, and until the window
+  /// of a patch shows unless the tool waits for it, which then counts as accepted.
   /// Cancelling the calling task closes the connection; the app sees that the tool is gone.
   ///
   /// - Throws: ``SessionError/serverUnreachable(path:)`` if no server accepted the connection in
@@ -39,7 +40,9 @@ public struct SessionClient: Sendable {
     var reader = connection.makeLineReader()
     while let line = try await reader.nextLine() {
       switch try MessageCoding.decode(SessionEvent.self, from: line) {
-      case .opened: Logger.sessionIPC.info("The app opened the session")
+      case .opened:
+        Logger.sessionIPC.info("The app opened the session")
+        if case .patch(let patch) = request, !patch.waitsForWindow { return .accepted }
       case .accepted: return .accepted
       case .closed(let outcome): return .closed(outcome)
       case .rejected(let reason): throw .rejected(reason)

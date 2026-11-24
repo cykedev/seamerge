@@ -9,6 +9,10 @@ enum MessageCoding {
   /// The version of the protocol this module speaks.
   static let version = 2
 
+  /// The longest request, line feed excluded: one with the largest patch, whose bytes take a
+  /// third more in Base64, and room for the rest of the message.
+  static let maximumRequestLength = SessionRequest.Patch.maximumByteCount / 3 * 4 + (1 << 20)
+
   /// The line feed that ends every message.
   static let lineFeed = UInt8(ascii: "\n")
 
