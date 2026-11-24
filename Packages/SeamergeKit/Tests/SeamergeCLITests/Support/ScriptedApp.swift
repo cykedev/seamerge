@@ -15,6 +15,9 @@ struct ScriptedApp {
     /// Goes away without closing the window, as an app that crashes.
     case disconnect
 
+    /// Opens the window and keeps it open until the tool goes away.
+    case open
+
     /// Takes over the files of a collected comparison without a window.
     case accept
 
@@ -60,6 +63,8 @@ struct ScriptedApp {
             try await connection.send(.closed(.saved))
           case .disconnect, .reject, .accept:
             return
+          case .open:
+            break
           }
         } catch {
           Issue.record(error, "The app in the test could not end the session")

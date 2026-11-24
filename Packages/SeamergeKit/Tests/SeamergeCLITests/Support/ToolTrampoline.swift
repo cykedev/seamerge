@@ -90,7 +90,8 @@ final class ToolTrampoline: Sendable {
   func runNextInvocation(of command: SeamergeCommand) async throws -> CommandResult {
     let invocation = try await nextInvocation()
     let result = await command.run(
-      invocation.arguments, workingDirectory: invocation.workingDirectory,
+      invocation.arguments, standardInput: StandardInput(.nullDevice),
+      workingDirectory: invocation.workingDirectory,
       environment: invocation.environment)
     try finish(with: result)
     return result

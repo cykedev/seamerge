@@ -1,5 +1,6 @@
 import Foundation
 import SessionIPC
+import TextIO
 
 /// Why the command ends without a session outcome.
 ///
@@ -42,6 +43,22 @@ enum CommandError: Error {
   /// The folder the result is to be saved in does not exist.
   case outputFolderNotFound(path: String)
 
+  /// Standard input could not be read; the associated value is the reason the system gives.
+  case standardInputNotReadable(reason: String)
+
+  /// The patch is larger than a request to the app holds.
+  case patchTooLarge
+
+  /// The patch is not a unified diff that the app can show; the file name is `nil` for a patch
+  /// from standard input.
+  case unreadablePatch(PatchReadingError, fileName: String?)
+
+  /// The app could not read the patch that the command read.
+  case patchRefused
+
+  /// The app read the patch but could not open its window; it shows why.
+  case patchWindowNotOpened
+
   /// The app could not be started; the associated value is the reason the system gives.
   case appNotOpened(reason: String)
 
@@ -77,9 +94,11 @@ enum CommandError: Error {
       1
     case .unknownOption, .unknownOptionOrFile, .missingValue, .repeatedOption, .missingOption,
       .unexpectedArgument, .missingFiles, .emptyFileName, .fileNotFound, .folderInsteadOfFile,
-      .fileNotReadable, .outputFolderNotFound:
+      .fileNotReadable, .outputFolderNotFound, .standardInputNotReadable, .patchTooLarge,
+      .unreadablePatch, .patchRefused:
       2
     case .appNotOpened, .appNotAnswering, .appStillQuitting, .appRefusedRequest,
+      .patchWindowNotOpened,
       .connectionNotPossible,
       .socketPathTooLong, .socketFolderNotPrivate:
       3
@@ -107,6 +126,17 @@ enum CommandError: Error {
     case .fileNotReadable(let path): "Cannot read '\(path)'. Check its permissions."
     case .outputFolderNotFound(let path):
       "Cannot find the folder to save '\(path)' in. Check the path."
+    case .standardInputNotReadable(let reason):
+      "Cannot read standard input (\(reason.trimmingTrailingPeriod)). Pass the patch as a file."
+    case .patchTooLarge:
+      "The patch is larger than \(SessionRequest.Patch.maximumByteCount >> 20) MB. "
+        + "Split it into smaller patches."
+    case .unreadablePatch(let error, let fileName):
+      "Cannot read \(fileName.map { "'\($0)'" } ?? "the patch"): \(error.reason)"
+    case .patchRefused:
+      "Seamerge cannot read the patch. Make one with 'git diff' or 'diff -u'."
+    case .patchWindowNotOpened:
+      "Seamerge cannot open a window for the patch; it says why. Try again."
     case .appNotOpened(let reason):
       "Cannot open Seamerge (\(reason.trimmingTrailingPeriod)). "
         + "Open it once from the Finder, then try again."
@@ -138,11 +168,15 @@ enum CommandError: Error {
     case .serverUnreachable:
       self = .appNotAnswering
     case .rejected(.unsupportedRequest):
-      if case .merge = request {
-        self = .windowNotAvailable(isComparison: false)
-      } else {
-        self = .windowNotAvailable(isComparison: true)
+      switch request {
+      case .merge: self = .windowNotAvailable(isComparison: false)
+      case .diff, .folders: self = .windowNotAvailable(isComparison: true)
+      case .patch: self = .appRefusedRequest
       }
+    case .rejected(.unreadablePatch):
+      self = .patchRefused
+    case .rejected(.windowNotOpened):
+      self = .patchWindowNotOpened
     case .rejected, .unsupportedVersion:
       self = .appRefusedRequest
     case .disconnected, .cancelled, .malformedMessage, .messageTooLong:
@@ -165,5 +199,28 @@ extension String {
   /// The text without the period that ends a sentence, so that it fits into parentheses.
   fileprivate var trimmingTrailingPeriod: String {
     hasSuffix(".") ? String(dropLast()) : self
+  }
+}
+
+extension PatchReadingError {
+  /// Why the patch cannot be read and what to do, as the end of a line on standard error.
+  fileprivate var reason: String {
+    switch self {
+    case .combinedDiff(let line):
+      "line \(line) starts a combined diff of a merge, which Seamerge cannot show. "
+        + "Compare with one parent instead, such as with 'git diff HEAD^1'."
+    case .notUnifiedDiff:
+      "it is not a unified diff. Make one with 'git diff' or 'diff -u'."
+    case .malformedHunkHeader(let line):
+      "line \(line) is not the header of a hunk. Check the patch."
+    case .hunkWithoutFile(let line):
+      "the hunk at line \(line) has no lines '---' and '+++' before it. Check the patch."
+    case .truncatedHunk(let line):
+      "the hunk at line \(line) ends early. Check that the patch is complete."
+    case .hunkLengthMismatch(let line):
+      "the hunk at line \(line) holds other lines than its header says. Check the patch."
+    case .malformedFileName(let line):
+      "the file name in line \(line) is not quoted as Git quotes names. Check the patch."
+    }
   }
 }

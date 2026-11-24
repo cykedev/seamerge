@@ -17,7 +17,8 @@ struct ArgumentTests {
       #expect(result.output.hasPrefix("Usage:\n  seamerge merge "))
       for option in [
         "--base", "--local", "--remote", "--output", "--label-base", "--label-local",
-        "--label-remote", "--from-git", "--path", "--label-left", "--label-right", "--version",
+        "--label-remote", "--from-git", "--path", "--label-left", "--label-right", "--wait",
+        "--version",
       ] {
         #expect(result.output.contains(option), "\(option) is not in the help")
       }
@@ -34,7 +35,6 @@ struct ArgumentTests {
   }
 
   @Test(arguments: [
-    ([], "Name two files to compare. See 'seamerge --help'."),
     (["merge", "--local"], "Add a value after --local. See 'seamerge --help'."),
     (["merge", "--lokal", "a"], "Unknown option '--lokal'. See 'seamerge --help'."),
     (
@@ -228,7 +228,7 @@ struct ArgumentTests {
 
       for left in [copy.path, "/dev/null"] {
         let result = await sandbox.command().run(
-          ["diff", left, "Sources/Greeting.swift"],
+          ["diff", left, "Sources/Greeting.swift"], standardInput: StandardInput(.nullDevice),
           workingDirectory: sandbox.directory.appending(path: "repo", directoryHint: .isDirectory),
           environment: environment)
         #expect(result.exitStatus == 0, "\(result)")
@@ -322,5 +322,11 @@ extension SessionRequest {
   var diff: Diff? {
     guard case .diff(let diff) = self else { return nil }
     return diff
+  }
+
+  /// The patch, if this is one.
+  var patch: Patch? {
+    guard case .patch(let patch) = self else { return nil }
+    return patch
   }
 }

@@ -63,7 +63,8 @@ struct QuittingAppTests {
 
       let result = await sandbox.command(launcher: app).run(
         ["diff", "--collect", "--path", "a.txt", "a.txt", "a.txt"],
-        workingDirectory: sandbox.directory, environment: environment)
+        standardInput: StandardInput(.nullDevice), workingDirectory: sandbox.directory,
+        environment: environment)
 
       #expect(result == CommandResult(exitStatus: 0))
       #expect(await app.copiesThatShowedAWindow == 1)

@@ -24,7 +24,7 @@ let modules: [(name: String, dependencies: [Target.Dependency])] = [
   ),
   ("GitSupport", []),
   ("SessionIPC", []),
-  ("SeamergeCLI", ["SessionIPC", "GitSupport"]),
+  ("SeamergeCLI", ["SessionIPC", "GitSupport", "TextIO"]),
   ("SyntaxKit", []),
   ("PaneKit", ["TextBasics"]),
   ("FolderCompare", ["MergeModel", "GitSupport"]),

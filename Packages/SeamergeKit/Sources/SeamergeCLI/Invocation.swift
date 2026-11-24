@@ -6,6 +6,12 @@ enum Invocation {
   /// A comparison: `seamerge diff …`, or the short form `seamerge <old> <new>`.
   case diff(DiffArguments)
 
+  /// A patch: `seamerge patch …`, or the short form `seamerge` with a patch on standard input.
+  case patch(PatchArguments)
+
+  /// No argument and no patch on standard input: the help, as for a wrong invocation.
+  case usage
+
   /// `--help`.
   case help
 
@@ -18,17 +24,25 @@ enum Invocation {
   /// `--help`; after `--`, every argument is a file. Anywhere else, `--help` and `--version` win
   /// over every other argument, including wrong ones.
   ///
+  /// - Parameter patchOnStandardInput: Whether standard input is a pipe or a file, which makes
+  ///   the command without arguments read a patch from it.
   /// - Throws: ``CommandError`` with a usage case if the arguments do not form a valid invocation.
-  init(arguments: [String]) throws(CommandError) {
-    let isMerge = arguments.first == "merge"
+  init(arguments: [String], patchOnStandardInput: Bool) throws(CommandError) {
+    guard let first = arguments.first else {
+      self =
+        patchOnStandardInput ? .patch(PatchArguments(file: nil, waitsForWindow: false)) : .usage
+      return
+    }
     let scanned =
-      switch arguments.first {
+      switch first {
       case "merge":
         Self.scan(
           arguments.dropFirst(), options: Option.merge, flags: Flag.merge, filesFollow: false)
       case "diff":
         Self.scan(
           arguments.dropFirst(), options: Option.diff, flags: Flag.diff, filesFollow: true)
+      case "patch":
+        Self.scan(arguments.dropFirst(), options: [], flags: Flag.patch, filesFollow: true)
       default:
         Self.scan(arguments[...], options: Option.diff, flags: Flag.diff, filesFollow: true)
       }
@@ -38,8 +52,10 @@ enum Invocation {
       self = .version
     } else if let error = scanned.firstError {
       throw error
-    } else if isMerge {
+    } else if first == "merge" {
       self = .merge(try MergeArguments(scanned))
+    } else if first == "patch" {
+      self = .patch(try PatchArguments(scanned))
     } else {
       self = .diff(try DiffArguments(scanned))
     }
@@ -110,12 +126,16 @@ enum Option: String {
 enum Flag: String {
   case fromGit = "--from-git"
   case collect = "--collect"
+  case wait = "--wait"
 
   /// The flags of `seamerge merge`.
   static let merge: [Flag] = [.fromGit]
 
   /// The flags of `seamerge diff`.
   static let diff: [Flag] = [.collect]
+
+  /// The flags of `seamerge patch`.
+  static let patch: [Flag] = [.wait]
 }
 
 /// The arguments of one form of the command, split into option values and operands.
@@ -225,5 +245,25 @@ struct DiffArguments {
     leftLabel = scanned.values[.leftLabel]
     rightLabel = scanned.values[.rightLabel]
     isCollecting = scanned.flags.contains(.collect)
+  }
+}
+
+/// The arguments of `seamerge patch`, as they were given.
+struct PatchArguments {
+  /// The path of the patch, or `nil` for standard input, which `-` names too.
+  var file: String?
+
+  /// Whether the command waits until the window closes, rather than ending once it shows.
+  var waitsForWindow: Bool
+
+  init(file: String?, waitsForWindow: Bool) {
+    self.file = file
+    self.waitsForWindow = waitsForWindow
+  }
+
+  fileprivate init(_ scanned: ScannedArguments) throws(CommandError) {
+    if scanned.operands.count > 1 { throw .unexpectedArgument(scanned.operands[1]) }
+    let file = scanned.operands.first
+    self.init(file: file == "-" ? nil : file, waitsForWindow: scanned.flags.contains(.wait))
   }
 }

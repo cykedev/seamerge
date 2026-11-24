@@ -35,12 +35,15 @@ struct Sandbox {
       client: SessionClient(socketURL: socketURL, connectionTimeout: connectionTimeout))
   }
 
-  /// Runs `command` with `arguments` in the sandbox, as a shell in `directory` would.
+  /// Runs `command` with `arguments` in the sandbox, as a shell in `directory` would, with
+  /// `standardInput` or else `/dev/null` as its standard input.
   func run(
-    _ arguments: [String], in directory: URL? = nil, command: SeamergeCommand? = nil
+    _ arguments: [String], in directory: URL? = nil, command: SeamergeCommand? = nil,
+    standardInput: StandardInput = StandardInput(.nullDevice)
   ) async -> CommandResult {
     await (command ?? self.command()).run(
-      arguments, workingDirectory: directory ?? self.directory, environment: environment)
+      arguments, standardInput: standardInput, workingDirectory: directory ?? self.directory,
+      environment: environment)
   }
 
   /// Writes `text` into a new file at `path` in the sandbox and returns its location.

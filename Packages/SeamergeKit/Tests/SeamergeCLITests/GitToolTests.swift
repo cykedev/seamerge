@@ -132,7 +132,8 @@ struct GitToolTests {
         #expect(try Data(contentsOf: baseFile).isEmpty, "Git hands over an empty base")
         try tool.finish(
           with: await sandbox.command().run(
-            invocation.arguments, workingDirectory: invocation.workingDirectory,
+            invocation.arguments, standardInput: StandardInput(.nullDevice),
+            workingDirectory: invocation.workingDirectory,
             environment: invocation.environment))
       }
 

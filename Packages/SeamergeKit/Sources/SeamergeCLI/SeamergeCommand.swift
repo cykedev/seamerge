@@ -1,14 +1,17 @@
 public import Foundation
 import GitSupport
 public import SessionIPC
+import TextIO
 import os
 
-/// The `seamerge` command: hands a merge or a comparison to the app and ends with its outcome.
+/// The `seamerge` command: hands a merge, a comparison or a patch to the app and ends with its
+/// outcome.
 ///
 /// Git runs the command as its mergetool and difftool. The command checks the files, finds out
 /// what Git is doing, opens the app, sends the session and waits until the user closes the window;
 /// a comparison that may join the other files of its run in one window waits only until the app
-/// has taken the files over.
+/// has taken the files over. A patch is read and checked in full before the app opens, and the
+/// command ends once its window shows unless told to wait for it.
 public struct SeamergeCommand: Sendable {
   /// The version `--version` prints.
   public var version: String
@@ -39,19 +42,25 @@ public struct SeamergeCommand: Sendable {
   ///
   /// - Parameters:
   ///   - arguments: The arguments after the name of the command.
+  ///   - standardInput: Where a patch comes from that no file names.
   ///   - workingDirectory: The directory relative paths are read from; Git starts the command at
   ///     the top of the working tree.
   ///   - environment: The environment the command runs in, which `git` inherits.
   public func run(
     _ arguments: [String],
+    standardInput: StandardInput,
     workingDirectory: URL = .currentDirectory(),
     environment: [String: String] = ProcessInfo.processInfo.environment
   ) async -> CommandResult {
     do {
       let request: SessionRequest
-      switch try Invocation(arguments: arguments) {
+      switch try Invocation(
+        arguments: arguments, patchOnStandardInput: standardInput.kind == .pipeOrFile)
+      {
       case .help:
         return CommandResult(exitStatus: 0, output: HelpText.text)
+      case .usage:
+        return CommandResult(exitStatus: 2, errorOutput: HelpText.text)
       case .version:
         return CommandResult(exitStatus: 0, output: "seamerge \(version)\n")
       case .merge(let merge):
@@ -59,6 +68,14 @@ public struct SeamergeCommand: Sendable {
           try Self.request(for: merge, in: workingDirectory, environment: environment))
       case .diff(let diff):
         request = try Self.request(for: diff, in: workingDirectory, environment: environment)
+      case .patch(let arguments):
+        guard
+          let patch = try Self.patch(
+            for: arguments, from: standardInput, in: workingDirectory)
+        else {
+          return CommandResult(exitStatus: 0, errorOutput: "seamerge: The patch has no changes.\n")
+        }
+        request = .patch(patch)
       }
       return CommandResult(exitStatus: try await perform(request))
     } catch {
@@ -146,6 +163,49 @@ public struct SeamergeCommand: Sendable {
       Logger.seamergeCLI.error("Cannot open the app: \(String(describing: error))")
       throw .appNotOpened(reason: error.localizedDescription)
     }
+  }
+
+  /// Reads and checks the patch that `arguments` name, from a file or from `standardInput`; `nil`
+  /// for a patch without changes, for which no window opens.
+  private static func patch(
+    for arguments: PatchArguments, from standardInput: StandardInput, in directory: URL
+  ) throws(CommandError) -> SessionRequest.Patch? {
+    let limit = SessionRequest.Patch.maximumByteCount
+    var fileName: String?
+    let read: Data?
+    if let path = arguments.file {
+      let url = try FileCheck.readableFile(path, option: nil, in: directory)
+      fileName = url.lastPathComponent
+      do {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer {
+          do {
+            try handle.close()
+          } catch {
+            Logger.seamergeCLI.notice("Cannot close the patch: \(String(describing: error))")
+          }
+        }
+        read = try handle.readToEnd(atMost: limit)
+      } catch {
+        throw .fileNotReadable(path: url.path(percentEncoded: false))
+      }
+    } else {
+      do {
+        read = try standardInput.readAll(atMost: limit)
+      } catch {
+        throw .standardInputNotReadable(reason: error.localizedDescription)
+      }
+    }
+    guard let text = read else { throw .patchTooLarge }
+    let patch: Patch
+    do {
+      patch = try Patch(reading: text)
+    } catch {
+      throw .unreadablePatch(error, fileName: fileName)
+    }
+    guard !patch.files.isEmpty else { return nil }
+    return SessionRequest.Patch(
+      text: text, fileName: fileName, waitsForWindow: arguments.waitsForWindow)
   }
 
   private static func request(

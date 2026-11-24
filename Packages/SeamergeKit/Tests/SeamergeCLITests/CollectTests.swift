@@ -19,7 +19,8 @@ struct CollectTests {
 
       let result = await sandbox.command().run(
         ["diff", "--collect", "--path", "new.txt", "old.txt", "new.txt"],
-        workingDirectory: sandbox.directory, environment: environment)
+        standardInput: StandardInput(.nullDevice), workingDirectory: sandbox.directory,
+        environment: environment)
 
       #expect(result.exitStatus == 0, "\(result)")
       let diff = try #require(try await app.nextRequest().diff)
@@ -55,7 +56,8 @@ struct CollectTests {
       }
 
       let result = await sandbox.command().run(
-        arguments, workingDirectory: sandbox.directory, environment: environment)
+        arguments, standardInput: StandardInput(.nullDevice), workingDirectory: sandbox.directory,
+        environment: environment)
 
       #expect(result.exitStatus == 1)
       #expect(try #require(try await app.nextRequest().diff).origin == nil)

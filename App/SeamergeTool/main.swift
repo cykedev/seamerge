@@ -9,6 +9,7 @@ else {
 }
 let command = SeamergeCommand(
   version: version, appLauncher: WorkspaceAppLauncher(executableURL: executableURL))
-let result = await command.run(Array(CommandLine.arguments.dropFirst()))
+let result = await command.run(
+  Array(CommandLine.arguments.dropFirst()), standardInput: .process)
 result.write()
 exit(result.exitStatus)
