@@ -255,6 +255,6 @@ Seamerge checks for new versions with [Sparkle](https://sparkle-project.org), on
 
 ## Status and limits
 
-The current release is Seamerge 0.8.2. It runs on macOS 27 only. Files of up to about 100,000 lines open in a third of a second; files of around 500,000 lines and lines of a few thousand characters work, but noticeably slower. The [user guide](Documentation/UserGuide.md#large-files) gives the figures.
+The current release is Seamerge 0.9.0. It runs on macOS 27 only. Files of up to about 100,000 lines open in a third of a second; files of around 500,000 lines and lines of a few thousand characters work, but noticeably slower. The [user guide](Documentation/UserGuide.md#large-files) gives the figures.
 
 Read [CHANGELOG.md](CHANGELOG.md) for what changed in each release, and [CONTRIBUTING.md](CONTRIBUTING.md) if you want to work on the code. The [user guide](Documentation/UserGuide.md) describes the window in more detail, and [Documentation/Architecture.md](Documentation/Architecture.md) describes how the code is organized.

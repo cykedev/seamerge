@@ -4,6 +4,26 @@ All notable changes to Seamerge are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-24
+
+Users of 0.8.2 and earlier get this version through Seamerge ▸ Check for Updates… or the automatic check. This release keeps the work of a merge you leave, compares text from the clipboard, and describes how to use Seamerge with Mercurial, Jujutsu, Subversion and Perforce.
+
+### Added
+
+- A merge that you close before you finish it keeps its work on this Mac: the result, your decisions, the text you typed, the comparison mode, the encoding and line endings, and the block you were on. When the same merge opens again, even from other paths, the work comes back as one step of undo, and the subtitle says "Earlier work restored". Undo Restore Earlier Work (⌘Z) starts fresh. The work goes once the merge is saved without open conflicts and closed, or after Reset All Decisions; otherwise it expires after 30 days, and Seamerge keeps it for at most 100 merges.
+- Edit ▸ Paste (⌘V) in the sheet Compare Files puts text from the clipboard on one side: into the field with the focus, or else the first empty one. Files on the clipboard act as if dropped, and formatted text becomes plain text. In the welcome window, Paste opens the sheet with the text on the left. The side is called Clipboard, shows its number of lines, and is never written to.
+- The user guide describes how to set up Seamerge as the merge and diff tool of Mercurial, Jujutsu, Subversion and the Perforce command line, with the configuration and scripts checked against those tools.
+
+### Changed
+
+- Leave Unresolved (⌘.) no longer asks, since the work of the merge is kept.
+- The sheet before closing an unsaved merge says that the work in the window is kept until you finish the merge.
+
+### Fixed
+
+- After Reload, when another program changed the result, a merge that Git or the command line waits for counts as unsaved until you save. Before, closing it reported the merge as saved, and Git took the other program's file as resolved.
+- A tab or line break in a name given with `--label-…` shows as a space in the window title, as it already did in the header.
+
 ## [0.8.2] - 2026-11-23
 
 Users of 0.8.1 and earlier get this version through Seamerge ▸ Check for Updates… or the automatic check.
