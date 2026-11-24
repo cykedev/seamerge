@@ -317,11 +317,13 @@ extension Windows {
   static func controller(
     for collection: FileCollection, options: DisplayOptions = DisplayOptions(reducesMotion: true),
     settings: UserSettings = .private(), window: SessionWindow = SessionWindow(),
-    prompts: PromptRecorder = PromptRecorder(), fillsFirstFile: Bool = true
+    prompts: PromptRecorder = PromptRecorder(), fillsFirstFile: Bool = true,
+    patch: PatchCopy? = nil
   ) async throws -> SessionWindowController {
     WindowAnimations.turnOff()
     TransparentWindows.turnOn()
-    let opening = try await SessionWindowController.opening(collection, settings: settings)
+    let opening = try await SessionWindowController.opening(
+      collection, settings: settings, patch: patch)
     let controller = SessionWindowController(
       session: opening.session, context: opening.context, undoManager: UndoManager(),
       displayOptions: options, pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(),
@@ -338,10 +340,11 @@ extension Windows {
   static func picture(
     _ collection: FileCollection, look: Look, options: DisplayOptions = DisplayOptions(),
     settings: UserSettings = .private(), size: CGSize? = WindowMetrics.defaultContentSize,
-    named name: String,
+    named name: String, patch: PatchCopy? = nil,
     prepare: @MainActor (SessionWindowController) async throws -> Void = { _ in }
   ) async throws {
-    let controller = try await controller(for: collection, options: options, settings: settings)
+    let controller = try await controller(
+      for: collection, options: options, settings: settings, patch: patch)
     let window = try #require(controller.window)
     defer { window.close() }
     Rendering.prepare(window, size: size ?? window.contentMinSize, appearance: look.appearance)

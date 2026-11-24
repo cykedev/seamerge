@@ -322,7 +322,7 @@ package final class PaneSearch: NSObject {
           section.rows.lowerBound, grid.rowCount)..<min(
           section.rows.upperBound, grid.rowCount)
       let lines = rows.compactMap { row -> Range<Int>? in
-        guard !content.isFiller(row: row) else { return nil }
+        guard !textView.standsForNoLine(row: row) else { return nil }
         let line = grid.offsets(ofRow: row)
         let endsWithLineFeed = !line.isEmpty && text.character(at: line.upperBound - 1) == 0x0A
         return line.lowerBound..<line.upperBound - (endsWithLineFeed ? 1 : 0)
@@ -378,7 +378,7 @@ package final class PaneSearch: NSObject {
 
   /// Tells the finder that the text it searches is about to change, and has the search text
   /// taken anew when it is next asked for.
-  private func textWillChange() {
+  func textWillChange() {
     finder.noteClientStringWillChange()
     isTextStale = true
     // The ranges of the matches refer to the text as it was.

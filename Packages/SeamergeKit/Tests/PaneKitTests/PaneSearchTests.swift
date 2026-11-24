@@ -173,6 +173,20 @@ import Testing
     #expect(inResult.map(\.range) == [0..<6, 34..<40])
   }
 
+  @Test func rowsOfARunOfLinesThePaneDoesNotHaveAreNeverSearched() {
+    let all = SearchPanes()
+    let count = all.occurrences(of: "needle").count
+    all.window.close()
+    let panes = SearchPanes()
+    defer { panes.window.close() }
+
+    panes.base.collapsedRuns = [CollapsedRun(rows: 0..<1, missingLineCount: 4)]
+
+    #expect(panes.occurrences(of: "needle").count == count - 1)
+    panes.base.collapsedRuns = [CollapsedRun(rows: 0..<1)]
+    #expect(panes.occurrences(of: "needle").count == count)
+  }
+
   @Test func searchTextFollowsEveryChangeOfThePanesText() {
     let panes = SearchPanes()
     defer { panes.window.close() }

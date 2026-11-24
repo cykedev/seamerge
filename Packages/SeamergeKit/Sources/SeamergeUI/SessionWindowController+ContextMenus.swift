@@ -176,9 +176,9 @@ extension SessionWindowController {
 
   /// The context menu of the header of the pane of `role`, or of the result for `nil`: copying
   /// the path of its file and showing the file in the Finder, or `nil` if it has no file, as a
-  /// side of text pasted from the clipboard has none of its own.
+  /// side of text pasted from the clipboard or of a patch has none of its own.
   func headerMenu(for role: Role?) -> NSMenu? {
-    guard let url = fileURL(of: role), context.pastedTexts[url] == nil else { return nil }
+    guard let url = fileURL(of: role), !context.holdsCopy(at: url) else { return nil }
     let menu = NSMenu()
     menu.autoenablesItems = false
     let copyPath = item(Self.copyPathTitle, action: #selector(copyPath(_:)), target: self)

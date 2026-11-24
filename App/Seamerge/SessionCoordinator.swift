@@ -23,6 +23,10 @@ protocol SessionCoordinatorDelegate: AnyObject {
 /// coordinator answers `opened` once the window shows, and the outcome once it closes; if the
 /// helper goes away first, it tells the window, which stays open.
 ///
+/// A patch gets a window of its own, which shows its copy and nothing can change; the coordinator
+/// answers `opened` once it shows, and the outcome once it closes only where the helper waits for
+/// it.
+///
 /// A comparison that comes with its origin joins the window of the other comparisons of that
 /// origin while their collection receives files, or starts a collection with a window of its own.
 /// The coordinator keeps a copy of each of its files and answers `accepted` at once, so that Git
@@ -42,6 +46,7 @@ final class SessionCoordinator {
 
   private let socketURL: URL
   private let cache: CollectionCache
+  private let patchCache: PatchCache
   private let settings: UserSettings
   private let workStore: MergeWorkStore
   private let presentError: (any Error) -> Void
@@ -56,15 +61,16 @@ final class SessionCoordinator {
   private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "App")
 
   /// Creates a coordinator that listens for the helper at `socketURL` once it starts, keeps the
-  /// copies of the files of collections in `cache`, opens windows as `settings` say, keeps the
-  /// work of merges in `workStore`, and shows what keeps a session from opening with
-  /// `presentError`.
+  /// copies of the files of collections in `cache` and those of patches in `patchCache`, opens
+  /// windows as `settings` say, keeps the work of merges in `workStore`, and shows what keeps a
+  /// session from opening with `presentError`.
   init(
-    socketURL: URL, cache: CollectionCache = .standard, settings: UserSettings,
-    workStore: MergeWorkStore, presentError: @escaping (any Error) -> Void
+    socketURL: URL, cache: CollectionCache = .standard, patchCache: PatchCache,
+    settings: UserSettings, workStore: MergeWorkStore, presentError: @escaping (any Error) -> Void
   ) {
     self.socketURL = socketURL
     self.cache = cache
+    self.patchCache = patchCache
     self.settings = settings
     self.workStore = workStore
     self.presentError = presentError
@@ -221,8 +227,8 @@ final class SessionCoordinator {
     case .folders(let folders):
       await serveFolders(folders, on: connection)
       return
-    case .patch:
-      await send(.rejected(.unsupportedRequest), on: connection)
+    case .patch(let patch):
+      await servePatch(patch, on: connection)
       return
     case .merge, .diff:
       break
@@ -410,6 +416,57 @@ final class SessionCoordinator {
     ) { _ in .saved }
   }
 
+  /// Keeps a copy of `patch` and shows it in a window, and answers `opened` once it shows; where
+  /// the helper waits for the window, answers once it closes as a comparison does.
+  ///
+  /// The helper has read the patch and found files in it; should the app find none, it opens
+  /// nothing and answers that the session ended. A patch that the app cannot read, or whose
+  /// window it cannot open, is refused, so that the helper says why whether it waits or not;
+  /// the reason a window failed shows in the app as well.
+  private func servePatch(_ patch: SessionRequest.Patch, on connection: SessionConnection) async {
+    guard !isFinishing else {
+      await send(.rejected(.quitting), on: connection)
+      return
+    }
+    let copy: PatchCopy
+    do {
+      copy = try await patchCache.keep(patch.text, fileName: patch.fileName)
+    } catch .unreadablePatch {
+      await send(.rejected(.unreadablePatch), on: connection)
+      return
+    } catch {
+      presentError(error)
+      await send(.rejected(.windowNotOpened), on: connection)
+      return
+    }
+    guard !copy.isEmpty else {
+      copy.remove()
+      await send(.closed(.saved), on: connection)
+      return
+    }
+    let controller: SessionWindowController
+    do {
+      controller = try await SessionWindowController.openPatch(
+        copy, undoManager: UndoManager(), settings: settings)
+    } catch {
+      copy.remove()
+      presentError(error)
+      await send(.rejected(.windowNotOpened), on: connection)
+      return
+    }
+    guard !isFinishing else {
+      controller.cancel()
+      await send(.rejected(.quitting), on: connection)
+      return
+    }
+    guard patch.waitsForWindow else {
+      show(controller, kind: .diff) { _ in }
+      await send(.opened, on: connection)
+      return
+    }
+    await serveWindow(controller, kind: .diff, on: connection) { _ in .saved }
+  }
+
   /// Shows `controller`, which shows a session of `kind`, and keeps it until its window closes;
   /// then `onFinish` learns how the session ended.
   private func show(
@@ -498,7 +555,7 @@ final class SessionCoordinator {
     case .folders:
       preconditionFailure("The folders of a directory diff are served as a collection")
     case .patch:
-      preconditionFailure("This version of the app shows no patch")
+      preconditionFailure("A patch is served from its copy")
     }
   }
 }

@@ -76,8 +76,12 @@ extension SessionWindowController {
   }
 
   /// Whether the window has a patch to make: in a comparison of two files, files whose bytes
-  /// differ and whose lines the patch can show; in a window of several files, one that changed.
+  /// differ and whose lines the patch can show; in a window of several files, one that changed;
+  /// never in a window that shows a patch.
   var hasPatch: Bool {
+    // The sides of a patch hold placeholders for the lines it passes over, which a patch made of
+    // them would take for lines of the files.
+    guard context.patch == nil else { return false }
     guard let collection else { return comparisonHasPatch }
     return collection.files.contains(where: \.belongsToPatch)
   }

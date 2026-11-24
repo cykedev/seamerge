@@ -673,7 +673,9 @@ extension PaneView: RowInteraction {
   }
 
   func askToExpandRun(at index: Int) {
-    delegate?.pane(self, didAskToExpand: displayRows.runs[index])
+    let run = displayRows.runs[index]
+    guard run.expands else { return }
+    delegate?.pane(self, didAskToExpand: run)
   }
 
   func askToCollapse(_ run: CollapsedRun) {

@@ -56,7 +56,16 @@ extension Session {
 
   /// Reads `file`; `/dev/null`, the missing side of a new or a deleted file, is empty, since it
   /// cannot be mapped like a file.
+  ///
+  /// The side of a patch comes with the file read from it.
+  ///
+  /// - Throws: ``SessionLoadingError/binaryFileInPatch(_:)`` for a side of a patch that holds no
+  ///   lines, ``SessionLoadingError/unreadableFile(_:)`` for a file that cannot be read.
   private static func read(_ file: SessionFile) throws(SessionLoadingError) -> SourceFile {
+    if let side = file.patchSide {
+      guard !side.isBinary else { throw .binaryFileInPatch(file.url) }
+      return try read(SessionFile(url: file.url, label: file.label)).holding(side)
+    }
     if FileOrigin(url: file.url) == .missing {
       return SourceFile(bytes: Data(), label: file.label, url: file.url)
     }

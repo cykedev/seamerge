@@ -71,24 +71,8 @@ public struct PastedTextCache: Sendable {
   /// behind; copies made since stay, as those of a sheet that is open already.
   @concurrent
   public func removeLeftovers(madeBefore date: Date) async {
-    let manager = FileManager.default
-    let copies: [URL]
-    do {
-      copies = try manager.contentsOfDirectory(
-        at: folder, includingPropertiesForKeys: [.creationDateKey])
-    } catch {
-      // A cache that was never made has nothing to remove.
-      return
-    }
-    for copy in copies {
-      do {
-        let made = try copy.resourceValues(forKeys: [.creationDateKey]).creationDate
-        if made.map({ $0 < date }) ?? true {
-          try manager.removeItem(at: copy)
-        }
-      } catch {
-        Self.logger.error("Cannot remove a leftover copy: \(error, privacy: .public)")
-      }
+    for error in FileManager.default.removeItems(in: folder, madeBefore: date) {
+      Self.logger.error("Cannot remove a leftover copy: \(error, privacy: .public)")
     }
   }
 }

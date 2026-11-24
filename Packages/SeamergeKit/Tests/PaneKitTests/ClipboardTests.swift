@@ -53,6 +53,29 @@ import TextBasics
     #expect(copied == "a b\tc\nd")
   }
 
+  @Test func rowOfARunOfLinesThePaneDoesNotHaveIsNeverCopied() throws {
+    let pane = PaneView()
+    pane.content = PaneContent(text: "first\n\u{22EF}\nsecond", lineNumbers: [0, 9, 10])
+    pane.collapsedRuns = [CollapsedRun(rows: 1..<2, missingLineCount: 9)]
+    let window = Rendering.host(pane, size: CGSize(width: 300, height: 100))
+    defer { window.close() }
+    pane.documentView.selectAll(nil)
+
+    #expect(try Self.copy(from: pane) == "first\nsecond")
+  }
+
+  @Test func voiceOverHearsNoTextInARunOfLinesThePaneDoesNotHave() {
+    let pane = PaneView()
+    pane.content = PaneContent(text: "first\n\u{22EF}\nsecond", lineNumbers: [0, 9, 10])
+    pane.collapsedRuns = [CollapsedRun(rows: 1..<2, missingLineCount: 9)]
+    let window = Rendering.host(pane, size: CGSize(width: 300, height: 100))
+    defer { window.close() }
+
+    #expect(pane.documentView.accessibilityValue() == "first\n \nsecond")
+    pane.collapsedRuns = [CollapsedRun(rows: 1..<2)]
+    #expect(pane.documentView.accessibilityValue() == "first\n\u{22EF}\nsecond")
+  }
+
   /// "first" at 0, filler rows at 6 and 7, "second" at 8, a filler row at 15, "third" at 16, and
   /// an empty filler row at 22, the end.
   private static func pane() -> PaneView {

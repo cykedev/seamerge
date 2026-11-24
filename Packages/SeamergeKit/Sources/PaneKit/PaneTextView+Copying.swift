@@ -4,8 +4,8 @@ extension PaneTextView {
   /// The selection is copied, dragged and passed to services as plain text.
   override var writablePasteboardTypes: [NSPasteboard.PasteboardType] { [.string] }
 
-  /// Writes the selected text without its filler rows and previews, which stand for no line of
-  /// the file.
+  /// Writes the selected text without its filler rows, the rows of runs that stand for lines
+  /// the pane does not have, and previews, which stand for no line of the file.
   override func writeSelection(
     to pasteboard: NSPasteboard, types: [NSPasteboard.PasteboardType]
   ) -> Bool {
@@ -14,15 +14,15 @@ extension PaneTextView {
     return pasteboard.setString(copiedText, forType: .string)
   }
 
-  /// The selected text with every filler row left out, line feed and all, and the previews left
-  /// out; several selections are joined by line feeds.
+  /// The selected text with every row that stands for no line of the file left out, line feed
+  /// and all, and the previews left out; several selections are joined by line feeds.
   private var copiedText: String {
     let text = string as NSString
     return selectedRanges.map(\.rangeValue).filter { $0.length > 0 }.map { selection in
       let range = selection.location..<selection.location + selection.length
       let first = grid.row(containingOffset: range.lowerBound)
       let last = grid.row(containingOffset: range.upperBound - 1)
-      return (first...last).filter { !content.isFiller(row: $0) }.flatMap { row in
+      return (first...last).filter { !standsForNoLine(row: $0) }.flatMap { row in
         textOutsidePreviews(in: grid.offsets(ofRow: row).clamped(to: range))
       }.map { text.substring(with: NSRange($0)) }.joined()
     }.joined(separator: "\n")

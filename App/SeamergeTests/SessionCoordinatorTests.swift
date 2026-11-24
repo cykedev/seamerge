@@ -299,8 +299,8 @@ struct SessionCoordinatorTests {
     let sandbox = try AppSandbox()
     let recorder = WindowRecorder()
     let coordinator = SessionCoordinator(
-      socketURL: sandbox.socketURL, settings: sandbox.settings, workStore: sandbox.workStore,
-      presentError: sandbox.presentError)
+      socketURL: sandbox.socketURL, patchCache: sandbox.patchCache, settings: sandbox.settings,
+      workStore: sandbox.workStore, presentError: sandbox.presentError)
     coordinator.delegate = recorder
     let merge = FileComparison(
       left: try sandbox.file("theirs.txt", "a\nb\n"), base: try sandbox.file("base.txt", "a\n"),
@@ -320,8 +320,8 @@ struct SessionCoordinatorTests {
     let sandbox = try AppSandbox()
     let recorder = WindowRecorder()
     let coordinator = SessionCoordinator(
-      socketURL: sandbox.socketURL, settings: sandbox.settings, workStore: sandbox.workStore,
-      presentError: sandbox.presentError)
+      socketURL: sandbox.socketURL, patchCache: sandbox.patchCache, settings: sandbox.settings,
+      workStore: sandbox.workStore, presentError: sandbox.presentError)
     coordinator.delegate = recorder
     let comparison = FileComparison(
       left: try sandbox.file("old.txt", "a\nb\n"), right: try sandbox.file("new.txt", "a\nc\n"))
@@ -341,8 +341,8 @@ struct SessionCoordinatorTests {
     sandbox.settings.comparisonMode = .exact
     let recorder = WindowRecorder()
     let coordinator = SessionCoordinator(
-      socketURL: sandbox.socketURL, settings: sandbox.settings, workStore: sandbox.workStore,
-      presentError: sandbox.presentError)
+      socketURL: sandbox.socketURL, patchCache: sandbox.patchCache, settings: sandbox.settings,
+      workStore: sandbox.workStore, presentError: sandbox.presentError)
     coordinator.delegate = recorder
 
     try await coordinator.open(
@@ -358,8 +358,8 @@ struct SessionCoordinatorTests {
   @Test func filesFromTheWindowThatCannotBeOpenedThrowWithTheFile() async throws {
     let sandbox = try AppSandbox()
     let coordinator = SessionCoordinator(
-      socketURL: sandbox.socketURL, settings: sandbox.settings, workStore: sandbox.workStore,
-      presentError: sandbox.presentError)
+      socketURL: sandbox.socketURL, patchCache: sandbox.patchCache, settings: sandbox.settings,
+      workStore: sandbox.workStore, presentError: sandbox.presentError)
     let binary = try sandbox.file("image.png", "\u{0}\u{1}PNG\u{0}")
     let merge = FileComparison(
       left: binary, base: try sandbox.file("base.txt"), right: try sandbox.file("mine.txt"))

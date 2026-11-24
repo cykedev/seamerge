@@ -26,6 +26,6 @@ final class ColumnSyntaxTokens: PaneSyntaxProvider {
     let place = column.place(atRow: line)
     let side = place.side ?? PaneContent.otherSide(of: column.firstSide)
     guard let lineOfSide = place.line(in: side) else { return [] }
-    return (side == .a ? a : b)?.tokens(inLine: lineOfSide) ?? []
+    return (side == .a ? a : b)?.tokens(inTextLine: lineOfSide) ?? []
   }
 }

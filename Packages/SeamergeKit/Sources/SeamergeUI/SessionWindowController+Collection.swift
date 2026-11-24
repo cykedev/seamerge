@@ -45,13 +45,16 @@ extension SessionWindowController {
   /// one that is ready within ``comparisonWait`` fills the window before it shows; otherwise it
   /// shows with the headers of the file and empty panes, which fill once the file is compared.
   ///
+  /// - Parameter patch: The copy of the patch whose files `collection` holds, if it holds the
+  ///   files of a patch; it goes with the window.
   /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the headers of the first file
   ///   can be made.
   public convenience init(
-    collection: FileCollection, undoManager: UndoManager, settings: UserSettings
+    collection: FileCollection, undoManager: UndoManager, settings: UserSettings,
+    patch: PatchCopy? = nil
   ) async throws(SessionLoadingError) {
     let start = ContinuousClock.now
-    let opening = try await Self.opening(collection, settings: settings)
+    let opening = try await Self.opening(collection, settings: settings, patch: patch)
     self.init(
       session: opening.session, context: opening.context, undoManager: undoManager,
       displayOptions: .current(in: .shared), pasteboard: .general,
@@ -70,7 +73,7 @@ extension SessionWindowController {
   ///
   /// - Throws: ``SessionLoadingError/comparisonFailed`` if not even the headers can be made.
   static func opening(
-    _ collection: FileCollection, settings: UserSettings
+    _ collection: FileCollection, settings: UserSettings, patch: PatchCopy? = nil
   ) async throws(SessionLoadingError) -> CollectionOpening {
     let navigator = CollectionNavigator(
       collection: collection, showsIdenticalFiles: settings.showsIdenticalFiles)
@@ -101,7 +104,7 @@ extension SessionWindowController {
     return CollectionOpening(
       session: try await emptySession(
         of: Session.Inputs(a: file.old, b: file.new), kind: .diff, mode: mode),
-      context: SessionContext(difftool: difftool, folders: collection.namingFolders),
+      context: SessionContext(difftool: difftool, folders: collection.namingFolders, patch: patch),
       comparison: comparison, navigator: navigator)
   }
 
@@ -473,7 +476,8 @@ extension SessionWindowController {
     var difftool = file.difftool
     difftool.filePosition = collectionNavigator.filePosition
     context = SessionContext(
-      difftool: difftool, folders: collectionNavigator.collection.namingFolders)
+      difftool: difftool, folders: collectionNavigator.collection.namingFolders,
+      patch: context.patch)
     let session = collected.session
     phase = collected.unavailable.map(SessionPhase.unavailable) ?? .ready
     if placing {

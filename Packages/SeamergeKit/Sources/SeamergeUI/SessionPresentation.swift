@@ -929,6 +929,9 @@ final class SessionPresentation {
   /// makes its block current if the line belongs to a changed block; a run that hides the line
   /// expands first.
   ///
+  /// In a side of a patch, `line` is the number its hunks give the line, and the first line from
+  /// there on stands in for one the patch passes over.
+  ///
   /// - Returns: The row of the line in `pane`.
   @discardableResult
   func go(toLine line: Int, in pane: PaneView) -> Int {
@@ -942,9 +945,11 @@ final class SessionPresentation {
       let role = PaneContent.otherSide(of: columnLayout.firstSide)
       let lineCount = rowLayout.lineCount(in: role)
       guard lineCount > 0 else { return 0 }
+      let line = changes.session.line(numbered: line, in: role)
       row = columnLayout.row(ofLine: min(max(line, 0), lineCount - 1), in: role)
     } else if let role = role(of: pane) {
       let lineCount = rowLayout.lineCount(in: role)
+      let line = changes.session.line(numbered: line, in: role)
       let clamped = min(max(line, 0), max(lineCount - 1, 0))
       row = lineCount == 0 || !alignsLines ? clamped : rowLayout.row(ofLine: clamped, in: role)
     } else {

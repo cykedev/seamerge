@@ -320,14 +320,21 @@ struct PreparedSession: Sendable {
   static func sourceRuns(
     of runs: [CollapsedRows.Run], in role: Role, collapsed: CollapsedRows, alignsLines: Bool
   ) -> [CollapsedRun] {
-    runs.map { CollapsedRun(rows: alignsLines ? $0.rows : collapsed.lines(of: $0, in: role)) }
+    runs.map { run in
+      CollapsedRun(
+        rows: alignsLines ? run.rows : collapsed.lines(of: run, in: role),
+        missingLineCount: run.missingLineCount)
+    }
   }
 
   /// `runs` in the rows of `column`.
   static func columnRuns(
     of runs: [CollapsedRows.Run], in column: SingleColumnLayout, collapsed: CollapsedRows
   ) -> [CollapsedRun] {
-    runs.map { CollapsedRun(rows: collapsed.rows(of: $0, in: column)) }
+    runs.map { run in
+      CollapsedRun(
+        rows: collapsed.rows(of: run, in: column), missingLineCount: run.missingLineCount)
+    }
   }
 
   /// `runs` in lines of `result`, without those that hide no line there.
@@ -336,7 +343,7 @@ struct PreparedSession: Sendable {
   ) -> [CollapsedRun] {
     runs.compactMap { run in
       let lines = collapsed.resultLines(of: run, in: result.scrollMap)
-      return lines.isEmpty ? nil : CollapsedRun(rows: lines)
+      return lines.isEmpty ? nil : CollapsedRun(rows: lines, missingLineCount: run.missingLineCount)
     }
   }
 }

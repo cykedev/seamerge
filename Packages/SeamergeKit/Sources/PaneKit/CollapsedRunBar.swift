@@ -7,6 +7,9 @@ import AppKit
 /// the run as they press any button. It draws its own face, darker while it is pressed, but
 /// leaves focus, tracking and accessibility to `NSButton`. Like other buttons of macOS, it keeps
 /// the arrow pointer and shows no hover.
+///
+/// The bar of a run that stands for lines the pane does not have looks the same but names them
+/// as lines not in the patch; it is text rather than a button, since there is nothing to expand.
 final class CollapsedRunBar: NSButton {
   /// The colors and fonts of the pane.
   var theme: Theme {
@@ -26,8 +29,12 @@ final class CollapsedRunBar: NSButton {
   /// The index of the run in the pane's collapsed runs.
   let runIndex: Int
 
-  /// The number of rows that the run hides.
-  let rowCount: Int
+  /// The number of lines that the run hides or stands for.
+  let lineCount: Int
+
+  /// Whether pressing the bar expands its run, which a run of lines the pane does not have never
+  /// does.
+  let expands: Bool
 
   /// The distance from the leading edge of the bar to its symbol: where the code starts.
   var contentInset: CGFloat = 0 {
@@ -47,10 +54,12 @@ final class CollapsedRunBar: NSButton {
   /// Gives the pane of the bar the focus, as a click anywhere in a pane does.
   var focusPane: () -> Void = {}
 
-  /// Creates the bar of the run at `runIndex`, which hides `rowCount` rows.
-  init(runIndex: Int, rowCount: Int, theme: Theme) {
+  /// Creates the bar of the run at `runIndex`, which hides `lineCount` rows, or which stands for
+  /// `lineCount` lines the pane does not have unless it `expands`.
+  init(runIndex: Int, lineCount: Int, expands: Bool, theme: Theme) {
     self.runIndex = runIndex
-    self.rowCount = rowCount
+    self.lineCount = lineCount
+    self.expands = expands
     self.theme = theme
     super.init(frame: .zero)
     title = ""
@@ -59,6 +68,10 @@ final class CollapsedRunBar: NSButton {
     focusRingType = .exterior
     // A button without a title would otherwise not tell VoiceOver what it is.
     setAccessibilityElement(true)
+    guard expands else {
+      setAccessibilityRole(.staticText)
+      return
+    }
     setAccessibilityRole(.button)
     setAccessibilityHelp(
       String(
@@ -86,23 +99,44 @@ final class CollapsedRunBar: NSButton {
   /// Names the lines the bar hides and the pane it stands in, so that the bars of the panes side
   /// by side do not all sound the same.
   override func accessibilityLabel() -> String? {
-    guard let paneName = paneName() else {
-      return String(
-        localized: "\(rowCount) unchanged lines, collapsed", bundle: .module,
+    switch (expands, paneName()) {
+    case (true, nil):
+      String(
+        localized: "\(lineCount) unchanged lines, collapsed", bundle: .module,
         comment: "VoiceOver: the bar that stands for unchanged lines that are hidden.")
+    case (true, let paneName?):
+      String(
+        localized: "\(lineCount) unchanged lines in \(paneName), collapsed", bundle: .module,
+        comment:
+          "VoiceOver: the bar that stands for unchanged lines that are hidden in a pane, such as Base."
+      )
+    case (false, nil):
+      String(
+        localized: "\(lineCount) lines not in the patch", bundle: .module,
+        comment: "VoiceOver: the bar that stands for lines that a patch passes over.")
+    case (false, let paneName?):
+      String(
+        localized: "\(lineCount) lines not in the patch, in \(paneName)", bundle: .module,
+        comment:
+          "VoiceOver: the bar that stands for lines that a patch passes over, in a pane such as Left."
+      )
     }
-    return String(
-      localized: "\(rowCount) unchanged lines in \(paneName), collapsed", bundle: .module,
-      comment:
-        "VoiceOver: the bar that stands for unchanged lines that are hidden in a pane, such as Base."
-    )
   }
 
   /// The text of the bar.
   var label: String {
-    String(
-      localized: "\(rowCount) Unchanged Lines", bundle: .module,
-      comment: "The bar that stands for unchanged lines that are hidden.")
+    expands
+      ? String(
+        localized: "\(lineCount) Unchanged Lines", bundle: .module,
+        comment: "The bar that stands for unchanged lines that are hidden.")
+      : String(
+        localized: "\(lineCount) Lines Not in the Patch", bundle: .module,
+        comment: "The bar that stands for lines that a patch passes over, which it does not hold.")
+  }
+
+  /// A bar of lines the pane does not have never takes the focus, as text does not.
+  override var acceptsFirstResponder: Bool {
+    expands && super.acceptsFirstResponder
   }
 
   override func draw(_ dirtyRect: NSRect) {
@@ -137,10 +171,12 @@ final class CollapsedRunBar: NSButton {
     text.draw(at: CGPoint(x: x, y: ((bounds.height - height) / 2).rounded()))
   }
 
-  /// Gives the pane the focus, then tracks the click as a button does.
+  /// Gives the pane the focus, then tracks the click as a button does, if the bar expands.
   override func mouseDown(with event: NSEvent) {
     focusPane()
-    super.mouseDown(with: event)
+    if expands {
+      super.mouseDown(with: event)
+    }
   }
 
   override func drawFocusRingMask() {
@@ -152,7 +188,7 @@ final class CollapsedRunBar: NSButton {
   /// Presses the bar for Return and Enter too, not only for Space, while it has focus.
   override func keyDown(with event: NSEvent) {
     switch event.charactersIgnoringModifiers {
-    case "\r", "\u{3}":
+    case "\r" where expands, "\u{3}" where expands:
       performClick(self)
     default:
       super.keyDown(with: event)
@@ -160,6 +196,7 @@ final class CollapsedRunBar: NSButton {
   }
 
   override func accessibilityPerformPress() -> Bool {
+    guard expands else { return false }
     performClick(self)
     return true
   }

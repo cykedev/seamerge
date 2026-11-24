@@ -654,6 +654,9 @@
     "Compare Folders…" : {
       "comment" : "Welcome window: the button that chooses two folders to compare."
     },
+    "Compare the files themselves to see how they differ." : {
+      "comment" : "Alert: what to do about a file that a patch shows no lines of."
+    },
     "Compare the folder %@ with %@" : {
       "comment" : "VoiceOver: a recent comparison of two folders, with their names."
     },
@@ -1276,6 +1279,9 @@
     "Paste text to try the selected rule" : {
       "comment" : "Settings: placeholder of the field in which an ignore rule is tried."
     },
+    "Patch" : {
+      "comment" : "The title of a window that shows a patch read from standard input."
+    },
     "Pattern" : {
       "comment" : "Settings: the column of the patterns."
     },
@@ -1661,6 +1667,12 @@
     },
     "The patch can’t be read. Open a unified diff, as git diff writes it." : {
       "comment" : "Comparison window: a patch is not a unified diff."
+    },
+    "The patch holds no lines of “%@”." : {
+      "comment" : "Alert: a patch only says that a binary file differs."
+    },
+    "The patch only says that the file differs, as for a binary file." : {
+      "comment" : "Comparison window: a patch holds no lines of a file."
     },
     "The pattern also matches empty text, so the rule ignores nothing." : {
       "comment" : "Settings: why an ignore rule takes no effect: its pattern matches empty text."

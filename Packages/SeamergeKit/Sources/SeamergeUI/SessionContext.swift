@@ -31,11 +31,16 @@ public struct SessionContext: Sendable, Hashable {
   /// Such a side is never written, and its copy goes when the window closes.
   public var pastedTexts: [URL: PastedText]
 
+  /// The copy of the patch whose files the window shows, if it shows a patch.
+  ///
+  /// Its sides are never written, and the copy goes when the window closes.
+  public var patch: PatchCopy?
+
   /// Creates a context; without arguments, one that knows nothing beyond the files.
   public init(
     resultURL: URL? = nil, git: GitContext? = nil, difftool: DifftoolContext? = nil,
     waitingCaller: WaitingCaller? = nil, folders: FolderPair? = nil,
-    pastedTexts: [URL: PastedText] = [:]
+    pastedTexts: [URL: PastedText] = [:], patch: PatchCopy? = nil
   ) {
     self.resultURL = resultURL
     self.git = git
@@ -43,6 +48,13 @@ public struct SessionContext: Sendable, Hashable {
     self.waitingCaller = waitingCaller
     self.folders = folders
     self.pastedTexts = pastedTexts
+    self.patch = patch
+  }
+
+  /// Whether the file at `url` is a copy that the window made, of text pasted from the clipboard
+  /// or of a side of a patch, which is never written and has no place of its own to show.
+  func holdsCopy(at url: URL) -> Bool {
+    pastedTexts[url] != nil || patch?.holds(url) == true
   }
 }
 

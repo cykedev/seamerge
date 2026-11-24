@@ -9,7 +9,7 @@ let delegate = AppDelegate(
   socketURL: SessionSocket.url(
     launchedWith: UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)),
   workStore: MergeWorkStore(folder: MergeWorkStore.standardFolder), pasteboard: .general,
-  pastedTextCache: .standard,
+  pastedTextCache: .standard, patchCache: .standard,
   presenter: ApplicationPresenter(),
   integrationStore: SystemIntegrationStore(
     bundle: Bundle.main.bundleURL, home: FileManager.default.homeDirectoryForCurrentUser),

@@ -85,6 +85,43 @@ import Testing
     #expect(window.firstResponder === pane.documentView)
   }
 
+  @Test func barOfLinesNotInThePatchNamesThemAndNeverExpands() throws {
+    let (pane, window, delegate) = try Self.paneWithDelegate(height: 200)
+    defer { window.close() }
+    pane.collapsedRuns = [
+      CollapsedRun(rows: 0..<1, missingLineCount: 33), CollapsedRun(rows: 5..<6),
+    ]
+    let bars = pane.subviews.flatMap(\.subviews).compactMap { $0 as? CollapsedRunBar }
+      .sorted { $0.runIndex < $1.runIndex }
+    try #require(bars.count == 2)
+    let (gap, unchanged) = (bars[0], bars[1])
+
+    #expect(gap.label == "33 Lines Not in the Patch")
+    #expect(gap.accessibilityLabel() == "33 lines not in the patch")
+    #expect(gap.accessibilityRole() == .staticText)
+    #expect(!gap.acceptsFirstResponder)
+    #expect(!gap.accessibilityPerformPress())
+    #expect(unchanged.label == "1 Unchanged Line")
+    #expect(unchanged.accessibilityRole() == .button)
+
+    gap.performClick(nil)
+    pane.askToExpandRun(at: 0)
+    #expect(delegate.expandedRuns.isEmpty)
+    unchanged.performClick(nil)
+    #expect(delegate.expandedRuns == [CollapsedRun(rows: 5..<6)])
+  }
+
+  @Test func oneLineNotInThePatchIsNamedInTheSingular() throws {
+    let (pane, window, _) = try Self.paneWithDelegate(height: 200)
+    defer { window.close() }
+    pane.collapsedRuns = [CollapsedRun(rows: 0..<1, missingLineCount: 1)]
+    let bar = try #require(
+      pane.subviews.flatMap(\.subviews).compactMap { $0 as? CollapsedRunBar }.first)
+
+    #expect(bar.label == "1 Line Not in the Patch")
+    #expect(bar.accessibilityLabel() == "1 line not in the patch")
+  }
+
   /// Six rows; rows 2 to 4 form block 0.
   private static let content = PaneContent(
     text: "zero\none\ntwo\nthree\nfour\nfive", lineNumbers: [0, 1, 2, 3, 4, 5],

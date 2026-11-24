@@ -109,10 +109,14 @@ extension PaneView {
   }
 
   private func makeRunBar(_ index: Int) -> CollapsedRunBar {
+    let run = displayRows.runs[index]
     let bar = CollapsedRunBar(
-      runIndex: index, rowCount: displayRows.runs[index].rows.count, theme: theme)
-    bar.target = self
-    bar.action = #selector(runBarWasPressed(_:))
+      runIndex: index, lineCount: run.missingLineCount ?? run.rows.count, expands: run.expands,
+      theme: theme)
+    if run.expands {
+      bar.target = self
+      bar.action = #selector(runBarWasPressed(_:))
+    }
     bar.selectionFill = { [weak textView] in textView?.selectionFill }
     bar.paneName = { [weak self] in self?.accessibilityLabel() }
     bar.focusPane = { [weak self] in self?.takeFocus() }

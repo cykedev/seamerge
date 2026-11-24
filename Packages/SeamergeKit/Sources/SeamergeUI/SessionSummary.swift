@@ -7,9 +7,9 @@ import MergeModel
 /// of a merge brings, how far the Git operation has come, and which file of a run of
 /// `git difftool` a comparison shows.
 struct SessionSummary: Equatable {
-  /// The title: the name of the file that the result of a merge is written to, the path in the
-  /// repository of the file a comparison from Git or Tower shows, or else the names of the files
-  /// a comparison shows.
+  /// The title: the name of the file that the result of a merge is written to, the name of a
+  /// patch, the path in the repository of the file a comparison from Git or Tower shows, or else
+  /// the names of the files a comparison shows.
   let title: String
 
   /// The parts of the subtitle in the order they stand; the operation is the first to go when
@@ -52,7 +52,7 @@ struct SessionSummary: Equatable {
       .compactMap(\.self).joined(separator: Self.separator)
     } else {
       name =
-        context.difftool?.path
+        context.patch?.title ?? context.difftool?.path
         ?? Self.title(of: arrangement.sourceRoles.compactMap { session.inputs[$0] })
       self.changes = modeNote
     }
@@ -73,7 +73,11 @@ struct SessionSummary: Equatable {
           comment: "Subtitle: how many other files of the operation still have conflicts.")
         : nil
     }
-    let filePosition = context.difftool?.filePosition.map { position in
+    // A patch of one file has no other file to count.
+    let countedPosition = context.difftool?.filePosition.flatMap { position in
+      context.patch != nil && position.count == 1 ? nil : position
+    }
+    let filePosition = countedPosition.map { position in
       String(
         localized: "File \(position.number) of \(position.count)", bundle: .module,
         comment: "Subtitle: which file of a git difftool run is compared, such as File 3 of 12.")

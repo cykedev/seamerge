@@ -18,6 +18,10 @@ public enum SessionLoadingError: LocalizedError, Equatable {
   /// The text handed over as a patch is not a unified diff that Seamerge can read.
   case unreadablePatch
 
+  /// The patch only says that the file differs, as for a binary file, and holds none of its
+  /// lines.
+  case binaryFileInPatch(URL)
+
   /// Why the comparison of `files` failed, if the files are known.
   init(_ error: MergeModelError, files: Session.Inputs<SessionFile>?) {
     self =
@@ -52,6 +56,10 @@ public enum SessionLoadingError: LocalizedError, Equatable {
       String(
         localized: "Seamerge can’t read the patch.",
         bundle: .module, comment: "Alert: a patch handed to the app is not a unified diff.")
+    case .binaryFileInPatch(let url):
+      String(
+        localized: "The patch holds no lines of “\(url.lastPathComponent)”.",
+        bundle: .module, comment: "Alert: a patch only says that a binary file differs.")
     }
   }
 
@@ -78,6 +86,10 @@ public enum SessionLoadingError: LocalizedError, Equatable {
       String(
         localized: "Open a unified diff, as git diff writes it.",
         bundle: .module, comment: "Alert: what to do when a patch cannot be read.")
+    case .binaryFileInPatch:
+      String(
+        localized: "Compare the files themselves to see how they differ.",
+        bundle: .module, comment: "Alert: what to do about a file that a patch shows no lines of.")
     }
   }
 }

@@ -7,6 +7,75 @@
     "%@, removes these lines" : {
       "comment" : "VoiceOver: a toggle that follows the inputs named in removing the lines, such as A."
     },
+    "%lld lines not in the patch" : {
+      "comment" : "VoiceOver: the bar that stands for lines that a patch passes over.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld line not in the patch"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld lines not in the patch"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld Lines Not in the Patch" : {
+      "comment" : "The bar that stands for lines that a patch passes over, which it does not hold.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Line Not in the Patch"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Lines Not in the Patch"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld lines not in the patch, in %@" : {
+      "comment" : "VoiceOver: the bar that stands for lines that a patch passes over, in a pane such as Left.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$lld line not in the patch, in %2$@"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$lld lines not in the patch, in %2$@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld Unchanged Lines" : {
       "comment" : "The bar that stands for unchanged lines that are hidden.",
       "localizations" : {

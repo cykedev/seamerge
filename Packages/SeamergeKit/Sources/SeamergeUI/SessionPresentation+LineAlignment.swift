@@ -112,7 +112,9 @@ extension SessionPresentation {
     let map = gridMap(of: role)
     pane.overviewGrid = OverviewGrid(
       rowCount: changes.session.rowLayout.rowCount,
-      collapsedRuns: collapsed.runs.map { CollapsedRun(rows: $0.rows) },
+      collapsedRuns: collapsed.runs.map {
+        CollapsedRun(rows: $0.rows, missingLineCount: $0.missingLineCount)
+      },
       gridRow: { map.sourcePosition(at: $0) }, paneRow: { map.targetPosition(at: $0) })
   }
 

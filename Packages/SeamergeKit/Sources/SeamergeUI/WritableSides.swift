@@ -40,7 +40,7 @@ struct WritableSides: Sendable, Hashable {
     roles = Set(
       sides.filter { side in
         (git == nil || side.gitRole == .workingCopy)
-          && context.pastedTexts[side.file.url] == nil
+          && !context.holdsCopy(at: side.file.url)
           && side.folder.map { Self.folder($0, holds: side.file.url) } ?? true
           && Self.canWrite(side.file.url)
       }.map(\.role))

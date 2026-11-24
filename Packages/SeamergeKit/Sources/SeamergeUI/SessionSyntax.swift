@@ -83,12 +83,13 @@ final class SessionSyntax {
       let text = file.text ?? ""
       if let source = sources[role], source.text == text { continue }
       sources[role]?.lexing?.cancel()
+      let lineNumbers = session.lineNumbers(in: role)
       sources[role] = Source(
         text: text, tokens: sources[role]?.tokens,
         lexing: Task { [weak self] in
           let lexed = await Self.lex(text, as: language)
           guard !Task.isCancelled, let self, self.sources[role]?.text == text else { return }
-          self.sources[role]?.tokens = SyntaxTokens(lexed)
+          self.sources[role]?.tokens = SyntaxTokens(lexed, lineNumbers: lineNumbers)
           self.sources[role]?.lexing = nil
           self.onLexed()
         })

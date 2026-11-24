@@ -70,6 +70,10 @@ public struct UnavailableComparison: Sendable {
         String(
           localized: "The patch can’t be read. Open a unified diff, as git diff writes it.",
           bundle: .module, comment: "Comparison window: a patch is not a unified diff.")
+      case .binaryFileInPatch:
+        String(
+          localized: "The patch only says that the file differs, as for a binary file.",
+          bundle: .module, comment: "Comparison window: a patch holds no lines of a file.")
       }
     guard context.difftool.map(\.hasFilesAfterThisOne) == true else { return reason }
     return reason + " "

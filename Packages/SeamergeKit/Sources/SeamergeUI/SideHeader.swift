@@ -119,7 +119,7 @@ struct SideHeader: Equatable {
     details = Details(
       commit: side?.commit,
       location: file.url.flatMap { url in
-        context.pastedTexts[url] == nil ? url.path(percentEncoded: false) : nil
+        context.holdsCopy(at: url) ? nil : url.path(percentEncoded: false)
       } ?? file.label,
       lineEndingStyle: file.lineEndingStyle, encoding: file.encoding)
   }

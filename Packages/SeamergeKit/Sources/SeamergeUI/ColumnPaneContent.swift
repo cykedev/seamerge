@@ -65,7 +65,9 @@ extension PaneContent {
       showsIgnoredPlaces ? Self.places(of: ignoredDifferences, on: column, of: session) : []
     self.init(
       text: column.displayText.string, lineNumbers: (0..<Int32(column.rowCount)).map(\.self),
-      sideLineNumbers: SideLineNumbers(left: left, right: right),
+      sideLineNumbers: SideLineNumbers(
+        left: Self.numbered(left, by: session.lineNumbers(in: firstSide)),
+        right: Self.numbered(right, by: session.lineNumbers(in: secondSide))),
       blocks: Self.blocks(column: column, of: changes),
       ignoredDifferenceRows: ignoredDifferences.rows(on: column), ignoredDifferencePlaces: places,
       lineEndings: endings)

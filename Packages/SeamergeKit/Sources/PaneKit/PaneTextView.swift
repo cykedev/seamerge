@@ -378,7 +378,7 @@ final class PaneTextView: NSTextView {
     let runs = displayRows.runs.compactMap { run -> CollapsedRun? in
       guard !run.rows.overlaps(change.oldRows) else { return nil }
       let rows = change.newRows(of: run.rows)
-      return rows.isEmpty ? nil : CollapsedRun(rows: rows)
+      return rows.isEmpty ? nil : CollapsedRun(rows: rows, missingLineCount: run.missingLineCount)
     }
     let rewritten = wrappedRows(in: change.newRows, of: text as NSString).entries
     ownWrappedRows.takeOver(change, rewritten: rewritten)
@@ -397,6 +397,10 @@ final class PaneTextView: NSTextView {
   /// - Precondition: The runs are sorted, do not overlap and lie within the rows.
   func setCollapsedRuns(_ runs: [CollapsedRun]) {
     guard runs != displayRows.runs else { return }
+    // Rows that stand for lines the pane does not have are never searched.
+    if runs.filter({ !$0.expands }) != displayRows.runs.filter({ !$0.expands }) {
+      search?.textWillChange()
+    }
     displayRows = DisplayRows(
       runs: runs, rowCount: grid.rowCount, wrappedRows: displayRows.wrappedRows)
     guard let textLayoutManager else { return }

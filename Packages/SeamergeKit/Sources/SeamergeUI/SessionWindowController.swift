@@ -653,7 +653,7 @@ extension SessionWindowController {
   }
 
   /// Reports that the session ended with `outcome`, unless it was reported already, and removes
-  /// the copies of text pasted from the clipboard that the window compares.
+  /// the copies of text pasted from the clipboard and of a patch that the window compares.
   ///
   /// A merge whose work the window keeps reports it only once the work is written, or removed
   /// if the merge is finished, so that whoever waits for the window never goes on before; with
@@ -664,6 +664,7 @@ extension SessionWindowController {
     for text in context.pastedTexts.values {
       text.remove()
     }
+    context.patch?.remove()
     let keeping = finishesMerge(outcome) ? workKeeper?.removeWork() : workKeeper?.keepNow()
     guard let keeping else {
       onFinish?(outcome)

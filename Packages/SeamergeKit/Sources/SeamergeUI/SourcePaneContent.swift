@@ -33,15 +33,15 @@ extension PaneContent {
       self = .empty
       return
     }
-    var lineNumbers: [Int32] = []
-    lineNumbers.reserveCapacity(layout.rowCount)
+    var lines: [Int32] = []
+    lines.reserveCapacity(layout.rowCount)
     for block in session.blocks {
-      let lines = block.lines(in: role)
+      let blockLines = block.lines(in: role)
       for row in 0..<layout.rows(of: block).count {
-        lineNumbers.append(row < lines.count ? Int32(lines.lowerBound + row) : -1)
+        lines.append(row < blockLines.count ? Int32(blockLines.lowerBound + row) : -1)
       }
     }
-    let lineEndings = lineNumbers.map { line in
+    let lineEndings = lines.map { line in
       line < 0 ? nil : endingsByLine[Int(line)]
     }
     let blocks = Self.blocks(
@@ -54,7 +54,9 @@ extension PaneContent {
         displayText.utf16Range(ofRow: layout.row(ofLine: $0, in: role)).lowerBound
       } : []
     self.init(
-      text: displayText.string, lineNumbers: lineNumbers, blocks: blocks,
+      text: displayText.string,
+      lineNumbers: Self.numbered(lines, by: session.lineNumbers(in: role)),
+      blocks: blocks,
       ignoredDifferenceRows: ignoredRows, ignoredDifferencePlaces: places,
       lineEndings: lineEndings)
   }
@@ -94,9 +96,22 @@ extension PaneContent {
         text.utf16Range(ofRow: $0).lowerBound
       } : []
     self.init(
-      text: text.string, lineNumbers: (0..<Int32(lineCount)).map(\.self), blocks: blocks,
+      text: text.string,
+      lineNumbers: session.lineNumbers(in: role) ?? (0..<Int32(lineCount)).map(\.self),
+      blocks: blocks,
       ignoredDifferenceRows: ignoredDifferences.lines(in: role), ignoredDifferencePlaces: places,
       lineEndings: lineEndings, marksBlocksWithoutRows: true)
+  }
+
+  /// `lines`, lines of a file counted from 0 or -1 for a filler row, as the numbers that `numbers`
+  /// give them, where the file is a side of a patch whose lines keep the numbers of its hunks;
+  /// `lines` themselves where `numbers` is `nil`.
+  ///
+  /// The panes number their rows with these numbers, which a syntax provider of a side of a
+  /// patch takes back to the lines of its text.
+  static func numbered(_ lines: [Int32], by numbers: [Int32]?) -> [Int32] {
+    guard let numbers else { return lines }
+    return lines.map { $0 < 0 ? $0 : numbers[Int($0)] }
   }
 
   /// The places where the lines of `role` differ in a way that the comparison ignores, as

@@ -101,6 +101,20 @@ final class AppSandbox {
     }
   }
 
+  /// Where the app in the test keeps the copies of the patches it shows.
+  var patchCache: PatchCache {
+    PatchCache(folder: folder.appending(path: "Patch", directoryHint: .isDirectory))
+  }
+
+  /// The copies of patches that the app in the test keeps, each in a folder of its own.
+  var keptPatches: [String] {
+    get throws {
+      let url = folder.appending(path: "Patch", directoryHint: .isDirectory)
+      guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+      return try FileManager.default.contentsOfDirectory(atPath: url.path)
+    }
+  }
+
   /// Where the app in the test listens for the helper.
   var socketURL: URL { folder.appending(path: "s.sock") }
 
@@ -112,8 +126,8 @@ final class AppSandbox {
   /// A coordinator that listens at the socket of the sandbox, with `recorder` as its delegate.
   func startCoordinator(recorder: WindowRecorder) throws -> SessionCoordinator {
     let coordinator = SessionCoordinator(
-      socketURL: socketURL, cache: collectionCache, settings: settings, workStore: workStore,
-      presentError: presentError)
+      socketURL: socketURL, cache: collectionCache, patchCache: patchCache, settings: settings,
+      workStore: workStore, presentError: presentError)
     coordinator.delegate = recorder
     try coordinator.start()
     return coordinator
