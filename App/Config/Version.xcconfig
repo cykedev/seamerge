@@ -4,5 +4,5 @@
 // prints. CURRENT_PROJECT_VERSION is the build number and rises by one with every
 // release, never resetting: Sparkle compares it to decide whether an update is newer.
 
-MARKETING_VERSION = 0.9.0
-CURRENT_PROJECT_VERSION = 12
+MARKETING_VERSION = 0.10.0
+CURRENT_PROJECT_VERSION = 13

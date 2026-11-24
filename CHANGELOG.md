@@ -4,6 +4,25 @@ All notable changes to Seamerge are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-24
+
+Users of 0.9.0 and earlier get this version through Seamerge ▸ Check for Updates… or the automatic check. This release opens patches, says more about a comparison in its subtitle and footer, and describes how to use Seamerge with Fork and Sourcetree.
+
+### Added
+
+- `git diff | seamerge` and `seamerge patch [--wait] [<file> | -]` open a unified diff, as `git diff`, `git format-patch` or `diff -u` write it, in a read-only window; a patch of several files opens in one window with a list of the files. Line numbers come from the patch, and the lines between two hunks show as a bar, "N Lines Not in the Patch". A combined diff, a patch that is cut short and a patch of more than 128 MiB are refused with exit 2.
+- The footer says how many lines the folded runs of unchanged lines hide, for example "51 Lines Hidden".
+- The user guide describes how to set up Seamerge as the diff and merge tool of Fork and Sourcetree, checked against those programs.
+
+### Changed
+
+- The subtitle of a comparison counts its changes by kind, for example "4 additions · 3 changes · 1 deletion", and names the position of the file, "File 2 of 3", only when the window holds more than one file.
+
+### Fixed
+
+- A comparison started from a folder outside the repository, as Fork does, names the file by its path in the repository instead of nearly its whole path.
+- The window title that VoiceOver reads no longer ends with a comma when the window has no subtitle.
+
 ## [0.9.0] - 2026-11-24
 
 Users of 0.8.2 and earlier get this version through Seamerge ▸ Check for Updates… or the automatic check. This release keeps the work of a merge you leave, compares text from the clipboard, and describes how to use Seamerge with Mercurial, Jujutsu, Subversion and Perforce.
