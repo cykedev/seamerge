@@ -39,16 +39,10 @@ protocol SessionPrompts: AnyObject {
 
   /// Asks whether to save the changes of the result of `name` before the window closes; a merge
   /// that `caller` waits for names its open conflicts, `openConflictCount`, and, if it is Git,
-  /// what Git does.
+  /// what Git does; every merge says that its work is kept until it is finished.
   func confirmClosing(
     _ name: String, openConflictCount: Int, caller: WaitingCaller?, in window: NSWindow
   ) async -> UnsavedChangesChoice
-
-  /// Asks whether to leave the merge of `name` unresolved although `count` decisions would be
-  /// lost, and tells whether to; `gitPutsBackTheFile` says that Git waits and restores its file.
-  func confirmLeavingUnresolved(
-    _ name: String, discarding count: Int, gitPutsBackTheFile: Bool, in window: NSWindow
-  ) async -> Bool
 
   /// Tells that `encoding` cannot hold the result of `name` and asks whether to save it in UTF-8.
   func offerUTF8(saving name: String, in encoding: FileEncoding, in window: NSWindow) async -> Bool
@@ -163,7 +157,26 @@ final class SessionSheets: SessionPrompts {
   func confirmClosing(
     _ name: String, openConflictCount: Int, caller: WaitingCaller?, in window: NSWindow
   ) async -> UnsavedChangesChoice {
+    let alert = Self.closingAlert(name, openConflictCount: openConflictCount, caller: caller)
+    return switch await Self.present(alert, in: window) {
+    case .alertFirstButtonReturn: .save
+    case .alertSecondButtonReturn: .discard
+    default: .cancel
+    }
+  }
+
+  /// The sheet that asks whether to save the result of `name` before the window closes, as
+  /// ``confirmClosing(_:openConflictCount:caller:in:)`` shows it: Save, Don’t Save and Cancel.
+  static func closingAlert(
+    _ name: String, openConflictCount: Int, caller: WaitingCaller?
+  ) -> NSAlert {
     let alert = NSAlert()
+    let kept = String(
+      localized: "Your work in this window is kept until you finish this merge.",
+      bundle: .module,
+      comment:
+        "Sheet before closing a merge with unsaved changes: the decisions and the text typed stay for when the same merge opens again."
+    )
     if let caller {
       alert.messageText = String(
         localized: "Do you want to save the merge of “\(name)”?", bundle: .module,
@@ -171,14 +184,11 @@ final class SessionSheets: SessionPrompts {
       let consequence =
         caller == .git
         ? String(
-          localized:
-            "If you don’t save, your decisions are lost and Git keeps the file unresolved.",
-          bundle: .module, comment: "Sheet before closing a merge that Git waits for: what follows."
-        )
-        : String(
-          localized: "If you don’t save, your decisions are lost.", bundle: .module,
+          localized: "If you don’t save, Git keeps the file unresolved. \(kept)", bundle: .module,
           comment:
-            "Sheet before closing a merge that a command other than Git waits for: what follows.")
+            "Sheet before closing a merge that Git waits for: what follows, then that the work is kept."
+        )
+        : kept
       alert.informativeText =
         openConflictCount > 0
         ? String(
@@ -191,16 +201,10 @@ final class SessionSheets: SessionPrompts {
       alert.messageText = String(
         localized: "Do you want to save the changes made to the document “\(name)”?",
         bundle: .module, comment: "Sheet before closing a merge of files with unsaved changes.")
-      alert.informativeText = String(
-        localized: "Your changes will be lost if you don’t save them.", bundle: .module,
-        comment: "Sheet before closing a merge of files with unsaved changes: what follows.")
+      alert.informativeText = kept
     }
-    Self.addSavingButtons(to: alert)
-    return switch await Self.present(alert, in: window) {
-    case .alertFirstButtonReturn: .save
-    case .alertSecondButtonReturn: .discard
-    default: .cancel
-    }
+    addSavingButtons(to: alert)
+    return alert
   }
 
   func confirmSavingChanges(to names: [String], in window: NSWindow) async -> UnsavedChangesChoice {
@@ -221,7 +225,7 @@ final class SessionSheets: SessionPrompts {
         comment: "Sheet before copied changes of a file would be lost, such as to “main.swift”.")
       alert.informativeText = String(
         localized: "Your changes will be lost if you don’t save them.", bundle: .module,
-        comment: "Sheet before closing a merge of files with unsaved changes: what follows.")
+        comment: "Sheet before copied changes of a file would be lost: what follows.")
     } else {
       alert.messageText = String(
         localized: "Do you want to save the changes made to \(names.count) files?",
@@ -263,32 +267,6 @@ final class SessionSheets: SessionPrompts {
     discard.keyEquivalent = "d"
     discard.keyEquivalentModifierMask = .command
     alert.addButton(withTitle: cancelTitle)
-  }
-
-  func confirmLeavingUnresolved(
-    _ name: String, discarding count: Int, gitPutsBackTheFile: Bool, in window: NSWindow
-  ) async -> Bool {
-    let alert = NSAlert()
-    alert.messageText = String(
-      localized: "Leave “\(name)” unresolved?", bundle: .module,
-      comment: "Sheet before leaving a merge unresolved that has decisions.")
-    alert.informativeText =
-      gitPutsBackTheFile
-      ? String(
-        localized:
-          "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decisions in \(count) blocks are lost.",
-        bundle: .module,
-        comment:
-          "Sheet before leaving a merge unresolved: Git restores the file it had before the merge tool, such as in 3 blocks."
-      )
-      : String(
-        localized: "Your decisions in \(count) blocks are lost.", bundle: .module,
-        comment:
-          "Sheet before leaving a merge unresolved that a command other than Git waits for, such as in 3 blocks."
-      )
-    Self.addDefaultCancelButton(to: alert)
-    alert.addButton(withTitle: SessionCommand.leaveUnresolved.title)
-    return await Self.confirm(alert, in: window)
   }
 
   func offerUTF8(saving name: String, in encoding: FileEncoding, in window: NSWindow) async -> Bool

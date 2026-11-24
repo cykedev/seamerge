@@ -45,36 +45,13 @@ extension SessionWindowController {
     return true
   }
 
-  /// Closes a merge that Git waits for without saving, so that Git keeps the file unresolved;
-  /// asks first if decisions that are not saved would be lost.
+  /// Closes a merge that Git waits for without saving, so that Git keeps the file unresolved.
+  ///
+  /// It asks nothing: the window keeps its work until the merge is finished, and opening the
+  /// same merge again puts it back.
   @objc func leaveUnresolved(_ sender: Any?) {
     guard canPerform(.leaveUnresolved) else { return }
-    Task { await leaveUnresolvedAskingFirst() }
-  }
-
-  /// Closes the window without saving and reports the session as cancelled, after asking if
-  /// decisions would be lost, and tells whether it closed.
-  ///
-  /// Where Git waits, saved decisions count too: Git puts the file back as it was before the
-  /// merge when the tool fails, with its conflict markers.
-  @discardableResult
-  func leaveUnresolvedAskingFirst() async -> Bool {
-    if binaryMerge != nil {
-      cancel()
-      return true
-    }
-    guard let window, let result = presentation.result else { return false }
-    let count = result.document.decisionCount
-    let gitPutsBackTheFile = context.waitingCaller == .git
-    if count > 0 && (gitPutsBackTheFile || isResultEdited) {
-      isAskingToClose = true
-      let leaves = await prompts.confirmLeavingUnresolved(
-        resultName, discarding: count, gitPutsBackTheFile: gitPutsBackTheFile, in: window)
-      isAskingToClose = false
-      guard leaves else { return false }
-    }
     cancel()
-    return true
   }
 
   /// Whether the result differs from what was saved last; a merge that someone waits for counts
@@ -275,7 +252,7 @@ extension SessionWindowController {
   }
 
   /// Writes the result in `format` from now on, as a step of undo named `name`.
-  private func setResultFormat(_ format: ResultFormat, named name: String) {
+  func setResultFormat(_ format: ResultFormat, named name: String) {
     guard var saving, format != saving.format else { return }
     let previous = saving.format
     saving.format = format
@@ -286,6 +263,7 @@ extension SessionWindowController {
     }
     sessionUndoManager.setActionName(name)
     showResultFormat()
+    workDidChange()
     stateDidChange()
   }
 

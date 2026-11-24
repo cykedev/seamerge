@@ -14,6 +14,8 @@ enum Windows {
   /// comparison, `session` is its empty session; for a `pendingComparison`, `session` names
   /// the files without their lines.
   ///
+  /// With a `workKeeper`, a merge keeps its work.
+  ///
   /// Windows that share `syntaxChoices` find the languages chosen in each other.
   static func controller(
     for session: Session, context: SessionContext = SessionContext(),
@@ -21,7 +23,7 @@ enum Windows {
     workspace: WorkspaceRecorder = WorkspaceRecorder(), prompts: PromptRecorder = PromptRecorder(),
     undoManager: UndoManager = UndoManager(), unavailable: UnavailableComparison? = nil,
     settings: UserSettings = .private(), syntaxChoices: SyntaxChoices = SyntaxChoices(),
-    pendingComparison: PendingComparison? = nil
+    pendingComparison: PendingComparison? = nil, workKeeper: MergeWorkKeeper? = nil
   ) throws -> SessionWindowController {
     WindowAnimations.turnOff()
     TransparentWindows.turnOn()
@@ -29,14 +31,15 @@ enum Windows {
       session: session, context: context, undoManager: undoManager, displayOptions: options,
       pasteboard: .withUniqueName(), workspace: workspace, prompts: prompts, doneStyle: .standard,
       settings: settings, syntaxChoices: syntaxChoices, window: SessionWindow(),
-      unavailable: unavailable, pendingComparison: pendingComparison)
+      unavailable: unavailable, pendingComparison: pendingComparison, workKeeper: workKeeper)
     let window = try #require(controller.window)
     window.contentView?.layoutSubtreeIfNeeded()
     return controller
   }
 
   /// Draws the window of `session` at `size`, or at its least size for `nil`, after `prepare`;
-  /// for a `pendingComparison`, the window that waits for it.
+  /// for a `pendingComparison`, the window that waits for it; with a `workKeeper`, a merge that
+  /// keeps its work.
   ///
   /// With `actsAsKey`, the window acts as the key
   /// window, so that the focus shows in the accent color.
@@ -46,14 +49,14 @@ enum Windows {
     settings: UserSettings = .private(), actsAsKey: Bool = false,
     size: CGSize? = WindowMetrics.defaultContentSize, named name: String,
     unavailable: UnavailableComparison? = nil, pendingComparison: PendingComparison? = nil,
-    prepare: (SessionWindowController) -> Void = { _ in }
+    workKeeper: MergeWorkKeeper? = nil, prepare: (SessionWindowController) -> Void = { _ in }
   ) throws {
     let controller = SessionWindowController(
       session: session, context: context, undoManager: UndoManager(), displayOptions: options,
       pasteboard: .withUniqueName(), workspace: WorkspaceRecorder(), prompts: PromptRecorder(),
       doneStyle: doneStyle, settings: settings,
       window: actsAsKey ? KeySessionWindow() : SessionWindow(), unavailable: unavailable,
-      pendingComparison: pendingComparison)
+      pendingComparison: pendingComparison, workKeeper: workKeeper)
     let window = try #require(controller.window)
     defer { window.close() }
     Rendering.prepare(window, size: size ?? window.contentMinSize, appearance: look.appearance)
@@ -157,9 +160,6 @@ final class PromptRecorder: SessionPrompts {
   /// The answer to the sheet before closing with unsaved changes.
   var unsavedChangesChoice = UnsavedChangesChoice.cancel
 
-  /// Whether to leave a merge unresolved although decisions would be lost.
-  var leavesUnresolvedAnyway = false
-
   /// Whether to save in UTF-8 when the encoding cannot hold the result.
   var savesAsUTF8 = false
 
@@ -197,14 +197,6 @@ final class PromptRecorder: SessionPrompts {
       }
     questions.append("close \(name), \(openConflictCount) open\(callerName)")
     return unsavedChangesChoice
-  }
-
-  func confirmLeavingUnresolved(
-    _ name: String, discarding count: Int, gitPutsBackTheFile: Bool, in window: NSWindow
-  ) async -> Bool {
-    questions.append(
-      "leave \(name) unresolved, \(count) decisions\(gitPutsBackTheFile ? ", Git" : "")")
-    return leavesUnresolvedAnyway
   }
 
   /// What happens while the window offers UTF-8.

@@ -74,26 +74,8 @@ import Testing
       (["OrderService.swift", "README.md", "prices-and-discounts-for-every-region.json"], "three"),
     ] {
       let alert = SessionSheets.savingChangesAlert(to: names)
-      alert.window.appearance = look.appearance
-      alert.layout()
-      let view = try #require(alert.window.contentView)
-      view.layoutSubtreeIfNeeded()
-      let content = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
-      view.cacheDisplay(in: view.bounds, to: content)
-      // The material of the sheet comes from the window server; the window background stands
-      // in for it.
-      let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
-      NSGraphicsContext.saveGraphicsState()
-      NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)
-      look.appearance.performAsCurrentDrawingAppearance {
-        NSColor.windowBackgroundColor.setFill()
-        view.bounds.fill()
-      }
-      content.draw(
-        in: view.bounds, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true,
-        hints: nil)
-      NSGraphicsContext.restoreGraphicsState()
-      try Rendering.write(bitmap, named: "saving-sheet-\(suffix)-\(look.name)")
+      try Rendering.write(
+        try Rendering.bitmap(of: alert, in: look), named: "saving-sheet-\(suffix)-\(look.name)")
       #expect(alert.buttons.map(\.title) == ["Save", "Don’t Save", "Cancel"])
       #expect(alert.buttons[1].keyEquivalent == "d")
     }

@@ -9,23 +9,42 @@ typealias PendingComparison = Task<Result<Session, SessionLoadingError>, Never>
 
 extension SessionWindowController {
   /// Opens a window for the merge of `a` and `b`, with `base` if there is one, read and merged in
-  /// the comparison mode `mode`, as a window for ``init(session:context:undoManager:settings:)``.
+  /// the comparison mode `mode`, as a window for ``init(session:context:undoManager:settings:)``,
+  /// that keeps its work in `workStore`.
   ///
   /// The files are read before the window opens. A merge that is ready soon opens as it is. A
   /// longer one opens with the headers of the files and empty panes, which fill once it is
   /// ready; should it then fail, the window says why in place of the lines.
   ///
+  /// If `workStore` holds work of a merge of the same contents, from whatever paths, the window
+  /// merges in the comparison mode of the work and puts the work back as it opens, as a step of
+  /// undo that takes it back to the merge as loaded.
+  ///
   /// - Throws: ``SessionLoadingError`` with the file that cannot be read or is not text, or why
   ///   the files cannot be merged if that is known before the window opens.
   public static func openMerge(
     base: SessionFile?, a: SessionFile, b: SessionFile, mode: ComparisonMode,
-    context: SessionContext, undoManager: UndoManager, settings: UserSettings
+    context: SessionContext, undoManager: UndoManager, settings: UserSettings,
+    workStore: MergeWorkStore
+  ) async throws(SessionLoadingError) -> SessionWindowController {
+    try await openMerge(
+      base: base, a: a, b: b, mode: mode, context: context, undoManager: undoManager,
+      settings: settings, workKeeper: MergeWorkKeeper(store: workStore))
+  }
+
+  /// Opens a window for the merge of `a` and `b`, with `base` if there is one, as
+  /// ``openMerge(base:a:b:mode:context:undoManager:settings:workStore:)`` does, whose work
+  /// `workKeeper` keeps.
+  static func openMerge(
+    base: SessionFile?, a: SessionFile, b: SessionFile, mode: ComparisonMode,
+    context: SessionContext, undoManager: UndoManager, settings: UserSettings,
+    workKeeper: MergeWorkKeeper
   ) async throws(SessionLoadingError) -> SessionWindowController {
     let files = Session.Inputs(base: base, a: a, b: b)
     return try await open(
       files, kind: .merge, mode: mode, context: context, undoManager: undoManager,
-      settings: settings
-    ) { read throws(SessionLoadingError) in
+      settings: settings, workKeeper: workKeeper
+    ) { read, mode throws(SessionLoadingError) in
       do throws(MergeModelError) {
         return try await Session.merge(
           base: read.base, a: read.a, b: read.b, options: ComparisonOptions(mode: mode))
@@ -53,7 +72,7 @@ extension SessionWindowController {
     return try await open(
       files, kind: .diff, mode: mode, context: context, undoManager: undoManager,
       settings: settings
-    ) { read throws(SessionLoadingError) in
+    ) { read, mode throws(SessionLoadingError) in
       do throws(MergeModelError) {
         return try await Session.diff(old: read.a, new: read.b, mode: mode, ignoring: rules)
       } catch {
@@ -69,24 +88,34 @@ extension SessionWindowController {
   /// comparison that is there within `wait` seconds, ``comparisonWait`` unless told otherwise,
   /// fills the window before it returns, so that it shows filled; otherwise the window returns
   /// to show while it waits.
+  ///
+  /// With a `workKeeper`, the window keeps its work; if the store of the keeper holds work of
+  /// the files read, `compare` gets the comparison mode of the work in place of `mode`, and the
+  /// window puts the work back once it is filled.
   static func open(
     _ files: Session.Inputs<SessionFile>, kind: Session.Kind, mode: ComparisonMode,
     context: SessionContext, undoManager: UndoManager, settings: UserSettings,
-    waitingAtMost wait: TimeInterval = comparisonWait,
+    waitingAtMost wait: TimeInterval = comparisonWait, workKeeper: MergeWorkKeeper? = nil,
     compare:
-      @escaping @Sendable (Session.Inputs<SourceFile>) async throws(SessionLoadingError) -> Session
+      @escaping @Sendable (Session.Inputs<SourceFile>, ComparisonMode)
+      async throws(SessionLoadingError) -> Session
   ) async throws(SessionLoadingError) -> SessionWindowController {
     let start = ContinuousClock.now
     let readSince = Date()
     let read = try await Session.read(files)
+    let earlierWork = workKeeper.map { workKeeper in
+      let store = workKeeper.store
+      return Task { await MergeWorkKeeper.earlierWork(of: read, in: store) }
+    }
     // The comparison may end while the window is made, before anyone can wait for it. It runs
     // detached, so that it notes its outcome the moment it is there, not once the main actor,
     // which makes the window meanwhile, is free.
     let arrived = Mutex<Result<Session, SessionLoadingError>?>(nil)
     let comparison = PendingComparison.detached(priority: .userInitiated) {
       let outcome: Result<Session, SessionLoadingError>
+      let mode = await earlierWork?.value.work?.mode ?? mode
       do throws(SessionLoadingError) {
-        outcome = .success(try await compare(read))
+        outcome = .success(try await compare(read, mode))
       } catch {
         outcome = .failure(error)
       }
@@ -98,7 +127,7 @@ extension SessionWindowController {
       undoManager: undoManager, displayOptions: .current(in: .shared), pasteboard: .general,
       workspace: NSWorkspace.shared, prompts: SessionSheets(), doneStyle: .standard,
       settings: settings, syntaxChoices: .shared, window: SessionWindow(),
-      pendingComparison: comparison)
+      pendingComparison: comparison, workKeeper: workKeeper, earlierWork: earlierWork)
     controller.observeDisplayOptions()
     controller.diskWatch.lookIfModified(since: readSince)
     var outcome = arrived.withLock { $0 }
@@ -239,8 +268,11 @@ extension SessionWindowController {
     // What the window says once the files cannot be compared, which VoiceOver hears as well.
     var failure: String?
     var unavailable: UnavailableComparison?
+    var lookedUpWork: EarlierWork?
     switch outcome {
     case .success(let session):
+      lookedUpWork = await earlierWork?.value
+      guard !hasFinished else { return }
       presentation.show(SideHeader.headers(of: session, context: context))
       let prepared = await presentation.prepareLoaded(session)
       guard !hasFinished else { return }
@@ -274,6 +306,10 @@ extension SessionWindowController {
     endWaiting()
     if let unavailable {
       phase = .unavailable(unavailable)
+    } else if let lookedUpWork {
+      restore(lookedUpWork)
+    } else {
+      workKeeper?.keepWork(of: presentation.changes.session.inputs)
     }
     sessionDidChange()
     showResultFormat()
@@ -281,9 +317,14 @@ extension SessionWindowController {
     stateDidChange()
     diskWatch.lookAgainIfAsked()
     followIgnoreRules()
-    // A window that fills before it shows says nothing: VoiceOver reads it as it appears.
+    // A window that fills before it shows says nothing: VoiceOver reads it as it appears, and
+    // hears of earlier work once it shows.
     guard window?.isVisible == true else { return }
-    presentation.announce(failure ?? comparedAnnouncement)
+    if restoredWorkAnnouncement != nil {
+      announceRestoredWorkOnce()
+    } else {
+      presentation.announce(failure ?? comparedAnnouncement)
+    }
   }
 
   /// What VoiceOver hears once the files of a window that showed without their lines are

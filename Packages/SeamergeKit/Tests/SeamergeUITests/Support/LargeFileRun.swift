@@ -196,7 +196,8 @@ final class LargeFileRun {
         largeCase.isMerge
         ? try await SessionWindowController.openMerge(
           base: files.base.map(file), a: file(files.a), b: file(files.b), mode: .windowDefault,
-          context: SessionContext(), undoManager: UndoManager(), settings: .private())
+          context: SessionContext(), undoManager: UndoManager(), settings: .private(),
+          workStore: MergeWorkStore(folder: folder.appending(path: "Merges")))
         : try await SessionWindowController.openDiff(
           old: file(files.a), new: file(files.b), mode: .windowDefault,
           context: SessionContext(), undoManager: UndoManager(), settings: .private())

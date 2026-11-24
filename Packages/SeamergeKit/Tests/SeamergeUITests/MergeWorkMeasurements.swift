@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import MergeModel
 import Testing
@@ -9,8 +10,9 @@ import Testing
 /// of the file; and on the main actor the first edit after a snapshot, which copies the text and
 /// the segments the snapshot still shares, beside an edit that copies nothing.
 ///
-/// The snapshot here copies the two values the window holds; taking them out of a window, as the
-/// window does it, is not measured here.
+/// The first test copies the two values the window holds; the second takes them out of a window,
+/// as the window does it, and measures the hold of the main actor while the window keeps its work;
+/// the third measures opening the files with and without work kept for them.
 ///
 /// The measurements run only on demand, never in the check of the repository: the environment
 /// variable `SEAMERGE_MEASURE_WORK` names the case of ``LargeFileCase``, and
@@ -74,6 +76,132 @@ struct MergeWorkMeasurements {
     }
     recorder.record("file-size", Double(size) / 1_000_000, unit: "MB")
     recorder.record("blocks", Double(session.blocks.count), unit: "-")
+    recorder.finish()
+  }
+
+  /// Measures keeping the work of a window of the chosen case on the main actor: the snapshot
+  /// the window takes of its result, the call that hands it to the background, the longest hold
+  /// of the main actor until the work is written, and the first decision after a snapshot,
+  /// while the background still shares the text and the segments, beside a decision that
+  /// shares nothing.
+  @Test(.enabled(if: chosenCase != nil))
+  func measureKeepingTheWorkOfAWindowOfTheChosenCase() async throws {
+    let name = try #require(Self.chosenCase)
+    let largeCase = try #require(LargeFileCase.all.first { $0.name == name }, "No case \(name)")
+    let recorder = try LargeFileRecorder(caseName: name)
+    let texts = largeCase.texts()
+    let session = try await Session.merge(
+      base: texts.base.map { SourceFile(bytes: Data($0.utf8), label: "base") },
+      a: SourceFile(bytes: Data(texts.a.utf8), label: "a"),
+      b: SourceFile(bytes: Data(texts.b.utf8), label: "b"))
+    let work = WorkFolder()
+    let keeper = work.keeper()
+    let controller = try Windows.controller(for: session, workKeeper: keeper)
+    let conflicts = controller.presentation.changes.blocks.indices.filter {
+      controller.presentation.changes.blocks[$0].kind == .conflict
+    }
+    try #require(conflicts.count >= 2 * Self.runs + 1)
+    let clock = ContinuousClock()
+    var timings: [String: [Duration]] = [:]
+    func decide(_ number: Int) -> Duration {
+      controller.presentation.setCurrentBlock(conflicts[number])
+      let start = clock.now
+      controller.perform(.useB)
+      let duration = clock.now - start
+      controller.endEvent()
+      return duration
+    }
+    _ = decide(0)
+    for run in 0..<Self.runs {
+      var start = clock.now
+      let snapshot = controller.workSnapshot
+      timings["window-snapshot-main", default: []].append(clock.now - start)
+      #expect(snapshot != nil)
+
+      let hold = await LargeFileRun.longestHold {
+        start = clock.now
+        keeper.keepNow()
+        timings["keep-now-main", default: []].append(clock.now - start)
+        await keeper.lastOperation?.value
+      }
+      timings["keep-longest-hold", default: []].append(hold)
+
+      keeper.keepNow()
+      timings["decision-after-snapshot-main", default: []].append(decide(2 * run + 1))
+      await keeper.lastOperation?.value
+      timings["decision-unshared-main", default: []].append(decide(2 * run + 2))
+    }
+    for (metric, durations) in timings.sorted(by: { $0.key < $1.key }) {
+      let sorted = durations.sorted()
+      recorder.record(metric, sorted[sorted.count / 2])
+      recorder.record("\(metric)-max", sorted[sorted.count - 1])
+    }
+    recorder.record("blocks", Double(session.blocks.count), unit: "-")
+    recorder.finish()
+    controller.close()
+    await keeper.lastOperation?.value
+  }
+
+  /// Measures opening the files of the chosen case as a merge, from the call until the window
+  /// is filled: without work kept for them, and with work, which the window reads before it
+  /// compares and puts back once it is filled.
+  @Test(.enabled(if: chosenCase != nil))
+  func measureOpeningTheChosenCaseWithAndWithoutItsWork() async throws {
+    let name = try #require(Self.chosenCase)
+    let largeCase = try #require(LargeFileCase.all.first { $0.name == name }, "No case \(name)")
+    let recorder = try LargeFileRecorder(caseName: name)
+    let texts = largeCase.texts()
+    let folder = FileManager.default.temporaryDirectory
+      .appending(path: "MergeWorkMeasurements-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { #expect(throws: Never.self) { try FileManager.default.removeItem(at: folder) } }
+    var files: [String: SessionFile] = [:]
+    for (role, text) in [("base", texts.base), ("a", texts.a), ("b", texts.b)] {
+      guard let text else { continue }
+      let url = folder.appending(path: "\(role).\(largeCase.fileExtension)")
+      try Data(text.utf8).write(to: url)
+      files[role] = SessionFile(url: url, label: url.lastPathComponent)
+    }
+    let a = try #require(files["a"])
+    let b = try #require(files["b"])
+    let work = WorkFolder()
+    let clock = ContinuousClock()
+    func open() async throws -> (SessionWindowController, Duration) {
+      let start = clock.now
+      let controller = try await SessionWindowController.openMerge(
+        base: files["base"], a: a, b: b, mode: .windowDefault, context: SessionContext(),
+        undoManager: UndoManager(), settings: .private(), workKeeper: work.keeper())
+      await controller.phase.filling?.value
+      return (controller, clock.now - start)
+    }
+    func close(_ controller: SessionWindowController) async {
+      controller.close()
+      await controller.workKeeper?.lastOperation?.value
+    }
+
+    var timings: [String: [Duration]] = [:]
+    for _ in 0..<Self.runs {
+      let (controller, duration) = try await open()
+      timings["open-without-work", default: []].append(duration)
+      #expect(controller.restoredWork == nil)
+      await close(controller)
+    }
+    let (worked, _) = try await open()
+    worked.perform(.resolveAllWithB)
+    worked.endEvent()
+    await close(worked)
+    #expect(try work.fileNames.count == 1)
+    for _ in 0..<Self.runs {
+      let (controller, duration) = try await open()
+      timings["open-with-work", default: []].append(duration)
+      #expect(controller.restoredWork != nil)
+      await close(controller)
+    }
+    for (metric, durations) in timings.sorted(by: { $0.key < $1.key }) {
+      let sorted = durations.sorted()
+      recorder.record(metric, sorted[sorted.count / 2])
+      recorder.record("\(metric)-max", sorted[sorted.count - 1])
+    }
     recorder.finish()
   }
 

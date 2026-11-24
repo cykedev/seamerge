@@ -250,7 +250,7 @@ import Testing
         b: SessionFile(url: try files.file("new.txt"), label: "Greeting.swift")),
       kind: .diff, mode: .windowDefault, context: SessionContext(), undoManager: UndoManager(),
       settings: .private(), waitingAtMost: 30
-    ) { _ in session }
+    ) { _, _ in session }
     defer { controller.window?.close() }
 
     #expect(!controller.waitsForComparison)
@@ -270,7 +270,7 @@ import Testing
         b: SessionFile(url: try files.file("new.txt"), label: "Greeting.swift")),
       kind: .diff, mode: .windowDefault, context: SessionContext(), undoManager: UndoManager(),
       settings: .private(), waitingAtMost: 0
-    ) { _ throws(SessionLoadingError) in
+    ) { _, _ throws(SessionLoadingError) in
       var iterator = outcomes.makeAsyncIterator()
       guard let session = await iterator.next() else { throw .comparisonFailed }
       return session
@@ -301,12 +301,15 @@ import Testing
     let files = try SampleFiles()
     let image = files.folder.appending(path: "image.png")
     try Data([0, 1, 2, 0, 80, 78, 71]).write(to: image)
+    let work = WorkFolder()
 
     await #expect(throws: SessionLoadingError.binaryFile(image)) {
       _ = try await SessionWindowController.openMerge(
         base: nil, a: SessionFile(url: try files.file("a.txt"), label: "a"),
         b: SessionFile(url: image, label: "b"), mode: .windowDefault,
-        context: SessionContext(), undoManager: UndoManager(), settings: .private())
+        context: SessionContext(), undoManager: UndoManager(), settings: .private(),
+        workStore: work.store)
     }
+    #expect(try work.fileNames.isEmpty)
   }
 }

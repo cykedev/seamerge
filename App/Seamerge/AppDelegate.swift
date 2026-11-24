@@ -73,13 +73,15 @@ final class AppDelegate: NSObject {
 
   /// Creates the delegate of an app started with `arguments`, which keeps its settings and
   /// recent comparisons in `defaults`, listens for the helper at `socketURL`, keeps the copies of
-  /// collected files in `collectionCache`, shows alerts, hides and comes to the front with
-  /// `presenter`, sets up Git and Tower in `integrationStore`, installs the seamerge command with
-  /// `commandLineTool`, updates itself with the updater that `makeSoftwareUpdater` makes, and
-  /// registers its service with `updateServices` when `bundle` is in a folder of applications.
+  /// collected files in `collectionCache` and the work of unfinished merges in `workStore`, shows
+  /// alerts, hides and comes to the front with `presenter`, sets up Git and Tower in
+  /// `integrationStore`, installs the seamerge command with `commandLineTool`, updates itself
+  /// with the updater that `makeSoftwareUpdater` makes, and registers its service with
+  /// `updateServices` when `bundle` is in a folder of applications.
   init(
     arguments: [String], defaults: UserDefaults, socketURL: URL,
-    collectionCache: CollectionCache = .standard, presenter: any AppPresenter,
+    collectionCache: CollectionCache = .standard, workStore: MergeWorkStore,
+    presenter: any AppPresenter,
     integrationStore: SystemIntegrationStore, commandLineTool: CommandLineTool,
     makeSoftwareUpdater: @MainActor (Updater) -> any SoftwareUpdater = Updater.sparkle,
     bundle: URL, updateServices: @escaping @MainActor () -> Void
@@ -95,7 +97,7 @@ final class AppDelegate: NSObject {
     recentComparisonsMenu = RecentComparisonsMenu(recentComparisons: recentComparisons)
     mainMenu = MainMenu(openRecentMenu: recentComparisonsMenu.menu)
     coordinator = SessionCoordinator(
-      socketURL: socketURL, cache: collectionCache, settings: settings
+      socketURL: socketURL, cache: collectionCache, settings: settings, workStore: workStore
     ) {
       [weak presenter] error in
       presenter?.present(error)

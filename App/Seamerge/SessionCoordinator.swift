@@ -18,7 +18,8 @@ protocol SessionCoordinatorDelegate: AnyObject {
 /// the welcome window puts together.
 ///
 /// Every session, a merge or a comparison of two files, gets a window of its own with an undo
-/// manager of its own, built in the comparison mode of the window. For the helper, the
+/// manager of its own, built in the comparison mode of the window; a merge keeps its work in the
+/// store of work of the app, and answers only once the work is written. For the helper, the
 /// coordinator answers `opened` once the window shows, and the outcome once it closes; if the
 /// helper goes away first, it tells the window, which stays open.
 ///
@@ -42,6 +43,7 @@ final class SessionCoordinator {
   private let socketURL: URL
   private let cache: CollectionCache
   private let settings: UserSettings
+  private let workStore: MergeWorkStore
   private let presentError: (any Error) -> Void
   private var collections: [OpenCollection] = []
   private var kinds: [ObjectIdentifier: Session.Kind] = [:]
@@ -49,19 +51,22 @@ final class SessionCoordinator {
   private var isFinishing = false
   private var servingCount = 0
   private var idleWaiters: [CheckedContinuation<Void, Never>] = []
+  private var closedWaiters: [CheckedContinuation<Void, Never>] = []
 
   private static let logger = Logger(subsystem: "app.eiden.seamerge", category: "App")
 
   /// Creates a coordinator that listens for the helper at `socketURL` once it starts, keeps the
-  /// copies of the files of collections in `cache`, opens windows as `settings` say, and shows
-  /// what keeps a session from opening with `presentError`.
+  /// copies of the files of collections in `cache`, opens windows as `settings` say, keeps the
+  /// work of merges in `workStore`, and shows what keeps a session from opening with
+  /// `presentError`.
   init(
     socketURL: URL, cache: CollectionCache = .standard, settings: UserSettings,
-    presentError: @escaping (any Error) -> Void
+    workStore: MergeWorkStore, presentError: @escaping (any Error) -> Void
   ) {
     self.socketURL = socketURL
     self.cache = cache
     self.settings = settings
+    self.workStore = workStore
     self.presentError = presentError
   }
 
@@ -96,7 +101,7 @@ final class SessionCoordinator {
 
   /// Closes every session window, which tells each waiting helper how its session ended: a merge
   /// whether it is saved, a comparison that it was cancelled, so that Git compares no further
-  /// files either; then stops listening.
+  /// files either; then stops listening, once every merge has written its work.
   ///
   /// Sessions that come meanwhile are refused as `quitting`, except further comparisons of a run
   /// whose window closed, which are cancelled with it.
@@ -105,6 +110,7 @@ final class SessionCoordinator {
     for controller in windowControllers {
       controller.closeAsTheAppQuits()
     }
+    await waitUntilEveryWindowFinished()
     await waitUntilIdle()
     serverTask?.cancel()
     await serverTask?.value
@@ -121,6 +127,14 @@ final class SessionCoordinator {
   func waitUntilIdle() async {
     if servingCount > 0 {
       await withCheckedContinuation { idleWaiters.append($0) }
+    }
+  }
+
+  /// Waits until every window has reported how its session ended, which a merge does once its
+  /// work is written.
+  private func waitUntilEveryWindowFinished() async {
+    if !windowControllers.isEmpty {
+      await withCheckedContinuation { closedWaiters.append($0) }
     }
   }
 
@@ -148,7 +162,7 @@ final class SessionCoordinator {
         try await SessionWindowController.openMerge(
           base: file(base), a: file(comparison.left), b: file(comparison.right),
           mode: settings.comparisonMode, context: SessionContext(), undoManager: UndoManager(),
-          settings: settings)
+          settings: settings, workStore: workStore)
       } else {
         try await SessionWindowController.openDiff(
           old: file(comparison.left), new: file(comparison.right), mode: settings.comparisonMode,
@@ -214,7 +228,8 @@ final class SessionCoordinator {
     }
     let controller: SessionWindowController
     do {
-      controller = try await Self.makeWindow(for: connection.request, settings: settings)
+      controller = try await Self.makeWindow(
+        for: connection.request, settings: settings, workStore: workStore)
     } catch {
       presentError(error)
       await send(.closed(.cancelled), on: connection)
@@ -402,6 +417,12 @@ final class SessionCoordinator {
       windowControllers.removeAll { $0 === controller }
       kinds[ObjectIdentifier(controller)] = nil
       delegate?.sessionCoordinatorDidChangeWindows(self)
+      if windowControllers.isEmpty {
+        for waiter in closedWaiters {
+          waiter.resume()
+        }
+        closedWaiters = []
+      }
     }
     windowControllers.append(controller)
     kinds[ObjectIdentifier(controller)] = kind
@@ -418,7 +439,7 @@ final class SessionCoordinator {
   }
 
   /// Reads the files of `request` and opens a window for their merge or comparison, drawn and
-  /// started as `settings` say.
+  /// started as `settings` say; a merge keeps its work in `workStore`.
   ///
   /// A merge knows who waits for it: Git where the command line says so, else the command line.
   /// Every side of a merge shows the name of the file it is merged into, since Git hands over
@@ -430,7 +451,7 @@ final class SessionCoordinator {
   ///
   /// - Throws: Why the files of a merge cannot be opened.
   private static func makeWindow(
-    for request: SessionRequest, settings: UserSettings
+    for request: SessionRequest, settings: UserSettings, workStore: MergeWorkStore
   ) async throws(SessionLoadingError) -> SessionWindowController {
     switch request {
     case .merge(let merge):
@@ -446,7 +467,7 @@ final class SessionCoordinator {
         return try await SessionWindowController.openMerge(
           base: merge.base.map { SessionFile(url: $0, label: label) }, a: a, b: b,
           mode: settings.comparisonMode, context: context, undoManager: UndoManager(),
-          settings: settings)
+          settings: settings, workStore: workStore)
       } catch .binaryFile {
         Self.logger.notice("Asking which side of the binary file to take")
         return try await SessionWindowController(

@@ -201,21 +201,24 @@ struct SavingTests {
     #expect(!window.isDocumentEdited)
   }
 
-  @Test func leavingUnresolvedAsksOnlyWhenDecisionsWouldBeLost() async throws {
+  @Test func leavingUnresolvedNeverAsks() async throws {
     let untouched = try await Fixture("merge")
-    #expect(await untouched.controller.leaveUnresolvedAskingFirst())
+    untouched.controller.leaveUnresolved(nil)
     #expect(untouched.prompts.questions.isEmpty)
     #expect(untouched.outcomeNames == ["cancelled"])
 
     let decided = try await Fixture("merge")
     decided.controller.resolveOpenConflicts(with: [.a])
     #expect(await decided.controller.save())
-    #expect(await !decided.controller.leaveUnresolvedAskingFirst())
-    #expect(decided.prompts.questions == ["leave story.txt unresolved, 1 decisions, Git"])
-    #expect(decided.outcomeNames.isEmpty)
-    decided.prompts.leavesUnresolvedAnyway = true
-    #expect(await decided.controller.leaveUnresolvedAskingFirst())
+    decided.controller.leaveUnresolved(nil)
+    #expect(decided.prompts.questions.isEmpty)
     #expect(decided.outcomeNames == ["cancelled"])
+
+    let unsaved = try await Fixture("merge", waitingCaller: .commandLine)
+    unsaved.controller.resolveOpenConflicts(with: [.b])
+    unsaved.controller.leaveUnresolved(nil)
+    #expect(unsaved.prompts.questions.isEmpty)
+    #expect(unsaved.outcomeNames == ["cancelled"])
   }
 
   @Test func mergeByHandOfFilesInARepositoryNamesGitNowhere() async throws {
@@ -226,19 +229,16 @@ struct SavingTests {
     #expect(await !controller.save())
     #expect(await !controller.closeAskingFirst())
     controller.resolveOpenConflicts(with: [.a])
-    #expect(await !controller.leaveUnresolvedAskingFirst())
     #expect(await controller.save())
 
     #expect(
       fixture.prompts.questions == [
         "save with 1 open conflicts", "close story.txt, 1 open, command line",
-        "leave story.txt unresolved, 1 decisions",
       ])
     #expect(controller.layout.resultHeader?.callerIsGit == false)
     #expect(SessionCommand.leaveUnresolved.help?.contains("Git") == false)
-    // Saved, the decisions stay in the file, which no one puts back.
-    #expect(await controller.leaveUnresolvedAskingFirst())
-    #expect(fixture.prompts.questions.count == 3)
+    controller.leaveUnresolved(nil)
+    #expect(fixture.prompts.questions.count == 2)
     #expect(fixture.outcomeNames == ["cancelled"])
   }
 

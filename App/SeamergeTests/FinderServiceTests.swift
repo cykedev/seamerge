@@ -246,7 +246,8 @@ struct FinderServiceTests {
   ) -> AppDelegate {
     AppDelegate(
       arguments: ["Seamerge"], defaults: sandbox.defaults, socketURL: sandbox.socketURL,
-      collectionCache: sandbox.collectionCache, presenter: sandbox.presenter,
+      collectionCache: sandbox.collectionCache, workStore: sandbox.workStore,
+      presenter: sandbox.presenter,
       integrationStore: sandbox.integrationStore, commandLineTool: sandbox.commandLineTool,
       makeSoftwareUpdater: { _ in SoftwareUpdaterDouble() }, bundle: bundle ?? sandbox.bundle,
       updateServices: updateServices)

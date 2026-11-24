@@ -165,6 +165,25 @@ public final class SessionWindowController: NSWindowController {
   /// The steps of undo of the result, among them the runs of typing.
   let resultUndo: ResultUndo
 
+  /// What keeps the work of a merge on disk while the window is open; `nil` for a comparison and
+  /// for a merge whose work is not kept.
+  let workKeeper: MergeWorkKeeper?
+
+  /// What the folder of work held for the merge as the window opened, which it puts back once
+  /// its comparison is ready; `nil` for a window that does not look.
+  let earlierWork: Task<EarlierWork, Never>?
+
+  /// The earlier work the window put back as it opened, which the subtitle names until the user
+  /// takes a step; `nil` otherwise.
+  var restoredWork: RestoredWork?
+
+  /// What VoiceOver hears about the earlier work once the window shows, if it put work back
+  /// before it showed.
+  var restoredWorkAnnouncement: String?
+
+  /// Whether the window puts earlier work back, which is no step of the user.
+  var isRestoringWork = false
+
   /// The accessibility settings the window draws with.
   var displayOptions: DisplayOptions {
     didSet {
@@ -261,6 +280,9 @@ public final class SessionWindowController: NSWindowController {
   /// out in `window`; for an `unavailable` comparison, it says why in place of the lines. `now`
   /// tells the time, which ends a run of typing after a pause.
   ///
+  /// With a `workKeeper`, the window keeps the work of its merge on disk; with `earlierWork` as
+  /// well, it puts back the work it finds there once its `pendingComparison` is ready.
+  ///
   /// With a `pendingComparison`, `session` names the files without their lines, and the window
   /// shows their headers and empty panes until the comparison is ready, then the session it
   /// makes.
@@ -276,6 +298,7 @@ public final class SessionWindowController: NSWindowController {
     window: SessionWindow, unavailable: UnavailableComparison? = nil,
     binaryMerge: BinaryMerge? = nil, collectionNavigator: CollectionNavigator? = nil,
     pendingComparison: PendingComparison? = nil, pendingFile: PendingFile? = nil,
+    workKeeper: MergeWorkKeeper? = nil, earlierWork: Task<EarlierWork, Never>? = nil,
     now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
   ) {
     let collection = collectionNavigator?.collection
@@ -330,6 +353,8 @@ public final class SessionWindowController: NSWindowController {
     self.resultUndo = resultUndo
     comparisonSwitcher = ComparisonSwitcher(
       undoManager: undoManager, presentation: presentation, resultUndo: resultUndo)
+    self.workKeeper = workKeeper
+    self.earlierWork = earlierWork
     presentation.wrapsLines = settings.wrapsLines
     for pane in presentation.allPanes {
       pane.showsInvisibles = settings.showsInvisibles
@@ -365,6 +390,10 @@ public final class SessionWindowController: NSWindowController {
     }
     super.init(window: window)
     diskWatch.delegate = self
+    workKeeper?.snapshot = { [weak self] in self?.workSnapshot }
+    if pendingComparison == nil {
+      workKeeper?.keepWork(of: session.inputs)
+    }
     comparisonSwitcher.delegate = self
     // The delegate comes first: the window asks it for its undo manager once and keeps the
     // answer.
@@ -482,6 +511,15 @@ public final class SessionWindowController: NSWindowController {
     layout.showCallerIsGone()
   }
 
+  /// Shows the window in front: for the merge of a file that is not text with the sheet that
+  /// asks which side to take, and for a merge that put back earlier work before it showed with
+  /// word of it for VoiceOver.
+  public override func showWindow(_ sender: Any?) {
+    super.showWindow(sender)
+    askWhichSideToTakeAsItShows()
+    announceRestoredWorkOnce()
+  }
+
   /// Draws the window with the theme of its display options, settings and font size.
   func applyTheme() {
     let theme = displayOptions.theme(settings: settings, fontSize: fontSize)
@@ -497,7 +535,7 @@ public final class SessionWindowController: NSWindowController {
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: presentation.arrangement,
       startMode: settings.comparisonMode, ignoredDifferences: presentation.ignoredDifferences,
-      isComparing: waitsForComparison)
+      isComparing: waitsForComparison, restoredWorkNote: restoredWorkNote)
     window?.title = summary.title
     window?.setAccessibilityTitle([summary.title, summary.fullSubtitle].joined(separator: ", "))
     updateSubtitle()
@@ -593,6 +631,7 @@ extension SessionWindowController {
   /// is saved, as closing it does, and a comparison reports that it was cancelled, so that Git
   /// compares no further files.
   public func closeAsTheAppQuits() {
+    guard !hasFinished else { return }
     if saving == nil {
       cancel()
     } else {
@@ -614,10 +653,22 @@ extension SessionWindowController {
   }
 
   /// Reports that the session ended with `outcome`, unless it was reported already.
+  ///
+  /// A merge whose work the window keeps reports it only once the work is written, or removed
+  /// if the merge is finished, so that whoever waits for the window never goes on before; with
+  /// nothing to write, it reports at once.
   func finish(_ outcome: SessionOutcome) {
     guard !hasFinished else { return }
     hasFinished = true
-    onFinish?(outcome)
+    let keeping = finishesMerge(outcome) ? workKeeper?.removeWork() : workKeeper?.keepNow()
+    guard let keeping else {
+      onFinish?(outcome)
+      return
+    }
+    Task {
+      await keeping.value
+      onFinish?(outcome)
+    }
   }
 }
 
@@ -792,6 +843,7 @@ extension SessionWindowController: SessionPresentationDelegate {
   }
 
   func presentationDidChangeResult(_ presentation: SessionPresentation) {
+    workDidChange()
     stateDidChange()
   }
 
@@ -809,6 +861,7 @@ extension SessionWindowController: SessionPresentationDelegate {
   func presentationDidTakeOverUnannouncedChange(_ presentation: SessionPresentation) {
     resultUndo.endTypingRun()
     sessionUndoManager.removeAllActions()
+    workDidChange()
   }
 
   func presentation(

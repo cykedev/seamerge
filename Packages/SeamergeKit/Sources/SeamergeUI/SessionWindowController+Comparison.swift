@@ -153,6 +153,9 @@ extension SessionWindowController {
     let session = prepared.changes.session
     resultUndo.endTypingRun()
     placing()
+    if !Self.haveSameContent(previous.shown.session.inputs, session.inputs) {
+      workKeeper?.keepWork(of: session.inputs)
+    }
     comparisonSwitcher.keepShownBefore(previous.shown.session, showing: session)
     presentation.show(SideHeader.headers(of: session, context: context))
     detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
@@ -163,7 +166,16 @@ extension SessionWindowController {
     }
     showResultFormat()
     watchFiles()
+    workDidChange()
     stateDidChange()
+  }
+
+  /// Whether `first` and `second` hold the same bytes in every role, as files compared anew in
+  /// another mode do, and files reloaded or changed do not.
+  private static func haveSameContent(
+    _ first: Session.Inputs<SourceFile>, _ second: Session.Inputs<SourceFile>
+  ) -> Bool {
+    Role.allCases.allSatisfy { first[$0]?.bytes == second[$0]?.bytes }
   }
 
   /// The comparison that the window shows now, as undo and redo bring it back.

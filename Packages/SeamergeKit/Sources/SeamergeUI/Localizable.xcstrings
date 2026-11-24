@@ -805,6 +805,71 @@
     "Earlier Version" : {
       "comment" : "Role: the file before the change, shown when both sides have the same name."
     },
+    "Earlier work partly restored · %@" : {
+      "comment" : "Subtitle: the window put back some of the work of an earlier session of the same merge, such as Earlier work partly restored · 14:32."
+    },
+    "Earlier work partly restored: %lld blocks start over." : {
+      "comment" : "VoiceOver as a merge opens with some of its earlier work, such as 2 blocks start over.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Earlier work partly restored: %lld block starts over."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Earlier work partly restored: %lld blocks start over."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Earlier work restored · %@" : {
+      "comment" : "Subtitle: the window put back the work of an earlier session of the same merge, such as Earlier work restored · 14:32 or · Nov 21."
+    },
+    "Earlier work restored: %lld of %lld conflicts resolved." : {
+      "comment" : "VoiceOver as a merge opens with its earlier work, such as 3 of 5 conflicts resolved.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Earlier work restored: %1$lld of %#@conflicts@ resolved."
+          },
+          "substitutions" : {
+            "conflicts" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg conflict"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg conflicts"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Earlier work restored." : {
+      "comment" : "VoiceOver as a merge without conflicts opens with its earlier work."
+    },
     "Edit" : {
       "comment" : "Menu bar."
     },
@@ -895,29 +960,6 @@
     "Git is no longer waiting for this merge." : {
       "comment" : "Notice below the result header after the Git command that asked has ended."
     },
-    "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decisions in %lld blocks are lost." : {
-      "comment" : "Sheet before leaving a merge unresolved: Git restores the file it had before the merge tool, such as in 3 blocks.",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decision in %lld block is lost."
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Git puts the file back as it was before Seamerge opened it, with its conflict markers. Your decisions in %lld blocks are lost."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "Go" : {
       "comment" : "Button: jump to the line.\nMenu bar."
     },
@@ -978,11 +1020,8 @@
     "Identical" : {
       "comment" : "A file in the sidebar whose two sides hold the same bytes."
     },
-    "If you don’t save, your decisions are lost and Git keeps the file unresolved." : {
-      "comment" : "Sheet before closing a merge that Git waits for: what follows."
-    },
-    "If you don’t save, your decisions are lost." : {
-      "comment" : "Sheet before closing a merge that a command other than Git waits for: what follows."
+    "If you don’t save, Git keeps the file unresolved. %@" : {
+      "comment" : "Sheet before closing a merge that Git waits for: what follows, then that the work is kept."
     },
     "Ignore All Whitespace" : {
       "comment" : "Compare menu command."
@@ -1028,9 +1067,6 @@
     },
     "Later Version" : {
       "comment" : "Role: the file after the change, shown when both sides have the same name."
-    },
-    "Leave “%@” unresolved?" : {
-      "comment" : "Sheet before leaving a merge unresolved that has decisions."
     },
     "Leave out the text that the rules in Settings match" : {
       "comment" : "Help tag of Compare > Use Ignore Rules."
@@ -1301,6 +1337,9 @@
     },
     "Resolved conflict, line %lld" : {
       "comment" : "VoiceOver: the mark of a decided conflict in the overview bar."
+    },
+    "Restore Earlier Work" : {
+      "comment" : "Undo menu: the work of an earlier session of the same merge was put back."
     },
     "Restore Layout" : {
       "comment" : "View menu command."
@@ -1744,33 +1783,13 @@
       "comment" : "Sheet before copied changes of several files would be lost: what follows, such as to main.swift and README.md."
     },
     "Your changes will be lost if you don’t save them." : {
-      "comment" : "Sheet before closing a merge of files with unsaved changes: what follows."
+      "comment" : "Sheet before copied changes of a file would be lost: what follows."
     },
     "your commit" : {
       "comment" : "Role: the user's own commit that a rebase moves."
     },
-    "Your decisions in %lld blocks are lost." : {
-      "comment" : "Sheet before leaving a merge unresolved that a command other than Git waits for, such as in 3 blocks.",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Your decision in %lld block is lost."
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Your decisions in %lld blocks are lost."
-                }
-              }
-            }
-          }
-        }
-      }
+    "Your work in this window is kept until you finish this merge." : {
+      "comment" : "Sheet before closing a merge with unsaved changes: the decisions and the text typed stay for when the same merge opens again."
     },
     "yours" : {
       "comment" : "Role: the branch the user is on."

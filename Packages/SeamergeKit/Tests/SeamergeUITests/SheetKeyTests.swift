@@ -116,12 +116,6 @@ struct SheetKeyTests {
         try await texts {
           await $0.confirmSavingWithOpenConflicts(2, gitTakesItAsResolved: false, in: $1)
         }))
-    #expect(
-      !mentionsGit(
-        try await texts {
-          await $0.confirmLeavingUnresolved(
-            "story.txt", discarding: 1, gitPutsBackTheFile: false, in: $1)
-        }))
 
     #expect(
       mentionsGit(
@@ -132,12 +126,6 @@ struct SheetKeyTests {
       mentionsGit(
         try await texts {
           await $0.confirmSavingWithOpenConflicts(2, gitTakesItAsResolved: true, in: $1)
-        }))
-    #expect(
-      mentionsGit(
-        try await texts {
-          await $0.confirmLeavingUnresolved(
-            "story.txt", discarding: 1, gitPutsBackTheFile: true, in: $1)
         }))
   }
 
@@ -158,10 +146,6 @@ struct SheetKeyTests {
   /// The sheets whose default button is Cancel, which keeps what would be lost; each tells
   /// whether to go ahead.
   static let cautiousSheets: [@MainActor (SessionSheets, NSWindow) async -> Bool] = [
-    {
-      await $0.confirmLeavingUnresolved(
-        "story.txt", discarding: 2, gitPutsBackTheFile: true, in: $1)
-    },
     { await $0.confirmDiscarding(3, in: $1) },
     { await $0.confirmResettingAll(discardingHandwritingIn: 2, in: $1) },
     { await $0.confirmReloading("main", discarding: 1, in: $1) },

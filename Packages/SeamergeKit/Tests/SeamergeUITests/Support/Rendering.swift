@@ -181,6 +181,33 @@ enum Rendering {
     view.subviews + view.subviews.flatMap(descendants(of:))
   }
 
+  /// Draws the sheet of `alert` in `look`, on the background of a window.
+  ///
+  /// The sheet draws in the colors of the system, which increased contrast of the app leaves
+  /// alone.
+  static func bitmap(of alert: NSAlert, in look: Look) throws -> NSBitmapImageRep {
+    alert.window.appearance = look.appearance
+    alert.layout()
+    let view = try #require(alert.window.contentView)
+    view.layoutSubtreeIfNeeded()
+    let content = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+    view.cacheDisplay(in: view.bounds, to: content)
+    // The material of the sheet comes from the window server; the window background stands in
+    // for it.
+    let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)
+    look.appearance.performAsCurrentDrawingAppearance {
+      NSColor.windowBackgroundColor.setFill()
+      view.bounds.fill()
+    }
+    content.draw(
+      in: view.bounds, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true,
+      hints: nil)
+    NSGraphicsContext.restoreGraphicsState()
+    return bitmap
+  }
+
   /// Writes `bitmap` as a PNG named `name` into the folder for pictures and returns its URL.
   ///
   /// The folder is `SEAMERGE_PICTURES` if that is set, and a folder in the temporary directory

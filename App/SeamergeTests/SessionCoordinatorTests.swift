@@ -147,6 +147,65 @@ struct SessionCoordinatorTests {
     #expect(!FileManager.default.fileExists(atPath: sandbox.socketURL.path(percentEncoded: false)))
   }
 
+  @Test func helperHearsOfTheEndOnlyOnceTheWorkOfTheMergeIsKept() async throws {
+    let sandbox = try AppSandbox()
+    let recorder = WindowRecorder()
+    let coordinator = try sandbox.startCoordinator(recorder: recorder)
+    let outcome = perform(try sandbox.mergeRequest(), at: sandbox.socketURL)
+    let controller = await recorder.nextOpened()
+    await waitUntilFilled(controller)
+
+    NSApplication.shared.sendAction(SessionCommand.useB.action, to: controller, from: nil)
+    NSApplication.shared.sendAction(
+      SessionCommand.leaveUnresolved.action, to: controller, from: nil)
+
+    #expect(try await outcome.value == .closed(.cancelled))
+    #expect(try sandbox.keptWorkFiles.count == 1)
+    await coordinator.finish()
+  }
+
+  @Test func sameMergeFromGitAgainOpensWithItsWork() async throws {
+    let sandbox = try AppSandbox()
+    let recorder = WindowRecorder()
+    let coordinator = try sandbox.startCoordinator(recorder: recorder)
+    let first = perform(try sandbox.mergeRequest(), at: sandbox.socketURL)
+    let left = await recorder.nextOpened()
+    await waitUntilFilled(left)
+    NSApplication.shared.sendAction(SessionCommand.useB.action, to: left, from: nil)
+    NSApplication.shared.sendAction(SessionCommand.leaveUnresolved.action, to: left, from: nil)
+    _ = try await first.value
+
+    let second = perform(try sandbox.mergeRequest(), at: sandbox.socketURL)
+    let restored = await recorder.nextOpened()
+    await waitUntilFilled(restored)
+
+    let window = try #require(restored.window)
+    #expect(window.subtitle.contains("Earlier work restored"))
+    #expect(window.isDocumentEdited)
+    #expect(window.undoManager?.undoActionName == "Restore Earlier Work")
+    restored.close()
+    #expect(try await second.value == .closed(.cancelled))
+    await coordinator.finish()
+  }
+
+  @Test func quittingKeepsTheWorkOfEveryMergeBeforeTheAppEnds() async throws {
+    let sandbox = try AppSandbox()
+    let recorder = WindowRecorder()
+    let coordinator = try sandbox.startCoordinator(recorder: recorder)
+    try await coordinator.open(
+      FileComparison(
+        left: try sandbox.file("theirs.txt", "a\nb\n"), base: try sandbox.file("base.txt", "a\n"),
+        right: try sandbox.file("mine.txt", "a\nc\n")))
+    let controller = await recorder.nextOpened()
+    await waitUntilFilled(controller)
+    NSApplication.shared.sendAction(SessionCommand.useB.action, to: controller, from: nil)
+
+    await coordinator.finish()
+
+    #expect(coordinator.windowControllers.isEmpty)
+    #expect(try sandbox.keptWorkFiles.count == 1)
+  }
+
   @Test func comparisonFromGitOpensAWindowAndClosingItReportsSaved() async throws {
     let sandbox = try AppSandbox()
     let recorder = WindowRecorder()
@@ -240,7 +299,7 @@ struct SessionCoordinatorTests {
     let sandbox = try AppSandbox()
     let recorder = WindowRecorder()
     let coordinator = SessionCoordinator(
-      socketURL: sandbox.socketURL, settings: sandbox.settings,
+      socketURL: sandbox.socketURL, settings: sandbox.settings, workStore: sandbox.workStore,
       presentError: sandbox.presentError)
     coordinator.delegate = recorder
     let merge = FileComparison(
@@ -261,7 +320,7 @@ struct SessionCoordinatorTests {
     let sandbox = try AppSandbox()
     let recorder = WindowRecorder()
     let coordinator = SessionCoordinator(
-      socketURL: sandbox.socketURL, settings: sandbox.settings,
+      socketURL: sandbox.socketURL, settings: sandbox.settings, workStore: sandbox.workStore,
       presentError: sandbox.presentError)
     coordinator.delegate = recorder
     let comparison = FileComparison(
@@ -282,7 +341,7 @@ struct SessionCoordinatorTests {
     sandbox.settings.comparisonMode = .exact
     let recorder = WindowRecorder()
     let coordinator = SessionCoordinator(
-      socketURL: sandbox.socketURL, settings: sandbox.settings,
+      socketURL: sandbox.socketURL, settings: sandbox.settings, workStore: sandbox.workStore,
       presentError: sandbox.presentError)
     coordinator.delegate = recorder
 
@@ -299,7 +358,7 @@ struct SessionCoordinatorTests {
   @Test func filesFromTheWindowThatCannotBeOpenedThrowWithTheFile() async throws {
     let sandbox = try AppSandbox()
     let coordinator = SessionCoordinator(
-      socketURL: sandbox.socketURL, settings: sandbox.settings,
+      socketURL: sandbox.socketURL, settings: sandbox.settings, workStore: sandbox.workStore,
       presentError: sandbox.presentError)
     let binary = try sandbox.file("image.png", "\u{0}\u{1}PNG\u{0}")
     let merge = FileComparison(

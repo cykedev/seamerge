@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 import MergeModel
 import os
 
@@ -14,7 +14,7 @@ import os
 /// The store writes the keys of each file in sorted order, so that the small fields, among them
 /// the format version and the time of capture, come before the segments and the text. Dating a
 /// file then takes only its head, however large the work.
-actor MergeWorkStore {
+public actor MergeWorkStore {
   /// How long work is kept after it was captured.
   static let lifetime: TimeInterval = 30 * 24 * 60 * 60
 
@@ -39,14 +39,14 @@ actor MergeWorkStore {
   /// Creates a store in `folder`, which it creates when it first writes.
   ///
   /// - Parameter now: The clock by which the age of work counts.
-  init(folder: URL, now: @escaping @Sendable () -> Date = { Date() }) {
+  public init(folder: URL, now: @escaping @Sendable () -> Date = { Date() }) {
     self.folder = folder
     self.now = now
   }
 
   /// The folder of the user: `Seamerge/Merges` in Application Support, because the work belongs
   /// to the user and the system may empty the caches.
-  static var standardFolder: URL {
+  public static var standardFolder: URL {
     URL.applicationSupportDirectory.appending(path: "Seamerge/Merges", directoryHint: .isDirectory)
   }
 
@@ -117,7 +117,7 @@ actor MergeWorkStore {
   ///
   /// Only files named like work whose head shows work of this format version count; every other
   /// file stays.
-  func removeExpired() {
+  public func removeExpired() {
     let urls: [URL]
     do {
       urls = try FileManager.default.contentsOfDirectory(

@@ -381,7 +381,8 @@ struct AppDelegateTests {
   private func makeDelegate(in sandbox: AppSandbox, arguments: [String]) -> AppDelegate {
     AppDelegate(
       arguments: arguments, defaults: sandbox.defaults, socketURL: sandbox.socketURL,
-      collectionCache: sandbox.collectionCache, presenter: sandbox.presenter,
+      collectionCache: sandbox.collectionCache, workStore: sandbox.workStore,
+      presenter: sandbox.presenter,
       integrationStore: sandbox.integrationStore,
       commandLineTool: sandbox.commandLineTool,
       makeSoftwareUpdater: { _ in SoftwareUpdaterDouble() }, bundle: sandbox.bundle,

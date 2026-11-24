@@ -24,9 +24,12 @@ struct SessionSummary: Equatable {
   /// them, and names the comparison mode where it differs from `startMode`, that of a new window,
   /// and the ignore rules if they passed over a difference, as `ignoredDifferences` tell; while
   /// the files `isComparing` for the first time, it counts no changes yet.
+  ///
+  /// A merge ends its changes with `restoredWorkNote`, which says that it put back earlier work.
   init(
     changes: SessionChanges, context: SessionContext, arrangement: PaneArrangement,
-    startMode: ComparisonMode, ignoredDifferences: IgnoredDifferences?, isComparing: Bool = false
+    startMode: ComparisonMode, ignoredDifferences: IgnoredDifferences?, isComparing: Bool = false,
+    restoredWorkNote: String? = nil
   ) {
     let session = changes.session
     // A rule that empties a whole file leaves no change; the note says why.
@@ -43,8 +46,10 @@ struct SessionSummary: Equatable {
     if arrangement.showsResult {
       let file = session.inputs.b
       name = context.resultURL?.lastPathComponent ?? file.url?.lastPathComponent ?? file.label
-      self.changes = [isComparing ? nil : Self.changeCounts(of: changes), modeNotes]
-        .compactMap(\.self).joined(separator: Self.separator)
+      self.changes = [
+        isComparing ? nil : Self.changeCounts(of: changes), modeNotes, restoredWorkNote,
+      ]
+      .compactMap(\.self).joined(separator: Self.separator)
     } else {
       name =
         context.difftool?.path

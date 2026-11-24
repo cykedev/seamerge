@@ -71,10 +71,9 @@ extension BinaryMerge {
 }
 
 extension SessionWindowController {
-  /// Shows the window, and for the merge of a file that is not text the sheet that asks which
-  /// side to take.
-  public override func showWindow(_ sender: Any?) {
-    super.showWindow(sender)
+  /// Shows the sheet that asks which side to take, for the merge of a file that is not text, as
+  /// the window shows.
+  func askWhichSideToTakeAsItShows() {
     guard binaryMerge != nil, !isAskingToClose, !hasFinished else { return }
     Task { await askWhichSideToTake() }
   }

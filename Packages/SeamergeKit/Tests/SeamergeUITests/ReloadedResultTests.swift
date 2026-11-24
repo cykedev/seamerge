@@ -214,9 +214,8 @@ struct ReloadedResultTests {
   @Test func leavingAReloadedMergeUnresolvedReportsCancelled() async throws {
     let fixture = try await Fixture(waitingCaller: .git)
     try await fixture.changeOnDisk()
-    fixture.prompts.leavesUnresolvedAnyway = true
 
-    #expect(await fixture.controller.leaveUnresolvedAskingFirst())
+    fixture.controller.leaveUnresolved(nil)
 
     #expect(fixture.outcomes == [.cancelled])
     #expect(try fixture.resultFileText() == Self.external)

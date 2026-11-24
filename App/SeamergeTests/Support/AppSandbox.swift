@@ -69,6 +69,20 @@ final class AppSandbox {
     CollectionCache(folder: folder.appending(path: "Collections", directoryHint: .isDirectory))
   }
 
+  /// Where the app in the test keeps the work of unfinished merges, which the sandbox removes
+  /// with its folder.
+  lazy var workStore = MergeWorkStore(
+    folder: folder.appending(path: "Merges", directoryHint: .isDirectory))
+
+  /// The files in the folder of work of the app in the test.
+  var keptWorkFiles: [String] {
+    get throws {
+      let url = folder.appending(path: "Merges", directoryHint: .isDirectory)
+      guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+      return try FileManager.default.contentsOfDirectory(atPath: url.path)
+    }
+  }
+
   /// Where the app in the test listens for the helper.
   var socketURL: URL { folder.appending(path: "s.sock") }
 
@@ -80,7 +94,7 @@ final class AppSandbox {
   /// A coordinator that listens at the socket of the sandbox, with `recorder` as its delegate.
   func startCoordinator(recorder: WindowRecorder) throws -> SessionCoordinator {
     let coordinator = SessionCoordinator(
-      socketURL: socketURL, cache: collectionCache, settings: settings,
+      socketURL: socketURL, cache: collectionCache, settings: settings, workStore: workStore,
       presentError: presentError)
     coordinator.delegate = recorder
     try coordinator.start()
@@ -186,6 +200,16 @@ final class WindowRecorder: SessionCoordinatorDelegate {
 func perform(_ request: SessionRequest, at socketURL: URL) -> Task<SessionReply, any Error> {
   Task {
     try await SessionClient(socketURL: socketURL).perform(request)
+  }
+}
+
+/// Waits until the merge window of `controller` takes the commands of its lines, as it does once
+/// the comparison of its files is ready and shown.
+@MainActor
+func waitUntilFilled(_ controller: SessionWindowController) async {
+  let item = NSMenuItem(title: "", action: SessionCommand.toggleBase.action, keyEquivalent: "")
+  while !controller.validateUserInterfaceItem(item) {
+    await Task.yield()
   }
 }
 
