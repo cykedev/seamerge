@@ -62,6 +62,7 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
 - **Find and replace.** Find (`⌘F`) searches all panes of a window, and Find and Replace (`⌥⌘F`) in a merge replaces in the result only. Replace All is one undo step.
 - **Ignore rules.** Settings ▸ Ignored Text holds rules for text that a comparison should leave out, such as timestamps, UUIDs and memory addresses, and your own patterns. Compare ▸ Use Ignore Rules applies them to a comparison.
 - **Export as patch.** File ▸ Export as Patch… and Edit ▸ Copy as Patch write the changes as a unified diff. `git apply` takes the patch; see the [user guide](Documentation/UserGuide.md#export-as-patch).
+- **Open a patch.** `git diff | seamerge` opens the changes of a unified diff in a read-only window; see [Opening a patch](Documentation/UserGuide.md#opening-a-patch).
 - **Terminal command.** Seamerge ▸ Install Command Line Tool… installs `seamerge` in `/usr/local/bin`, so you can compare files and folders from Terminal.
 - **Finder and Dock.** Select two or three files, or two folders, in Finder and choose Compare with Seamerge from the Services menu. Drop files or folders on the Seamerge icon in the Dock to fill the sheet Compare Files or Merge Files.
 - **Encoding and line endings of the result.** Choose the encoding and the line endings the result is saved with.

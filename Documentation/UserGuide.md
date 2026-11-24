@@ -16,6 +16,7 @@ This guide is for people who use Seamerge to compare files and to resolve Git me
 - [Finding and replacing](#finding-and-replacing)
 - [Ignore rules](#ignore-rules)
 - [Export as patch](#export-as-patch)
+- [Opening a patch](#opening-a-patch)
 - [Terminal and Finder](#terminal-and-finder)
 - [Other version control systems](#other-version-control-systems)
 - [Saving and closing](#saving-and-closing)
@@ -245,6 +246,34 @@ The rules are kept in **Seamerge ▸ Settings…**, on the page **Ignored Text**
 The patch records every byte of the files, whatever the comparison mode. A patch of a window that ignores whitespace still produces the new file exactly. The commands are valid only where the two files differ in their bytes.
 
 To apply a patch, run `git apply change.patch` in the repository, or use `patch -p1 < change.patch`. The `patch` that comes with macOS understands the names that Git writes for ordinary paths. It does not understand a path that Git quotes, such as one with letters outside ASCII, a quotation mark or a control character: it then finds no file. `git apply` takes those paths too. A new file is written with mode 644, so an executable file loses its executable bit.
+
+## Opening a patch
+
+`seamerge patch` opens a unified diff in a window that shows its changes. The diff can be a file that `git diff`, `git format-patch` or `diff -u` wrote, or the output of such a command:
+
+```
+git diff HEAD~3 | seamerge
+seamerge patch change.patch
+seamerge patch --wait change.patch
+```
+
+Without a file, or with `-`, `seamerge patch` reads standard input. `seamerge` alone does the same when its standard input is a pipe or a file. Run without input in a terminal, it prints its usage and exits with 2.
+
+Without `--wait`, the command returns as soon as the window shows the patch. With `--wait`, it returns when the window is closed. A patch of several files opens in one window with a sidebar, as a comparison of several files does. The line numbers come from the hunk headers, so they are the numbers of the files the patch was made from.
+
+The window is read-only. Copy to Left, Copy to Right, Save, Change Files, Open in Editor, Export as Patch and Copy as Patch are not available.
+
+The lines between two hunks are not in the patch. Each gap is one bar, **N Lines Not in the Patch**, which cannot be opened. The lines of a gap are not copied or searched.
+
+The command refuses some input:
+
+- A combined diff, which Git writes with `--cc` for a merge commit, is refused.
+- A patch that is not a unified diff, or that cannot be read, such as one cut short, is refused.
+- A patch of more than 128 MiB is refused.
+
+Each refusal exits with 2 and opens nothing. A patch without changes opens nothing either; the command says `The patch has no changes.` and exits with 0. For a binary file, Git writes only that it differs, so Seamerge says that the patch holds no lines of it.
+
+Exit status: 0 when the window shows the patch, or when it was closed with `--wait`; 1 when the connection to Seamerge was lost while `--wait` waited; 2 when the arguments are invalid, the file cannot be read, or the patch is refused; 3 when Seamerge cannot be opened or does not answer, or cannot open the window.
 
 ## Terminal and Finder
 

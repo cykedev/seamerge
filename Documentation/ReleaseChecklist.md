@@ -18,6 +18,11 @@ The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, a min
 - [ ] In a throwaway repository, `Scripts/make-test-repo.sh <an empty folder> diff` creates three changed files. Open them with `git difftool`, with Seamerge as the diff tool, set up as in the next item. In each file, copy the change to the right with Copy to Right (`⌥⌘→`), then save all with `⌘S` and close the window. `git -C <the folder> diff` must then print nothing.
 - [ ] Set up the Git integration from the app and remove it again. Removing must leave the global configuration as it was before the set-up.
 
+## Patches
+
+- [ ] In a throwaway repository with one changed file, `git diff | seamerge` opens a window that shows the change. The command returns at once with exit 0, and Save is not available in the window.
+- [ ] `Scripts/make-test-repo.sh <an empty folder> diff` creates three changed files. Open them as in the item above, choose **File ▸ Export as Patch…** and save the patch as `<an empty folder>/change.patch`. Close the window. Then `seamerge patch <an empty folder>/change.patch` opens a window with the three files, and the changes are the ones the comparison showed.
+
 ## Aborting and restoring a merge
 
 Run these steps in a throwaway repository, with Seamerge set up as the Git merge tool.
