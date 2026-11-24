@@ -57,26 +57,44 @@ public struct DifftoolContext: Sendable, Hashable {
       filePosition: FilePosition(environment: environment))
   }
 
-  /// The path of the compared file relative to `workingDirectory`, when the caller did not
-  /// name it: the path of the one side that is a file in `workingDirectory`, while the other side
-  /// is a temporary copy or missing, as Tower passes the sides of a change in the working tree.
+  /// The context of a comparison whose caller named no path: the one side that is a file in a
+  /// working tree is the working copy, and its path in that working tree is the path of the
+  /// comparison, while the other side is a temporary copy or missing.
   ///
-  /// Returns `nil` if both sides or neither are such a file. `temporaryDirectory` is the
-  /// temporary folder of the user, where Git writes its copies.
-  public static func inferredPath(
-    leftFile: URL, rightFile: URL, workingDirectory: URL,
-    temporaryDirectory: URL = FileManager.default.temporaryDirectory
-  ) -> String? {
+  /// Tower passes the sides of a change in the working tree this way and starts the tool at the
+  /// top of the working tree, Fork starts it in `/`; the working tree is therefore the one that
+  /// holds the file, not the directory the tool runs in. Returns `nil` if both sides or neither
+  /// are such a file, or if the file lies in no working tree.
+  ///
+  /// - Parameters:
+  ///   - leftFile: The file before the change.
+  ///   - rightFile: The file after the change.
+  ///   - git: Finds the working tree that holds a file.
+  ///   - temporaryDirectory: The temporary folder of the caller, where Git and the apps that run
+  ///     it write their copies.
+  ///   - environment: The environment the tool runs with; `GIT_DIFF_PATH_COUNTER` and
+  ///     `GIT_DIFF_PATH_TOTAL` give the position of the file.
+  public static func inferred(
+    leftFile: URL,
+    rightFile: URL,
+    git: Git,
+    temporaryDirectory: URL = FileManager.default.temporaryDirectory,
+    environment: [String: String] = ProcessInfo.processInfo.environment
+  ) -> DifftoolContext? {
     let sides = [leftFile, rightFile].map {
       ($0, FileOrigin(url: $0, temporaryDirectory: temporaryDirectory))
     }
     let ordinary = sides.filter { $0.1 == .ordinary }
     guard ordinary.count == 1, let file = ordinary.first?.0 else { return nil }
-    let folder = canonicalPath(of: workingDirectory)
     let path = canonicalPath(of: file)
-    let prefix = folder.hasSuffix("/") ? folder : folder + "/"
+    let folder = URL(filePath: path).deletingLastPathComponent()
+    guard let workingTree = git.topLevel(of: folder) else { return nil }
+    let top = canonicalPath(of: workingTree)
+    let prefix = top.hasSuffix("/") ? top : top + "/"
     guard path.hasPrefix(prefix) else { return nil }
-    return String(path.dropFirst(prefix.count))
+    return detect(
+      path: String(path.dropFirst(prefix.count)), leftFile: leftFile, rightFile: rightFile,
+      workingDirectory: workingTree, environment: environment)
   }
 
   private static func canonicalPath(of url: URL) -> String {

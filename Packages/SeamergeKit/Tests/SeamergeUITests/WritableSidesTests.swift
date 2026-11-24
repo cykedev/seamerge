@@ -17,6 +17,14 @@ import Testing
     SessionFile(url: url, label: url.lastPathComponent)
   }
 
+  /// Runs `git` without the configuration of the user or of the system.
+  private static let git = Git(
+    environment: [
+      "PATH": ProcessInfo.processInfo.environment["PATH"] ?? "", "GIT_CONFIG_NOSYSTEM": "1",
+      "GIT_CONFIG_GLOBAL": "/dev/null",
+    ],
+    timeout: .seconds(10))
+
   /// The roles of the files that `writable` lets copying write to.
   private static func roles(_ writable: WritableSides) -> [Role] {
     [Role.a, .b].filter { writable.contains($0) }
@@ -148,13 +156,11 @@ import Testing
   @Test func towerWritesTheSideThatLiesInTheWorkingTree() throws {
     let folders = try SampleFolders(left: "T", right: "repository")
     let files = try Self.gitFiles(in: folders)
-    let path = try #require(
-      DifftoolContext.inferredPath(
-        leftFile: files.copy, rightFile: files.workingCopy, workingDirectory: folders.right,
-        temporaryDirectory: folders.left))
-    let difftool = DifftoolContext.detect(
-      path: path, leftFile: files.copy, rightFile: files.workingCopy,
-      workingDirectory: folders.right, environment: [:])
+    _ = try Self.git.run(["init", "--quiet"], in: folders.right)
+    let difftool = try #require(
+      DifftoolContext.inferred(
+        leftFile: files.copy, rightFile: files.workingCopy, git: Self.git,
+        temporaryDirectory: folders.left, environment: [:]))
 
     let writable = WritableSides(
       old: Self.file(files.copy), new: Self.file(files.workingCopy),
@@ -220,10 +226,11 @@ import Testing
     try folders.write("notes.txt", left: "one\n", right: "two\n")
     let old = folders.left.appending(path: "notes.txt")
     let new = folders.right.appending(path: "notes.txt")
-    let path = DifftoolContext.inferredPath(
-      leftFile: old, rightFile: new, workingDirectory: folders.folder,
-      temporaryDirectory: URL(filePath: "/private/var/folders/xy/T/", directoryHint: .isDirectory))
-    try #require(path == nil)
+    let difftool = DifftoolContext.inferred(
+      leftFile: old, rightFile: new, git: Self.git,
+      temporaryDirectory: URL(filePath: "/private/var/folders/xy/T/", directoryHint: .isDirectory),
+      environment: [:])
+    try #require(difftool == nil)
 
     let writable = WritableSides(
       old: Self.file(old), new: Self.file(new), context: SessionContext(difftool: nil))

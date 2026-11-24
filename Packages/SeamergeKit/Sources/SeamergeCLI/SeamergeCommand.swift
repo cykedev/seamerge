@@ -265,25 +265,24 @@ public struct SeamergeCommand: Sendable {
   ) throws(CommandError) -> SessionRequest.Diff {
     let left = try FileCheck.readableFile(arguments.left, option: nil, in: directory)
     let right = try FileCheck.readableFile(arguments.right, option: nil, in: directory)
-    var context = SessionRequest.DiffContext()
-    // Tower passes no path for a change in the working tree; the side in the working tree has it.
     // Git writes its copies into the temporary folder of the environment it runs the tool in.
     let temporaryDirectory =
       environment["TMPDIR"].map { URL(filePath: $0, directoryHint: .isDirectory) }
       ?? FileManager.default.temporaryDirectory
-    let path =
-      arguments.path.flatMap { $0.isEmpty ? nil : $0 }
-      ?? DifftoolContext.inferredPath(
-        leftFile: left, rightFile: right, workingDirectory: directory,
-        temporaryDirectory: temporaryDirectory)
-    if let path {
-      context = SessionRequest.DiffContext(
+    // Tower and Fork pass no path for a change in the working tree; the side in it has the path.
+    let detected: DifftoolContext? =
+      if let path = arguments.path, !path.isEmpty {
         DifftoolContext.detect(
           path: path, leftFile: left, rightFile: right, workingDirectory: directory,
-          environment: environment))
-    }
+          environment: environment)
+      } else {
+        DifftoolContext.inferred(
+          leftFile: left, rightFile: right, git: Git(environment: environment),
+          temporaryDirectory: temporaryDirectory, environment: environment)
+      }
     return SessionRequest.Diff(
-      left: left, right: right, displayPath: path, leftLabel: arguments.leftLabel,
-      rightLabel: arguments.rightLabel, context: context)
+      left: left, right: right, displayPath: detected?.path, leftLabel: arguments.leftLabel,
+      rightLabel: arguments.rightLabel,
+      context: detected.map(SessionRequest.DiffContext.init) ?? SessionRequest.DiffContext())
   }
 }

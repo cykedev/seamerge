@@ -1,4 +1,5 @@
 import Foundation
+import GitSupport
 import SeamergeCLI
 import SessionIPC
 import Testing
@@ -223,6 +224,7 @@ struct ArgumentTests {
       var app = try ScriptedApp(at: sandbox.socketURL, ending: .close(.saved))
       let copy = try sandbox.makeFile("T/git-blob-taXZ1B/Greeting.swift")
       try sandbox.makeFile("repo/Sources/Greeting.swift")
+      _ = try sandbox.git.run(["init", "--quiet"], in: sandbox.directory.appending(path: "repo"))
       var environment = sandbox.environment
       environment["TMPDIR"] = sandbox.directory.appending(path: "T").path
 
@@ -236,6 +238,61 @@ struct ArgumentTests {
         #expect(diff.displayPath == "Sources/Greeting.swift")
         #expect(diff.context.rightRole == .workingCopy)
       }
+      await app.stop()
+    }
+  }
+
+  /// Fork starts the tool in `/` with the copy of the index in its temporary folder, below the
+  /// link `/var`, and the file in the working tree by its whole path, both with spaces.
+  @Test func diffFromOutsideTheWorkingTreeTakesThePathOfTheFileInIt() async throws {
+    try await withSandbox { sandbox in
+      var app = try ScriptedApp(at: sandbox.socketURL, ending: .close(.saved))
+      let temporary = sandbox.directory.appending(path: "T", directoryHint: .isDirectory)
+      try #require(temporary.path.hasPrefix("/var/"), "The sandbox lies below the link /var")
+      let copy = try sandbox.makeFile("T/fork/staged/sub dir/changed file.txt")
+      let file = try sandbox.makeFile("git tests/diff/sub dir/changed file.txt")
+      _ = try sandbox.git.run(
+        ["init", "--quiet"], in: sandbox.directory.appending(path: "git tests/diff"))
+      var environment = sandbox.environment
+      environment["TMPDIR"] = temporary.path
+
+      let result = await sandbox.command().run(
+        ["diff", copy.path, file.path], standardInput: StandardInput(.nullDevice),
+        workingDirectory: URL(filePath: "/", directoryHint: .isDirectory),
+        environment: environment)
+
+      #expect(result.exitStatus == 0, "\(result)")
+      let diff = try #require(try await app.nextRequest().diff)
+      #expect(diff.displayPath == "sub dir/changed file.txt")
+      #expect(diff.context.leftRole == .before)
+      #expect(diff.context.rightRole == .workingCopy)
+      await app.stop()
+    }
+  }
+
+  /// Without a working tree that holds one of them, two files are named by their own names,
+  /// whether the folders they lie in share nothing or the end of their paths.
+  @Test(arguments: [
+    ("T/fork/staged/sub dir/changed file.txt", "notes/sub dir/changed file.txt"),
+    ("T/fork/staged/notes.txt", "Projects/Orders/notes.txt"),
+    ("old/sub dir/notes.txt", "new/sub dir/notes.txt"),
+  ])
+  func diffOutsideAWorkingTreeTakesNoPath(left: String, right: String) async throws {
+    try await withSandbox { sandbox in
+      var app = try ScriptedApp(at: sandbox.socketURL, ending: .close(.saved))
+      let files = try [left, right].map { try sandbox.makeFile($0) }
+      var environment = sandbox.environment
+      environment["TMPDIR"] = sandbox.directory.appending(path: "T").path
+
+      let result = await sandbox.command().run(
+        ["diff"] + files.map(\.path), standardInput: StandardInput(.nullDevice),
+        workingDirectory: URL(filePath: "/", directoryHint: .isDirectory),
+        environment: environment)
+
+      #expect(result.exitStatus == 0, "\(result)")
+      let diff = try #require(try await app.nextRequest().diff)
+      #expect(diff.displayPath == nil)
+      #expect(diff.context == SessionRequest.DiffContext())
       await app.stop()
     }
   }

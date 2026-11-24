@@ -91,6 +91,33 @@ import Testing
     #expect(labels(of: controller) == ["A, old.txt", "B, new.txt"])
   }
 
+  /// A change in the working tree as Fork hands it over: the copy of the index from its
+  /// temporary folder and the working copy, named by the path the command line found in the
+  /// working tree, as the app names both sides with it.
+  @Test func changeInTheWorkingTreeFromForkIsNamedByItsPathInTheRepository() async throws {
+    let path = "sub dir/changed file.txt"
+    let session = try await Session.diff(
+      old: SourceFile(
+        bytes: Data("alpha\nbeta\n".utf8), label: path,
+        url: Self.temporary.appending(path: "fork/staged/sub dir/changed file.txt")),
+      new: SourceFile(
+        bytes: Data("alpha\nBETA changed\n".utf8), label: path,
+        url: URL(filePath: "/Users/ada/git tests/diff/sub dir/changed file.txt")),
+      mode: .windowDefault)
+    let context = SessionContext(
+      difftool: DifftoolContext(path: path, leftRole: .before, rightRole: .workingCopy))
+
+    let controller = try Windows.controller(for: session, context: context)
+
+    let window = try #require(controller.window)
+    #expect(window.title == path)
+    #expect(window.accessibilityTitle() == "\(path), 1 change")
+    #expect(
+      labels(of: controller) == [
+        "A, \(path), Earlier Version", "B, \(path), Working Copy",
+      ])
+  }
+
   @Test(arguments: [Look.light, .dark])
   func newFileIsPictured(look: Look) async throws {
     let session = try await Session.diff(
