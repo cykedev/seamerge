@@ -476,6 +476,20 @@ struct BinaryMergeTests {
     #expect(outcomes.count == 1 && { if case .saved = outcomes[0] { true } else { false } }())
   }
 
+  /// The two sides differ, but not line by line: the subtitle counts no changes, and VoiceOver
+  /// reads the title alone.
+  @Test func sidesThatDifferCountNoChanges() async throws {
+    let folder = try temporaryFolder()
+    defer { #expect(throws: Never.self) { try FileManager.default.removeItem(at: folder) } }
+    let (controller, merge) = try await window(PromptRecorder(), folder: folder)
+    defer { controller.window?.close() }
+    try #require(try Data(contentsOf: merge.a.url) != Data(contentsOf: merge.b.url))
+
+    let window = try #require(controller.window)
+    #expect(window.subtitle == "")
+    #expect(window.accessibilityTitle() == "logo.png")
+  }
+
   @Test func leavingItUnresolvedWritesNothingAndReportsCancelled() async throws {
     let folder = try temporaryFolder()
     defer { #expect(throws: Never.self) { try FileManager.default.removeItem(at: folder) } }

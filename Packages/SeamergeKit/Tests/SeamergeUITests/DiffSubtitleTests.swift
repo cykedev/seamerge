@@ -83,7 +83,7 @@ import Testing
     let summary = SessionSummary(
       changes: SessionChanges(session: session, origin: .a), context: SessionContext(),
       arrangement: PaneArrangement(session: session), startMode: .windowDefault,
-      ignoredDifferences: nil, isComparing: true)
+      ignoredDifferences: nil, countsChanges: false)
     #expect(summary.changes == "")
   }
 

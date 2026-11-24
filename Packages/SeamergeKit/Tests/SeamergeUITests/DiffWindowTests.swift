@@ -370,6 +370,34 @@ import Testing
     #expect(outcomes == [.saved])
   }
 
+  /// Two versions of an image differ, but not line by line: the subtitle counts no changes, and
+  /// VoiceOver reads the title alone.
+  @Test func imagesThatDifferCountNoChanges() async throws {
+    let folder = FileManager.default.temporaryDirectory
+      .appending(path: "DiffWindowTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { #expect(throws: Never.self) { try FileManager.default.removeItem(at: folder) } }
+    let (old, new) = (folder.appending(path: "logo_LEFT.png"), folder.appending(path: "logo.png"))
+    try Data([0x89, 0x50, 0x4E, 0x47, 0, 1]).write(to: old)
+    try Data([0x89, 0x50, 0x4E, 0x47, 0, 2]).write(to: new)
+    let files = (SessionFile(url: old, label: "logo.png"), SessionFile(url: new, label: "logo.png"))
+    let error = await #expect(throws: SessionLoadingError.self) {
+      _ = try await SessionWindowController.openDiff(
+        old: files.0, new: files.1, mode: .windowDefault, context: SessionContext(),
+        undoManager: UndoManager(), settings: .private())
+    }
+    let unavailable = UnavailableComparison(
+      old: files.0, new: files.1, reason: try #require(error))
+
+    let controller = try Windows.controller(
+      for: try await unavailable.emptySession(), unavailable: unavailable)
+    defer { controller.window?.close() }
+
+    let window = try #require(controller.window)
+    #expect(window.subtitle == "")
+    #expect(window.accessibilityTitle() == "logo.png")
+  }
+
   @Test func commandsOfTheBaseAndTheResultDoNothingInAComparison() async throws {
     let controller = try Windows.controller(for: try await SampleDiffs.greeting())
 

@@ -534,10 +534,16 @@ public final class SessionWindowController: NSWindowController {
   func sessionDidChange() {
     updateEditedFiles()
     comparisonHasPatch = shownComparisonHasPatch
+    // The subtitle counts the changes only where the toolbar counts lines.
+    let countsChanges =
+      switch toolbarCount {
+      case .conflicts, .changes: true
+      case .nothing, .waiting: false
+      }
     summary = SessionSummary(
       changes: presentation.changes, context: context, arrangement: presentation.arrangement,
       startMode: settings.comparisonMode, ignoredDifferences: presentation.ignoredDifferences,
-      isComparing: waitsForComparison, restoredWorkNote: restoredWorkNote)
+      countsChanges: countsChanges, restoredWorkNote: restoredWorkNote)
     window?.title = summary.title
     window?.setAccessibilityTitle(summary.accessibilityTitle)
     updateSubtitle()

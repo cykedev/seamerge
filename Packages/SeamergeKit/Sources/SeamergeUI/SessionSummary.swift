@@ -23,13 +23,16 @@ struct SessionSummary: Equatable {
 
   /// Summarizes `changes` in `context`, with the sides of a comparison where `arrangement` puts
   /// them, and names the comparison mode where it differs from `startMode`, that of a new window,
-  /// and the ignore rules if they passed over a difference, as `ignoredDifferences` tell; while
-  /// the files `isComparing` for the first time, it counts no changes yet.
+  /// and the ignore rules if they passed over a difference, as `ignoredDifferences` tell.
+  ///
+  /// Unless it `countsChanges`, it names no changes: not while the files are compared for the
+  /// first time, and not for files that cannot be compared line by line, such as those of a binary
+  /// merge.
   ///
   /// A merge ends its changes with `restoredWorkNote`, which says that it put back earlier work.
   init(
     changes: SessionChanges, context: SessionContext, arrangement: PaneArrangement,
-    startMode: ComparisonMode, ignoredDifferences: IgnoredDifferences?, isComparing: Bool = false,
+    startMode: ComparisonMode, ignoredDifferences: IgnoredDifferences?, countsChanges: Bool = true,
     restoredWorkNote: String? = nil
   ) {
     let session = changes.session
@@ -48,7 +51,7 @@ struct SessionSummary: Equatable {
       let file = session.inputs.b
       name = context.resultURL?.lastPathComponent ?? file.url?.lastPathComponent ?? file.label
       self.changes = [
-        isComparing ? nil : Self.changeCounts(of: changes), modeNotes, restoredWorkNote,
+        countsChanges ? Self.changeCounts(of: changes) : nil, modeNotes, restoredWorkNote,
       ]
       .compactMap(\.self).joined(separator: Self.separator)
     } else {
@@ -56,7 +59,7 @@ struct SessionSummary: Equatable {
         context.patch?.title ?? context.difftool?.path
         ?? Self.title(of: arrangement.sourceRoles.compactMap { session.inputs[$0] })
       self.changes = [
-        isComparing ? nil : Self.changeKinds(of: changes, readTo: arrangement.trailingRole),
+        countsChanges ? Self.changeKinds(of: changes, readTo: arrangement.trailingRole) : nil,
         modeNotes,
       ]
       .compactMap(\.self).joined(separator: Self.separator)
@@ -98,7 +101,8 @@ struct SessionSummary: Equatable {
   }
 
   /// The title and the whole subtitle, as VoiceOver reads the window; the title alone while the
-  /// subtitle is empty, as it is while the files of a comparison are compared.
+  /// subtitle is empty, as it is while the files are compared or if they cannot be compared line
+  /// by line.
   var accessibilityTitle: String {
     [title, fullSubtitle].filter { !$0.isEmpty }.joined(separator: ", ")
   }
