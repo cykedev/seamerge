@@ -2,7 +2,7 @@
 
 **A native diff and merge tool for macOS, built for Git.**
 
-Seamerge shows two files side by side, or a three-way merge with its base, and lets you choose what goes into the result block by block.
+Seamerge shows two files side by side, or a three-way merge with its base, and lets you choose what goes into the result block by block. It works with Git, and with Mercurial, Jujutsu, Subversion and Perforce as well; see [Other version control systems](Documentation/UserGuide.md#other-version-control-systems).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="Documentation/Images/screenshot-merge-dark.png">

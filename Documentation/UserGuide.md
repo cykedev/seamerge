@@ -16,6 +16,7 @@ This guide is for people who use Seamerge to compare files and to resolve Git me
 - [Ignore rules](#ignore-rules)
 - [Export as patch](#export-as-patch)
 - [Terminal and Finder](#terminal-and-finder)
+- [Other version control systems](#other-version-control-systems)
 - [Saving and closing](#saving-and-closing)
 - [Picking up an unfinished merge](#picking-up-an-unfinished-merge)
 - [Settings](#settings)
@@ -252,6 +253,174 @@ The service is available once Seamerge is in the Applications folder or in `~/Ap
 ### Dock
 
 Files and folders dropped on the Seamerge icon in the Dock fill the sheet Compare Files, or Merge Files for three files. Nothing is compared until you choose the comparison. Seamerge accepts files and folders in the Dock but is never the default app for them.
+
+## Other version control systems
+
+Seamerge can also be the merge tool and the diff tool of other systems. The entries below were checked with the versions named in them and the configuration shown.
+
+The command for a merge exits with 0 when the merge was saved, with 1 when it was not saved or the connection to Seamerge was lost, with 2 when the arguments are invalid or a file cannot be read, and with 3 when Seamerge cannot be opened or does not answer. Each system reads that status in its own way, as the entries below describe.
+
+Scripts are small files that a system runs instead of the command. Copy each one to the place named, make it executable with `chmod +x`, and change the path to Seamerge in it if you move the app.
+
+### Mercurial
+
+Checked with Mercurial 7.2.4 from PyPI. Add this to the Mercurial configuration:
+
+```
+[ui]
+merge = seamerge
+[merge-tools]
+seamerge.executable = /Applications/Seamerge.app/Contents/Helpers/seamerge
+seamerge.args = merge --base $base --local $local --remote $other --output $output --label-base $labelbase --label-local $labellocal --label-remote $labelother
+seamerge.gui = True
+seamerge.check = conflicts
+seamerge.diffargs = diff --label-left $plabel1 --label-right $clabel $parent $child
+[extensions]
+extdiff =
+[extdiff]
+seamerge =
+```
+
+- Without `[extensions]` and `extdiff`, the command `hg seamerge` does not exist.
+- Mercurial writes the names of the sides as `working copy`, `merge rev` and `common ancestor`. For the detailed names, set `seamerge.mergemarkers = detailed` under `[merge-tools]`.
+- After a save, the file is resolved (`R`). After Leave Unresolved, or closing without saving, Mercurial reports `merging … failed!`, the file stays unresolved (`U`) and keeps your own version, and a `.orig` file lies beside it.
+- After a save with conflict markers, the file stays unresolved, because `check = conflicts` finds the markers, and `hg merge` ends with 1. Continue with `hg resolve <file>`, which opens the file again, or with `hg resolve -m`.
+- `hg seamerge` with one file shows two files, named `<file>@1` and `<file>`. With several files it shows two folders, and the header and the title show the folder names. Mercurial waits, and ends with 1 when there are differences, whatever status the helper returns.
+- The title of the window is the name of the file in the working directory.
+
+### Jujutsu
+
+Checked with Jujutsu 0.47.1 from its GitHub release. Add this to the Jujutsu configuration:
+
+```toml
+[ui]
+merge-editor = "seamerge"
+[merge-tools.seamerge]
+program = "/Applications/Seamerge.app/Contents/Helpers/seamerge"
+merge-args = ["merge", "--base", "$base", "--local", "$left", "--remote", "$right",
+              "--output", "$output"]
+merge-tool-edits-conflict-markers = true
+conflict-marker-style = "git"
+diff-args = ["diff", "$left", "$right"]
+diff-expected-exit-codes = [0, 1]
+edit-args = []
+```
+
+- `$left` is the first parent, shown on the right, and `$right` the second, shown on the left.
+- The names of the sides come from the Git markers in the file, such as `vmquxkrz 6722f4e1 "side1"`.
+- After a save, the conflict is resolved. After Leave Unresolved, or closing without saving, Jujutsu reports `Tool exited with exit status: 1`, and the conflict stays.
+- After a save with markers and no decision, the file is the same as at the start. Jujutsu reports `The output file is either unchanged or empty`, and the conflict stays. After a save with markers and a partial resolution, the markers that remain stay a conflict, and Jujutsu warns about unresolved conflicts.
+- `jj diff --tool seamerge` shows two folders, `left` and `right`, even for one file. Jujutsu waits, and exits with 0.
+- Without the script below, the title is `output_conflict file.txt`, the name of Jujutsu's temporary file.
+
+Jujutsu's own file names can be shown in the title with a script. Copy this to `~/bin/seamerge-jj`:
+
+```sh
+#!/bin/sh
+# Merge tool for Jujutsu: names the window after the file in the repository.
+# Jujutsu passes base, left, right, output and the path in the repository.
+dir=$(mktemp -d) || exit 2
+link="$dir/${5##*/}"
+ln -s "$4" "$link" || exit 2
+/Applications/Seamerge.app/Contents/Helpers/seamerge merge \
+  --base "$1" --local "$2" --remote "$3" --output "$link"
+status=$?
+rm -r "$dir"
+exit $status
+```
+
+Add this configuration. It is checked under the name `seamerge-link`, and it runs with `jj resolve --tool seamerge-link`:
+
+```toml
+[merge-tools.seamerge-link]
+program = "/Users/<name>/bin/seamerge-jj"
+merge-args = ["$base", "$left", "$right", "$output", "$path"]
+merge-tool-edits-conflict-markers = true
+conflict-marker-style = "git"
+```
+
+With the script, the title shows the name of the file in the repository, and a save through the link is taken as the save of the file. If another app changes the output while the window is open, the window offers to reload it.
+
+### Subversion
+
+Checked with Subversion 1.15.0 from Homebrew. Add this to `~/.subversion/config`:
+
+```
+[helpers]
+diff-cmd = /Users/<name>/bin/seamerge-svn-diff
+merge-tool-cmd = /Users/<name>/bin/seamerge-svn-merge
+```
+
+Copy this to `~/bin/seamerge-svn-diff`:
+
+```sh
+#!/bin/sh
+# Diff command for Subversion: svn passes -u or the options of -x, then
+# -L <old name> -L <new name> <old file> <new file>.
+left= right=
+while [ $# -gt 2 ]; do
+  if [ "$1" = -L ]; then
+    if [ -z "$left" ]; then left=$2; else right=$2; fi
+    shift
+  fi
+  shift
+done
+exec /Applications/Seamerge.app/Contents/Helpers/seamerge diff \
+  --label-left "$left" --label-right "$right" -- "$1" "$2"
+```
+
+Copy this to `~/bin/seamerge-svn-merge`:
+
+```sh
+#!/bin/sh
+# Merge tool for Subversion: svn passes base, theirs, mine, merged and the
+# path in the working copy.
+exec /Applications/Seamerge.app/Contents/Helpers/seamerge merge \
+  --base "$1" --remote "$2" --local "$3" --output "$4" \
+  --label-base Base --label-remote Theirs --label-local Mine
+```
+
+- The merged file is the file in the working copy, which holds Subversion's markers at the start. Its title is correct as it is.
+- The merge tool gets the label `Base` for the base. Without `--label-base Base`, the base would be named `.r1`, from the marker.
+- In `svn update`, answer `l` to launch the tool. Subversion then offers `(r) Mark as resolved` even after Seamerge exits with 1. Choose `r` only after a save without open conflicts. Otherwise choose `p`.
+- After a save with markers and `p`, the file keeps the markers `Mine`, `Base` and `Theirs`, and its status is `C`.
+- With `--accept launch` (in scripts, together with `--force-interactive`), Subversion marks the file resolved when Seamerge exits with 0, and leaves the conflict when it exits with 1. A save with markers exits with 0, so the file is marked resolved while the markers stay in its text, with the status `M`. Save without markers in that case.
+- `svn diff` shows one window per file, one after another, and waits for each. The names are `conflict file.txt⇥(revision 2)` and `…⇥(working copy)`. The header shows a space where the title shows a wide gap, because the title shows the tab. The options `-x '-w --ignore-eol-style'` and `-r 1:2` are checked.
+- Subversion has no folder comparison; each file opens its own window.
+
+### Perforce
+
+Checked with the command-line client `p4` 2026.1 against a `p4d` 2025.2 server. A server that requires a password (security level 4) was not checked. Set the two variables in the shell environment:
+
+```
+P4DIFF="/Applications/Seamerge.app/Contents/Helpers/seamerge diff"
+P4MERGE=/Users/<name>/bin/seamerge-p4-merge
+```
+
+Copy this to `~/bin/seamerge-p4-merge`:
+
+```sh
+#!/bin/sh
+# Merge tool for Perforce (P4MERGE): p4 passes base, theirs, yours and result.
+# The result is a temporary file; a link named like yours names the window.
+dir=$(mktemp -d) || exit 2
+link="$dir/${3##*/}"
+ln -s "$4" "$link" || exit 2
+/Applications/Seamerge.app/Contents/Helpers/seamerge merge \
+  --base "$1" --remote "$2" --local "$3" --output "$link" \
+  --label-base Base --label-remote Theirs --label-local Yours
+status=$?
+rm -r "$dir"
+exit $status
+```
+
+- p4 passes the base, then theirs (the depot version), then yours (the file in the workspace), then the result. The result is a temporary file named `tmp.<pid>.<address>.<n>`, which is why the link gives the window your file's name. Without the link, the title and the base carry that temporary name.
+- After a merge, answer `ae` (accept edit), which accepts what you saved in Seamerge. Do not answer `am`: it accepts the proposal of the server.
+- After Leave Unresolved, or closing without saving, p4 reports `Execution Failed` with `No such file or directory` and asks again. Answer `s` (skip) to leave the file open.
+- After a save with markers, which exits with 0, answer `s`, not `ae`.
+- `p4 diff` runs the diff command once per file and waits. The headers are `conflict file.txt, Earlier Version` and `Working Copy`. With `p4 resolve` and `d`, the command compares yours with the result.
+- Perforce has no folder comparison; each file opens its own window.
+- P4V is not covered here.
 
 ## Settings
 
