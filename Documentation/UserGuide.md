@@ -6,6 +6,7 @@ This guide is for people who use Seamerge to compare files and to resolve Git me
 - [Reading the window](#reading-the-window)
 - [The decision bar](#the-decision-bar)
 - [Comparing files](#comparing-files)
+- [Comparing text from the clipboard](#comparing-text-from-the-clipboard)
 - [Copying changes between the sides](#copying-changes-between-the-sides)
 - [Resolving a conflict](#resolving-a-conflict)
 - [Moved blocks](#moved-blocks)
@@ -121,6 +122,21 @@ Files of up to about 100,000 lines open in about a third of a second. Jumping be
 ### Long lines
 
 A line longer than 20,000 characters is shown cut off at a character boundary, followed by an ellipsis in the color of the preview. The line is shown whole as soon as the insertion point or a selection lies in it, so you can work in it. The text, copying and saving always use the whole line.
+
+## Comparing text from the clipboard
+
+The sheet Compare Files takes text as well as files. Copy the text, then choose **Edit ▸ Paste** (`⌘V`) in the sheet:
+
+- The text goes into the field that has the focus. If no field has the focus, it goes into the first empty field. If every field is full and none has the focus, Paste is unavailable.
+- Files on the clipboard are taken as files, as a drop takes them. Formatted text is taken as plain text. Text that is already in a field does not change when the clipboard changes later.
+- If the clipboard holds empty text, Paste still works, but Seamerge only gives the warning sound and adds nothing.
+- A field with clipboard text shows **Clipboard**, the number of lines and the time, for example `12 lines · 14:32`. VoiceOver reads it as "Clipboard, 12 lines".
+- Merge Files and Change Files take only files. Text is pasted in Compare Files only.
+- In the welcome window, Paste puts the text on the left and opens the sheet with the focus on the right side.
+
+The comparison window is named **Clipboard**. Two texts pasted in the same minute have the same name, and the header tells them apart as Earlier Version and Later Version. The text cannot be saved from its window: a change can be copied out of it into a file, but nothing can be copied into it, and Open in Editor is not available. The window does not appear in **Open Recent**.
+
+The copy of the text is removed when its window closes. If Seamerge quit while such a window was open, the copy is removed the next time Seamerge starts.
 
 ## Copying changes between the sides
 

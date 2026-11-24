@@ -54,6 +54,7 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
   </picture>
 
 - **Unfinished merges come back.** A merge that you close before you finish keeps your decisions and typed text on this Mac, and they return when the same merge opens again. See [Picking up an unfinished merge](Documentation/UserGuide.md#picking-up-an-unfinished-merge).
+- **Text from the clipboard.** Compare text you copied, with Edit ▸ Paste in the sheet Compare Files. See [Comparing text from the clipboard](Documentation/UserGuide.md#comparing-text-from-the-clipboard).
 - **Collapsed unchanged lines.** Long stretches without changes fold into a bar that opens where you need it.
 - **Syntax colors with a language choice.** Common languages are highlighted, and you choose the language in the footer or switch the highlighting off.
 - **Line wrapping.** Wrap long lines in all panes, with the rows kept aligned.
