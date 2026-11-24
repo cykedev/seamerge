@@ -5,13 +5,15 @@ import Testing
 @testable import SeamergeUI
 
 /// A sheet of files for the tests, laid out without a screen and without a window to hang on,
-/// with what it opens, asks and says recorded.
+/// with what it opens, asks and says recorded; it pastes from a clipboard of its own and keeps
+/// pasted text in a folder of its own.
 @MainActor
 final class CompareFilesFixture {
   let controller: CompareFilesWindowController
   let window: CompareFilesWindow
   let opener = ComparisonRecorder()
   let panels = PanelRecorder()
+  let clipboard = Clipboard()
   private(set) var announcements: [String] = []
 
   init(
@@ -23,7 +25,8 @@ final class CompareFilesFixture {
     window = CompareFilesWindow()
     var announce: (String) -> Void = { _ in }
     controller = CompareFilesWindowController(
-      purpose: purpose, displayOptions: displayOptions, panels: panels, window: window
+      purpose: purpose, displayOptions: displayOptions, panels: panels,
+      pasteboard: clipboard.pasteboard, pastedTextCache: clipboard.cache, window: window
     ) { announce($0) }
     announce = { [weak self] in self?.announcements.append($0) }
     controller.onOpen = { [opener] in try await opener.open($0) }
@@ -52,7 +55,7 @@ final class CompareFilesFixture {
 }
 
 /// A welcome window for the tests, laid out without a screen, with what it opens, asks and says
-/// recorded.
+/// recorded; it pastes from a clipboard of its own and keeps pasted text in a folder of its own.
 @MainActor
 final class WelcomeFixture {
   let controller: WelcomeWindowController
@@ -60,6 +63,7 @@ final class WelcomeFixture {
   let recentComparisons: RecentComparisons
   let opener = ComparisonRecorder()
   let panels = PanelRecorder()
+  let clipboard = Clipboard()
   private(set) var announcements: [String] = []
 
   private let defaults: UserDefaults
@@ -79,7 +83,8 @@ final class WelcomeFixture {
     var announce: (String) -> Void = { _ in }
     controller = WelcomeWindowController(
       recentComparisons: recentComparisons, displayOptions: displayOptions, panels: panels,
-      window: window, integrationStore: integrationStore,
+      pasteboard: clipboard.pasteboard, pastedTextCache: clipboard.cache, window: window,
+      integrationStore: integrationStore,
       icon: NSImage(named: NSImage.applicationIconName) ?? NSImage(), version: "0.6.0"
     ) { announce($0) }
     announce = { [weak self] in self?.announcements.append($0) }

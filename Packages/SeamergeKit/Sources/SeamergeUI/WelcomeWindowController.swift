@@ -19,9 +19,10 @@ public protocol WelcomeWindowControllerDelegate: AnyObject {
 /// buttons Compare Files…, Compare Folders… and Merge Files…, and the place that invites files.
 /// On the right are the comparisons opened last and the line about Git. The buttons show the
 /// sheets with the fields for the files; two files or folders dropped on the window open at
-/// once, three fill the sheet Merge Files. Once a session window shows, the window closes and
-/// lists the files among the comparisons opened last; if they cannot be opened, a sheet says why
-/// and keeps them.
+/// once, three fill the sheet Merge Files. Paste shows the sheet with what the clipboard holds:
+/// text in Left with the focus on Right, and files as if dropped on the Dock icon. Once a session
+/// window shows, the window closes and lists the files among the comparisons opened last; if they
+/// cannot be opened, a sheet says why and keeps them.
 @MainActor
 public final class WelcomeWindowController: NSWindowController {
   /// Opens the sessions of the window; the window does not retain it, and opens nothing
@@ -51,6 +52,12 @@ public final class WelcomeWindowController: NSWindowController {
   /// Tells VoiceOver what changed.
   let announce: (String) -> Void
 
+  /// The clipboard that Paste reads.
+  let pasteboard: NSPasteboard
+
+  /// Where the sheet Compare Files keeps text pasted from the clipboard.
+  let pastedTextCache: PastedTextCache
+
   /// Whether a comparison is being opened from the list or from a drop.
   private(set) var isOpening = false
 
@@ -77,15 +84,17 @@ public final class WelcomeWindowController: NSWindowController {
   let emptyListView: NSStackView
 
   /// Creates the window, which lists the comparisons of `recentComparisons`, says at the bottom
-  /// what the settings in `integrationStore` say about Git, and draws with the accessibility
-  /// settings of the system.
+  /// what the settings in `integrationStore` say about Git, pastes from `pasteboard`, keeps
+  /// pasted text in `pastedTextCache`, and draws with the accessibility settings of the system.
   public convenience init(
-    recentComparisons: RecentComparisons, integrationStore: SystemIntegrationStore
+    recentComparisons: RecentComparisons, integrationStore: SystemIntegrationStore,
+    pasteboard: NSPasteboard, pastedTextCache: PastedTextCache
   ) {
     let window = WelcomeWindow()
     self.init(
       recentComparisons: recentComparisons, displayOptions: .current(in: .shared),
-      panels: SystemPanels(), window: window, integrationStore: integrationStore,
+      panels: SystemPanels(), pasteboard: pasteboard, pastedTextCache: pastedTextCache,
+      window: window, integrationStore: integrationStore,
       icon: NSApplication.shared.applicationIconImage,
       version: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
     ) { text in
@@ -100,19 +109,22 @@ public final class WelcomeWindowController: NSWindowController {
       name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
   }
 
-  /// Creates the window, which draws with `displayOptions`, asks with `panels`, reads and writes
-  /// the settings of Git with `integrationStore`, shows `icon` and `version` and tells VoiceOver
-  /// what changed through `announce`.
+  /// Creates the window, which draws with `displayOptions`, asks with `panels`, pastes from
+  /// `pasteboard`, keeps pasted text in `pastedTextCache`, reads and writes the settings of Git
+  /// with `integrationStore`, shows `icon` and `version` and tells VoiceOver what changed through
+  /// `announce`.
   init(
     recentComparisons: RecentComparisons, displayOptions: DisplayOptions,
-    panels: any CompareFilesPanels, window: WelcomeWindow,
-    integrationStore: (any IntegrationStore)? = nil, icon: NSImage, version: String?,
-    announce: @escaping (String) -> Void
+    panels: any CompareFilesPanels, pasteboard: NSPasteboard, pastedTextCache: PastedTextCache,
+    window: WelcomeWindow, integrationStore: (any IntegrationStore)? = nil, icon: NSImage,
+    version: String?, announce: @escaping (String) -> Void
   ) {
     self.recentComparisons = recentComparisons
     self.integrationStore = integrationStore
     self.displayOptions = displayOptions
     self.panels = panels
+    self.pasteboard = pasteboard
+    self.pastedTextCache = pastedTextCache
     self.announce = announce
     sidebar = WelcomeSidebar(icon: icon, version: version, colors: WelcomeColors(displayOptions))
     gitSetUpButton = NSButton(
@@ -270,12 +282,14 @@ extension WelcomeWindowController: NSWindowDelegate {
 }
 
 extension WelcomeWindowController: NSUserInterfaceValidations {
-  /// Set Up Git Integration… needs Git and no sheet on the window; the other commands of the
-  /// window always work.
+  /// Set Up Git Integration… needs Git and no sheet on the window, and Paste text or files on
+  /// the clipboard that a sheet of files takes; the other commands of the window always work.
   public func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
     switch item.action {
     case #selector(showGitIntegration(_:)):
       canSetUpGitIntegration && integrationSheet == nil && window?.attachedSheet == nil
+    case #selector(paste(_:)):
+      canPaste
     default: true
     }
   }

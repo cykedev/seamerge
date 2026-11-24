@@ -15,7 +15,7 @@ import os
 /// its target, as a text the app writes elsewhere, which no one would read. Either way, a file
 /// is written only if it is an ordinary file once symbolic links are resolved, the user may
 /// write it, and its volume is not read-only; the missing side of a new or deleted file,
-/// `/dev/null`, never is.
+/// `/dev/null`, never is, nor text pasted from the clipboard, whose copy goes with the window.
 ///
 /// The value names the files by their role, so it moves with them when Swap Sides puts them the
 /// other way round.
@@ -40,6 +40,7 @@ struct WritableSides: Sendable, Hashable {
     roles = Set(
       sides.filter { side in
         (git == nil || side.gitRole == .workingCopy)
+          && context.pastedTexts[side.file.url] == nil
           && side.folder.map { Self.folder($0, holds: side.file.url) } ?? true
           && Self.canWrite(side.file.url)
       }.map(\.role))

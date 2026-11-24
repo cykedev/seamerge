@@ -325,9 +325,9 @@ public final class SessionWindowController: NSWindowController {
     fontSize = settings.fontSize
     settingsFontSize = settings.fontSize
     self.syntaxChoices = syntaxChoices
-    let detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
+    let detectedLanguage = SessionSyntax.language(of: session, context: context)
     self.detectedLanguage = detectedLanguage
-    syntaxPath = SessionSyntax.path(of: session, resultURL: context.resultURL)
+    syntaxPath = SessionSyntax.path(of: session, context: context)
     self.context = context
     self.pasteboard = pasteboard
     self.workspace = workspace
@@ -652,7 +652,8 @@ extension SessionWindowController {
     close()
   }
 
-  /// Reports that the session ended with `outcome`, unless it was reported already.
+  /// Reports that the session ended with `outcome`, unless it was reported already, and removes
+  /// the copies of text pasted from the clipboard that the window compares.
   ///
   /// A merge whose work the window keeps reports it only once the work is written, or removed
   /// if the merge is finished, so that whoever waits for the window never goes on before; with
@@ -660,6 +661,9 @@ extension SessionWindowController {
   func finish(_ outcome: SessionOutcome) {
     guard !hasFinished else { return }
     hasFinished = true
+    for text in context.pastedTexts.values {
+      text.remove()
+    }
     let keeping = finishesMerge(outcome) ? workKeeper?.removeWork() : workKeeper?.keepNow()
     guard let keeping else {
       onFinish?(outcome)

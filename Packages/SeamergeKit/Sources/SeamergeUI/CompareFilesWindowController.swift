@@ -9,6 +9,10 @@ import MergeModel
 /// and takes no folders. The button opens the files in exactly the roles shown; if they cannot
 /// be opened, a sheet on the sheet says why and the files stay. The sheet opens nothing by
 /// itself, and the window it hangs on ends it once the files show.
+///
+/// Paste puts what the clipboard holds in the field with the focus, or else in the first empty
+/// one: files as if dropped there, and to compare, text as a side named Clipboard, whose copy the
+/// sheet keeps until a window takes it, no field holds it or the sheet ends.
 @MainActor
 final class CompareFilesWindowController: NSWindowController {
   /// What a sheet of files is for.
@@ -33,6 +37,10 @@ final class CompareFilesWindowController: NSWindowController {
 
     /// Whether the fields take folders, which only a comparison in a window of its own does.
     var acceptsFolders: Bool { self == .compare }
+
+    /// Whether the fields take text pasted from the clipboard, which only a comparison in a
+    /// window of its own does: a merge needs a file to write to.
+    var acceptsText: Bool { self == .compare }
 
     /// The title of the sheet, which VoiceOver says.
     var title: String {
@@ -113,6 +121,18 @@ final class CompareFilesWindowController: NSWindowController {
   /// Tells VoiceOver what changed.
   let announce: (String) -> Void
 
+  /// The clipboard that Paste reads.
+  let pasteboard: NSPasteboard
+
+  /// Where pasted text is kept, or `nil` for a sheet that takes only files.
+  let pastedTextCache: PastedTextCache?
+
+  /// The copies of text pasted into the sheet that no window has taken yet.
+  private var ownPastedTexts: [URL: PastedText] = [:]
+
+  /// Whether the sheet has ended.
+  private var hasEnded = false
+
   /// Opens the files of a comparison and returns once they show.
   ///
   /// - Throws: Why the files cannot be opened; the sheet shows it and keeps them.
@@ -121,15 +141,23 @@ final class CompareFilesWindowController: NSWindowController {
   private let cancelButton: NSButton
 
   /// Creates the sheet for `purpose` in `window`, which draws with `displayOptions`, asks with
-  /// `panels` and tells VoiceOver what changed through `announce`.
+  /// `panels`, pastes from `pasteboard`, keeps pasted text in `pastedTextCache` and tells
+  /// VoiceOver what changed through `announce`.
+  ///
+  /// A sheet whose purpose takes text needs a cache; the others take only files and need none.
   init(
     purpose: Purpose, displayOptions: DisplayOptions, panels: any CompareFilesPanels,
+    pasteboard: NSPasteboard, pastedTextCache: PastedTextCache? = nil,
     window: CompareFilesWindow, announce: @escaping (String) -> Void
   ) {
     self.purpose = purpose
     selection = FileSelection(kind: purpose.kind)
     self.displayOptions = displayOptions
     self.panels = panels
+    precondition(
+      !purpose.acceptsText || pastedTextCache != nil, "A sheet that takes text needs a cache")
+    self.pasteboard = pasteboard
+    self.pastedTextCache = purpose.acceptsText ? pastedTextCache : nil
     self.announce = announce
     cancelButton = NSButton(
       title: String(
@@ -139,7 +167,9 @@ final class CompareFilesWindowController: NSWindowController {
     var fields: [FileSlot: FileField] = [:]
     var captions: [FileSlot: NSTextField] = [:]
     for slot in FileSlot.slots(for: purpose.kind) {
-      fields[slot] = FileField(slot: slot, acceptsFolders: purpose.acceptsFolders, colors: colors)
+      fields[slot] = FileField(
+        slot: slot, acceptsFolders: purpose.acceptsFolders,
+        acceptsText: purpose.acceptsText, colors: colors)
       let caption = NSTextField(labelWithString: "")
       caption.alignment = .center
       caption.setAccessibilityElement(false)
@@ -222,11 +252,9 @@ final class CompareFilesWindowController: NSWindowController {
     return true
   }
 
-  /// Puts the files of `comparison` in their fields.
+  /// Puts the files of `comparison` in their fields, pasted text as such.
   func fill(_ comparison: FileComparison) {
-    var places: [FileSlot: URL] = [.left: comparison.left, .right: comparison.right]
-    places[.base] = comparison.base
-    selection.fill(places.filter { selection.slots.contains($0.key) })
+    selection.fill(comparison)
     selectionDidChange()
   }
 
@@ -234,26 +262,127 @@ final class CompareFilesWindowController: NSWindowController {
   func fill(_ places: [FileSlot: URL]) {
     selection.fill(places)
     selectionDidChange()
+    announceAdding(places.mapValues(\.lastPathComponent))
+  }
+
+  /// Tells VoiceOver which name went into which field, by `names`.
+  private func announceAdding(_ names: [FileSlot: String]) {
     announce(
       selection.slots.compactMap { slot in
-        places[slot].map { url in
+        names[slot].map { name in
           String(
-            localized: "\(url.lastPathComponent) added as \(selection.title(of: slot))",
-            bundle: .module,
+            localized: "\(name) added as \(selection.title(of: slot))", bundle: .module,
             comment: "VoiceOver: a file was put in a field, such as LoginView.swift added as Base.")
         }
       }.joined(separator: ". "))
   }
 
+  /// What Paste would do now: put files in the fields as if dropped on the field with the focus,
+  /// or text in the field with the focus, or else in the first empty one; `nil` if the clipboard
+  /// holds nothing the fields take or no field is left for it.
+  ///
+  /// The text itself is not read: each check of Paste asks this.
+  private var pasting: Pasting? {
+    switch ClipboardContent.available(on: pasteboard) {
+    case .files(let urls):
+      return places(for: urls, droppedOn: focusedSlot).map(Pasting.files)
+    case .text:
+      return textSlot.map(Pasting.text)
+    case nil:
+      return nil
+    }
+  }
+
+  /// The field of the sheet that has the focus, if one has.
+  private var focusedSlot: FileSlot? {
+    (window?.firstResponder as? FileField).flatMap { field in
+      fields[field.slot] === field ? field.slot : nil
+    }
+  }
+
+  /// The field that pasted text goes into, if the sheet takes text and a field is left for it.
+  private var textSlot: FileSlot? {
+    pastedTextCache == nil ? nil : selection.place(forTextPastedOn: focusedSlot)
+  }
+
+  /// What Paste does.
+  private enum Pasting {
+    /// Puts files in fields.
+    case files([FileSlot: URL])
+
+    /// Reads the text, keeps it in the cache and puts it in the field.
+    case text(into: FileSlot)
+  }
+
+  /// Puts what the clipboard holds in the field with the focus, or else in the first empty one:
+  /// files as if dropped on the field, and text as a side named Clipboard; says why if the text
+  /// cannot be kept.
+  @objc func paste(_ sender: Any?) {
+    switch pasting {
+    case .files(let places):
+      fill(places)
+    case .text:
+      guard let text = ClipboardContent.text(on: pasteboard) else {
+        NSSound.beep()
+        return
+      }
+      paste(text: text)
+    case nil:
+      NSSound.beep()
+    }
+  }
+
+  /// Puts `text`, read from the clipboard, in the field with the focus, or else in the first
+  /// empty one, as a side named Clipboard; says why if it cannot be kept.
+  func paste(text: String) {
+    guard let pastedTextCache, let slot = textSlot else {
+      NSSound.beep()
+      return
+    }
+    do {
+      paste(try pastedTextCache.keep(text, pastedAt: .now), into: slot)
+    } catch {
+      guard let window else { return }
+      Task { await panels.showFailure(error, in: window) }
+    }
+  }
+
+  /// Puts `text`, kept from the clipboard, in the field `slot` and tells VoiceOver.
+  private func paste(_ text: PastedText, into slot: FileSlot) {
+    ownPastedTexts[text.url] = text
+    selection.paste(text, into: slot)
+    selectionDidChange()
+    announceAdding([slot: PastedText.name])
+  }
+
+  /// Ends what the sheet keeps once it has ended: the copies of pasted text that no window took
+  /// go, at once or once the files being opened show.
+  func didEnd() {
+    hasEnded = true
+    removeUnusedPastedTexts()
+  }
+
+  /// Removes the copies of text pasted into the sheet that no field holds any longer, or every
+  /// one that no window took once the sheet has ended; while files are being opened, they wait
+  /// for the window, which may take them.
+  private func removeUnusedPastedTexts() {
+    guard !isOpening else { return }
+    for (url, text) in ownPastedTexts where hasEnded || selection.pastedTexts[url] == nil {
+      text.remove()
+      ownPastedTexts[url] = nil
+    }
+  }
+
   /// Empties the field `slot` and tells VoiceOver.
   func clear(_ slot: FileSlot) {
     guard let url = selection[slot] else { return }
+    let name = selection.pastedText(in: slot) == nil ? url.lastPathComponent : PastedText.name
     let role = selection.title(of: slot)
     selection[slot] = nil
     selectionDidChange()
     announce(
       String(
-        localized: "\(url.lastPathComponent) removed from \(role)", bundle: .module,
+        localized: "\(name) removed from \(role)", bundle: .module,
         comment: "VoiceOver: a field was emptied, such as LoginView.swift removed from Left."))
   }
 
@@ -295,6 +424,10 @@ final class CompareFilesWindowController: NSWindowController {
       }
       do {
         try await onOpen(comparison)
+        // The window of the comparison removes these copies as it closes.
+        for url in comparison.pastedTexts.keys {
+          ownPastedTexts[url] = nil
+        }
       } catch {
         await panels.showFailure(error, in: window)
       }
@@ -317,8 +450,11 @@ final class CompareFilesWindowController: NSWindowController {
   /// Shows the files of the fields, the roles they have now and whether the button opens them.
   func selectionDidChange() {
     for slot in selection.slots {
-      fields[slot]?.update(url: selection[slot], role: selection.title(of: slot))
+      fields[slot]?.update(
+        url: selection[slot], pastedText: selection.pastedText(in: slot),
+        role: selection.title(of: slot))
     }
+    removeUnusedPastedTexts()
     showDropTargets()
     problemLabel.stringValue =
       selection.problem?.message
@@ -375,10 +511,12 @@ extension CompareFilesWindowController {
 }
 
 extension CompareFilesWindowController: NSUserInterfaceValidations {
-  /// Swap Sides needs a file in an outer field; the other commands of the sheet always work.
+  /// Swap Sides needs a file in an outer field, and Paste something on the clipboard that a
+  /// field takes; the other commands of the sheet always work.
   func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
     switch item.action {
     case #selector(swapSides(_:)): selection[.left] != nil || selection[.right] != nil
+    case #selector(paste(_:)): pasting != nil
     case #selector(openComparison(_:)): openButton.isEnabled
     default: true
     }

@@ -37,6 +37,7 @@ final class AppSandbox {
   }
 
   isolated deinit {
+    pasteboard.releaseGlobally()
     NSApplication.shared.servicesProvider = servicesProvider
     defaults.removePersistentDomain(forName: suiteName)
     do {
@@ -78,6 +79,23 @@ final class AppSandbox {
   var keptWorkFiles: [String] {
     get throws {
       let url = folder.appending(path: "Merges", directoryHint: .isDirectory)
+      guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+      return try FileManager.default.contentsOfDirectory(atPath: url.path)
+    }
+  }
+
+  /// The clipboard of the app in the test, which no other test and no other app uses.
+  let pasteboard = NSPasteboard.withUniqueName()
+
+  /// Where the app in the test keeps the copies of text pasted from its clipboard.
+  var pastedTextCache: PastedTextCache {
+    PastedTextCache(folder: folder.appending(path: "Clipboard", directoryHint: .isDirectory))
+  }
+
+  /// The copies of pasted text that the app in the test keeps, each in a folder of its own.
+  var keptPastedTexts: [String] {
+    get throws {
+      let url = folder.appending(path: "Clipboard", directoryHint: .isDirectory)
       guard FileManager.default.fileExists(atPath: url.path) else { return [] }
       return try FileManager.default.contentsOfDirectory(atPath: url.path)
     }

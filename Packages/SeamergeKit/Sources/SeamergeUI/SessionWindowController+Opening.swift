@@ -281,8 +281,8 @@ extension SessionWindowController {
       saving = presentation.result.map {
         ResultSaving(result: $0, session: session, url: context.resultURL)
       }
-      detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
-      syntaxPath = SessionSyntax.path(of: session, resultURL: context.resultURL)
+      detectedLanguage = SessionSyntax.language(of: session, context: context)
+      syntaxPath = SessionSyntax.path(of: session, context: context)
       presentation.colorSyntax(as: syntaxLanguage)
     case .failure(let reason):
       let session = presentation.changes.session

@@ -17,12 +17,22 @@ public struct FileComparison: Sendable, Hashable {
   /// Whether `left` and `right` are folders, whose files are compared with each other.
   public let comparesFolders: Bool
 
+  /// The sides that hold text pasted from the clipboard, by the location of its copy.
+  public let pastedTexts: [URL: PastedText]
+
   /// Puts files together in their roles; with a base, they are merged.
   public init(left: URL, base: URL? = nil, right: URL) {
+    self.init(left: left, base: base, right: right, pastedTexts: [:])
+  }
+
+  /// Puts files together in their roles, those of `pastedTexts` as text pasted from the
+  /// clipboard.
+  init(left: URL, base: URL? = nil, right: URL, pastedTexts: [URL: PastedText]) {
     self.left = left
     self.base = base
     self.right = right
     comparesFolders = false
+    self.pastedTexts = pastedTexts.filter { url, _ in [left, base, right].contains(url) }
   }
 
   /// Puts two files together to compare them, the older one on the left; files of the same age,
@@ -55,6 +65,7 @@ public struct FileComparison: Sendable, Hashable {
     base = nil
     right = folder(folders.right)
     comparesFolders = true
+    pastedTexts = [:]
   }
 
   /// The folders compared, if the comparison is one of two folders.
@@ -67,6 +78,15 @@ public struct FileComparison: Sendable, Hashable {
 
   /// The files from left to right, as the panes show them.
   public var files: [URL] { [left, base, right].compactMap(\.self) }
+
+  /// The file at `url`, one of ``files``, as a session reads it: named Clipboard if it holds
+  /// pasted text, with the time it was pasted if another side holds pasted text as well, and
+  /// else by its file name.
+  public func sessionFile(at url: URL) -> SessionFile {
+    let label =
+      pastedTexts[url]?.name(withTime: pastedTexts.count > 1) ?? url.lastPathComponent
+    return SessionFile(url: url, label: label)
+  }
 
   /// The names of the files from left to right, as a line of a list or a menu shows them.
   public var title: String {

@@ -158,7 +158,7 @@ extension SessionWindowController {
     }
     comparisonSwitcher.keepShownBefore(previous.shown.session, showing: session)
     presentation.show(SideHeader.headers(of: session, context: context))
-    detectedLanguage = SessionSyntax.language(of: session, resultURL: context.resultURL)
+    detectedLanguage = SessionSyntax.language(of: session, context: context)
     presentation.colorSyntax(as: syntaxLanguage)
     sessionDidChange()
     if let name {

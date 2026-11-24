@@ -22,7 +22,8 @@ struct SideHeader: Equatable {
     /// The commit the side comes from, if it is known.
     var commit: CommitDetails?
 
-    /// Where the file of the side was read from, or its label if it was not read from disk.
+    /// Where the file of the side was read from, or its label if it was not read from disk or
+    /// holds text pasted from the clipboard.
     var location: String
 
     /// How the lines of the file end, if the file has line breaks.
@@ -117,7 +118,9 @@ struct SideHeader: Equatable {
     differingEncoding = encodings.count > 1 ? file.encoding : nil
     details = Details(
       commit: side?.commit,
-      location: file.url.map { $0.path(percentEncoded: false) } ?? file.label,
+      location: file.url.flatMap { url in
+        context.pastedTexts[url] == nil ? url.path(percentEncoded: false) : nil
+      } ?? file.label,
       lineEndingStyle: file.lineEndingStyle, encoding: file.encoding)
   }
 

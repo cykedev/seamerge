@@ -247,6 +247,29 @@
     "%lld from B" : {
       "comment" : "Subtitle: the changes of the own side after those of A, such as 5 from B."
     },
+    "%lld lines · %@" : {
+      "comment" : "Compare Files: below Clipboard in a field, such as 12 lines · 14:32.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld line · %@"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld lines · %@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld matches in %lld panes" : {
       "comment" : "VoiceOver: how often the search found its text and in how many panes.",
       "localizations" : {
@@ -483,14 +506,17 @@
     "Check that the file exists and that you may read it, then try again." : {
       "comment" : "Alert: what to do when a file cannot be read."
     },
+    "Check that your disk has free space, then paste again." : {
+      "comment" : "Alert: what to do when pasted text could not be written to disk."
+    },
     "cherry-picked commit" : {
       "comment" : "Role: the commit being cherry-picked."
     },
     "Choose" : {
       "comment" : "The button of the open panel of a field."
     },
-    "Choose a file or folder, or drop one here" : {
-      "comment" : "VoiceOver hint of a field of Compare Files that takes a folder as well."
+    "Choose a file or folder, drop one here, or paste text" : {
+      "comment" : "VoiceOver hint of a field of Compare Files, which takes folders and text as well."
     },
     "Choose a file, or drop one here" : {
       "comment" : "VoiceOver hint of a field of Compare Files."
@@ -533,6 +559,35 @@
     },
     "Choose…" : {
       "comment" : "Compare Files: the button in an empty field that opens the open panel."
+    },
+    "Clipboard" : {
+      "comment" : "The name of a side that holds text pasted from the clipboard."
+    },
+    "Clipboard %@" : {
+      "comment" : "The name of a side with text pasted from the clipboard while the other side holds such text as well, with the time it was pasted, such as Clipboard 14:32."
+    },
+    "Clipboard, %lld lines" : {
+      "comment" : "VoiceOver: a field with text pasted from the clipboard, such as Clipboard, 12 lines.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Clipboard, %lld line"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Clipboard, %lld lines"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Close and compare no more files of this run" : {
       "comment" : "Help tag of File > Skip Remaining Files."
@@ -769,8 +824,8 @@
     "Drop a File" : {
       "comment" : "Compare Files: an empty field, which takes a file dragged onto it."
     },
-    "Drop a File or Folder" : {
-      "comment" : "Compare Files: an empty field that takes a file or a folder."
+    "Drop a File or Folder\nor Paste Text" : {
+      "comment" : "Compare Files: an empty field that takes a file, a folder or text from the clipboard, on two lines."
     },
     "Drop to Compare" : {
       "comment" : "Welcome window: the place to drop files while a drop would compare them."
@@ -1394,6 +1449,9 @@
     },
     "Seamerge asks www.seamerge.app once a day whether a new version exists." : {
       "comment" : "Settings: what checking for updates sends where."
+    },
+    "Seamerge can’t keep the text from the clipboard." : {
+      "comment" : "Alert: text pasted into a field of Compare Files could not be written to disk."
     },
     "Seamerge can’t merge “%@”" : {
       "comment" : "Merge window: the files cannot be merged, such as “Settings.swift”."

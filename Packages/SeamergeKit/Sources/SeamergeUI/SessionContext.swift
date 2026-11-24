@@ -26,16 +26,23 @@ public struct SessionContext: Sendable, Hashable {
   /// repository, which ``git`` describes, are no sign of that.
   public var waitingCaller: WaitingCaller?
 
+  /// The files of a comparison that hold text pasted from the clipboard, by their location.
+  ///
+  /// Such a side is never written, and its copy goes when the window closes.
+  public var pastedTexts: [URL: PastedText]
+
   /// Creates a context; without arguments, one that knows nothing beyond the files.
   public init(
     resultURL: URL? = nil, git: GitContext? = nil, difftool: DifftoolContext? = nil,
-    waitingCaller: WaitingCaller? = nil, folders: FolderPair? = nil
+    waitingCaller: WaitingCaller? = nil, folders: FolderPair? = nil,
+    pastedTexts: [URL: PastedText] = [:]
   ) {
     self.resultURL = resultURL
     self.git = git
     self.difftool = difftool
     self.waitingCaller = waitingCaller
     self.folders = folders
+    self.pastedTexts = pastedTexts
   }
 }
 

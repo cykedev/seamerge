@@ -146,9 +146,10 @@ final class SessionCoordinator {
   /// Opens a window for the files of `comparison` in their roles and returns once it shows: a
   /// merge with a base, a comparison without one, or the files of two folders.
   ///
-  /// Such a session has no file to save to and no Git behind it. A comparison that takes a
-  /// moment shows the headers of its files until it is ready. While the app quits, nothing
-  /// opens.
+  /// Such a session has no file to save to and no Git behind it. A side of text pasted from the
+  /// clipboard is named Clipboard, and its window removes the copy as it closes. A comparison
+  /// that takes a moment shows the headers of its files until it is ready. While the app quits,
+  /// nothing opens.
   ///
   /// - Throws: Why the files cannot be opened.
   func open(_ comparison: FileComparison) async throws(SessionLoadingError) {
@@ -156,7 +157,7 @@ final class SessionCoordinator {
       try await open(folders)
       return
     }
-    let file = { (url: URL) in SessionFile(url: url, label: url.lastPathComponent) }
+    let file = comparison.sessionFile(at:)
     let controller =
       if let base = comparison.base {
         try await SessionWindowController.openMerge(
@@ -166,8 +167,9 @@ final class SessionCoordinator {
       } else {
         try await SessionWindowController.openDiff(
           old: file(comparison.left), new: file(comparison.right), mode: settings.comparisonMode,
-          ignoring: settings.ignoreRules, context: SessionContext(), undoManager: UndoManager(),
-          settings: settings)
+          ignoring: settings.ignoreRules,
+          context: SessionContext(pastedTexts: comparison.pastedTexts),
+          undoManager: UndoManager(), settings: settings)
       }
     guard !isFinishing else { return }
     show(controller, kind: comparison.base == nil ? .diff : .merge) { _ in }

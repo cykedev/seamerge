@@ -56,6 +56,9 @@ final class AppDelegate: NSObject {
   /// The removal of expired work of merges after the launch.
   private(set) var clearingWork: Task<Void, Never>?
 
+  /// The removal of the copies of pasted text that an earlier run left behind, after the launch.
+  private(set) var clearingPastedTexts: Task<Void, Never>?
+
   /// Shows alerts, hides the app and brings it to the front.
   let presenter: any AppPresenter
 
@@ -72,6 +75,12 @@ final class AppDelegate: NSObject {
   /// The folder that keeps the work of unfinished merges.
   private let workStore: MergeWorkStore
 
+  /// The clipboard that Paste reads in the welcome window and its sheets.
+  private let pasteboard: NSPasteboard
+
+  /// The folder that keeps the copies of text pasted from the clipboard.
+  private let pastedTextCache: PastedTextCache
+
   /// The seamerge command in Terminal, whose sheet the welcome window shows.
   private let commandLineTool: CommandLineTool
 
@@ -79,15 +88,16 @@ final class AppDelegate: NSObject {
 
   /// Creates the delegate of an app started with `arguments`, which keeps its settings and
   /// recent comparisons in `defaults`, listens for the helper at `socketURL`, keeps the copies of
-  /// collected files in `collectionCache` and the work of unfinished merges in `workStore`, shows
-  /// alerts, hides and comes to the front with `presenter`, sets up Git and Tower in
-  /// `integrationStore`, installs the seamerge command with `commandLineTool`, updates itself
-  /// with the updater that `makeSoftwareUpdater` makes, and registers its service with
-  /// `updateServices` when `bundle` is in a folder of applications.
+  /// collected files in `collectionCache`, the work of unfinished merges in `workStore` and the
+  /// copies of text pasted from `pasteboard` in `pastedTextCache`, shows alerts, hides and comes
+  /// to the front with `presenter`, sets up Git and Tower in `integrationStore`, installs the
+  /// seamerge command with `commandLineTool`, updates itself with the updater that
+  /// `makeSoftwareUpdater` makes, and registers its service with `updateServices` when `bundle`
+  /// is in a folder of applications.
   init(
     arguments: [String], defaults: UserDefaults, socketURL: URL,
     collectionCache: CollectionCache = .standard, workStore: MergeWorkStore,
-    presenter: any AppPresenter,
+    pasteboard: NSPasteboard, pastedTextCache: PastedTextCache, presenter: any AppPresenter,
     integrationStore: SystemIntegrationStore, commandLineTool: CommandLineTool,
     makeSoftwareUpdater: @MainActor (Updater) -> any SoftwareUpdater = Updater.sparkle,
     bundle: URL, updateServices: @escaping @MainActor () -> Void
@@ -99,6 +109,8 @@ final class AppDelegate: NSObject {
     self.integrationStore = integrationStore
     self.commandLineTool = commandLineTool
     self.workStore = workStore
+    self.pasteboard = pasteboard
+    self.pastedTextCache = pastedTextCache
     settings = UserSettings(defaults: defaults)
     recentComparisons = RecentComparisons(defaults: defaults)
     recentComparisonsMenu = RecentComparisonsMenu(recentComparisons: recentComparisons)
@@ -198,7 +210,8 @@ final class AppDelegate: NSObject {
       return welcomeWindowController
     }
     let controller = WelcomeWindowController(
-      recentComparisons: recentComparisons, integrationStore: integrationStore)
+      recentComparisons: recentComparisons, integrationStore: integrationStore,
+      pasteboard: pasteboard, pastedTextCache: pastedTextCache)
     controller.delegate = self
     welcomeWindowController = controller
     return controller
@@ -252,13 +265,19 @@ extension AppDelegate: NSApplicationDelegate {
 
   /// Listens for the helper, serves the service and shows the welcome window, unless the helper,
   /// the service or files to open started the app, which show what they need; clears out expired
-  /// work of merges in the background.
+  /// work of merges in the background, and the copies of pasted text that a crash left behind.
   ///
   /// The service hands over its selection only once the run loop turns after the launch, so the
-  /// window waits that long, and does not stand empty behind what the service opens.
+  /// window waits that long, and does not stand empty behind what the service opens. Only the
+  /// copy of the app that listens owns the copies of pasted text, as it owns those of
+  /// collections.
   func applicationDidFinishLaunching(_ notification: Notification) {
     do {
       try coordinator.start()
+      let launch = Date.now
+      clearingPastedTexts = Task(priority: .utility) { [pastedTextCache] in
+        await pastedTextCache.removeLeftovers(madeBefore: launch)
+      }
     } catch {
       Self.logger.error("Cannot listen for the helper: \(String(describing: error))")
       presenter.present(ListeningError(error))

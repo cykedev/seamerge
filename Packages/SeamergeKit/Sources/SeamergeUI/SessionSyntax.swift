@@ -197,25 +197,35 @@ final class SessionSyntax {
       language: language, lines: text.split(separator: "\n", omittingEmptySubsequences: false))
   }
 
-  /// The language of the files of `session`, recognized by the name of the result or, for a
-  /// comparison, of the newer file, and failing that by the first line of that file.
-  static func language(of session: Session, resultURL: URL?) -> LanguageDescription {
-    let file = session.inputs.b
+  /// The language of the files of `session` in `context`, recognized by the name of the result
+  /// or, for a comparison, of the file that names it, and failing that by the first line of that
+  /// file; plain text if both files of a comparison hold text pasted from the clipboard.
+  static func language(of session: Session, context: SessionContext) -> LanguageDescription {
+    guard let file = namingFile(of: session, context: context) else { return .plainText }
     // A file of a single line of megabytes would take long to read to its end.
     let firstLine =
       file.text.map { String($0.prefix(firstLineLength).prefix { !$0.isNewline }) } ?? ""
     return LanguageDescription(
-      fileName: path(of: session, resultURL: resultURL), firstLine: firstLine)
+      fileName: path(of: session, context: context), firstLine: firstLine)
   }
 
   /// How much of the first line of a file names its language: a `#!` line names its
   /// interpreter within its first few hundred characters.
   private static let firstLineLength = 1024
 
-  /// The path of the file that names the language of `session`: the result, or for a comparison
-  /// the newer file; its label if it has no path.
-  static func path(of session: Session, resultURL: URL?) -> String {
-    let file = session.inputs.b
-    return resultURL?.path ?? file.url?.path ?? file.label
+  /// The path of the file that names the language of `session` in `context`: the result, or for
+  /// a comparison the file that names it; its label if it has no path.
+  static func path(of session: Session, context: SessionContext) -> String {
+    let file = namingFile(of: session, context: context) ?? session.inputs.b
+    return context.resultURL?.path ?? file.url?.path ?? file.label
+  }
+
+  /// The file of `session` whose name and first line tell the language: the newer one, or the
+  /// older one if only the newer one holds pasted text, which has no name of its own; `nil` if
+  /// both hold pasted text.
+  private static func namingFile(of session: Session, context: SessionContext) -> SourceFile? {
+    [session.inputs.b, session.inputs.a].first { file in
+      file.url.map { context.pastedTexts[$0] == nil } ?? true
+    }
   }
 }

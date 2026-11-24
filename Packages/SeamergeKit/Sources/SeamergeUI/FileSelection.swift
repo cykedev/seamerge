@@ -52,7 +52,12 @@ struct FileSelection: Equatable {
   /// Whether the fields are those of a comparison or of a merge.
   let kind: Session.Kind
 
-  private var files: [FileSlot: URL] = [:]
+  private var files: [FileSlot: URL] = [:] {
+    didSet { pastedTexts = pastedTexts.filter { url, _ in files.values.contains(url) } }
+  }
+
+  /// The text pasted into the fields, by the location of its copy.
+  private(set) var pastedTexts: [URL: PastedText] = [:]
 
   /// Creates the empty fields of a sheet for a session of `kind`.
   init(kind: Session.Kind) {
@@ -66,6 +71,11 @@ struct FileSelection: Equatable {
   subscript(slot: FileSlot) -> URL? {
     get { files[slot] }
     set { files[slot] = newValue }
+  }
+
+  /// The text pasted into `slot`, if the field holds such text.
+  func pastedText(in slot: FileSlot) -> PastedText? {
+    files[slot].flatMap { pastedTexts[$0] }
   }
 
   /// Whether no field has a file.
@@ -97,7 +107,7 @@ struct FileSelection: Equatable {
     case .diff:
       return hasFolder
         ? FileComparison(folders: FolderPair(left: left, right: right))
-        : FileComparison(left: left, right: right)
+        : FileComparison(left: left, right: right, pastedTexts: pastedTexts)
     case .merge:
       return files[.base].map { FileComparison(left: left, base: $0, right: right) }
     }
@@ -165,13 +175,40 @@ struct FileSelection: Equatable {
     }
   }
 
+  /// The field that text pasted with the focus on `focused` goes into: that field, or without a
+  /// focused field the first empty one of Left, Right and Base; `nil` if every field holds
+  /// something.
+  func place(forTextPastedOn focused: FileSlot?) -> FileSlot? {
+    if let focused {
+      return slots.contains(focused) ? focused : nil
+    }
+    return [FileSlot.left, .right, .base].first { slots.contains($0) && files[$0] == nil }
+  }
+
   /// Puts the files of `places` in their fields.
   mutating func fill(_ places: [FileSlot: URL]) {
     files.merge(places) { $1 }
   }
 
+  /// Puts `text`, pasted from the clipboard, in the field `slot`.
+  mutating func paste(_ text: PastedText, into slot: FileSlot) {
+    pastedTexts[text.url] = text
+    files[slot] = text.url
+  }
+
+  /// Puts the files of `comparison` in their fields, pasted text as such.
+  mutating func fill(_ comparison: FileComparison) {
+    var places: [FileSlot: URL] = [.left: comparison.left, .right: comparison.right]
+    places[.base] = comparison.base
+    pastedTexts.merge(comparison.pastedTexts) { $1 }
+    fill(places.filter { slots.contains($0.key) })
+  }
+
   /// Swaps the files of two fields, whether or not both have one.
   mutating func swap(_ first: FileSlot, _ second: FileSlot) {
-    (files[first], files[second]) = (files[second], files[first])
+    // In one step, so that pasted text in either field stays.
+    var swapped = files
+    (swapped[first], swapped[second]) = (files[second], files[first])
+    files = swapped
   }
 }

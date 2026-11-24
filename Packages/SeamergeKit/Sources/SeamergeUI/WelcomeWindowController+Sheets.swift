@@ -59,6 +59,39 @@ extension WelcomeWindowController {
     }
   }
 
+  /// Shows the window with the sheet for what the clipboard holds: Compare Files with the text in
+  /// Left and the focus on Right, or the sheet that takes the files, as if they were dropped on
+  /// the Dock icon.
+  ///
+  /// The clipboard is read now, also if the sheet has to wait for another one to end.
+  @objc func paste(_ sender: Any?) {
+    switch ClipboardContent.available(on: pasteboard) {
+    case .files(let urls):
+      if !fill(with: urls) {
+        NSSound.beep()
+      }
+    case .text:
+      guard let text = ClipboardContent.text(on: pasteboard) else {
+        NSSound.beep()
+        return
+      }
+      showFilesSheet(.compare) { sheet in sheet.paste(text: text) }
+    case nil:
+      NSSound.beep()
+    }
+  }
+
+  /// Whether Paste shows a sheet: no other sheet hangs on the window, and the clipboard holds
+  /// text, or files that a sheet takes.
+  var canPaste: Bool {
+    guard window?.attachedSheet == nil else { return false }
+    switch ClipboardContent.available(on: pasteboard) {
+    case .files(let urls): return Self.purpose(for: Self.entries(urls)) != nil
+    case .text: return true
+    case nil: return false
+    }
+  }
+
   /// Shows the window with the sheet Compare Files, empty, with the sentence that says what
   /// Seamerge compares, until the fields change.
   public func showUnsupportedSelection() {
@@ -103,12 +136,13 @@ extension WelcomeWindowController {
       return
     }
     let sheet = CompareFilesWindowController(
-      purpose: purpose, displayOptions: displayOptions, panels: panels,
-      window: CompareFilesWindow(), announce: announce)
+      purpose: purpose, displayOptions: displayOptions, panels: panels, pasteboard: pasteboard,
+      pastedTextCache: pastedTextCache, window: CompareFilesWindow(), announce: announce)
     sheet.onOpen = { [weak self] comparison in try await self?.openFromSheet(comparison) }
     guard let sheetWindow = sheet.window else { return }
     filesSheet = sheet
     window.beginSheet(sheetWindow) { [weak self, weak sheet] _ in
+      sheet?.didEnd()
       guard let self, filesSheet === sheet else { return }
       filesSheet = nil
     }

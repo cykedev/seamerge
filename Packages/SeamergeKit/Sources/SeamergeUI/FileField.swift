@@ -19,7 +19,8 @@ protocol FileFieldDelegate: FileDropDelegate {
 /// name and folder, but it behaves like one: it takes files dragged onto it, chooses one with the
 /// system's open panel, takes the focus with Tab, and tells VoiceOver its role and content.
 /// Space chooses a file, Delete empties the field, a double click chooses as well; a filled field
-/// can be dragged onto another to swap the two.
+/// can be dragged onto another to swap the two. Text pasted from the clipboard shows as
+/// Clipboard, with its number of lines and the time it was pasted.
 final class FileField: NSView {
   /// The field of the sheet that this view is.
   let slot: FileSlot
@@ -27,11 +28,17 @@ final class FileField: NSView {
   /// Whether the field takes a folder as well as a file.
   let acceptsFolders: Bool
 
+  /// Whether the field takes text pasted from the clipboard.
+  let acceptsText: Bool
+
   /// Asked to choose, clear and take drops; the field does not retain it.
   weak var delegate: (any FileFieldDelegate)?
 
   /// The file in the field, if there is one.
   private(set) var url: URL?
+
+  /// The text pasted into the field, if the file holds such text.
+  private(set) var pastedText: PastedText?
 
   /// Whether a drop going on now would fill the field, which its border shows.
   var isDropTarget = false {
@@ -54,17 +61,20 @@ final class FileField: NSView {
   private let clearButton: NSButton
   private var mouseDownEvent: NSEvent?
 
-  /// Creates the field for `slot`, empty, which takes a folder if `acceptsFolders`, drawn in
-  /// `colors`.
-  init(slot: FileSlot, acceptsFolders: Bool, colors: CompareFilesColors) {
+  /// Creates the field for `slot`, empty, which takes a folder if `acceptsFolders` and pasted
+  /// text if `acceptsText`, drawn in `colors`.
+  init(slot: FileSlot, acceptsFolders: Bool, acceptsText: Bool, colors: CompareFilesColors) {
     self.slot = slot
     self.acceptsFolders = acceptsFolders
+    self.acceptsText = acceptsText
     self.colors = colors
     invitation = NSTextField(
-      labelWithString: acceptsFolders
+      labelWithString: acceptsText
         ? String(
-          localized: "Drop a File or Folder", bundle: .module,
-          comment: "Compare Files: an empty field that takes a file or a folder.")
+          localized: "Drop a File or Folder\nor Paste Text", bundle: .module,
+          comment:
+            "Compare Files: an empty field that takes a file, a folder or text from the clipboard, on two lines."
+        )
         : String(
           localized: "Drop a File", bundle: .module,
           comment: "Compare Files: an empty field, which takes a file dragged onto it."))
@@ -95,7 +105,7 @@ final class FileField: NSView {
     registerForDraggedTypes([.fileURL])
     focusRingType = .default
     applyColors()
-    update(url: nil, role: "")
+    update(url: nil, pastedText: nil, role: "")
   }
 
   private func applyColors() {
@@ -103,6 +113,7 @@ final class FileField: NSView {
       label.textColor = colors.quietText
     }
     clearButton.contentTintColor = colors.quietText
+    iconView.contentTintColor = colors.quietText
     needsDisplay = true
   }
 
@@ -159,14 +170,24 @@ final class FileField: NSView {
     ])
   }
 
-  /// Shows `url`, or invites a file when it is `nil`, in `role`, the word below the field.
-  func update(url: URL?, role: String) {
+  /// Shows `url`, which holds `pastedText` if that is not `nil`, or invites a file when it is
+  /// `nil`, in `role`, the word below the field.
+  func update(url: URL?, pastedText: PastedText?, role: String) {
     self.url = url
+    self.pastedText = pastedText
     roleTitle = role
     emptyContent.isHidden = url != nil
     filledContent.isHidden = url == nil
     clearButton.isHidden = url == nil
-    if let url {
+    if let pastedText {
+      iconView.image = NSImage(
+        systemSymbolName: "doc.on.clipboard", accessibilityDescription: nil)?
+        .withSymbolConfiguration(
+          NSImage.SymbolConfiguration(pointSize: CompareFilesMetrics.iconSize, weight: .regular))
+      nameLabel.stringValue = PastedText.name
+      folderLabel.stringValue = pastedText.details
+      toolTip = nil
+    } else if let url {
       let path = url.path(percentEncoded: false)
       iconView.image = NSWorkspace.shared.icon(
         for: url.hasDirectoryPath
@@ -298,16 +319,20 @@ final class FileField: NSView {
       return String(
         localized: "empty", bundle: .module, comment: "VoiceOver: a field without a file.")
     }
+    if let pastedText {
+      return pastedText.spokenValue
+    }
     return String(
       localized: "\(url.lastPathComponent), in \(Self.folderName(of: url))", bundle: .module,
       comment: "VoiceOver: the file in a field, such as LoginView.swift, in ~/Projects/app.")
   }
 
   override func accessibilityHelp() -> String? {
-    acceptsFolders
+    acceptsText
       ? String(
-        localized: "Choose a file or folder, or drop one here", bundle: .module,
-        comment: "VoiceOver hint of a field of Compare Files that takes a folder as well.")
+        localized: "Choose a file or folder, drop one here, or paste text", bundle: .module,
+        comment: "VoiceOver hint of a field of Compare Files, which takes folders and text as well."
+      )
       : String(
         localized: "Choose a file, or drop one here", bundle: .module,
         comment: "VoiceOver hint of a field of Compare Files.")

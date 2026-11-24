@@ -266,7 +266,8 @@ import Testing
     #expect(values == ["empty", "empty"])
     #expect(try fixture.field(.left).accessibilityRole() == .button)
     #expect(
-      try fixture.field(.left).accessibilityHelp() == "Choose a file or folder, or drop one here")
+      try fixture.field(.left).accessibilityHelp()
+        == "Choose a file or folder, drop one here, or paste text")
 
     #expect(fixture.controller.acceptDrop(DragInTest(files: [left]), onto: .left))
     labels = try [FileSlot.left, .right].map { try fixture.field($0).accessibilityLabel() }

@@ -8,7 +8,8 @@ let delegate = AppDelegate(
   arguments: CommandLine.arguments, defaults: .standard,
   socketURL: SessionSocket.url(
     launchedWith: UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)),
-  workStore: MergeWorkStore(folder: MergeWorkStore.standardFolder),
+  workStore: MergeWorkStore(folder: MergeWorkStore.standardFolder), pasteboard: .general,
+  pastedTextCache: .standard,
   presenter: ApplicationPresenter(),
   integrationStore: SystemIntegrationStore(
     bundle: Bundle.main.bundleURL, home: FileManager.default.homeDirectoryForCurrentUser),

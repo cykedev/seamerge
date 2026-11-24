@@ -109,18 +109,20 @@ import TextBasics
 
   @Test func languageComesFromTheResultThenTheNewerFileThenItsFirstLine() async throws {
     let session = try await SyntaxFixture.merge(named: "Sample")
-    #expect(SessionSyntax.language(of: session, resultURL: nil) == .plainText)
+    #expect(SessionSyntax.language(of: session, context: SessionContext()) == .plainText)
     #expect(
-      SessionSyntax.language(of: session, resultURL: URL(filePath: "/tmp/merged.py")).name
+      SessionSyntax.language(
+        of: session, context: SessionContext(resultURL: URL(filePath: "/tmp/merged.py"))
+      ).name
         == "Python")
     let script = try await SyntaxFixture.merge(named: "build", firstLine: "#!/bin/zsh")
-    #expect(SessionSyntax.language(of: script, resultURL: nil).name == "Shell")
+    #expect(SessionSyntax.language(of: script, context: SessionContext()).name == "Shell")
     let swift = try await SyntaxFixture.merge()
-    #expect(SessionSyntax.language(of: swift, resultURL: nil).name == "Swift")
+    #expect(SessionSyntax.language(of: swift, context: SessionContext()).name == "Swift")
     // A first line of two megabytes still names its interpreter at its start.
     let long = try await SyntaxFixture.merge(
       named: "run", firstLine: "#!/usr/bin/env python3 " + String(repeating: "x", count: 2_000_000))
-    #expect(SessionSyntax.language(of: long, resultURL: nil).name == "Python")
+    #expect(SessionSyntax.language(of: long, context: SessionContext()).name == "Python")
   }
 }
 

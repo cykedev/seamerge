@@ -213,7 +213,7 @@ extension SessionWindowController {
     let sheetWindow = CompareFilesWindow()
     let sheet = CompareFilesWindowController(
       purpose: .change(presentation.changes.session.kind), displayOptions: displayOptions,
-      panels: SystemPanels(), window: sheetWindow
+      panels: SystemPanels(), pasteboard: pasteboard, window: sheetWindow
     ) { [weak self] text in self?.presentation.announce(text) }
     sheet.fill(comparison)
     sheet.onOpen = { [weak self] comparison in try await self?.changeFiles(to: comparison) }
@@ -221,13 +221,15 @@ extension SessionWindowController {
     window.beginSheet(sheetWindow) { [weak self] _ in self?.changeFilesSheet = nil }
   }
 
-  /// The files of the window in their roles, or `nil` if a file was not read from disk.
+  /// The files of the window in their roles, pasted text as such, or `nil` if a file was not
+  /// read from disk.
   var fileComparison: FileComparison? {
     let files = presentation.changes.session.inputs
     guard let left = files.a.url, let right = files.b.url else { return nil }
     let base = files.base
     guard base == nil || base?.url != nil else { return nil }
-    return FileComparison(left: left, base: base?.url, right: right)
+    return FileComparison(
+      left: left, base: base?.url, right: right, pastedTexts: context.pastedTexts)
   }
 
   /// Compares the files of `comparison` in place of those the window shows, in its comparison
@@ -237,7 +239,7 @@ extension SessionWindowController {
   ///
   /// - Throws: Why the files cannot be compared, before anything changes.
   func changeFiles(to comparison: FileComparison) async throws(SessionLoadingError) {
-    let file = { (url: URL) in SessionFile(url: url, label: url.lastPathComponent) }
+    let file = comparison.sessionFile(at:)
     let mode = comparisonOptions.mode
     let session =
       if let base = comparison.base {
@@ -257,11 +259,29 @@ extension SessionWindowController {
     let isReplaced = await replaceSession(with: session) { count, window in
       await self.prompts.confirmChangingFiles(discarding: count, in: window)
     }
+    if isReplaced {
+      removePastedTexts(apartFrom: session)
+    }
     guard isReplaced, var saving else { return }
     saving.format = ResultFormat(resultOf: session)
     self.saving = saving
     showResultFormat()
     stateDidChange()
+  }
+}
+
+extension SessionWindowController {
+  /// Removes the copies of pasted text that `session`, now shown in place of the files before,
+  /// no longer compares.
+  ///
+  /// Undo of Change Files still shows that text, which the window holds; it is no longer known
+  /// as pasted, so it stays a side that is never written, as a file that is gone is.
+  private func removePastedTexts(apartFrom session: Session) {
+    let shown = Set(session.inputs.values.compactMap(\.url))
+    for (url, text) in context.pastedTexts where !shown.contains(url) {
+      text.remove()
+      context.pastedTexts[url] = nil
+    }
   }
 }
 

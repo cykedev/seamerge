@@ -7,7 +7,8 @@ import os
 /// folders among them.
 ///
 /// They are kept in the user defaults. A comparison whose files or folders are no longer all
-/// there is left out. Sessions that Git starts never get here: their files are temporary copies.
+/// there is left out. Sessions that Git starts never get here: their files are temporary copies;
+/// nor do comparisons of text pasted from the clipboard, whose copies go with their windows.
 @MainActor
 public final class RecentComparisons {
   /// Posted, with the list as the object, after a comparison was added or the list cleared.
@@ -52,8 +53,9 @@ public final class RecentComparisons {
   }
 
   /// Puts `comparison`, opened at `date`, first, in place of an earlier entry of the same files
-  /// in the same roles.
+  /// in the same roles; a comparison of text pasted from the clipboard stays out.
   public func add(_ comparison: FileComparison, openedAt date: Date = .now) {
+    guard comparison.pastedTexts.isEmpty else { return }
     let entries =
       [Entry(comparison: comparison, opened: date)]
       + self.entries.filter { $0.comparison != comparison }
