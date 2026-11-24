@@ -12,6 +12,11 @@ import TextBasics
 /// A run that the user expanded stays expanded until the panes collapse their unchanged rows
 /// again. A run never collapses over work in the result: once the segment of its block is
 /// edited or chosen, or the insertion point stands in it, it stays expanded.
+///
+/// In a comparison of the sides of a patch, the row of each placeholder line, ``Session/gapRows``,
+/// is a run of its own that stands for the lines the patch passes over: it is always collapsed
+/// and never expands. It parts the unchanged rows around it as a changed block would, so that
+/// the lines of context of the hunks stay in view.
 public struct CollapsedRows: Sendable {
   /// A run of rows of an unchanged block that the panes hide behind a bar.
   public struct Run: Sendable, Hashable {
@@ -21,6 +26,16 @@ public struct CollapsedRows: Sendable {
 
     /// The rows of the grid that the run hides.
     public let rows: Range<Int>
+
+    /// The number of lines a patch passes over where the run stands for them, or `nil` for a
+    /// run of unchanged rows, which expands.
+    public let missingLineCount: Int?
+
+    init(block: Block, rows: Range<Int>, missingLineCount: Int? = nil) {
+      self.block = block
+      self.rows = rows
+      self.missingLineCount = missingLineCount
+    }
   }
 
   /// The number of rows from which an unchanged block collapses.
@@ -41,6 +56,9 @@ public struct CollapsedRows: Sendable {
 
   /// The run that each unchanged block long enough to collapse would hide, in row order.
   private let candidates: [Run]
+
+  /// The runs that stand for lines a patch passes over, in row order.
+  private let gaps: [Run]
 
   /// The blocks whose runs are expanded.
   private var expandedBlocks: Set<Int> = []
@@ -69,14 +87,22 @@ public struct CollapsedRows: Sendable {
     let equalKinds: Set<Block.Kind> =
       session.kind == .merge && session.files.base == nil
       ? [.unchanged, .changedInBoth] : [.unchanged]
-    candidates = session.blocks.compactMap { block in
-      let rows = session.rowLayout.rows(of: block)
-      guard equalKinds.contains(block.kind), rows.count >= Self.minimumRowCount else {
-        return nil
+    let gaps = session.gapRows.map { gap in
+      Run(
+        block: session.rowLayout.block(atRow: gap.row), rows: gap.row..<gap.row + 1,
+        missingLineCount: gap.lineCount)
+    }
+    self.gaps = gaps
+    let gapStarts = gaps.map(\.rows.lowerBound)
+    candidates = session.blocks.flatMap { block -> [Run] in
+      guard equalKinds.contains(block.kind) else { return [] }
+      return Self.parts(of: session.rowLayout.rows(of: block), apartFrom: gapStarts).compactMap {
+        rows in
+        guard rows.count >= Self.minimumRowCount else { return nil }
+        let start = rows.lowerBound == 0 ? 0 : rows.lowerBound + Self.contextRowCount
+        let end = rows.upperBound == rowCount ? rowCount : rows.upperBound - Self.contextRowCount
+        return Run(block: block, rows: start..<end)
       }
-      let start = rows.lowerBound == 0 ? 0 : rows.lowerBound + Self.contextRowCount
-      let end = rows.upperBound == rowCount ? rowCount : rows.upperBound - Self.contextRowCount
-      return Run(block: block, rows: start..<end)
     }
     blocksWithWork = document.map { Self.blocks(withWorkIn: $0, candidates: candidates) } ?? []
     expandedBlocks = blocksWithWork
@@ -127,9 +153,9 @@ public struct CollapsedRows: Sendable {
   }
 
   /// Expands `run`, which then stays expanded until ``collapseUnchangedRows(document:caretRow:)``
-  /// or ``collapse(_:)``.
+  /// or ``collapse(_:)``; a run that stands for lines a patch passes over stays as it is.
   public mutating func expand(_ run: Run) {
-    guard expandedBlocks.insert(run.block.id).inserted else { return }
+    guard run.missingLineCount == nil, expandedBlocks.insert(run.block.id).inserted else { return }
     update()
   }
 
@@ -151,7 +177,7 @@ public struct CollapsedRows: Sendable {
   /// - Returns: Whether a run was expanded.
   @discardableResult
   public mutating func expandToShow(row: Int) -> Bool {
-    guard let run = run(containingRow: row) else { return false }
+    guard let run = run(containingRow: row), run.missingLineCount == nil else { return false }
     expand(run)
     return true
   }
@@ -204,9 +230,28 @@ public struct CollapsedRows: Sendable {
     update()
   }
 
-  /// Collapses the candidates that are not expanded.
+  /// Collapses the candidates that are not expanded, beside the runs of lines a patch passes
+  /// over.
   private mutating func update() {
-    runs = collapsesUnchangedRows ? candidates.filter { !expandedBlocks.contains($0.block.id) } : []
+    let collapsed =
+      collapsesUnchangedRows ? candidates.filter { !expandedBlocks.contains($0.block.id) } : []
+    runs =
+      gaps.isEmpty
+      ? collapsed : (collapsed + gaps).sorted { $0.rows.lowerBound < $1.rows.lowerBound }
+  }
+
+  /// The parts of `rows`, the rows of an unchanged block, between the rows that start at
+  /// `gapStarts`, which are in ascending order.
+  private static func parts(of rows: Range<Int>, apartFrom gapStarts: [Int]) -> [Range<Int>] {
+    var parts: [Range<Int>] = []
+    var start = rows.lowerBound
+    let first = gapStarts.partitioningIndex { $0 >= rows.lowerBound }
+    for gap in gapStarts[first...].prefix(while: { $0 < rows.upperBound }) {
+      parts.append(start..<gap)
+      start = gap + 1
+    }
+    parts.append(start..<rows.upperBound)
+    return parts
   }
 
   /// The blocks among `candidates` whose segments in `document` hold work: an edit or a choice.

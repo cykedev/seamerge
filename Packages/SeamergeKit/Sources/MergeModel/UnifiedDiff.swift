@@ -1,4 +1,5 @@
 public import Foundation
+import TextIO
 
 /// Files compared and written as a unified diff, as `git diff` writes it, which `git apply` and
 /// `patch -p1` take.
@@ -62,9 +63,8 @@ public enum UnifiedDiff {
     }
     let oldName = file.old.isMissing ? devNull : file.names.old
     let newName = file.new.isMissing ? devNull : file.names.new
-    if case .path(let path) = file.names {
-      output.append(
-        line: "diff --git \(Names.quoted(path, prefix: "a/")) \(Names.quoted(path, prefix: "b/"))")
+    if case .path = file.names {
+      output.append(line: "diff --git \(file.names.old) \(file.names.new)")
       // Git takes /dev/null as a side only where the mode of the file says it is new or deleted.
       if file.old.isMissing {
         output.append(line: "new file mode \(regularFileMode)")

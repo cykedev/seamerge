@@ -19,4 +19,8 @@ public enum MergeModelError: Error, Sendable, Hashable {
   /// The result could not be written to the file at `path`, for the reason the file system
   /// gives.
   case writingFailed(path: String, reason: String)
+
+  /// A text is not a unified diff of two sides, or a hunk of it does not hold the lines its
+  /// header says.
+  case unreadablePatch
 }

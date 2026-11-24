@@ -15,6 +15,9 @@ public enum SessionLoadingError: LocalizedError, Equatable {
   /// The comparison failed for another reason.
   case comparisonFailed
 
+  /// The text handed over as a patch is not a unified diff that Seamerge can read.
+  case unreadablePatch
+
   /// Why the comparison of `files` failed, if the files are known.
   init(_ error: MergeModelError, files: Session.Inputs<SessionFile>?) {
     self =
@@ -22,6 +25,7 @@ public enum SessionLoadingError: LocalizedError, Equatable {
       case .binaryInput(let role): files?[role].map { .binaryFile($0.url) } ?? .comparisonFailed
       case .inputTooLarge, .outOfMemory: .filesTooLarge
       case .comparisonFailed, .unrepresentableText, .writingFailed: .comparisonFailed
+      case .unreadablePatch: .unreadablePatch
       }
   }
 
@@ -44,6 +48,10 @@ public enum SessionLoadingError: LocalizedError, Equatable {
       String(
         localized: "Seamerge couldn’t compare the files.",
         bundle: .module, comment: "Alert: the comparison of the files of a session failed.")
+    case .unreadablePatch:
+      String(
+        localized: "Seamerge can’t read the patch.",
+        bundle: .module, comment: "Alert: a patch handed to the app is not a unified diff.")
     }
   }
 
@@ -66,6 +74,10 @@ public enum SessionLoadingError: LocalizedError, Equatable {
       String(
         localized: "Try again. If it fails again, use another tool for these files.",
         bundle: .module, comment: "Alert: what to do when the comparison of the files failed.")
+    case .unreadablePatch:
+      String(
+        localized: "Open a unified diff, as git diff writes it.",
+        bundle: .module, comment: "Alert: what to do when a patch cannot be read.")
     }
   }
 }

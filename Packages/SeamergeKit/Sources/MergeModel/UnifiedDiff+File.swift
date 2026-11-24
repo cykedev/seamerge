@@ -1,4 +1,5 @@
 import Foundation
+import TextIO
 
 extension UnifiedDiff {
   /// One file of a unified diff: its older and its newer side, and how the headers name them.
@@ -71,56 +72,17 @@ extension UnifiedDiff {
     /// The name of the older side, quoted as Git quotes it.
     var old: String {
       switch self {
-      case .path(let path): Self.quoted(path, prefix: "a/")
-      case .labels(let old, _): Self.quoted(old, prefix: "")
+      case .path(let path): GitQuotedName.quoted(path, prefix: "a/")
+      case .labels(let old, _): GitQuotedName.quoted(old)
       }
     }
 
     /// The name of the newer side, quoted as Git quotes it.
     var new: String {
       switch self {
-      case .path(let path): Self.quoted(path, prefix: "b/")
-      case .labels(_, let new): Self.quoted(new, prefix: "")
+      case .path(let path): GitQuotedName.quoted(path, prefix: "b/")
+      case .labels(_, let new): GitQuotedName.quoted(new)
       }
-    }
-
-    /// `prefix` and `name` as Git writes them in a header: as they are, or within quotes with
-    /// escapes where they hold a quote, a backslash, a control character or a byte outside ASCII.
-    ///
-    /// A space alone needs no quotes; the lines `---` and `+++` end such a name with a tab.
-    static func quoted(_ name: String, prefix: String) -> String {
-      let bytes = Array((prefix + name).utf8)
-      guard bytes.contains(where: needsEscape) else { return prefix + name }
-      let escaped = bytes.map { needsEscape($0) ? escape(of: $0) : String(Unicode.Scalar($0)) }
-      return "\"" + escaped.joined() + "\""
-    }
-
-    /// The escape Git writes for `byte`: a letter for the usual control characters, a backslash
-    /// before a quote or a backslash, three octal digits for any other byte.
-    private static func escape(of byte: UInt8) -> String {
-      switch byte {
-      case 0x07: "\\a"
-      case 0x08: "\\b"
-      case 0x09: "\\t"
-      case 0x0A: "\\n"
-      case 0x0B: "\\v"
-      case 0x0C: "\\f"
-      case 0x0D: "\\r"
-      case UInt8(ascii: "\""): "\\\""
-      case UInt8(ascii: "\\"): "\\\\"
-      default: "\\" + octal(byte)
-      }
-    }
-
-    /// Whether Git writes `byte` of a name as an escape.
-    private static func needsEscape(_ byte: UInt8) -> Bool {
-      byte < 0x20 || byte >= 0x7F || byte == UInt8(ascii: "\"") || byte == UInt8(ascii: "\\")
-    }
-
-    /// `byte` as three octal digits.
-    private static func octal(_ byte: UInt8) -> String {
-      let digits = String(byte, radix: 8)
-      return String(repeating: "0", count: 3 - digits.count) + digits
     }
   }
 }

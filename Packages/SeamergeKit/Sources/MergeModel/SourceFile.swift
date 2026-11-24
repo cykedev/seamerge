@@ -23,6 +23,11 @@ public struct SourceFile: Sendable {
   /// it, or `nil` if the file is binary.
   let utf8: Data?
 
+  /// The side of a file of a patch that the file holds, whose lines keep the numbers the hunks
+  /// give them and whose placeholder lines stand for the lines the patch passes over; `nil` for
+  /// a file whose lines are numbered by their place.
+  public private(set) var patchSide: PatchFile.Side?
+
   /// Reads the file at `url` and recognizes its encoding.
   ///
   /// The file is memory-mapped where that is safe. Reading and decoding take time in proportion
@@ -70,6 +75,14 @@ public struct SourceFile: Sendable {
       decodedText = nil
       utf8 = nil
     }
+  }
+
+  /// The file as one that holds `side`, the side of a file of a patch whose text it was read
+  /// from.
+  public func holding(_ side: PatchFile.Side) -> SourceFile {
+    var file = self
+    file.patchSide = side
+    return file
   }
 
   /// Whether the file is binary and has no text to compare.

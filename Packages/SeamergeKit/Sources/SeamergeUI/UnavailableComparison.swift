@@ -66,6 +66,10 @@ public struct UnavailableComparison: Sendable {
         String(
           localized: "The comparison failed. Try again, or use another tool for this file.",
           bundle: .module, comment: "Comparison window: the comparison failed for another reason.")
+      case .unreadablePatch:
+        String(
+          localized: "The patch can’t be read. Open a unified diff, as git diff writes it.",
+          bundle: .module, comment: "Comparison window: a patch is not a unified diff.")
       }
     guard context.difftool.map(\.hasFilesAfterThisOne) == true else { return reason }
     return reason + " "

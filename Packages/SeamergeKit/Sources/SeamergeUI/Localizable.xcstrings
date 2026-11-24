@@ -1255,6 +1255,9 @@
     "On" : {
       "comment" : "VoiceOver: a footer toggle that is on."
     },
+    "Open a unified diff, as git diff writes it." : {
+      "comment" : "Alert: what to do when a patch cannot be read."
+    },
     "Open conflict, line %lld" : {
       "comment" : "VoiceOver: the mark of an open conflict in the overview bar."
     },
@@ -1465,6 +1468,9 @@
     "Seamerge can’t read “%@”. Check that it exists and that you may read it." : {
       "comment" : "Comparison window: a file cannot be read, and what to do."
     },
+    "Seamerge can’t read the patch." : {
+      "comment" : "Alert: a patch handed to the app is not a unified diff."
+    },
     "Seamerge can’t show the differences of “%@”" : {
       "comment" : "Comparison window: the files cannot be compared, such as of “logo.png”."
     },
@@ -1652,6 +1658,9 @@
     },
     "The folders have the same files." : {
       "comment" : "Window of two folders: no file differs."
+    },
+    "The patch can’t be read. Open a unified diff, as git diff writes it." : {
+      "comment" : "Comparison window: a patch is not a unified diff."
     },
     "The pattern also matches empty text, so the rule ignores nothing." : {
       "comment" : "Settings: why an ignore rule takes no effect: its pattern matches empty text."

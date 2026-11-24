@@ -31,6 +31,10 @@ public struct Session: Sendable {
   /// The row grid of the panes.
   public let rowLayout: RowLayout
 
+  /// The rows where both inputs, the two sides of a file of a patch, hold the placeholder line
+  /// for lines the patch passes over; none for other files.
+  public let gapRows: [PatchFile.GapRow]
+
   /// The runs of lines that moved, in the order of their sources.
   ///
   /// In a comparison, the lines leave A and arrive in B, and each end is a changed block of its
@@ -202,6 +206,7 @@ public struct Session: Sendable {
       moves = try MoveDetection.moves(inMerge: blocks, files: files, mode: options.mode)
     }
     rowLayout = RowLayout(blocks: self.blocks, files: files)
+    gapRows = kind == .diff ? PatchFile.gapRows(of: files, on: rowLayout) : []
     var moveIndices: [MoveEnd: Int] = [:]
     for (index, move) in moves.enumerated() {
       for end in [move.source, move.destination] {
