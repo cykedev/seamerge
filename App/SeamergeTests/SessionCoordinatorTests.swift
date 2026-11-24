@@ -216,7 +216,7 @@ struct SessionCoordinatorTests {
     let window = try #require(controller.window)
     #expect(window.isVisible)
     #expect(window.title == "src/story.txt")
-    #expect(window.subtitle == "File 2 of 3")
+    #expect(window.subtitle == "1 change · File 2 of 3")
     #expect(coordinator.kind(of: window) == .diff)
     window.close()
 

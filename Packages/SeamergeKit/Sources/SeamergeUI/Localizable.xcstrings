@@ -129,6 +129,52 @@
     "%@. %@" : {
       "comment" : "VoiceOver after a decision, such as Chosen: B. 2 Conflicts Left."
     },
+    "%lld additions" : {
+      "comment" : "Subtitle: the blocks of lines a comparison adds, such as 4 additions.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld addition"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld additions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld changes" : {
+      "comment" : "Subtitle: the blocks of lines a comparison changes, such as 3 changes.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld change"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld changes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld Changes" : {
       "comment" : "Toolbar: the changes of a comparison while none is current, such as 12 Changes.",
       "localizations" : {
@@ -214,6 +260,29 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld Conflicts Left"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld deletions" : {
+      "comment" : "Subtitle: the blocks of lines a comparison deletes, such as 1 deletion.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld deletion"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld deletions"
                 }
               }
             }
@@ -1272,7 +1341,7 @@
       "comment" : "Go menu command."
     },
     "No changes" : {
-      "comment" : "Subtitle: neither side changed the base."
+      "comment" : "Subtitle: the files of a comparison are equal, or neither side changed the base."
     },
     "No Changes" : {
       "comment" : "Toolbar: the two files are equal under the comparison mode."

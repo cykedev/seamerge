@@ -2,10 +2,11 @@ import AppKit
 import FolderCompare
 import GitSupport
 import MergeModel
+import PaneKit
 
 /// The title and subtitle of a session window: the name of the file, how many changes each side
-/// of a merge brings, how far the Git operation has come, and which file of a run of
-/// `git difftool` a comparison shows.
+/// of a merge brings or of which kinds the changes of a comparison are, how far the Git operation
+/// has come, and which file of a run of `git difftool` a comparison shows.
 struct SessionSummary: Equatable {
   /// The title: the name of the file that the result of a merge is written to, the name of a
   /// patch, the path in the repository of the file a comparison from Git or Tower shows, or else
@@ -54,7 +55,11 @@ struct SessionSummary: Equatable {
       name =
         context.patch?.title ?? context.difftool?.path
         ?? Self.title(of: arrangement.sourceRoles.compactMap { session.inputs[$0] })
-      self.changes = modeNote
+      self.changes = [
+        isComparing ? nil : Self.changeKinds(of: changes, readTo: arrangement.trailingRole),
+        modeNotes,
+      ]
+      .compactMap(\.self).joined(separator: Self.separator)
     }
     // A label from the command line may hold a tab or a line break; the title stands on one
     // line, as the headers do.
@@ -73,9 +78,9 @@ struct SessionSummary: Equatable {
           comment: "Subtitle: how many other files of the operation still have conflicts.")
         : nil
     }
-    // A patch of one file has no other file to count.
+    // A single file has no other file to count.
     let countedPosition = context.difftool?.filePosition.flatMap { position in
-      context.patch != nil && position.count == 1 ? nil : position
+      position.count > 1 ? position : nil
     }
     let filePosition = countedPosition.map { position in
       String(
@@ -97,13 +102,11 @@ struct SessionSummary: Equatable {
     parts.compactMap(\.self).filter { !$0.isEmpty }.joined(separator: separator)
   }
 
-  /// The title of a comparison of `files`, from left to right: their name if both have the
-  /// same, and both names otherwise.
+  /// The title of a comparison of `files`, from left to right: the name both share, or both
+  /// names; a missing side of a new or a deleted file has none.
   ///
   /// The names come from the labels, since Git compares temporary copies whose names are made
   /// up.
-  /// The title of a comparison of `files`: the name both share, or both names; a missing side
-  /// of a new or a deleted file has none.
   private static func title(of files: [SourceFile]) -> String {
     let names = files.filter { file in file.url.map { FileOrigin(url: $0) != .missing } ?? true }
       .map { ($0.label as NSString).lastPathComponent }
@@ -130,11 +133,7 @@ struct SessionSummary: Equatable {
   /// The changes of each side, such as "3 changes from A · 5 from B".
   private static func changeCounts(of changes: SessionChanges) -> String {
     let (a, b) = (changes.changeCount(of: .a), changes.changeCount(of: .b))
-    guard a > 0 || b > 0 else {
-      return String(
-        localized: "No changes", bundle: .module,
-        comment: "Subtitle: neither side changed the base.")
-    }
+    guard a > 0 || b > 0 else { return noChanges }
     return String(
       localized: "\(a) changes from A", bundle: .module,
       comment: "Subtitle: the changes of the incoming side, such as 3 changes from A.")
@@ -142,6 +141,47 @@ struct SessionSummary: Equatable {
       + String(
         localized: "\(b) from B", bundle: .module,
         comment: "Subtitle: the changes of the own side after those of A, such as 5 from B.")
+  }
+
+  /// The changes of a comparison by kind, such as "4 additions · 3 changes · 1 deletion", with
+  /// only the kinds there are.
+  ///
+  /// Each kind is the marker that `trailingRole`, the side on the right, carries in the gutter:
+  /// lines it added, lines it changed, and lines it lacks, which the left side has.
+  private static func changeKinds(
+    of changes: SessionChanges, readTo trailingRole: Role
+  ) -> String {
+    var (additions, edits, deletions) = (0, 0, 0)
+    for block in changes.blocks {
+      switch changes.marker(of: trailingRole, in: block) {
+      case .added: additions += 1
+      case .changed: edits += 1
+      case .removed, nil: deletions += 1
+      }
+    }
+    let parts = [
+      additions > 0
+        ? String(
+          localized: "\(additions) additions", bundle: .module,
+          comment: "Subtitle: the blocks of lines a comparison adds, such as 4 additions.") : nil,
+      edits > 0
+        ? String(
+          localized: "\(edits) changes", bundle: .module,
+          comment: "Subtitle: the blocks of lines a comparison changes, such as 3 changes.") : nil,
+      deletions > 0
+        ? String(
+          localized: "\(deletions) deletions", bundle: .module,
+          comment: "Subtitle: the blocks of lines a comparison deletes, such as 1 deletion.") : nil,
+    ]
+    let kinds = parts.compactMap(\.self)
+    return kinds.isEmpty ? noChanges : kinds.joined(separator: separator)
+  }
+
+  /// What the subtitle says when the files do not differ.
+  private static var noChanges: String {
+    String(
+      localized: "No changes", bundle: .module,
+      comment: "Subtitle: the files of a comparison are equal, or neither side changed the base.")
   }
 
   /// The mode of the comparison where it differs from `startMode`, the mode a new window

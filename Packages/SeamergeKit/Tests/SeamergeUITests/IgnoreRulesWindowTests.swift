@@ -91,7 +91,7 @@ struct IgnoreRulesWindowTests {
     #expect(!Self.validatedItem(in: controller).isValid)
     #expect(session.ignoreRuleProblems == [IgnoreRule(name: "New", pattern: ""): .invalidPattern])
     #expect(session.blocks.filter { $0.kind == .changed }.first?.lines(in: .b).count == 4)
-    #expect(try #require(controller.window).subtitle == "")
+    #expect(try #require(controller.window).subtitle == "1 change")
   }
 
   @Test func renamingARuleComparesNothingAnew() async throws {
@@ -132,7 +132,7 @@ struct IgnoreRulesWindowTests {
     #expect(presentation.changes.blocks.filter { $0.kind == .changed }.count == 1)
     let change = try #require(presentation.changes.blocks.firstIndex { $0.kind == .changed })
     presentation.setCurrentBlock(change)
-    #expect(window.subtitle == "Ignore rules applied")
+    #expect(window.subtitle == "1 change · Ignore rules applied")
 
     undoManager.beginUndoGrouping()
     await controller.compareWithRequestedRules(usingIgnoreRules: false)
@@ -145,14 +145,14 @@ struct IgnoreRulesWindowTests {
     #expect(presentation.changes.blocks[current].lines(in: .b).contains(2), "the line with sign")
     #expect(presentation.changes.blocks[current].lines(in: .b).count == 4)
     #expect(Self.validatedItem(in: controller).item.state == .off)
-    #expect(window.subtitle == "")
+    #expect(window.subtitle == "1 change")
     #expect(undoManager.undoMenuItemTitle == "Undo Change Comparison")
 
     undoManager.undo()
     await controller.comparisonSwitcher.bringingBack?.value
     #expect(controller.usesIgnoreRules)
     #expect(presentation.changes.session.ignoreRules == settings.ignoreRules.filter(\.isEnabled))
-    #expect(window.subtitle == "Ignore rules applied")
+    #expect(window.subtitle == "1 change · Ignore rules applied")
     undoManager.redo()
     await controller.comparisonSwitcher.bringingBack?.value
     #expect(!controller.usesIgnoreRules)
@@ -216,7 +216,7 @@ struct IgnoreRulesWindowTests {
         Self.old, Self.old.replacingOccurrences(of: "link", with: "sign"),
         settings: settings),
       settings: settings)
-    #expect(try #require(same.window).subtitle == "")
+    #expect(try #require(same.window).subtitle == "1 change")
 
     let exact = try Windows.controller(
       for: try await Session.diff(
@@ -224,7 +224,8 @@ struct IgnoreRulesWindowTests {
         new: SourceFile(bytes: Data(Self.new.utf8), label: "build.log"), mode: .exact,
         ignoring: settings.ignoreRules),
       settings: settings)
-    #expect(try #require(exact.window).subtitle == "Compared exactly · Ignore rules applied")
+    #expect(
+      try #require(exact.window).subtitle == "1 change · Compared exactly · Ignore rules applied")
   }
 
   @Test func ruleThatEmptiesTheFilesLeavesNoChangeAndTheSubtitleSaysWhy() async throws {
@@ -234,7 +235,7 @@ struct IgnoreRulesWindowTests {
       settings: settings)
 
     #expect(controller.presentation.changes.blocks.allSatisfy { $0.kind == .unchanged })
-    #expect(try #require(controller.window).subtitle == "Ignore rules applied")
+    #expect(try #require(controller.window).subtitle == "No changes · Ignore rules applied")
   }
 
   @Test func showIgnoredChangesShowsThePlacesThatTheRulesMatch() async throws {

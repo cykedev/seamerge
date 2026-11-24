@@ -204,7 +204,7 @@ import Testing
     let window = try #require(controller.window)
 
     #expect(window.title == "Sources/Greeting.swift")
-    #expect(window.subtitle == "File 3 of 12")
+    #expect(window.subtitle == "1 addition · 1 change · 1 deletion · File 3 of 12")
     let labels = controller.layout.sourcePanes.map { $0.pane.accessibilityLabel() }
     #expect(
       labels == [
@@ -219,7 +219,7 @@ import Testing
     let controller = try Windows.controller(for: session)
 
     #expect(controller.window?.title == "old.txt ↔ new.txt")
-    #expect(controller.window?.subtitle == "")
+    #expect(controller.window?.subtitle == "1 change")
   }
 
   @Test func openInEditorOpensTheSideThatIsTheWorkingCopy() async throws {
