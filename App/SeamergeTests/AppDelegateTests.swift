@@ -24,6 +24,27 @@ struct AppDelegateTests {
     await delegate.coordinator.finish()
   }
 
+  @Test func launchClearsOutExpiredWorkOfMergesAndKeepsTheRest() async throws {
+    let sandbox = try AppSandbox()
+    let folder = sandbox.folder.appending(path: "Merges", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    let now = Date().timeIntervalSinceReferenceDate
+    for (digit, savedAt) in [("a", now - 31 * 86_400), ("b", now - 86_400)] {
+      let key = String(repeating: digit, count: 64)
+      let head =
+        #"{"formatVersion":1,"key":"\#(key)","savedAt":\#(savedAt),"segments":[],"text":""}"#
+      try Data(head.utf8).write(to: folder.appending(path: "\(key).json"))
+    }
+    let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])
+
+    delegate.applicationDidFinishLaunching(
+      Notification(name: NSApplication.didFinishLaunchingNotification))
+    await delegate.clearingWork?.value
+
+    #expect(try sandbox.keptWorkFiles == ["\(String(repeating: "b", count: 64)).json"])
+    await delegate.coordinator.finish()
+  }
+
   @Test func commandsOfTheFileMenuShowTheWelcomeWindowWithTheirSheet() throws {
     let sandbox = try AppSandbox()
     let delegate = makeDelegate(in: sandbox, arguments: ["Seamerge", HelperLaunch.argument])

@@ -53,6 +53,9 @@ final class AppDelegate: NSObject {
   /// The welcome window appearing after the launch, until it has.
   private(set) var startWindowTask: Task<Void, Never>?
 
+  /// The removal of expired work of merges after the launch.
+  private(set) var clearingWork: Task<Void, Never>?
+
   /// Shows alerts, hides the app and brings it to the front.
   let presenter: any AppPresenter
 
@@ -65,6 +68,9 @@ final class AppDelegate: NSObject {
 
   /// The settings of Git and Tower that the welcome window reads and writes.
   private let integrationStore: SystemIntegrationStore
+
+  /// The folder that keeps the work of unfinished merges.
+  private let workStore: MergeWorkStore
 
   /// The seamerge command in Terminal, whose sheet the welcome window shows.
   private let commandLineTool: CommandLineTool
@@ -92,6 +98,7 @@ final class AppDelegate: NSObject {
     self.updateServices = updateServices
     self.integrationStore = integrationStore
     self.commandLineTool = commandLineTool
+    self.workStore = workStore
     settings = UserSettings(defaults: defaults)
     recentComparisons = RecentComparisons(defaults: defaults)
     recentComparisonsMenu = RecentComparisonsMenu(recentComparisons: recentComparisons)
@@ -244,7 +251,8 @@ extension AppDelegate: NSApplicationDelegate {
   }
 
   /// Listens for the helper, serves the service and shows the welcome window, unless the helper,
-  /// the service or files to open started the app, which show what they need.
+  /// the service or files to open started the app, which show what they need; clears out expired
+  /// work of merges in the background.
   ///
   /// The service hands over its selection only once the run loop turns after the launch, so the
   /// window waits that long, and does not stand empty behind what the service opens.
@@ -261,6 +269,7 @@ extension AppDelegate: NSApplicationDelegate {
       startWindowTask = Task { showWelcomeUnlessBusy() }
     }
     updater.start()
+    clearingWork = Task(priority: .utility) { [workStore] in await workStore.removeExpired() }
   }
 
   func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
