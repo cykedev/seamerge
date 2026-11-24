@@ -255,18 +255,27 @@ struct PatchReadingTests {
     #expect(patch.files.map(\.newPath) == ["a b/c.txt"])
   }
 
-  /// A line `diff --git` of a megabyte without quotes is split at once: the names of a file that
-  /// keeps its name meet in the middle.
+  /// A line `diff --git` without quotes is split in linear time: the names of a file that keeps
+  /// its name meet in the middle.
+  ///
+  /// Four times the length takes well under eight times as long, where quadratic time would take
+  /// sixteen. A ratio rather than a fixed limit holds under the sanitizers too.
   @Test func longLineOfGitWithSpacesIsSplitInLinearTime() throws {
-    let name = String(repeating: "a ", count: 250_000) + "x"
-    let text = "diff --git a/\(name) b/\(name)\nnew file mode 100644\n"
-    let clock = ContinuousClock()
-    let start = clock.now
+    func time(repeats: Int) throws -> Duration {
+      let name = String(repeating: "a ", count: repeats) + "x"
+      let text = "diff --git a/\(name) b/\(name)\nnew file mode 100644\n"
+      let clock = ContinuousClock()
+      let start = clock.now
+      let patch = try read(text + "diff --git a/one two b/three\nnew file mode 100644\n")
+      let time = clock.now - start
+      #expect(patch.files.map(\.newPath) == [name, "three"])
+      return time
+    }
+    let short = try time(repeats: 62_500)
+    let long = try time(repeats: 250_000)
 
-    let patch = try read(text + "diff --git a/one two b/three\nnew file mode 100644\n")
-
-    #expect(clock.now - start < .seconds(1))
-    #expect(patch.files.map(\.newPath) == [name, "three"])
+    print("A line of \(62_500) spaces splits in \(short), of \(250_000) in \(long)")
+    #expect(long < short * 8)
   }
 
   @Test(arguments: [("i", "w"), ("c", "w"), ("c", "i"), ("o", "w"), ("1", "2")])
@@ -480,7 +489,9 @@ struct PatchReadingTests {
       #expect(read.files.first?.hunks.count == hunks)
     }
     print("20 000 hunks read in \(times[0]), 40 000 in \(times[1])")
-    #expect(times[1] < .seconds(1))
+    // Twice the hunks take well under three times as long, where quadratic time would take
+    // four; a ratio holds under the sanitizers too.
+    #expect(times[1] < times[0] * 3)
   }
 
   /// Mutates a patch at random and reads it, so that no input crashes the reader or keeps it
