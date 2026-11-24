@@ -50,6 +50,7 @@ A block that was changed on one side only is already decided: its change is take
 - **Overview bar** at the edge of the window shows where the changes are in the whole file.
 - **Toolbar** shows the number of open conflicts or changes, the navigation controls and the options.
 - **Pane headers** name each side. A side is named after its file, or by its letter where the file name tells nothing.
+- **Subtitle** under the title of a comparison counts its changes by kind, one per block, for example `4 additions · 3 changes · 1 deletion`; only the kinds that occur are named. A comparison of several files adds the position of the file, as in `File 2 of 3`. Identical files read `No changes`. While the first comparison runs, the subtitle names no count.
 
 ## The decision bar
 
@@ -215,6 +216,8 @@ Changing the arrangement changes only the display: it keeps the current block, t
 ## The footer
 
 The footer at the bottom of the window holds the comparison and view options, and the syntax language of the current file. Hide or show it with **Hide Footer** or **Show Footer** (`⌘/`). The arrangement of the lines is chosen in the toolbar segment, described under [Line arrangements](#line-arrangements); the footer has no switch for it.
+
+After the switches, the footer shows **N Lines Hidden**: the number of lines that the folded runs of unchanged lines hide. Its tooltip says how to show them, with **View ▸ Show All Lines**. When the footer is too narrow for the number, it disappears before the mode menu is shortened. The lines between the hunks of a patch are not counted; see [Opening a patch](#opening-a-patch).
 
 ## Finding and replacing
 
