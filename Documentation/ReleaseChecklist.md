@@ -18,6 +18,15 @@ The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, a min
 - [ ] In a throwaway repository, `Scripts/make-test-repo.sh <an empty folder> diff` creates three changed files. Open them with `git difftool`, with Seamerge as the diff tool, set up as in the next item. In each file, copy the change to the right with Copy to Right (`⌥⌘→`), then save all with `⌘S` and close the window. `git -C <the folder> diff` must then print nothing.
 - [ ] Set up the Git integration from the app and remove it again. Removing must leave the global configuration as it was before the set-up.
 
+## Aborting and restoring a merge
+
+Run these steps in a throwaway repository, with Seamerge set up as the Git merge tool.
+
+- [ ] `Scripts/make-test-repo.sh <an empty folder> merge` creates a merge with a conflict in `story.txt`. `git -C <the folder> status --short` then prints `UU story.txt`.
+- [ ] Run `git mergetool` in that folder, take one side for the conflict, and choose **Leave Unresolved** (`⌘.`). The window closes without a question, Git keeps the conflict, and `git -C <the folder> status --short` still prints `UU story.txt`.
+- [ ] Run `git mergetool` again. The conflict shows the side you took, the subtitle ends with `Earlier work restored · <time>`, and the Edit menu offers **Undo Restore Earlier Work**. Choose it: the conflict is open again. Choose **Edit ▸ Redo**, close the window and choose **Don't Save**. The sheet says that the work is kept, and the file stays unresolved.
+- [ ] Run `git mergetool` a third time. The side you took is back. Choose **Save and Close** (`⌘↩`). The command exits with 0, the file is resolved, and `~/Library/Application Support/Seamerge/Merges/` holds no file of this merge.
+
 ## Visual check
 
 - [ ] The main windows look right in light and dark appearance, and with increased contrast.

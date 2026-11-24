@@ -53,6 +53,7 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
     <img src="Documentation/Images/screenshot-decisions-light.png" alt="A merge with six conflicts left: a resolved conflict that takes both sides, a block taken from A on its own, and an open conflict ringed in red.">
   </picture>
 
+- **Unfinished merges come back.** A merge that you close before you finish keeps your decisions and typed text on this Mac, and they return when the same merge opens again. See [Picking up an unfinished merge](Documentation/UserGuide.md#picking-up-an-unfinished-merge).
 - **Collapsed unchanged lines.** Long stretches without changes fold into a bar that opens where you need it.
 - **Syntax colors with a language choice.** Common languages are highlighted, and you choose the language in the footer or switch the highlighting off.
 - **Line wrapping.** Wrap long lines in all panes, with the rows kept aligned.

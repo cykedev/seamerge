@@ -17,6 +17,7 @@ This guide is for people who use Seamerge to compare files and to resolve Git me
 - [Export as patch](#export-as-patch)
 - [Terminal and Finder](#terminal-and-finder)
 - [Saving and closing](#saving-and-closing)
+- [Picking up an unfinished merge](#picking-up-an-unfinished-merge)
 - [Settings](#settings)
 - [Updates](#updates)
 - [Accessibility](#accessibility)
@@ -285,12 +286,29 @@ Users of version 0.2.0 have no update check, so they download version 0.3.0 once
 
 - **Save** (`⌘S`) writes the result and keeps the window open. In a comparison, it writes the files with copied changes.
 - **Save and Close** (`⌘↩`) writes the result and closes the window. In a merge, Git then takes the result as resolved.
-- **Leave Unresolved** (`⌘.`) closes the window without saving, and Git keeps the conflict. Use it when you want to resolve the file later.
+- **Leave Unresolved** (`⌘.`) closes the window without saving and without asking, and Git keeps the conflict. Use it when you want to resolve the file later. Your work stays kept until you finish the merge; see [Picking up an unfinished merge](#picking-up-an-unfinished-merge).
 - If changes are not saved and you close the window, Seamerge asks first. For copied changes, see [Copying changes between the sides](#copying-changes-between-the-sides).
+- Closing a merge that Git or the command line waits for, without saving, asks first. The sheet says: *If you don’t save, Git keeps the file unresolved. Your work in this window is kept until you finish this merge.* The command line and a merge that nothing waits for show only the second sentence.
 
 The result keeps the encoding and line endings of the file, unless you choose others in the window.
 
-If a file changes on disk while the window is open, Seamerge reloads it and keeps your decisions. If the file holds copied changes that are not saved, Seamerge asks first; see [Copying changes between the sides](#copying-changes-between-the-sides).
+If a file you compare changes on disk while the window is open, Seamerge reloads it and keeps your decisions; if some would be lost, it asks first. If the result file changes, Seamerge asks whether to keep your version or reload the file. Reloading takes the text of the file as the result, as one step you can undo. In a merge that Git or the command line waits for, a reload leaves the merge unsaved, even after an earlier save. Closing then asks again until you save, and Don’t Save leaves the file unresolved. If the file holds copied changes that are not saved, Seamerge asks first; see [Copying changes between the sides](#copying-changes-between-the-sides).
+
+## Picking up an unfinished merge
+
+A merge that you close before you finish it keeps its work on this Mac. The next time the same merge opens, the work comes back.
+
+**What is kept.** The text of the result, your decision for each block, the text you typed by hand, the comparison mode, the encoding and the line endings of the result, and the block you were on. The previews of open conflicts are not kept; they are made again from the files. The kept work holds text from your files, including the parts that you took from A, the base and B, so keep the folder as private as the files.
+
+**When it comes back.** When a merge opens with the same base, A and B, the work comes back, even if the files have other names or lie in other folders. If one of the three files has changed, the merge opens as the files are now, and the earlier work stays where it is until it expires.
+
+If a newer version of Seamerge splits the files into blocks differently from the way they were split when you left the merge, only the decisions on blocks with the same lines come back. The other blocks start over, and the subtitle says *Earlier work partly restored*. Otherwise the subtitle says *Earlier work restored*, with the time you left the merge. The subtitle stays until your first change, and VoiceOver announces the restored work when the window opens.
+
+**Starting fresh.** Choose **Edit ▸ Undo Restore Earlier Work** (`⌘Z`). One step takes the merge back to the way it loaded, without the restored work. The kept work stays, so closing the merge again keeps it. **Reset All Decisions** (`⌥⇧⌘⌫`) also removes the kept work.
+
+**When it disappears.** The kept work is removed when you finish the merge: when the result is saved and no conflict is open, with **Done** or **Save and Close**. It is also removed by **Reset All Decisions**. Otherwise it expires 30 days after it was last saved. Seamerge keeps the 100 newest merges and removes the older ones first. Expired work is removed when Seamerge starts.
+
+The kept work is a file in `~/Library/Application Support/Seamerge/Merges/`. It stays on this Mac. Files of another format version are left alone; a merge that saves its own work with the same name replaces such a file.
 
 ## Keyboard shortcuts
 
