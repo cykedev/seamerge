@@ -320,6 +320,7 @@ public final class SessionWindowController: NSWindowController {
         }))
     self.content = content
     content.footer.theme = theme
+    content.footer.quietTextColor = CompareFilesColors(displayOptions).quietText
     self.settings = settings
     highlightsSyntax = settings.highlightsSyntax
     fontSize = settings.fontSize
@@ -526,6 +527,7 @@ public final class SessionWindowController: NSWindowController {
     layout.apply(theme)
     presentation.apply(theme)
     content.footer.theme = theme
+    content.footer.quietTextColor = CompareFilesColors(displayOptions).quietText
   }
 
   /// Titles the window after the session it shows now.

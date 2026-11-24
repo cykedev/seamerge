@@ -4,18 +4,19 @@ import SyntaxKit
 
 /// The footer of a session window: on the leading side the comparison mode and the language the
 /// code is colored as, each in a pop-up button, beside them the toggles of how the panes show
-/// the files.
+/// the files, and after them how many lines are collapsed.
 ///
 /// It answers how the files are compared and shown now, and changes that quickly. Every entry
 /// sends the action of a command of the window, which the main menu offers with its key
 /// equivalent as well; the footer keeps no state of its own and shows what the window tells it.
 ///
 /// The footer stands in the bottom border of the window, which the system draws; it has no
-/// surface of its own. When the window gets narrow, the pop-up button shortens its title; the
-/// symbols stay.
+/// surface of its own. When the window gets narrow, the number of collapsed lines goes first, then
+/// the pop-up button shortens its title; the symbols stay.
 @MainActor
 final class SessionFooterView: NSView {
-  /// What the footer shows: the comparison mode and the state of each toggle.
+  /// What the footer shows: the comparison mode, the state of each toggle and the number of
+  /// collapsed lines.
   struct State: Equatable {
     /// The command of the comparison mode in effect.
     var mode: SessionCommand
@@ -40,6 +41,9 @@ final class SessionFooterView: NSView {
 
     /// Whether the window shows a single column, in which some toggles cannot act.
     var showsSingleColumn: Bool
+
+    /// How many lines of the files the bars of unchanged lines hide, in all.
+    var hiddenLineCount: Int
 
     /// The state of a toggle.
     struct Toggle: Equatable {
@@ -67,6 +71,15 @@ final class SessionFooterView: NSView {
   /// while Automatic is chosen, whose own title is longer.
   private let syntaxTitleItem = NSMenuItem()
   private let toggleButtons: [(toggle: FooterToggle, button: FooterToggleButton)]
+
+  /// The number of collapsed lines, which the footer carries as its value for VoiceOver too.
+  private let hiddenLinesLabel = NSTextField(labelWithString: "")
+
+  /// The color of the number of collapsed lines: quieter than the controls, and still 4.5 : 1 on
+  /// the bottom border of the window.
+  var quietTextColor = NSColor.secondaryLabelColor {
+    didSet { hiddenLinesLabel.textColor = quietTextColor }
+  }
 
   /// The theme of the panes, whose outline of the toggles the mixed state takes.
   var theme = Theme() {
@@ -97,6 +110,8 @@ final class SessionFooterView: NSView {
     for (_, button) in toggleButtons {
       addSubview(button)
     }
+    setUpHiddenLinesLabel()
+    addSubview(hiddenLinesLabel)
     setAccessibilityElement(true)
     setAccessibilityRole(.group)
     setAccessibilityLabel(
@@ -132,6 +147,19 @@ final class SessionFooterView: NSView {
       syntaxButtonWidth = max(syntaxButtonWidth, cell.cellSize.width.rounded(.up))
     }
     syntaxTitleItem.title = ""
+  }
+
+  /// Sets up the number of collapsed lines as quiet text in the size of the controls; VoiceOver
+  /// hears it as the value of the footer rather than as text of its own.
+  private func setUpHiddenLinesLabel() {
+    hiddenLinesLabel.font = comparisonButton.font
+    hiddenLinesLabel.textColor = quietTextColor
+    hiddenLinesLabel.lineBreakMode = .byClipping
+    hiddenLinesLabel.toolTip = String(
+      localized: "Show them with View > Show All Lines", bundle: .module,
+      comment: "Help tag of the number of collapsed lines in the footer.")
+    hiddenLinesLabel.setAccessibilityElement(false)
+    hiddenLinesLabel.isHidden = true
   }
 
   /// The titles of `titles` that come within a point of the widest in `font`.
@@ -171,6 +199,11 @@ final class SessionFooterView: NSView {
     syntaxButton
   }
 
+  /// The number of collapsed lines, hidden while none is collapsed or the footer lacks the room.
+  var hiddenLinesField: NSTextField {
+    hiddenLinesLabel
+  }
+
   /// Shows `state`: the comparison mode, and each toggle with the command a click sends now.
   func show(_ state: State) {
     if let index = Self.modeCommands.firstIndex(of: state.mode),
@@ -205,7 +238,24 @@ final class SessionFooterView: NSView {
         : toggle.disabledHelp(showsSingleColumn: state.showsSingleColumn)
       button.setAccessibilityValueDescription(toggle.accessibilityValue(in: toggleState.state))
     }
+    showHiddenLines(state.hiddenLineCount)
     needsLayout = true
+  }
+
+  /// Shows that `count` lines are collapsed, and nothing while none is.
+  private func showHiddenLines(_ count: Int) {
+    hiddenLinesLabel.stringValue =
+      count > 0
+      ? String(
+        localized: "\(count) Lines Hidden", bundle: .module,
+        comment: "Footer: how many unchanged lines the bars hide in all, such as 51 Lines Hidden.")
+      : ""
+    setAccessibilityValue(
+      count > 0
+        ? String(
+          localized: "\(count) lines hidden", bundle: .module,
+          comment: "VoiceOver: the value of the footer, how many unchanged lines are collapsed.")
+        : nil)
   }
 
   /// The narrowest the footer gets with everything in view: the pop-up buttons at the width of
@@ -240,6 +290,20 @@ final class SessionFooterView: NSView {
       place(button, x: x, width: toggleWidth, height: height)
       x += toggleWidth + WindowMetrics.footerToggleSpacing
     }
+    layOutHiddenLines()
+  }
+
+  /// Places the number of collapsed lines after the toggles if it fits beside the controls at
+  /// their full widths, and hides it otherwise, before a pop-up button shortens its title.
+  private func layOutHiddenLines() {
+    let x = minimumWidth - WindowMetrics.footerInset + WindowMetrics.footerGroupSpacing
+    // The intrinsic size of a label may lag behind its text; its cell measures the text as is.
+    let width = (hiddenLinesLabel.cell?.cellSize.width ?? 0).rounded(.up)
+    hiddenLinesLabel.isHidden =
+      hiddenLinesLabel.stringValue.isEmpty
+      || x + width > bounds.width - WindowMetrics.footerInset
+    guard !hiddenLinesLabel.isHidden else { return }
+    place(hiddenLinesLabel, x: x, width: width)
   }
 
   /// Places `control` at `x` with `width` and `height`, its own unless given, centered in the

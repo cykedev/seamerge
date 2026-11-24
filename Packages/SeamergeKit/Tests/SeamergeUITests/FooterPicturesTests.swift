@@ -7,7 +7,8 @@ import Testing
 
 /// Draws the pictures of the footer, the overview bars and the headers for the visual review:
 /// the sample merge of P4Merge and a comparison in every look, at the least size, without
-/// transparency, and the overview bars scrolled to the top, the middle and the end.
+/// transparency, the number of collapsed lines with the changes of a diff in its subtitle, and
+/// the overview bars scrolled to the top, the middle and the end.
 @MainActor
 @Suite(.serialized) struct FooterPicturesTests {
   @Test(arguments: Look.all)
@@ -24,6 +25,37 @@ import Testing
       try await SampleDiffs.greeting(), context: SessionContext(), look: look,
       options: DisplayOptions(increasesContrast: look.increasesContrast), actsAsKey: true,
       named: "footer-diff-\(look.name)")
+  }
+
+  @Test(arguments: Look.all)
+  func hiddenLinesAndTheChangesOfADiffArePicturedInEveryLook(look: Look) async throws {
+    let options = DisplayOptions(increasesContrast: look.increasesContrast)
+    try Windows.picture(
+      try await SampleDiffs.manyChanges(), context: SampleDiffs.gitContext, look: look,
+      options: options, actsAsKey: true, named: "hidden-lines-diff-\(look.name)")
+    try Windows.picture(
+      try await SampleMerges.manyBlocks(lineCount: 600, spacing: 30), context: SessionContext(),
+      look: look, options: options, actsAsKey: true, named: "hidden-lines-merge-\(look.name)")
+  }
+
+  @Test func hiddenLinesArePicturedWithoutColorWithoutTransparencyAndAtTheLeastSize()
+    async throws
+  {
+    let session = try await SampleDiffs.manyChanges()
+    try Windows.picture(
+      session, context: SampleDiffs.gitContext, look: .light,
+      options: DisplayOptions(differentiatesWithoutColor: true),
+      named: "hidden-lines-diff-without-color-light")
+    try Windows.picture(
+      session, context: SampleDiffs.gitContext, look: .light,
+      options: DisplayOptions(reducesTransparency: true),
+      named: "hidden-lines-diff-reduced-transparency-light")
+    try Windows.picture(
+      session, context: SampleDiffs.gitContext, look: .light, size: nil,
+      named: "hidden-lines-diff-smallest-light")
+    try Windows.picture(
+      try await SampleMerges.manyBlocks(lineCount: 600, spacing: 30), context: SessionContext(),
+      look: .light, size: nil, named: "hidden-lines-merge-smallest-light")
   }
 
   @Test func smallestWindowsArePictured() async throws {

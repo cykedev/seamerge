@@ -862,9 +862,19 @@ final class SessionPresentation {
     return collapsing.runs != collapsed.runs
   }
 
-  /// Whether Show All Lines would change what the panes show: runs are collapsed.
+  /// Whether Show All Lines would change what the panes show: runs of unchanged lines are
+  /// collapsed; the runs of lines that a patch passes over stay.
   var canShowAllRows: Bool {
-    !collapsed.runs.isEmpty
+    hiddenLineCount > 0
+  }
+
+  /// How many lines of the files the collapsed runs of unchanged lines hide, in all: the sum of
+  /// the numbers on their bars, which every pane shows alike; not the lines that a patch passes
+  /// over, which the files do not have.
+  var hiddenLineCount: Int {
+    collapsed.runs.reduce(0) { sum, run in
+      run.missingLineCount == nil ? sum + run.rows.count : sum
+    }
   }
 
   /// Shows every row of every pane.

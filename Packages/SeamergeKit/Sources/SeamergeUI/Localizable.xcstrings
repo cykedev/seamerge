@@ -270,6 +270,52 @@
         }
       }
     },
+    "%lld lines hidden" : {
+      "comment" : "VoiceOver: the value of the footer, how many unchanged lines are collapsed.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld line hidden"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld lines hidden"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld Lines Hidden" : {
+      "comment" : "Footer: how many unchanged lines the bars hide in all, such as 51 Lines Hidden.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Line Hidden"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Lines Hidden"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld matches in %lld panes" : {
       "comment" : "VoiceOver: how often the search found its text and in how many panes.",
       "localizations" : {
@@ -1557,6 +1603,9 @@
     },
     "Show the right file on the left and the left file on the right" : {
       "comment" : "Help tag of Compare > Swap Sides."
+    },
+    "Show them with View > Show All Lines" : {
+      "comment" : "Help tag of the number of collapsed lines in the footer."
     },
     "Show where this side comes from" : {
       "comment" : "Help tag of ⓘ."

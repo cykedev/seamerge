@@ -21,7 +21,8 @@ extension SessionWindowController {
     updateFooter()
   }
 
-  /// Shows in the footer the comparison mode and the state of each toggle as they are now.
+  /// Shows in the footer the comparison mode, the state of each toggle and the number of
+  /// collapsed lines as they are now.
   func updateFooter() {
     let footer = content.footer
     guard footer.superview != nil, !footer.isHidden else { return }
@@ -41,7 +42,8 @@ extension SessionWindowController {
         syntaxChoice: syntaxChoice, language: syntaxChoice.languageTitle(of: language),
         automaticTitle: SyntaxChoice.automatic.title(detected: detectedLanguage),
         canChooseSyntax: canChooseSyntax,
-        showsSingleColumn: presentation.lineArrangement == .singleColumn))
+        showsSingleColumn: presentation.lineArrangement == .singleColumn,
+        hiddenLineCount: presentation.hiddenLineCount))
   }
 
   /// The state of `toggle`, as the main menu shows it with a checkmark or a title.
