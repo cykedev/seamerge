@@ -19,6 +19,7 @@ Seamerge shows two files side by side, or a three-way merge with its base, and l
   </picture>
 
 - **Git-Tower integration.** When Git-Tower is installed, the same set-up adds Seamerge to Git-Tower's diff and merge tools. In Git-Tower, Seamerge also opens directory diffs.
+- **Other Git programs.** Fork and Sourcetree can use Seamerge as their diff and merge tool; see [Other Git programs](Documentation/UserGuide.md#other-git-programs).
 - **Whitespace modes.** Compare exactly, ignore line endings, ignore changes in the amount of whitespace, or ignore all whitespace, chosen in the footer.
 
   <picture>

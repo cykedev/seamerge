@@ -18,6 +18,7 @@ This guide is for people who use Seamerge to compare files and to resolve Git me
 - [Export as patch](#export-as-patch)
 - [Opening a patch](#opening-a-patch)
 - [Terminal and Finder](#terminal-and-finder)
+- [Other Git programs](#other-git-programs)
 - [Other version control systems](#other-version-control-systems)
 - [Saving and closing](#saving-and-closing)
 - [Picking up an unfinished merge](#picking-up-an-unfinished-merge)
@@ -298,6 +299,53 @@ The service is available once Seamerge is in the Applications folder or in `~/Ap
 ### Dock
 
 Files and folders dropped on the Seamerge icon in the Dock fill the sheet Compare Files, or Merge Files for three files. Nothing is compared until you choose the comparison. Seamerge accepts files and folders in the Dock but is never the default app for them.
+
+## Other Git programs
+
+Fork and Sourcetree can use Seamerge as their diff and merge tool. The entries below were checked with Fork 2.72.0, Sourcetree 4.2.21 and Seamerge 0.9.0, on macOS 27.2. The paths point into the app bundle.
+
+### Fork
+
+In **Settings ▸ Integration**, choose **Custom Tool…** (or **Edit…** once it is set) for the merge tool, and for the external diff tool:
+
+```
+Merge Tool
+File Path:  /Applications/Seamerge.app/Contents/Helpers/seamerge
+Arguments:  merge --base $BASE --local $LOCAL --remote $REMOTE --output $MERGED
+
+External Diff Tool
+File Path:  /Applications/Seamerge.app/Contents/Helpers/seamerge
+Arguments:  diff $REMOTE $LOCAL
+```
+
+- Enter the arguments without quotation marks. Fork splits the line at the spaces and starts the command without a shell, so quotation marks reach Seamerge as part of the paths, and the command fails with exit 2. Without them, each path is one argument, also a path with spaces.
+- Fork suggests `$LOCAL $REMOTE`. In Fork, `$LOCAL` is the new side, the working copy or the commit, and `$REMOTE` the old one, the index or the parent. With `$REMOTE $LOCAL`, the old file is on the left and the new one on the right, as in Git.
+- Fork starts the command itself and does not wait for Git, so the arguments have no `--from-git`.
+- A merge saved without conflict markers exits with 0. Fork then says that the conflicts are resolved and leaves the file unstaged until you stage it.
+- A merge saved with conflict markers is refused by Fork, which shows **Merge Conflict** again; the file stays unmerged.
+- Leave Unresolved, or closing without saving, exits with 1. Fork shows no message, and the conflict stays.
+- Fork shows no message when the command fails. If nothing opens, check the arguments.
+
+### Sourcetree
+
+In **Settings ▸ Diff**, choose **Custom…** for the visual diff tool and for the merge tool, and enter:
+
+```
+Visual Diff Tool:  Custom…
+Diff Command:      /Applications/Seamerge.app/Contents/Helpers/seamerge
+Arguments:         diff --path "$MERGED" -- "$LOCAL" "$REMOTE"
+
+Merge Tool:        Custom…
+Merge Command:     /Applications/Seamerge.app/Contents/Helpers/seamerge
+Arguments:         merge --from-git --base "$BASE" --local "$LOCAL" --remote "$REMOTE" --output "$MERGED"
+```
+
+- Sourcetree runs these entries through the shell, so the quotation marks belong there.
+- `--from-git` tells Seamerge that Git waits for it.
+- When the settings window closes, Sourcetree writes the entries into the global Git configuration, `~/.gitconfig`, as `difftool.sourcetree.cmd` and `mergetool.sourcetree.cmd`, with `trustExitCode = true` for the merge. This happens while Sourcetree's switch **Allow Sourcetree to modify your global Mercurial and Git configuration files** is on, which is the default. Sourcetree also adds empty `user.name` and `user.email` entries and a `commit.template` setting.
+- Git trusts the exit code of the merge tool. A merge saved with conflict markers is therefore marked as resolved and staged with the markers in the file. Save the result without markers.
+- Leave Unresolved, or closing without saving, exits with 1. The file keeps its conflict, and Sourcetree shows no dialog.
+- Git keeps a backup beside the file, `<name>.orig`, as it does for other merge tools.
 
 ## Other version control systems
 
